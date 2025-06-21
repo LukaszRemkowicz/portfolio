@@ -1,0 +1,8 @@
+[MASTER]
+load-plugins = pylint_django
+
+[DJANGO]
+django-settings-module = backend.core.settings
+
+[MESSAGES CONTROL]
+disable = C0111
