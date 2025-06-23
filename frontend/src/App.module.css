@@ -20,6 +20,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  background-color: #181c2b; /* Fallback for when image fails */
 }
 
 .page-content {

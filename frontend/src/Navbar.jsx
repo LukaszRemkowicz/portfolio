@@ -1,48 +1,38 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { Link, NavLink } from 'react-router-dom';
 import styles from './Navbar.module.css';
-import { API_BASE_URL, API_ROUTES } from './api/routes';
 
 const DEFAULT_LOGO = '/logo.png';
 
 const Navbar = () => {
-  const [logoUrl, setLogoUrl] = useState(DEFAULT_LOGO);
-
-  useEffect(() => {
-    const fetchLogo = async () => {
-      if (!API_ROUTES.logo) return;
-      try {
-        const res = await fetch(API_BASE_URL + API_ROUTES.logo);
-        if (!res.ok) throw new Error('API error');
-        const data = await res.json();
-        if (data?.url) setLogoUrl(data.url);
-      } catch (e) {
-        setLogoUrl(DEFAULT_LOGO);
-      }
+    const getLinkClass = ({ isActive }) => {
+      return isActive ? `${styles.navbar__link} ${styles.navbar__link_active}` : styles.navbar__link;
     };
-    fetchLogo();
-  }, []);
 
-  return (
-    <nav className={styles.navbar}>
-      <img
-        src={logoUrl}
-        alt="Logo"
-        className={styles.navbar__logo}
-        height={150}
-        style={{
-          background: 'none',
-          filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.25))',
-          border: 'none',
-          display: 'block',
-        }}
-      />
-      <ul className={styles.navbar__links}>
-        <li><a className={styles.navbar__link} href="#">Astrophotography</a></li>
-        <li><a className={styles.navbar__link} href="#">Programming</a></li>
-        <li><a className={styles.navbar__link} href="#">Contact</a></li>
-      </ul>
-    </nav>
-  );
+    return (
+        <nav className={styles.navbar}>
+            <Link to="/" className={styles.navbar__logo_link}>
+                <img src={DEFAULT_LOGO} alt="Logo" className={styles.navbar__logo} />
+            </Link>
+            <ul className={styles.navbar__links}>
+                <li>
+                  <NavLink to="/astrophotography" className={getLinkClass}>
+                    Astrophotography
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/programming" className={getLinkClass}>
+                    Programming
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/contact" className={getLinkClass}>
+                    Contact
+                  </NavLink>
+                </li>
+            </ul>
+        </nav>
+    );
 };
 
 export default Navbar; 
