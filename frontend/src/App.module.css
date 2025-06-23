@@ -20,13 +20,14 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  background-color: #181c2b; /* Fallback for when image fails */
 }
 
 .page-content {
   flex: 1;
 }
 
-.navbar {
+/* .navbar {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -59,7 +60,7 @@
 
 .navbar__link:hover {
   color: var(--color-accent);
-}
+} */
 
 .main-content {
   flex: 1; /* Allow main content to grow and push gallery down */

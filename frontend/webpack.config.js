@@ -42,7 +42,7 @@ module.exports = {
     static: {
       directory: path.join(__dirname, 'public'),
     },
-    host: 'portfolio.local',
+    host: '0.0.0.0',
     port: 3000,
     open: true,
     hot: true,
@@ -54,7 +54,6 @@ module.exports = {
     allowedHosts: 'all',
     client: {
       webSocketURL: 'wss://portfolio.local/ws',
-      overlay: true,
     },
   },
   resolve: {

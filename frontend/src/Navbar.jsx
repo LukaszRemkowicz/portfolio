@@ -1,45 +1,37 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import styles from './Navbar.module.css';
-import { API_BASE_URL, API_ROUTES } from './api/routes';
 
 const DEFAULT_LOGO = '/logo.png';
 
-const Navbar = () => {
-  const [logoUrl, setLogoUrl] = useState(DEFAULT_LOGO);
+const Navbar = ({ transparent }) => {
+    const location = useLocation();
 
-  useEffect(() => {
-    const fetchLogo = async () => {
-      if (!API_ROUTES.logo) return;
-      try {
-        const res = await fetch(API_BASE_URL + API_ROUTES.logo);
-        if (!res.ok) throw new Error('API error');
-        const data = await res.json();
-        if (data?.url) setLogoUrl(data.url);
-      } catch (e) {
-        setLogoUrl(DEFAULT_LOGO);
-      }
+    const getLinkClass = ({ isActive }) => {
+      return isActive ? `${styles.navbar__link} ${styles.navbar__link_active}` : styles.navbar__link;
     };
-    fetchLogo();
-  }, []);
 
   return (
-    <nav className={styles.navbar}>
-      <img
-        src={logoUrl}
-        alt="Logo"
-        className={styles.navbar__logo}
-        height={150}
-        style={{
-          background: 'none',
-          filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.25))',
-          border: 'none',
-          display: 'block',
-        }}
-      />
+        <nav className={`${styles.navbar} ${transparent ? styles.transparent : ''}`}>
+            <Link to="/" className={styles.navbar__logo_link}>
+                <img src={DEFAULT_LOGO} alt="Logo" className={styles.navbar__logo} />
+            </Link>
       <ul className={styles.navbar__links}>
-        <li><a className={styles.navbar__link} href="#">Astrophotography</a></li>
-        <li><a className={styles.navbar__link} href="#">Programming</a></li>
-        <li><a className={styles.navbar__link} href="#">Contact</a></li>
+                <li>
+                  <NavLink to="/astrophotography" className={location.pathname === '/astrophotography' ? styles.active : getLinkClass}>
+                    Astrophotography
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/programming" className={location.pathname === '/programming' ? styles.active : getLinkClass}>
+                    Programming
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/contact" className={getLinkClass}>
+                    Contact
+                  </NavLink>
+                </li>
       </ul>
     </nav>
   );
