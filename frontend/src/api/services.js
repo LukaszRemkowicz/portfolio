@@ -37,7 +37,7 @@ export const fetchBackground = async () => {
     return null;
 };
 
-export const fetchAstroImages = async () => {
-    const response = await api.get(API_ROUTES.astroImages);
+export const fetchAstroImages = async (params = {}) => {
+    const response = await api.get(API_ROUTES.astroImages, { params });
     return handleResponse(response);
 }; 

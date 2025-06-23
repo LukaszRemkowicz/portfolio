@@ -1,28 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import styles from './AstroGallery.module.css';
-import { fetchAstroImages } from './api/services';
+import { fetchAstroImages, fetchBackground } from './api/services';
+// import Navbar from './Navbar';
+
+const GALLERY_BG = '/startrails.jpeg'; // fallback static image
+
+const FILTERS = [
+  'Landscape',
+  'Deep Sky',
+  'Startrails',
+  'Solar System',
+  'Milky Way',
+  'Northern Lights',
+];
 
 const AstroGallery = () => {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [background, setBackground] = useState(GALLERY_BG);
+  const [selectedFilter, setSelectedFilter] = useState(null);
+
+  const loadImages = async (filter = null) => {
+    try {
+      setError('');
+      setLoading(true);
+      let params = {};
+      if (filter) {
+        params.filter = filter; // send as-is
+      }
+      const data = await fetchAstroImages(params);
+      setImages(data);
+    } catch (err) {
+      setError('Failed to load images. Please try again later.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadImages = async () => {
+    loadImages(selectedFilter);
+    // eslint-disable-next-line
+  }, [selectedFilter]);
+
+  useEffect(() => {
+    // Try to fetch a background from the backend, fallback to static
+    const loadBackground = async () => {
       try {
-        setError('');
-        setLoading(true);
-        const data = await fetchAstroImages();
-        setImages(data);
-      } catch (err) {
-        setError('Failed to load images. Please try again later.');
-        console.error(err);
-      } finally {
-        setLoading(false);
+        const bg = await fetchBackground();
+        if (bg) setBackground(bg);
+      } catch {
+        setBackground(GALLERY_BG);
       }
     };
-
-    loadImages();
+    loadBackground();
   }, []);
 
   if (loading) return <div className={styles.loading}>Loading...</div>;
@@ -30,7 +62,24 @@ const AstroGallery = () => {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>Astrokrajobraz</h1>
+      {/* <Navbar transparent /> */}
+      <div
+        className={styles.hero}
+        style={{ backgroundImage: `url(${background})` }}
+      >
+        <h1 className={styles.heroTitle}>Gallery</h1>
+      </div>
+      <div className={styles.filtersSection}>
+        {FILTERS.map((filter) => (
+          <div
+            key={filter}
+            className={`${styles.filterBox} ${selectedFilter === filter ? styles.activeFilter : ''}`}
+            onClick={() => setSelectedFilter(selectedFilter === filter ? null : filter)}
+          >
+            {filter}
+          </div>
+        ))}
+      </div>
       <div className={styles.grid}>
         {images.map(image => (
           <div key={image.pk} className={styles.gridItem}>

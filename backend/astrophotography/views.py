@@ -7,9 +7,15 @@ from .serializers import BackgroundMainPageSerializer, AstroImageSerializer
 # Create your views here.
 
 class AstroImageListView(ListAPIView):
-    """View to list all astrophotography images."""
-    queryset = AstroImage.objects.all().order_by('-capture_date')
+    """View to list all astrophotography images, with optional filtering by celestial_object."""
     serializer_class = AstroImageSerializer
+
+    def get_queryset(self):
+        queryset = AstroImage.objects.all().order_by('-capture_date')
+        filter_value = self.request.GET.get('filter')
+        if filter_value:
+            queryset = queryset.filter(celestial_object=filter_value)
+        return queryset
 
 class BackgroundMainPageView(ViewSet):
     def list(self, request):
