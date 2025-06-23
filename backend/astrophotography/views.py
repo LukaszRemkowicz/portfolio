@@ -1,14 +1,14 @@
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from .models import BackgroundMainPage, AstroImage
-from .serializers import BackgroundMainPageSerializer, AstroImageSerializer
+from .serializers import BackgroundMainPageSerializer, AstroImageSerializerList, AstroImageSerializer
 
 # Create your views here.
 
 class AstroImageListView(ListAPIView):
     """View to list all astrophotography images, with optional filtering by celestial_object."""
-    serializer_class = AstroImageSerializer
+    serializer_class = AstroImageSerializerList
 
     def get_queryset(self):
         queryset = AstroImage.objects.all().order_by('-capture_date')
@@ -16,6 +16,10 @@ class AstroImageListView(ListAPIView):
         if filter_value:
             queryset = queryset.filter(celestial_object=filter_value)
         return queryset
+
+class AstroImageDetailView(RetrieveAPIView):
+    queryset = AstroImage.objects.all()
+    serializer_class = AstroImageSerializer
 
 class BackgroundMainPageView(ViewSet):
     def list(self, request):

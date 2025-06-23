@@ -4,9 +4,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.2rem 8rem;
+  padding: 1.2rem 2rem;
   background: transparent;
   color: #fff;
+  box-sizing: border-box;
+  overflow-x: visible;
 }
 
 :local(.navbar__logo) {
@@ -24,13 +26,15 @@
   gap: 2rem;
   margin: 0;
   padding: 0;
+  font-family: 'Montserrat', Arial, sans-serif;
 }
 
 :local(.navbar__link) {
   color: #fff;
   text-decoration: none;
-  font-size: 1rem;
+  font-size: 1.1rem;
   transition: color 0.2s;
+  font-family: 'Montserrat', Arial, sans-serif;
 }
 
 :local(.navbar__link:hover) {
@@ -48,16 +52,17 @@
     flex-direction: column;
     width: 100%;
   }
-}
+} 
 
 .transparent {
   background: transparent !important;
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
+  right: 0;
   z-index: 10;
   color: #fff;
+  box-sizing: border-box;
 }
 
 .transparent a,

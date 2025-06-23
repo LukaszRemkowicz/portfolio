@@ -4,7 +4,8 @@ export const API_BASE_URL = 'https://admin.portfolio.local';
 export const API_ROUTES = {
   profile: '/api/v1/profile/',
   background: '/api/v1/background/',
-  astroImages: '/api/v1/images/',
+  astroImages: '/api/v1/image/',
+  astroImage: '/api/v1/image/:id/',
 };
 
 // Helper function to get full media URL

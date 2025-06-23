@@ -1,4 +1,4 @@
-import { API_ROUTES, API_BASE_URL, getMediaUrl } from './routes';
+import { API_ROUTES, getMediaUrl } from './routes';
 import { api } from './api';
 
 const handleResponse = (response) => {
@@ -39,5 +39,13 @@ export const fetchBackground = async () => {
 
 export const fetchAstroImages = async (params = {}) => {
     const response = await api.get(API_ROUTES.astroImages, { params });
+    return handleResponse(response);
+}; 
+
+
+export const fetchAstroImage = async (id) => {
+    if (!id) throw new Error('id is required');
+    const url = API_ROUTES.astroImage.replace(':id', id);
+    const response = await api.get(url);
     return handleResponse(response);
 }; 

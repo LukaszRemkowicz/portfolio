@@ -11,12 +11,12 @@ const Navbar = ({ transparent }) => {
       return isActive ? `${styles.navbar__link} ${styles.navbar__link_active}` : styles.navbar__link;
     };
 
-    return (
+  return (
         <nav className={`${styles.navbar} ${transparent ? styles.transparent : ''}`}>
             <Link to="/" className={styles.navbar__logo_link}>
                 <img src={DEFAULT_LOGO} alt="Logo" className={styles.navbar__logo} />
             </Link>
-            <ul className={styles.navbar__links}>
+      <ul className={styles.navbar__links}>
                 <li>
                   <NavLink to="/astrophotography" className={location.pathname === '/astrophotography' ? styles.active : getLinkClass}>
                     Astrophotography
@@ -32,9 +32,9 @@ const Navbar = ({ transparent }) => {
                     Contact
                   </NavLink>
                 </li>
-            </ul>
-        </nav>
-    );
+      </ul>
+    </nav>
+  );
 };
 
 export default Navbar; 

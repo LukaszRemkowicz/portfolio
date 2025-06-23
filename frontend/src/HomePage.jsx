@@ -54,7 +54,7 @@ const HomePage = () => {
   return (
       <>
         <div className={styles['hero-viewport']} style={heroViewportStyle}>
-            <Navbar />
+            <Navbar transparent />
             <main className={styles['main-content']}>
                 <Home
                     portraitUrl={portraitUrl}
