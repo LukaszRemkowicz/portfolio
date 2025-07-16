@@ -1,44 +1,51 @@
-import { API_ROUTES, API_BASE_URL, getMediaUrl } from './routes';
+import { API_ROUTES, getMediaUrl } from './routes';
+import { api } from './api';
+
+const handleResponse = (response) => {
+    if (response && response.data) {
+        // The API returns an array for lists and an object for single items.
+        // Both are valid and should be returned.
+        return response.data;
+    }
+    // Handle cases where response or response.data is undefined
+    console.error("Invalid response structure:", response);
+    throw new Error("Invalid response from server.");
+};
 
 export const fetchProfile = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}${API_ROUTES.profile}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch profile');
-    }
-    const data = await response.json();
+    const response = await api.get(API_ROUTES.profile);
+    const data = handleResponse(response);
     
-    // Transform the data to include full URLs for media
-    return {
-      ...data,
-      avatar: data.avatar ? getMediaUrl(data.avatar) : null,
-      about_me_image: data.about_me_image ? getMediaUrl(data.about_me_image) : null,
-      about_me_image2: data.about_me_image2 ? getMediaUrl(data.about_me_image2) : null,
-    };
-  } catch (error) {
-    console.error('Error fetching profile:', error);
-    throw error;
-  }
+    // Transform relative media paths to full URLs
+    if (data) {
+        return {
+            ...data,
+            avatar: data.avatar ? getMediaUrl(data.avatar) : null,
+            about_me_image: data.about_me_image ? getMediaUrl(data.about_me_image) : null,
+            about_me_image2: data.about_me_image2 ? getMediaUrl(data.about_me_image2) : null,
+        };
+    }
+    return data;
 };
 
 export const fetchBackground = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}${API_ROUTES.background}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch background');
-    }
-    const data = await response.json();
-    // If the API returns a list, get the first item
-    if (Array.isArray(data) && data.length > 0) {
-      return data[0].url;
-    }
-    // If the API returns an object with a url field
-    if (data.url) {
-      return data.url;
+    const response = await api.get(API_ROUTES.background);
+    const data = handleResponse(response);
+    if (data && data.url) {
+        return data.url;
     }
     return null;
-  } catch (error) {
-    console.error('Error fetching background:', error);
-    return null;
-  }
+};
+
+export const fetchAstroImages = async (params = {}) => {
+    const response = await api.get(API_ROUTES.astroImages, { params });
+    return handleResponse(response);
+}; 
+
+
+export const fetchAstroImage = async (id) => {
+    if (!id) throw new Error('id is required');
+    const url = API_ROUTES.astroImage.replace(':id', id);
+    const response = await api.get(url);
+    return handleResponse(response);
 }; 
