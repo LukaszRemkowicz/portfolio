@@ -39,6 +39,7 @@ def debug_serve_media(request: HttpRequest, path: str, document_root: str) -> Fi
 urlpatterns = [
     path('api/v1/', include('users.urls')),
     path('api/v1/', include('astrophotography.urls')),
+    path('api/v1/', include('inbox.urls')),
 ]
 
 # Add admin URLs and media serving if we're on admin subdomain
