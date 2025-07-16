@@ -5,6 +5,7 @@ import Contact from './Contact';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import Gallery from './Gallery';
+import PrelectionsAndCourses from './PrelectionsAndCourses';
 import styles from './App.module.css';
 import { fetchProfile, fetchBackground } from './api/services';
 
@@ -66,6 +67,7 @@ const HomePage = () => {
             <Gallery />
         </div>
         <About />
+        <PrelectionsAndCourses />
         <Contact />
         <Footer />
       </>
