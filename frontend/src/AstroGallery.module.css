@@ -51,7 +51,7 @@
 }
 
 .hero {
-  width: 100%;
+  width: 100vw;
   height: 33vh;
   min-height: 250px;
   background-size: cover;

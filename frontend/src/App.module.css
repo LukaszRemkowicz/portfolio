@@ -13,6 +13,15 @@
 .app-container {
   color: var(--color-text);
   font-family: 'Montserrat', Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
 }
 
 .hero-viewport {

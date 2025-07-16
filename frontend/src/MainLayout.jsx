@@ -7,9 +7,10 @@ import { useLocation } from 'react-router-dom';
 const MainLayout = ({ children }) => {
   const location = useLocation();
   const isAstroGallery = location.pathname === '/astrophotography';
+  const isProgramming = location.pathname === '/programming';
   return (
-    <div className={styles['app-container']} style={{ backgroundColor: '#181c2b' }}>
-      <Navbar transparent={isAstroGallery} />
+    <div className={styles['app-container']} style={{ backgroundColor: isProgramming ? '#000' : '#181c2b' }}>
+      <Navbar transparent={isAstroGallery || isProgramming} programmingBg={isProgramming} />
       <main>{children}</main>
       <Footer />
     </div>
