@@ -48,4 +48,11 @@ export const fetchAstroImage = async (id) => {
     const url = API_ROUTES.astroImage.replace(':id', id);
     const response = await api.get(url);
     return handleResponse(response);
+};
+
+export const fetchContact = async (contactData) => {
+    if (!contactData) throw new Error('contactData is required');
+    
+    const response = await api.post(API_ROUTES.contact, contactData);
+    return handleResponse(response);
 }; 

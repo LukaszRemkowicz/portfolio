@@ -1,0 +1,160 @@
+/* landingpage/src/Contact.module.css */
+
+.contactContainer {
+  background-color: var(--color-bg2);
+  padding: 4rem 0;
+  color: var(--color-text);
+}
+
+.contactContent {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 1rem;
+  color: var(--color-text);
+  font-family: 'Montserrat', Arial, sans-serif;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  text-align: center;
+  margin-bottom: 3rem;
+  color: var(--color-subtext);
+  font-family: 'Montserrat', Arial, sans-serif;
+}
+
+.contactForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  font-family: 'Montserrat', Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.input,
+.textarea {
+  padding: 0.75rem;
+  border: 2px solid #3a3f5c;
+  border-radius: 4px;
+  background-color: var(--color-bg1);
+  color: var(--color-text);
+  font-family: 'Montserrat', Arial, sans-serif;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(255, 184, 0, 0.1);
+}
+
+.inputError,
+.textarea.inputError {
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.1);
+}
+
+.errorText {
+  color: #f87171;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.submitButton {
+  background-color: var(--color-accent);
+  color: var(--color-bg1);
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: 'Montserrat', Arial, sans-serif;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 1rem;
+}
+
+.submitButton:hover:not(:disabled) {
+  background-color: #e6a600;
+  transform: translateY(-1px);
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.successMessage {
+  color: #4ade80;
+  text-align: center;
+  font-weight: 600;
+  padding: 1rem;
+  background-color: rgba(74, 222, 128, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.errorMessage {
+  color: #f87171;
+  text-align: center;
+  font-weight: 600;
+  padding: 1rem;
+  background-color: rgba(248, 113, 113, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .contactContent {
+    padding: 0 1rem;
+  }
+  
+  .title {
+    font-size: 2rem;
+  }
+  
+  .formRow {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .submitButton {
+    padding: 0.875rem 1.5rem;
+  }
+} 
