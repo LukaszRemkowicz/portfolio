@@ -10,6 +10,15 @@ A modern, API-driven personal portfolio web app with subpages for Astrophotograp
 - Docker Compose for full-stack local development
 - nginx for HTTPS, static/media file serving, and domain routing
 
+## TODO
+- [x] Navbar
+- [x] About me page
+- [x] Gallery page
+- [ ] Courses
+- [x] Contact form
+- [ ] CI/CD
+- [ ] Tests
+
 ## Quick Start
 
 ### 1. Clone the repository
