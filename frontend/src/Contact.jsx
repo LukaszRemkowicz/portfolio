@@ -55,7 +55,7 @@ const Contact = () => {
   };
 
   return (
-    <section className={styles.contactContainer}>
+    <section id="contact" className={styles.contactContainer}>
       <div className={styles.contactContent}>
         <h2 className={styles.title}>Get in Touch</h2>
         <p className={styles.subtitle}>
