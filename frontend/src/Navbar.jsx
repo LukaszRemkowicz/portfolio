@@ -4,15 +4,25 @@ import styles from './Navbar.module.css';
 
 const DEFAULT_LOGO = '/logo.png';
 
-const Navbar = ({ transparent }) => {
+const Navbar = ({ transparent, programmingBg }) => {
     const location = useLocation();
 
     const getLinkClass = ({ isActive }) => {
       return isActive ? `${styles.navbar__link} ${styles.navbar__link_active}` : styles.navbar__link;
     };
 
+    const navbarStyle = transparent && programmingBg
+      ? {
+          backgroundImage: `url('/underconstruction.jpg')`,
+          backgroundSize: 'contain',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+        }
+      : {};
+
   return (
-        <nav className={`${styles.navbar} ${transparent ? styles.transparent : ''}`}>
+        <nav className={`${styles.navbar} ${transparent ? styles.transparent : ''}`}
+             style={navbarStyle}>
             <Link to="/" className={styles.navbar__logo_link}>
                 <img src={DEFAULT_LOGO} alt="Logo" className={styles.navbar__logo} />
             </Link>
