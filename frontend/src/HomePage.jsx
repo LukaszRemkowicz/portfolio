@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Home from './Home';
 import About from './About';
+import Contact from './Contact';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import Gallery from './Gallery';
@@ -65,6 +66,7 @@ const HomePage = () => {
             <Gallery />
         </div>
         <About />
+        <Contact />
         <Footer />
       </>
   );

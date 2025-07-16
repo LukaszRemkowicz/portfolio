@@ -33,6 +33,8 @@ services:
       - ./backend:/app
     ports:
       - "8000:8000"
+    environment:
+      DOCKER_ENV: true
     depends_on:
       - db
 
