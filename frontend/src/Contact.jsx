@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { fetchContact } from './api/services';
-import styles from './Contact.module.css';
+import styles from './styles/components/Contact.module.css';
 
 const Contact = () => {
   const [formData, setFormData] = useState({

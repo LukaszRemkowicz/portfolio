@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './PrelectionsAndCourses.module.css';
+import styles from './styles/components/PrelectionsAndCourses.module.css';
 
 const PrelectionsAndCourses = () => {
   return (
