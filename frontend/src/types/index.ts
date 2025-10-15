@@ -101,6 +101,31 @@ export interface FilterParams {
 
 export type FilterType = 'Landscape' | 'Deep Sky' | 'Startrails' | 'Solar System' | 'Milky Way' | 'Northern Lights';
 
+// API Types
+export interface ApiResponse<T = any> {
+  data: T;
+  status: number;
+  statusText: string;
+}
+
+export interface ApiError {
+  response?: {
+    data?: {
+      errors?: ValidationErrors;
+      message?: string;
+    };
+  };
+  message: string;
+}
+
+export interface ApiRoutes {
+  profile: string;
+  background: string;
+  astroImages: string;
+  astroImage: string;
+  contact: string;
+}
+
 // CSS Module Types
 declare module '*.module.css' {
   const classes: { [key: string]: string };
