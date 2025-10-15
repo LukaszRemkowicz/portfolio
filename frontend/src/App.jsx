@@ -4,7 +4,7 @@ import HomePage from './HomePage';
 import AstroGallery from './AstroGallery';
 import Programming from './Programming';
 import MainLayout from './MainLayout';
-import './App.module.css';
+import './styles/components/App.module.css';
 
 const App = () => {
   return (

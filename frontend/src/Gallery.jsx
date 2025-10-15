@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import styles from './Gallery.module.css';
+import styles from './styles/components/Gallery.module.css';
 import { galleryItems } from './data/galleryItems';
 
 const Gallery = () => {

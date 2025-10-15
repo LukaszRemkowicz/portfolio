@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import styles from './AstroGallery.module.css';
+import styles from './styles/components/AstroGallery.module.css';
 import { fetchAstroImages, fetchBackground, fetchAstroImage } from './api/services';
 import { API_BASE_URL } from './api/routes';
 // import Navbar from './Navbar';

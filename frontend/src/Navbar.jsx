@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import styles from './Navbar.module.css';
+import styles from './styles/components/Navbar.module.css';
 
 const DEFAULT_LOGO = '/logo.png';
 

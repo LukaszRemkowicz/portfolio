@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './App.module.css';
+import styles from './styles/components/App.module.css';
 
 const Home = ({ portraitUrl, firstName, lastName }) => {
   return (
