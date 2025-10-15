@@ -1,45 +1,45 @@
 import React, { useState } from 'react';
 import { fetchContact } from './api/services';
-import styles from './Contact.module.css';
+import styles from './styles/components/Contact.module.css';
+import { ContactFormData, ValidationErrors, SubmitStatus } from './types';
 
-const Contact = () => {
-  const [formData, setFormData] = useState({
+const Contact: React.FC = () => {
+  const [formData, setFormData] = useState<ContactFormData>({
     name: '',
     email: '',
     subject: '',
     message: ''
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState(null);
-  const [validationErrors, setValidationErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
     // Clear validation error for this field when user starts typing
-    if (validationErrors[name]) {
+    if (validationErrors[name as keyof ValidationErrors]) {
       setValidationErrors(prev => ({
         ...prev,
-        [name]: null
+        [name]: undefined
       }));
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus(null);
     setValidationErrors({});
 
     try {
-      const data = await fetchContact(formData);
-      
+      await fetchContact(formData);
       setSubmitStatus('success');
       setFormData({ name: '', email: '', subject: '', message: '' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to send message:', error);
       
       // Handle validation errors from backend
@@ -120,7 +120,7 @@ const Contact = () => {
               value={formData.message}
               onChange={handleChange}
               className={`${styles.textarea} ${validationErrors.message ? styles.inputError : ''}`}
-              rows="5"
+              rows={5}
               required
             />
             {validationErrors.message && (
@@ -159,4 +159,4 @@ const Contact = () => {
   );
 };
 
-export default Contact; 
+export default Contact;

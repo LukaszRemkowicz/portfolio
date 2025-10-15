@@ -1,8 +1,8 @@
 module.exports = {
   // setupFilesAfterEnv removed - each test file imports jest-dom directly
   testMatch: [
-    '<rootDir>/src/__tests__/**/*.test.{js,jsx}',
-    '<rootDir>/src/**/*.test.{js,jsx}'
+    '<rootDir>/src/__tests__/**/*.test.{js,jsx,ts,tsx}',
+    '<rootDir>/src/**/*.test.{js,jsx,ts,tsx}'
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
@@ -14,8 +14,11 @@ module.exports = {
   },
   testEnvironment: 'jsdom',
   collectCoverageFrom: [
-    'src/**/*.{js,jsx}',
+    'src/**/*.{js,jsx,ts,tsx}',
     '!src/__tests__/**',
-    '!src/index.jsx'
-  ]
+    '!src/index.{js,jsx,ts,tsx}'
+  ],
+  transform: {
+    '^.+\\.(ts|tsx)$': ['babel-jest', { presets: ['@babel/preset-typescript'] }]
+  }
 }; 

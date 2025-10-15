@@ -1,7 +1,7 @@
 import React from 'react';
-import styles from './PrelectionsAndCourses.module.css';
+import styles from './styles/components/PrelectionsAndCourses.module.css';
 
-const PrelectionsAndCourses = () => {
+const PrelectionsAndCourses: React.FC = () => {
   return (
     <section className={styles.prelectionsAndCourses}>
       <div className={styles.container}>
@@ -14,4 +14,4 @@ const PrelectionsAndCourses = () => {
   );
 };
 
-export default PrelectionsAndCourses; 
+export default PrelectionsAndCourses;

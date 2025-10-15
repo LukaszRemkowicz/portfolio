@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import Navbar from '../Navbar';
+import { ReactElement } from 'react';
 
 /**
  * Helper function to render components with React Router context
@@ -10,7 +11,7 @@ import Navbar from '../Navbar';
  * The Navbar component uses React Router's Link components,
  * so it needs to be wrapped in a Router context for testing.
  */
-const renderWithRouter = (component) => {
+const renderWithRouter = (component: ReactElement) => {
   return render(
     <BrowserRouter>
       {component}
@@ -28,21 +29,22 @@ const renderWithRouter = (component) => {
  * - Responsive design and hover effects
  * 
  * Tests verify:
- * - All navigation elements render correctly
- * - Logo is displayed with proper alt text
- * - Navigation links are present and accessible
- * - Transparent styling prop works correctly
- * - Component integrates properly with React Router
+ * - Logo and navigation links are rendered correctly
+ * - Transparent styling is applied when specified
+ * - Navigation links have proper href attributes
+ * - Component renders without errors in Router context
+ * - Styling classes are applied conditionally
  */
 describe('Navbar Component', () => {
   /**
    * Test: Renders logo and navigation links
    * 
    * Verifies that:
-   * - Logo image is displayed with proper alt text
-   * - All navigation links are rendered (Astrophotography, Programming, Contact)
-   * - Navigation elements are accessible and clickable
-   * - Component renders without errors in router context
+   * - Logo image is displayed with correct alt text
+   * - All navigation links are present (Astrophotography, Programming, Contact)
+   * - Links have proper text content
+   * - Component renders without errors
+   * - Navigation structure is complete
    */
   it('renders logo and navigation links', () => {
     renderWithRouter(<Navbar />);
@@ -57,27 +59,31 @@ describe('Navbar Component', () => {
    * Test: Applies transparent class when transparent prop is true
    * 
    * Verifies that:
-   * - Component accepts transparent prop
-   * - When transparent=true, component gets 'transparent' CSS class
-   * - Transparent styling is applied correctly
-   * - Component can be used as overlay on hero sections
+   * - Transparent styling is applied when transparent prop is true
+   * - Navbar has the correct CSS class for transparent styling
+   * - Component handles conditional styling properly
+   * - Transparent mode doesn't break navigation functionality
    */
   it('applies transparent class when transparent prop is true', () => {
-    const { container } = renderWithRouter(<Navbar transparent />);
-    expect(container.firstChild).toHaveClass('transparent');
+    renderWithRouter(<Navbar transparent={true} />);
+    
+    const navbar = screen.getByRole('navigation');
+    expect(navbar).toHaveClass('transparent');
   });
 
   /**
    * Test: Does not apply transparent class when transparent prop is false
    * 
    * Verifies that:
-   * - Default behavior when transparent prop is not provided
-   * - Component doesn't get 'transparent' class by default
-   * - Normal navbar styling is applied
-   * - Prop handling works correctly for both true/false states
+   * - Transparent styling is not applied when transparent prop is false
+   * - Navbar has normal styling without transparent class
+   * - Component handles false/undefined transparent prop correctly
+   * - Default styling is preserved when not in transparent mode
    */
   it('does not apply transparent class when transparent prop is false', () => {
-    const { container } = renderWithRouter(<Navbar />);
-    expect(container.firstChild).not.toHaveClass('transparent');
+    renderWithRouter(<Navbar transparent={false} />);
+    
+    const navbar = screen.getByRole('navigation');
+    expect(navbar).not.toHaveClass('transparent');
   });
 });
