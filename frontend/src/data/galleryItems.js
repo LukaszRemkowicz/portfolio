@@ -1,10 +1,10 @@
 export const galleryItems = [
   {
-    title: 'ASTRO\\nPHOTOGRAPHY',
+    title: 'ASTROPHOTOGRAPHY',
     imageUrl: '/startrails.jpeg',
   },
   {
-    title: 'LANDSCAPE\\nPHOTOGRAPHY',
+    title: 'LANDSCAPE PHOTOGRAPHY',
     imageUrl: '/landscape.png',
   },
   {
