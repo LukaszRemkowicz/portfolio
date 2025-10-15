@@ -29,6 +29,7 @@ export interface AstroImage {
 export interface ContactFormData {
   name: string;
   email: string;
+  subject: string;
   message: string;
 }
 
@@ -36,6 +37,15 @@ export interface ContactResponse {
   success: boolean;
   message: string;
 }
+
+export interface ValidationErrors {
+  name?: string[];
+  email?: string[];
+  subject?: string[];
+  message?: string[];
+}
+
+export type SubmitStatus = 'success' | 'validation_error' | 'error' | null;
 
 // Component Props Types
 export interface HomeProps {
@@ -72,6 +82,24 @@ export interface GalleryItem {
   title: string;
   imageUrl: string;
 }
+
+// AstroGallery types
+export interface AstroGalleryState {
+  images: AstroImage[];
+  loading: boolean;
+  error: string;
+  background: string;
+  selectedFilter: string | null;
+  modalImage: AstroImage | null;
+  modalDescription: string;
+  modalDescriptionLoading: boolean;
+}
+
+export interface FilterParams {
+  filter?: string;
+}
+
+export type FilterType = 'Landscape' | 'Deep Sky' | 'Startrails' | 'Solar System' | 'Milky Way' | 'Northern Lights';
 
 // CSS Module Types
 declare module '*.module.css' {

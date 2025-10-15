@@ -2,7 +2,7 @@ import React from 'react';
 
 const BG_IMAGE = '/underconstruction.jpg';
 
-const containerStyle = {
+const containerStyle: React.CSSProperties = {
   flex: 1,
   width: '100%',
   height: 'calc(100vh - 50px)', // Adjust 100px if your navbar is taller/shorter
@@ -20,7 +20,7 @@ const containerStyle = {
   overflow: 'hidden',
 };
 
-const overlayStyle = {
+const overlayStyle: React.CSSProperties = {
   position: 'absolute',
   top: 0,
   left: 0,
@@ -30,7 +30,7 @@ const overlayStyle = {
   zIndex: 1,
 };
 
-const textStyle = {
+const textStyle: React.CSSProperties = {
   fontSize: '1.5rem',
   fontWeight: 600,
   textAlign: 'center',
@@ -39,7 +39,7 @@ const textStyle = {
   zIndex: 2,
 };
 
-const Programming = () => (
+const Programming: React.FC = () => (
   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
     <div style={containerStyle}>
       <div style={overlayStyle}></div>
@@ -52,4 +52,4 @@ const Programming = () => (
   </div>
 );
 
-export default Programming; 
+export default Programming;
