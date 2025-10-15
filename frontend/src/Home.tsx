@@ -1,7 +1,8 @@
 import React from 'react';
 import styles from './styles/components/App.module.css';
+import { HomeProps } from './types';
 
-const Home = ({ portraitUrl, firstName, lastName }) => {
+const Home: React.FC<HomeProps> = ({ portraitUrl, firstName, lastName }) => {
   return (
     <>
       <section className={styles.hero}>
@@ -24,4 +25,4 @@ const Home = ({ portraitUrl, firstName, lastName }) => {
   );
 };
 
-export default Home; 
+export default Home;

@@ -49,6 +49,10 @@ export interface NavbarProps {
   programmingBg?: boolean;
 }
 
+export interface NavLinkClassProps {
+  isActive: boolean;
+}
+
 export interface MainLayoutProps {
   children: React.ReactNode;
 }

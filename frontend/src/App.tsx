@@ -6,7 +6,7 @@ import Programming from './Programming';
 import MainLayout from './MainLayout';
 import './styles/components/App.module.css';
 
-const App = () => {
+const App: React.FC = () => {
   return (
     <Router>
       <Routes>
