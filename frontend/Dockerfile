@@ -15,6 +15,11 @@ FROM base AS build
 COPY . .
 RUN npm run build
 
+# --- Test image ---
+FROM base AS test
+COPY . .
+CMD ["npm", "test", "--", "--passWithNoTests"]
+
 # --- Production runtime ---
 FROM node:20-alpine AS prod
 WORKDIR /app

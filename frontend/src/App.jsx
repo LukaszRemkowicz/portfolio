@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import React, { useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -7,6 +8,15 @@ import styles from './App.module.css';
 import { fetchBackground, fetchProfile } from './api/services';
 
 const DEFAULT_PORTRAIT = '/portrait.jpeg';
+=======
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import HomePage from './HomePage';
+import AstroGallery from './AstroGallery';
+import Programming from './Programming';
+import MainLayout from './MainLayout';
+import './styles/components/App.module.css';
+>>>>>>> Stashed changes
 
 const App = () => {
   const [portraitUrl, setPortraitUrl] = useState(DEFAULT_PORTRAIT);

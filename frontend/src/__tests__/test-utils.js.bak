@@ -1,0 +1,19 @@
+import React from 'react';
+import { render } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+
+// Helper function to render components with common providers
+export const renderWithProviders = (ui, options = {}) => {
+  const AllTheProviders = ({ children }) => {
+    return (
+      <BrowserRouter>
+        {children}
+      </BrowserRouter>
+    );
+  };
+
+  return render(ui, { wrapper: AllTheProviders, ...options });
+};
+
+// Re-export everything
+export * from '@testing-library/react';

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchProfile } from './api/services';
-import styles from './About.module.css';
+import styles from './styles/components/About.module.css';
 
 const About = () => {
   const [profile, setProfile] = useState(null);

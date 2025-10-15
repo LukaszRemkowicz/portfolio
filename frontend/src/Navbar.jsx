@@ -1,6 +1,12 @@
+<<<<<<< Updated upstream
 import React, { useEffect, useState } from 'react';
 import styles from './Navbar.module.css';
 import { API_BASE_URL, API_ROUTES } from './api/routes';
+=======
+import React from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import styles from './styles/components/Navbar.module.css';
+>>>>>>> Stashed changes
 
 const DEFAULT_LOGO = '/logo.png';
 
