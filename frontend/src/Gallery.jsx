@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './Gallery.module.css';
+import styles from './styles/components/Gallery.module.css';
 import { galleryItems } from './data/galleryItems';
 
 const Gallery = () => {

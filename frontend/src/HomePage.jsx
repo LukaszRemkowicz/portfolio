@@ -4,10 +4,10 @@ import About from './About';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import Gallery from './Gallery';
-import styles from './App.module.css';
-import { fetchProfile, fetchBackground } from './api/services';
 
-const DEFAULT_PORTRAIT = '/portrait.jpeg';
+import styles from './styles/components/App.module.css';
+import { fetchProfile, fetchBackground } from './api/services';
+const DEFAULT_PORTRAIT = '/portrait_default.png';
 
 const HomePage = () => {
   const [portraitUrl, setPortraitUrl] = useState(DEFAULT_PORTRAIT);

@@ -136,3 +136,5 @@ jspm_packages/
 nginx/ssl/certs/
 nginx/logs/
 .cursor/rules/
+
+local.py

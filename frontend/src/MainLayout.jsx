@@ -1,7 +1,7 @@
 import React from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
-import styles from './App.module.css';
+import styles from './styles/components/App.module.css';
 import { useLocation } from 'react-router-dom';
 
 const MainLayout = ({ children }) => {
