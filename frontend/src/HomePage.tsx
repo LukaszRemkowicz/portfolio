@@ -8,28 +8,30 @@ import Gallery from './Gallery';
 import PrelectionsAndCourses from './PrelectionsAndCourses';
 import styles from './styles/components/App.module.css';
 import { fetchProfile, fetchBackground } from './api/services';
+import { UserProfile, BackgroundImage } from './types';
+
 const DEFAULT_PORTRAIT = '/portrait_default.png';
 
-const HomePage = () => {
-  const [portraitUrl, setPortraitUrl] = useState(DEFAULT_PORTRAIT);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [backgroundUrl, setBackgroundUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const HomePage: React.FC = () => {
+  const [portraitUrl, setPortraitUrl] = useState<string>(DEFAULT_PORTRAIT);
+  const [firstName, setFirstName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
+  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadData = async (): Promise<void> => {
       setLoading(true);
       try {
-        const profile = await fetchProfile();
+        const profile: UserProfile = await fetchProfile();
         if (profile.avatar) setPortraitUrl(profile.avatar);
         setFirstName(profile.first_name || '');
         setLastName(profile.last_name || '');
 
-        const background = await fetchBackground();
+        const background: string = await fetchBackground();
         setBackgroundUrl(background);
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('Failed to load initial data:', e);
         setError('Failed to load page content. Please try again later.');
         setPortraitUrl(DEFAULT_PORTRAIT);
@@ -40,7 +42,7 @@ const HomePage = () => {
     loadData();
   }, []);
 
-  const heroViewportStyle = backgroundUrl
+  const heroViewportStyle: React.CSSProperties = backgroundUrl
     ? {
         backgroundImage: `url(${backgroundUrl})`,
         backgroundSize: 'cover',
@@ -53,24 +55,24 @@ const HomePage = () => {
   if (error) return <div className={styles['error-message']}>{error}</div>;
 
   return (
-      <>
-        <div className={styles['hero-viewport']} style={heroViewportStyle}>
-            <Navbar transparent />
-            <main className={styles['main-content']}>
-                <Home
-                    portraitUrl={portraitUrl}
-                    firstName={firstName}
-                    lastName={lastName}
-                />
-            </main>
-            <Gallery />
-        </div>
-        <About />
-        <PrelectionsAndCourses />
-        <Contact />
-        <Footer />
-      </>
+    <>
+      <div className={styles['hero-viewport']} style={heroViewportStyle}>
+        <Navbar transparent />
+        <main className={styles['main-content']}>
+          <Home
+            portraitUrl={portraitUrl}
+            firstName={firstName}
+            lastName={lastName}
+          />
+        </main>
+        <Gallery />
+      </div>
+      <About />
+      <PrelectionsAndCourses />
+      <Contact />
+      <Footer />
+    </>
   );
 };
 
-export default HomePage; 
+export default HomePage;

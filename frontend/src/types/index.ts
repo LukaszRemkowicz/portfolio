@@ -57,6 +57,16 @@ export interface MainLayoutProps {
   children: React.ReactNode;
 }
 
+// HomePage state types
+export interface HomePageState {
+  portraitUrl: string;
+  firstName: string;
+  lastName: string;
+  backgroundUrl: string | null;
+  loading: boolean;
+  error: string | null;
+}
+
 export interface GalleryItem {
   id: number;
   title: string;

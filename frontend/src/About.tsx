@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { fetchProfile } from './api/services';
 import styles from './styles/components/About.module.css';
+import { UserProfile } from './types';
 
-const About = () => {
-  const [profile, setProfile] = useState(null);
+const About: React.FC = () => {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    const loadProfile = async () => {
+    const loadProfile = async (): Promise<void> => {
       try {
-        const profileData = await fetchProfile();
+        const profileData: UserProfile = await fetchProfile();
         setProfile(profileData);
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('Failed to load profile for About section:', e);
       }
     };
@@ -25,11 +26,13 @@ const About = () => {
     <section className={styles.aboutContainer}>
       <div className={styles.aboutContent}>
         <div className={styles.imageWrapper}>
-          {profile.about_me_image && <img src={profile.about_me_image} alt="About me" className={styles.aboutImage} />}
+          {profile.about_me_image && (
+            <img src={profile.about_me_image} alt="About me" className={styles.aboutImage} />
+          )}
         </div>
         <div className={styles.textWrapper}>
           <h2 className={styles.title}>About me</h2>
-          {profile.bio.split('\n').map((paragraph, index) => (
+          {profile.bio?.split('\n').map((paragraph: string, index: number) => (
             <p key={index} className={index === 0 ? styles.subtitle : ''}>
               {paragraph}
             </p>
@@ -40,4 +43,4 @@ const About = () => {
   );
 };
 
-export default About; 
+export default About;
