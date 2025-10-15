@@ -39,7 +39,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
         <li>
           <NavLink 
             to="/astrophotography" 
-            className={location.pathname === '/astrophotography' ? styles.active : getLinkClass}
+            className={location.pathname === '/astrophotography' ? styles.active : getLinkClass({ isActive: location.pathname === '/astrophotography' })}
           >
             Astrophotography
           </NavLink>
@@ -47,7 +47,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
         <li>
           <NavLink 
             to="/programming" 
-            className={location.pathname === '/programming' ? styles.active : getLinkClass}
+            className={location.pathname === '/programming' ? styles.active : getLinkClass({ isActive: location.pathname === '/programming' })}
           >
             Programming
           </NavLink>

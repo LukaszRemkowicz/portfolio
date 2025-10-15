@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import Gallery from '../Gallery';
 
@@ -35,10 +36,14 @@ describe('Gallery Component', () => {
    * - No API calls are needed for this component
    */
   it('renders gallery items from static data', () => {
-    render(<Gallery />);
+    render(
+      <BrowserRouter>
+        <Gallery />
+      </BrowserRouter>
+    );
     
-    expect(screen.getByText('ASTRO\\nPHOTOGRAPHY')).toBeInTheDocument();
-    expect(screen.getByText('LANDSCAPE\\nPHOTOGRAPHY')).toBeInTheDocument();
+    expect(screen.getByText('ASTROPHOTOGRAPHY')).toBeInTheDocument();
+    expect(screen.getByText('LANDSCAPE PHOTOGRAPHY')).toBeInTheDocument();
     expect(screen.getByText('PROGRAMMING')).toBeInTheDocument();
   });
 
@@ -53,7 +58,11 @@ describe('Gallery Component', () => {
    * - Gallery structure is consistent and complete
    */
   it('renders correct number of gallery items', () => {
-    render(<Gallery />);
+    render(
+      <BrowserRouter>
+        <Gallery />
+      </BrowserRouter>
+    );
     
     // Gallery items use background images, so we check for gallery item containers by text content
     const galleryContainers = screen.getAllByText(/PHOTOGRAPHY|PROGRAMMING/);
