@@ -38,9 +38,19 @@ const Navbar = ({ transparent, programmingBg }) => {
                   </NavLink>
                 </li>
                 <li>
-                  <NavLink to="/contact" className={getLinkClass}>
+                  <a 
+                    href="#contact" 
+                    className={getLinkClass}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const contactSection = document.getElementById('contact');
+                      if (contactSection) {
+                        contactSection.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                  >
                     Contact
-                  </NavLink>
+                  </a>
                 </li>
       </ul>
     </nav>

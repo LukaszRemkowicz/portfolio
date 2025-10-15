@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import Home from './Home';
 import About from './About';
+import Contact from './Contact';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import Gallery from './Gallery';
-
+import PrelectionsAndCourses from './PrelectionsAndCourses';
 import styles from './styles/components/App.module.css';
 import { fetchProfile, fetchBackground } from './api/services';
 const DEFAULT_PORTRAIT = '/portrait_default.png';
@@ -65,6 +66,8 @@ const HomePage = () => {
             <Gallery />
         </div>
         <About />
+        <PrelectionsAndCourses />
+        <Contact />
         <Footer />
       </>
   );

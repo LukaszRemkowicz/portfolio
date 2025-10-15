@@ -6,6 +6,7 @@ export const API_ROUTES = {
   background: '/api/v1/background/',
   astroImages: '/api/v1/image/',
   astroImage: '/api/v1/image/:id/',
+  contact: '/api/v1/contact/',
 };
 
 // Helper function to get full media URL

@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     # Local apps
     'astrophotography.apps.AstrophotographyConfig',
     'programming.apps.ProgrammingConfig',
+    "inbox.apps.InboxConfig",
 ]
 
 MIDDLEWARE = [
@@ -182,3 +183,9 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
 }
+
+# Import local settings if available (for local development)
+try:
+    from .local import *
+except ImportError:
+    pass
