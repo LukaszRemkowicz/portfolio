@@ -4,62 +4,57 @@ This file documents the required GitHub secrets for the CI/CD pipeline.
 
 ## Required Secrets
 
-### Docker Hub
-- `DOCKER_USERNAME` - Your Docker Hub username
-- `DOCKER_PASSWORD` - Your Docker Hub access token (not password)
+### None Required! 🎉
+The current CI/CD pipeline uses only `GITHUB_TOKEN` which is automatically provided by GitHub.
 
-### Production Deployment
-- `PROD_HOST` - Production server hostname/IP
-- `PROD_USERNAME` - SSH username for production server
-- `PROD_SSH_KEY` - Private SSH key for production server access
+## Optional Secrets
+
+### Codecov (for code coverage reporting)
+- `CODECOV_TOKEN` - Your Codecov token for coverage reporting
 
 ## Setup Instructions
 
-### 1. Docker Hub Secrets
+### 1. Codecov Token (Optional)
 ```bash
 # Go to GitHub repository settings > Secrets and variables > Actions
-# Add these secrets:
-DOCKER_USERNAME=your-dockerhub-username
-DOCKER_PASSWORD=your-dockerhub-access-token
+# Add this secret if you want code coverage reporting:
+CODECOV_TOKEN=your-codecov-token
+
+# To get Codecov token:
+# 1. Go to https://codecov.io
+# 2. Sign in with GitHub
+# 3. Select your repository
+# 4. Copy the token from Settings > General
 ```
 
-### 2. Production Server Secrets
-```bash
-# Add these secrets for deployment:
-PROD_HOST=your-production-server.com
-PROD_USERNAME=deploy
-PROD_SSH_KEY=your-private-ssh-key
-```
+## Current CI/CD Workflow
 
-### 3. Generate Docker Hub Access Token
-1. Go to Docker Hub > Account Settings > Security
-2. Create a new access token
-3. Use this token as `DOCKER_PASSWORD` (not your login password)
+### What's Included:
+- ✅ **Pre-commit hooks** - No secrets needed
+- ✅ **PR checks** - No secrets needed
+- ✅ **CodeQL security** - No secrets needed
+- ✅ **Frontend tests** - No secrets needed
+- ✅ **Backend tests** - No secrets needed
+- ✅ **Docker build & test** - No secrets needed
 
-### 4. Generate SSH Key for Production
-```bash
-# Generate SSH key pair
-ssh-keygen -t ed25519 -C "github-actions-deploy"
-
-# Add public key to production server
-ssh-copy-id -i ~/.ssh/id_ed25519.pub user@production-server
-
-# Use private key content as PROD_SSH_KEY secret
-cat ~/.ssh/id_ed25519
-```
+### What's NOT Included:
+- ❌ **Docker Hub push** - Removed (was using public images)
+- ❌ **Production deployment** - Uses `deploy.sh` script instead
+- ❌ **Release automation** - Removed (unnecessary for portfolio)
 
 ## Security Notes
 
 - Never commit secrets to the repository
-- Use environment-specific secrets
-- Rotate secrets regularly
-- Use least-privilege access for production secrets
-- Consider using GitHub Environments for production secrets
+- Current pipeline is secure without additional secrets
+- `GITHUB_TOKEN` is automatically provided and scoped
+- All workflows run in isolated environments
 
-## Optional: GitHub Environments
+## Deployment
 
-For better security, create GitHub Environments:
-1. Go to repository settings > Environments
-2. Create `production` environment
-3. Add production secrets to the environment
-4. Require manual approval for production deployments
+For production deployment, use the provided `deploy.sh` script:
+```bash
+# On your production server:
+./scripts/deploy.sh
+```
+
+No GitHub secrets needed for deployment!
