@@ -37,7 +37,7 @@ class Migration(migrations.Migration):
                     "astrobin_url",
                     models.URLField(
                         blank=True,
-                        help_text="Link to this image on Astrobin (e.g., https://www.astrobin.com/XXXXX/)",
+                        help_text="Link to this image on Astrobin (e.g., https://www.astrobin.com/XXXXX/)",  # noqa: E501
                     ),
                 ),
             ],
