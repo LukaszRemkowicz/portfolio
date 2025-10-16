@@ -7,8 +7,6 @@ import {
   AstroImage,
   ContactFormData,
   FilterParams,
-  ApiResponse,
-  ApiError,
 } from '../types';
 
 const handleResponse = <T>(response: AxiosResponse<T>): T => {
