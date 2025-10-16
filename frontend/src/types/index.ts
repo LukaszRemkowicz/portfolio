@@ -99,7 +99,13 @@ export interface FilterParams {
   filter?: string;
 }
 
-export type FilterType = 'Landscape' | 'Deep Sky' | 'Startrails' | 'Solar System' | 'Milky Way' | 'Northern Lights';
+export type FilterType =
+  | 'Landscape'
+  | 'Deep Sky'
+  | 'Startrails'
+  | 'Solar System'
+  | 'Milky Way'
+  | 'Northern Lights';
 
 // API Types
 export interface ApiResponse<T = any> {

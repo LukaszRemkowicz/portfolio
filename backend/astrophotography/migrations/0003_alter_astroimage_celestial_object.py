@@ -6,13 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('astrophotography', '0002_backgroundmainpage'),
+        ("astrophotography", "0002_backgroundmainpage"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='astroimage',
-            name='celestial_object',
-            field=models.CharField(choices=[('Landscape', 'Landscape'), ('Deep Sky', 'Deep Sky'), ('Startrails', 'Startrails'), ('Solar System', 'Solar System'), ('Milky Way', 'Milky Way'), ('Northern Lights', 'Northern Lights')]),
+            model_name="astroimage",
+            name="celestial_object",
+            field=models.CharField(
+                choices=[
+                    ("Landscape", "Landscape"),
+                    ("Deep Sky", "Deep Sky"),
+                    ("Startrails", "Startrails"),
+                    ("Solar System", "Solar System"),
+                    ("Milky Way", "Milky Way"),
+                    ("Northern Lights", "Northern Lights"),
+                ]
+            ),
         ),
     ]

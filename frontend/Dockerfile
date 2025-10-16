@@ -34,4 +34,4 @@ FROM dev AS final-dev
 FROM prod AS final-prod
 
 # Use the right final stage
-# docker build --target final-prod --build-arg NODE_ENV=production . 
+# docker build --target final-prod --build-arg NODE_ENV=production .

@@ -40,12 +40,21 @@ const textStyle: React.CSSProperties = {
 };
 
 const Programming: React.FC = () => (
-  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+  <div
+    style={{
+      flex: 1,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}
+  >
     <div style={containerStyle}>
       <div style={overlayStyle}></div>
       <div style={textStyle}>
-        Oops, page is under construction<br />
-        Sorry, this page is still being built.<br />
+        Oops, page is under construction
+        <br />
+        Sorry, this page is still being built.
+        <br />
         Please check back later!
       </div>
     </div>

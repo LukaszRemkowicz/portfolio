@@ -32,4 +32,4 @@ RUN chown -R www-data:www-data /app/media && \
 EXPOSE 8000
 
 # Run migrations and start server
-CMD poetry run python manage.py migrate && poetry run python manage.py runserver 0.0.0.0:8000 
+CMD poetry run python manage.py migrate && poetry run python manage.py runserver 0.0.0.0:8000

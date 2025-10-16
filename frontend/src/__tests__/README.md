@@ -7,7 +7,7 @@ This directory contains all test files for the frontend React components. Each t
 ```
 src/__tests__/
 ├── About.test.jsx          # Tests for About component
-├── AstroGallery.test.jsx   # Tests for AstroGallery component  
+├── AstroGallery.test.jsx   # Tests for AstroGallery component
 ├── Footer.test.jsx         # Tests for Footer component
 ├── Gallery.test.jsx        # Tests for Gallery component
 ├── HomePage.test.jsx       # Tests for HomePage component
@@ -18,6 +18,7 @@ src/__tests__/
 ## Test Categories
 
 ### 1. **HomePage Component Tests**
+
 - **Purpose**: Tests the main landing page functionality
 - **Key Features Tested**:
   - Loading states during API calls
@@ -26,6 +27,7 @@ src/__tests__/
   - Router integration
 
 ### 2. **AstroGallery Component Tests**
+
 - **Purpose**: Tests the dynamic astrophotography gallery
 - **Key Features Tested**:
   - Loading states during API calls
@@ -35,6 +37,7 @@ src/__tests__/
   - Error handling for failed API calls
 
 ### 3. **About Component Tests**
+
 - **Purpose**: Tests the user profile/about section
 - **Key Features Tested**:
   - Conditional rendering when no profile data exists
@@ -42,6 +45,7 @@ src/__tests__/
   - Profile image rendering with correct attributes
 
 ### 4. **Gallery Component Tests**
+
 - **Purpose**: Tests the static gallery with predefined categories
 - **Key Features Tested**:
   - Static gallery items rendering (ASTRO PHOTOGRAPHY, LANDSCAPE PHOTOGRAPHY, PROGRAMMING)
@@ -49,6 +53,7 @@ src/__tests__/
   - Background image styling (no img tags)
 
 ### 5. **Navbar Component Tests**
+
 - **Purpose**: Tests the site navigation
 - **Key Features Tested**:
   - Logo rendering with alt text
@@ -57,6 +62,7 @@ src/__tests__/
   - React Router integration
 
 ### 6. **Footer Component Tests**
+
 - **Purpose**: Tests the site footer
 - **Key Features Tested**:
   - Copyright text rendering
@@ -65,6 +71,7 @@ src/__tests__/
 ## Running Tests
 
 ### In Docker (Recommended)
+
 ```bash
 # Run all tests
 docker-compose exec portfolio-fe npm test
@@ -77,6 +84,7 @@ docker-compose exec portfolio-fe npm test -- --coverage
 ```
 
 ### Locally (if Node.js is installed)
+
 ```bash
 cd frontend
 npm test
@@ -85,6 +93,7 @@ npm test
 ## Test Configuration
 
 Tests are configured using:
+
 - **Jest**: Test runner and assertion library
 - **React Testing Library**: Component testing utilities
 - **@testing-library/jest-dom**: Custom DOM matchers
@@ -93,42 +102,46 @@ Tests are configured using:
 ## Mock Strategy
 
 ### API Services
+
 All API calls are mocked using Jest mocks:
+
 - `fetchProfile`: Mocked in About and HomePage tests
-- `fetchBackground`: Mocked in HomePage and AstroGallery tests  
+- `fetchBackground`: Mocked in HomePage and AstroGallery tests
 - `fetchAstroImages`: Mocked in AstroGallery tests
 - `fetchAstroImage`: Mocked in AstroGallery tests
 
 ### Router Context
+
 Components using React Router are wrapped in `BrowserRouter` for testing:
+
 ```javascript
-const renderWithRouter = (component) => {
-  return render(
-    <BrowserRouter>
-      {component}
-    </BrowserRouter>
-  );
+const renderWithRouter = component => {
+  return render(<BrowserRouter>{component}</BrowserRouter>);
 };
 ```
 
 ## Test Best Practices
 
 ### 1. **Async Testing**
+
 - Use `waitFor()` for async operations
 - Wrap state updates in `act()` when needed
 - Mock slow API calls to test loading states
 
 ### 2. **Accessibility Testing**
+
 - Test alt text for images
 - Verify proper text content
 - Check for proper semantic HTML structure
 
 ### 3. **Error Handling**
+
 - Test error states and error messages
 - Verify graceful degradation
 - Ensure user-friendly error messages
 
 ### 4. **Mock Management**
+
 - Clear mocks between tests using `beforeEach`
 - Use realistic mock data
 - Test both success and failure scenarios
@@ -136,6 +149,7 @@ const renderWithRouter = (component) => {
 ## Test Documentation
 
 Each test file includes:
+
 - **File-level documentation**: Explains what the component does
 - **Test suite documentation**: Describes the component's features
 - **Individual test documentation**: Explains what each test verifies
@@ -144,6 +158,7 @@ Each test file includes:
 ## Coverage Goals
 
 Current test coverage includes:
+
 - ✅ Component rendering
 - ✅ User interactions (clicks, filters)
 - ✅ API integration (mocked)
@@ -156,10 +171,11 @@ Current test coverage includes:
 When adding new tests:
 
 1. **Follow the existing pattern**:
+
    ```javascript
    /**
     * Test: [Brief description]
-    * 
+    *
     * Verifies that:
     * - [Specific behavior 1]
     * - [Specific behavior 2]
@@ -183,12 +199,15 @@ When adding new tests:
 ### Common Issues
 
 1. **"toBeInTheDocument is not a function"**
+
    - Ensure `@testing-library/jest-dom` is imported in each test file
 
 2. **"useLocation() may be used only in the context of a <Router>"**
+
    - Wrap components in `BrowserRouter` for testing
 
 3. **React act() warnings**
+
    - Wrap async operations in `act()` when needed
    - Use `waitFor()` for assertions on async state changes
 
@@ -202,4 +221,3 @@ When adding new tests:
 - Add `console.log()` statements in tests for debugging
 - Use `--verbose` flag for detailed test output
 - Check Jest configuration in `jest.config.js`
-

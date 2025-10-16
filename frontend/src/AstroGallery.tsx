@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import styles from './styles/components/AstroGallery.module.css';
-import { fetchAstroImages, fetchBackground, fetchAstroImage } from './api/services';
+import {
+  fetchAstroImages,
+  fetchBackground,
+  fetchAstroImage,
+} from './api/services';
 import { API_BASE_URL } from './api/routes';
 import { AstroImage, FilterParams, FilterType } from './types';
 
@@ -23,7 +27,8 @@ const AstroGallery: React.FC = () => {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
   const [modalDescription, setModalDescription] = useState<string>('');
-  const [modalDescriptionLoading, setModalDescriptionLoading] = useState<boolean>(false);
+  const [modalDescriptionLoading, setModalDescriptionLoading] =
+    useState<boolean>(false);
 
   const loadImages = async (filter: string | null = null): Promise<void> => {
     try {
@@ -105,7 +110,9 @@ const AstroGallery: React.FC = () => {
     closeModal();
   };
 
-  const handleModalContentClick = (e: React.MouseEvent<HTMLDivElement>): void => {
+  const handleModalContentClick = (
+    e: React.MouseEvent<HTMLDivElement>
+  ): void => {
     e.stopPropagation();
   };
 
@@ -124,7 +131,9 @@ const AstroGallery: React.FC = () => {
         {FILTERS.map((filter: FilterType) => (
           <div
             key={filter}
-            className={`${styles.filterBox} ${selectedFilter === filter ? styles.activeFilter : ''}`}
+            className={`${styles.filterBox} ${
+              selectedFilter === filter ? styles.activeFilter : ''
+            }`}
             onClick={() => handleFilterClick(filter)}
           >
             {filter}
@@ -145,11 +154,22 @@ const AstroGallery: React.FC = () => {
       </div>
       {modalImage && (
         <div className={styles.modalOverlay} onClick={handleModalOverlayClick}>
-          <div className={styles.modalContent} onClick={handleModalContentClick}>
-            <button className={styles.modalClose} onClick={closeModal}>&times;</button>
-            <img src={modalImage.url} alt="Astro Large" className={styles.modalImage} />
+          <div
+            className={styles.modalContent}
+            onClick={handleModalContentClick}
+          >
+            <button className={styles.modalClose} onClick={closeModal}>
+              &times;
+            </button>
+            <img
+              src={modalImage.url}
+              alt='Astro Large'
+              className={styles.modalImage}
+            />
             <div className={styles.modalDescription}>
-              {modalDescriptionLoading ? 'Loading description...' : modalDescription}
+              {modalDescriptionLoading
+                ? 'Loading description...'
+                : modalDescription}
             </div>
           </div>
         </div>

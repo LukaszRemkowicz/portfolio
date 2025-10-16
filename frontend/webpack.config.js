@@ -62,11 +62,13 @@ module.exports = (env, argv) => {
       https: httpsConfig,
       allowedHosts: 'all',
       client: {
-        webSocketURL: httpsConfig ? 'wss://portfolio.local/ws' : 'ws://portfolio.local/ws',
+        webSocketURL: httpsConfig
+          ? 'wss://portfolio.local/ws'
+          : 'ws://portfolio.local/ws',
       },
     },
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx'],
     },
   };
-}; 
+};

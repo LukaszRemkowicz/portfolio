@@ -29,19 +29,36 @@ body {
 }
 
 /* Typography */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-family-heading);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   margin: 0;
 }
 
-h1 { font-size: var(--font-size-5xl); }
-h2 { font-size: var(--font-size-4xl); }
-h3 { font-size: var(--font-size-3xl); }
-h4 { font-size: var(--font-size-2xl); }
-h5 { font-size: var(--font-size-xl); }
-h6 { font-size: var(--font-size-lg); }
+h1 {
+  font-size: var(--font-size-5xl);
+}
+h2 {
+  font-size: var(--font-size-4xl);
+}
+h3 {
+  font-size: var(--font-size-3xl);
+}
+h4 {
+  font-size: var(--font-size-2xl);
+}
+h5 {
+  font-size: var(--font-size-xl);
+}
+h6 {
+  font-size: var(--font-size-lg);
+}
 
 p {
   margin: 0 0 var(--space-4) 0;
@@ -76,7 +93,9 @@ button {
 }
 
 /* Form Elements */
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: inherit;
   font-size: inherit;
   border: 1px solid var(--border-light);
@@ -85,7 +104,9 @@ input, textarea, select {
   transition: border-color var(--transition-fast);
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
@@ -112,12 +133,13 @@ input:focus, textarea:focus, select:focus {
     box-shadow: none !important;
     text-shadow: none !important;
   }
-  
-  a, a:visited {
+
+  a,
+  a:visited {
     text-decoration: underline;
   }
-  
+
   .no-print {
     display: none !important;
   }
-} 
+}

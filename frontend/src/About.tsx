@@ -27,7 +27,11 @@ const About: React.FC = () => {
       <div className={styles.aboutContent}>
         <div className={styles.imageWrapper}>
           {profile.about_me_image && (
-            <img src={profile.about_me_image} alt="About me" className={styles.aboutImage} />
+            <img
+              src={profile.about_me_image}
+              alt='About me'
+              className={styles.aboutImage}
+            />
           )}
         </div>
         <div className={styles.textWrapper}>

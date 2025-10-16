@@ -20,11 +20,7 @@ module.exports = {
     ecmaVersion: 12,
     sourceType: 'module',
   },
-  plugins: [
-    'react',
-    '@typescript-eslint',
-    'react-hooks',
-  ],
+  plugins: ['react', '@typescript-eslint', 'react-hooks'],
   rules: {
     'react/react-in-jsx-scope': 'off', // Not needed in React 17+
     'react/prop-types': 'off', // Using TypeScript for prop validation
@@ -40,10 +36,5 @@ module.exports = {
       version: 'detect',
     },
   },
-  ignorePatterns: [
-    'dist/',
-    'node_modules/',
-    'coverage/',
-    '*.config.js',
-  ],
+  ignorePatterns: ['dist/', 'node_modules/', 'coverage/', '*.config.js'],
 };

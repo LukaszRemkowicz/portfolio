@@ -10,7 +10,9 @@ const Home: React.FC<HomeProps> = ({ portraitUrl, firstName, lastName }) => {
           Landscape and Astrophotography
           {(firstName || lastName) && (
             <div className={styles.hero__signature}>
-              <div className={styles.hero__name}>{`${firstName} ${lastName}`.trim()}</div>
+              <div className={styles.hero__name}>
+                {`${firstName} ${lastName}`.trim()}
+              </div>
             </div>
           )}
         </div>
@@ -18,8 +20,8 @@ const Home: React.FC<HomeProps> = ({ portraitUrl, firstName, lastName }) => {
       <img
         className={styles['astro-image']}
         src={portraitUrl}
-        alt="Portrait"
-        loading="lazy"
+        alt='Portrait'
+        loading='lazy'
       />
     </>
   );

@@ -9,17 +9,20 @@ const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
   const location = useLocation();
 
   const getLinkClass = ({ isActive }: NavLinkClassProps): string => {
-    return isActive ? `${styles.navbar__link} ${styles.navbar__link_active}` : styles.navbar__link;
+    return isActive
+      ? `${styles.navbar__link} ${styles.navbar__link_active}`
+      : styles.navbar__link;
   };
 
-  const navbarStyle: React.CSSProperties = transparent && programmingBg
-    ? {
-        backgroundImage: `url('/underconstruction.jpg')`,
-        backgroundSize: 'contain',
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center',
-      }
-    : {};
+  const navbarStyle: React.CSSProperties =
+    transparent && programmingBg
+      ? {
+          backgroundImage: `url('/underconstruction.jpg')`,
+          backgroundSize: 'contain',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+        }
+      : {};
 
   const handleContactClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -30,31 +33,45 @@ const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
   };
 
   return (
-    <nav className={`${styles.navbar} ${transparent ? styles.transparent : ''}`}
-         style={navbarStyle}>
-      <Link to="/" className={styles.navbar__logo_link}>
-        <img src={DEFAULT_LOGO} alt="Logo" className={styles.navbar__logo} />
+    <nav
+      className={`${styles.navbar} ${transparent ? styles.transparent : ''}`}
+      style={navbarStyle}
+    >
+      <Link to='/' className={styles.navbar__logo_link}>
+        <img src={DEFAULT_LOGO} alt='Logo' className={styles.navbar__logo} />
       </Link>
       <ul className={styles.navbar__links}>
         <li>
-          <NavLink 
-            to="/astrophotography" 
-            className={location.pathname === '/astrophotography' ? styles.active : getLinkClass({ isActive: location.pathname === '/astrophotography' })}
+          <NavLink
+            to='/astrophotography'
+            className={
+              location.pathname === '/astrophotography'
+                ? styles.active
+                : getLinkClass({
+                    isActive: location.pathname === '/astrophotography',
+                  })
+            }
           >
             Astrophotography
           </NavLink>
         </li>
         <li>
-          <NavLink 
-            to="/programming" 
-            className={location.pathname === '/programming' ? styles.active : getLinkClass({ isActive: location.pathname === '/programming' })}
+          <NavLink
+            to='/programming'
+            className={
+              location.pathname === '/programming'
+                ? styles.active
+                : getLinkClass({
+                    isActive: location.pathname === '/programming',
+                  })
+            }
           >
             Programming
           </NavLink>
         </li>
         <li>
-          <a 
-            href="#contact" 
+          <a
+            href='#contact'
             className={getLinkClass}
             onClick={handleContactClick}
           >

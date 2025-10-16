@@ -161,7 +161,8 @@ main {
   font-size: 0.95rem;
 }
 
-.loading-indicator, .error-message {
+.loading-indicator,
+.error-message {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -171,4 +172,4 @@ main {
 
 .error-message {
   color: #ff6b6b;
-} 
+}

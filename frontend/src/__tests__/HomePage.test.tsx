@@ -8,24 +8,24 @@ import { UserProfile } from '../types';
 // Mock the API services
 jest.mock('../api/services', () => ({
   fetchProfile: jest.fn(),
-  fetchBackground: jest.fn()
+  fetchBackground: jest.fn(),
 }));
 
 import { fetchProfile, fetchBackground } from '../api/services';
 
 /**
  * Test suite for the HomePage component
- * 
+ *
  * The HomePage component is the main landing page that displays:
  * - User profile information (name, avatar, bio)
  * - Background image
  * - Loading states during API calls
  * - Error handling when API calls fail
- * 
+ *
  * The component fetches data from two API endpoints:
  * - fetchProfile: Gets user profile information
  * - fetchBackground: Gets background image URL
- * 
+ *
  * Tests verify:
  * - Loading state is shown during API calls
  * - Profile data renders correctly after successful API calls
@@ -35,8 +35,12 @@ import { fetchProfile, fetchBackground } from '../api/services';
  * - Integration with React Router for navigation
  */
 describe('HomePage Component', () => {
-  const mockFetchProfile = fetchProfile as jest.MockedFunction<typeof fetchProfile>;
-  const mockFetchBackground = fetchBackground as jest.MockedFunction<typeof fetchBackground>;
+  const mockFetchProfile = fetchProfile as jest.MockedFunction<
+    typeof fetchProfile
+  >;
+  const mockFetchBackground = fetchBackground as jest.MockedFunction<
+    typeof fetchBackground
+  >;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -44,7 +48,7 @@ describe('HomePage Component', () => {
 
   /**
    * Test: Shows loading state initially
-   * 
+   *
    * Verifies that:
    * - Loading text is displayed while API calls are in progress
    * - Component shows appropriate loading state
@@ -53,19 +57,27 @@ describe('HomePage Component', () => {
    */
   it('shows loading state initially', async () => {
     // Mock API calls to return promises that resolve after a delay
-    mockFetchProfile.mockImplementation(() => 
-      new Promise(resolve => setTimeout(() => resolve({
-        first_name: 'John',
-        last_name: 'Doe',
-        avatar: null,
-        bio: 'Test bio',
-        about_me_image: null,
-        about_me_image2: null
-      }), 100))
+    mockFetchProfile.mockImplementation(
+      () =>
+        new Promise(resolve =>
+          setTimeout(
+            () =>
+              resolve({
+                first_name: 'John',
+                last_name: 'Doe',
+                avatar: null,
+                bio: 'Test bio',
+                about_me_image: null,
+                about_me_image2: null,
+              }),
+            100
+          )
+        )
     );
-    
-    mockFetchBackground.mockImplementation(() => 
-      new Promise(resolve => setTimeout(() => resolve('/test-bg.jpg'), 100))
+
+    mockFetchBackground.mockImplementation(
+      () =>
+        new Promise(resolve => setTimeout(() => resolve('/test-bg.jpg'), 100))
     );
 
     render(
@@ -79,7 +91,7 @@ describe('HomePage Component', () => {
 
   /**
    * Test: Renders profile data after loading
-   * 
+   *
    * Verifies that:
    * - Profile information is displayed after successful API calls
    * - User name and avatar are rendered correctly
@@ -94,7 +106,7 @@ describe('HomePage Component', () => {
       avatar: '/test-avatar.jpg',
       bio: 'This is a test bio',
       about_me_image: null,
-      about_me_image2: null
+      about_me_image2: null,
     };
 
     mockFetchProfile.mockResolvedValue(mockProfile);
@@ -118,7 +130,7 @@ describe('HomePage Component', () => {
 
   /**
    * Test: Handles API errors gracefully
-   * 
+   *
    * Verifies that:
    * - Error message is displayed when API calls fail
    * - Component doesn't crash when API errors occur
@@ -137,13 +149,15 @@ describe('HomePage Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to load page content. Please try again later.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Failed to load page content. Please try again later.')
+      ).toBeInTheDocument();
     });
   });
 
   /**
    * Test: Uses default fallback files when API fails
-   * 
+   *
    * Verifies that:
    * - Default portrait image is used when API avatar is null
    * - Component falls back to default assets when API data is unavailable
@@ -158,7 +172,7 @@ describe('HomePage Component', () => {
       avatar: null, // No avatar from API
       bio: 'Test bio',
       about_me_image: null,
-      about_me_image2: null
+      about_me_image2: null,
     };
 
     mockFetchProfile.mockResolvedValue(mockProfile);
@@ -181,7 +195,7 @@ describe('HomePage Component', () => {
 
   /**
    * Test: Uses API avatar when available
-   * 
+   *
    * Verifies that:
    * - API-provided avatar is used when available
    * - Component prioritizes API data over default fallbacks
@@ -195,7 +209,7 @@ describe('HomePage Component', () => {
       avatar: '/api-avatar.jpg',
       bio: 'Test bio',
       about_me_image: null,
-      about_me_image2: null
+      about_me_image2: null,
     };
 
     mockFetchProfile.mockResolvedValue(mockProfile);
@@ -218,7 +232,7 @@ describe('HomePage Component', () => {
 
   /**
    * Test: Falls back to default when API avatar is null
-   * 
+   *
    * Verifies that:
    * - Default portrait is used when API avatar is null
    * - Fallback mechanism works correctly
@@ -232,7 +246,7 @@ describe('HomePage Component', () => {
       avatar: null,
       bio: 'Test bio',
       about_me_image: null,
-      about_me_image2: null
+      about_me_image2: null,
     };
 
     mockFetchProfile.mockResolvedValue(mockProfile);

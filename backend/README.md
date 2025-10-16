@@ -138,7 +138,7 @@ poetry run python manage.py runserver 0.0.0.0:8000
 # Docker Compose V2 (newer versions)
 docker compose up --build
 
-# Docker Compose V1 (older versions)  
+# Docker Compose V1 (older versions)
 docker-compose up --build
 ```
 - **Backend API**: `https://admin.portfolio.local/api/v1/`
@@ -329,4 +329,4 @@ poetry run pytest
 
 ---
 
-For frontend setup and integration, see [Frontend README](../frontend/README.md). 
+For frontend setup and integration, see [Frontend README](../frontend/README.md).

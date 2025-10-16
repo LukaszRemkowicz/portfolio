@@ -8,26 +8,30 @@ import { AstroImage } from '../types';
 jest.mock('../api/services', () => ({
   fetchAstroImages: jest.fn(),
   fetchBackground: jest.fn(),
-  fetchAstroImage: jest.fn()
+  fetchAstroImage: jest.fn(),
 }));
 
-import { fetchAstroImages, fetchBackground, fetchAstroImage } from '../api/services';
+import {
+  fetchAstroImages,
+  fetchBackground,
+  fetchAstroImage,
+} from '../api/services';
 
 /**
  * Test suite for the AstroGallery component
- * 
+ *
  * The AstroGallery component displays a dynamic gallery of astrophotography images with:
  * - Loading states during API calls
  * - Filter buttons for different image categories (Landscape, Deep Sky, etc.)
  * - Image grid display with clickable thumbnails
  * - Modal popup when images are clicked
  * - Error handling for failed API calls
- * 
+ *
  * The component fetches data from three API endpoints:
  * - fetchAstroImages: Gets list of images (optionally filtered)
  * - fetchBackground: Gets background image for the gallery
  * - fetchAstroImage: Gets detailed image information for modal display
- * 
+ *
  * Tests verify:
  * - Loading state is shown during API calls
  * - Gallery content renders correctly after successful API calls
@@ -38,9 +42,15 @@ import { fetchAstroImages, fetchBackground, fetchAstroImage } from '../api/servi
  * - Background image is applied correctly
  */
 describe('AstroGallery Component', () => {
-  const mockFetchAstroImages = fetchAstroImages as jest.MockedFunction<typeof fetchAstroImages>;
-  const mockFetchBackground = fetchBackground as jest.MockedFunction<typeof fetchBackground>;
-  const mockFetchAstroImage = fetchAstroImage as jest.MockedFunction<typeof fetchAstroImage>;
+  const mockFetchAstroImages = fetchAstroImages as jest.MockedFunction<
+    typeof fetchAstroImages
+  >;
+  const mockFetchBackground = fetchBackground as jest.MockedFunction<
+    typeof fetchBackground
+  >;
+  const mockFetchAstroImage = fetchAstroImage as jest.MockedFunction<
+    typeof fetchAstroImage
+  >;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -48,7 +58,7 @@ describe('AstroGallery Component', () => {
 
   /**
    * Test: Shows loading state initially
-   * 
+   *
    * Verifies that:
    * - Loading text is displayed while API calls are in progress
    * - Component shows appropriate loading state
@@ -57,12 +67,13 @@ describe('AstroGallery Component', () => {
    */
   it('shows loading state initially', async () => {
     // Mock API calls to return promises that resolve after a delay
-    mockFetchAstroImages.mockImplementation(() => 
-      new Promise(resolve => setTimeout(() => resolve([]), 100))
+    mockFetchAstroImages.mockImplementation(
+      () => new Promise(resolve => setTimeout(() => resolve([]), 100))
     );
-    
-    mockFetchBackground.mockImplementation(() => 
-      new Promise(resolve => setTimeout(() => resolve('/test-bg.jpg'), 100))
+
+    mockFetchBackground.mockImplementation(
+      () =>
+        new Promise(resolve => setTimeout(() => resolve('/test-bg.jpg'), 100))
     );
 
     render(<AstroGallery />);
@@ -72,7 +83,7 @@ describe('AstroGallery Component', () => {
 
   /**
    * Test: Renders the gallery title and filter boxes after loading
-   * 
+   *
    * Verifies that:
    * - Gallery title is displayed correctly
    * - All filter buttons are rendered (Landscape, Deep Sky, Startrails, etc.)
@@ -100,7 +111,7 @@ describe('AstroGallery Component', () => {
 
   /**
    * Test: Renders images from the API after loading
-   * 
+   *
    * Verifies that:
    * - Images are displayed in the gallery after successful API call
    * - Image elements have correct src attributes
@@ -111,7 +122,7 @@ describe('AstroGallery Component', () => {
   it('renders images from the API after loading', async () => {
     const mockImages: AstroImage[] = [
       { pk: 1, url: '/test1.jpg', name: 'Test Image 1' },
-      { pk: 2, url: '/test2.jpg', name: 'Test Image 2' }
+      { pk: 2, url: '/test2.jpg', name: 'Test Image 2' },
     ];
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
@@ -126,7 +137,7 @@ describe('AstroGallery Component', () => {
 
   /**
    * Test: Handles API errors gracefully
-   * 
+   *
    * Verifies that:
    * - Error message is displayed when API calls fail
    * - Component doesn't crash when API errors occur
@@ -141,13 +152,15 @@ describe('AstroGallery Component', () => {
     render(<AstroGallery />);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to load images. Please try again later.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Failed to load images. Please try again later.')
+      ).toBeInTheDocument();
     });
   });
 
   /**
    * Test: Filters images when filter is clicked
-   * 
+   *
    * Verifies that:
    * - Filter buttons trigger API calls with correct filter parameters
    * - Component updates when filters are applied
@@ -157,7 +170,7 @@ describe('AstroGallery Component', () => {
    */
   it('filters images when filter is clicked', async () => {
     const mockImages: AstroImage[] = [
-      { pk: 1, url: '/test1.jpg', name: 'Test Image 1' }
+      { pk: 1, url: '/test1.jpg', name: 'Test Image 1' },
     ];
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
@@ -170,7 +183,7 @@ describe('AstroGallery Component', () => {
     });
 
     const landscapeFilter = screen.getByText(/Landscape/i);
-    
+
     jest.clearAllMocks();
     mockFetchAstroImages.mockResolvedValue(mockImages);
 
@@ -185,7 +198,7 @@ describe('AstroGallery Component', () => {
 
   /**
    * Test: Opens modal when image is clicked
-   * 
+   *
    * Verifies that:
    * - Modal opens when an image thumbnail is clicked
    * - Modal displays image details correctly
@@ -195,14 +208,14 @@ describe('AstroGallery Component', () => {
    */
   it('opens modal when image is clicked', async () => {
     const mockImages: AstroImage[] = [
-      { pk: 1, url: '/test1.jpg', name: 'Test Image 1' }
+      { pk: 1, url: '/test1.jpg', name: 'Test Image 1' },
     ];
 
     const mockImageDetail: AstroImage = {
       pk: 1,
       url: '/test1.jpg',
       name: 'Test Image 1',
-      description: 'Test description'
+      description: 'Test description',
     };
 
     mockFetchAstroImages.mockResolvedValue(mockImages);

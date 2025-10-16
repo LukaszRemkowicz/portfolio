@@ -51,7 +51,8 @@ const HomePage: React.FC = () => {
       }
     : {};
 
-  if (loading) return <div className={styles['loading-indicator']}>Loading...</div>;
+  if (loading)
+    return <div className={styles['loading-indicator']}>Loading...</div>;
   if (error) return <div className={styles['error-message']}>{error}</div>;
 
   return (

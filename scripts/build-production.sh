@@ -135,7 +135,7 @@ log "📋 Current branch: $CURRENT_BRANCH"
 # Git pull (if not disabled)
 if [ "$NO_PULL" = false ]; then
     log "📥 Pulling latest code from branch $BRANCH..."
-    
+
     # Switch to correct branch if needed
     if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
         log "🔄 Switching to branch $BRANCH..."
@@ -144,13 +144,13 @@ if [ "$NO_PULL" = false ]; then
             exit 1
         }
     fi
-    
+
     # Pull latest code
     git pull origin "$BRANCH" || {
         error "Failed to pull code from git!"
         exit 1
     }
-    
+
     success "✅ Code pulled successfully"
 else
     info "⏭️  Skipping git pull (--no-pull)"
@@ -186,7 +186,7 @@ fi
 # Build images
 if [ "$BACKEND_ONLY" = false ]; then
     log "🔨 Building frontend image (production)..."
-    
+
     # Check if 'prod' target exists in Dockerfile
     if grep -q "target.*prod" frontend/Dockerfile; then
         BUILD_TARGET="prod"
@@ -195,7 +195,7 @@ if [ "$BACKEND_ONLY" = false ]; then
         BUILD_TARGET=""
         warning "No 'prod' target in Dockerfile, building default"
     fi
-    
+
     if [ -n "$BUILD_TARGET" ]; then
         docker build -t portfolio-frontend:prod -t portfolio-frontend:latest -t portfolio-frontend:$CURRENT_COMMIT --target "$BUILD_TARGET" ./frontend || {
             error "Error building frontend image!"
@@ -207,14 +207,14 @@ if [ "$BACKEND_ONLY" = false ]; then
             exit 1
         }
     fi
-    
+
     success "✅ Frontend image built successfully"
     info "📦 Tags: portfolio-frontend:prod, portfolio-frontend:latest, portfolio-frontend:$CURRENT_COMMIT"
 fi
 
 if [ "$FRONTEND_ONLY" = false ]; then
     log "🔨 Building backend image (production)..."
-    
+
     # Check if 'prod' target exists in Dockerfile
     if grep -q "target.*prod" backend/Dockerfile; then
         BUILD_TARGET="prod"
@@ -223,7 +223,7 @@ if [ "$FRONTEND_ONLY" = false ]; then
         BUILD_TARGET=""
         warning "No 'prod' target in Dockerfile, building default"
     fi
-    
+
     if [ -n "$BUILD_TARGET" ]; then
         docker build -t portfolio-backend:prod -t portfolio-backend:latest -t portfolio-backend:$CURRENT_COMMIT --target "$BUILD_TARGET" ./backend || {
             error "Error building backend image!"
@@ -235,7 +235,7 @@ if [ "$FRONTEND_ONLY" = false ]; then
             exit 1
         }
     fi
-    
+
     success "✅ Backend image built successfully"
     info "📦 Tags: portfolio-backend:prod, portfolio-backend:latest, portfolio-backend:$CURRENT_COMMIT"
 fi
@@ -250,7 +250,7 @@ read -p "🚀 Do you want to run production containers? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     log "🚀 Starting production containers..."
-    
+
     if command -v docker-compose &> /dev/null; then
         docker-compose up -d || {
             error "Error starting containers!"
@@ -262,7 +262,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             exit 1
         }
     fi
-    
+
     # Check status
     sleep 3
     log "📊 Container status:"
@@ -271,7 +271,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     else
         docker compose ps
     fi
-    
+
     success "✅ Containers started successfully"
 else
     info "⏭️  Skipping container startup"

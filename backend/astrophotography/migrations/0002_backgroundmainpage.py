@@ -6,16 +6,24 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('astrophotography', '0001_initial'),
+        ("astrophotography", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='BackgroundMainPage',
+            name="BackgroundMainPage",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('image', models.ImageField(upload_to='backgrounds/')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("image", models.ImageField(upload_to="backgrounds/")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
         ),
     ]

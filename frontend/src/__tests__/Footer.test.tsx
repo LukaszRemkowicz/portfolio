@@ -5,17 +5,17 @@ import Footer from '../Footer';
 
 /**
  * Test suite for the Footer component
- * 
+ *
  * The Footer component displays site footer information including:
  * - Copyright text with current year and author name
  * - Footer styling and layout
  * - Consistent branding across the site
- * 
+ *
  * This is a simple, static component that doesn't require:
  * - API calls
  * - Router context
  * - Complex state management
- * 
+ *
  * Tests verify:
  * - Copyright text is displayed correctly
  * - Footer renders without errors
@@ -24,7 +24,7 @@ import Footer from '../Footer';
 describe('Footer Component', () => {
   /**
    * Test: Renders copyright text
-   * 
+   *
    * Verifies that:
    * - Copyright text is displayed with proper formatting
    * - Author name (Łukasz Remkowicz) is shown correctly

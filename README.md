@@ -146,4 +146,4 @@ docker-compose exec portfolio-fe npm test    # Run frontend tests
 - [Backend README](backend/README.md) - Django API documentation
 
 ## License
-MIT 
+MIT

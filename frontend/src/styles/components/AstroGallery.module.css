@@ -28,7 +28,7 @@
   background-color: #1e293b;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease;
   display: flex;
   align-items: center;
@@ -100,8 +100,12 @@
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  transition: background 0.2s, color 0.2s, transform 0.2s, border-color 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition:
+    background 0.2s,
+    color 0.2s,
+    transform 0.2s,
+    border-color 0.2s;
   border: 2px solid transparent;
 }
 
@@ -116,7 +120,7 @@
   color: #181c2b !important;
   border-color: #ffd700 !important;
   font-weight: 700;
-  box-shadow: 0 4px 16px rgba(255,215,0,0.12);
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.12);
 }
 
 .modalOverlay {
@@ -125,7 +129,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -137,7 +141,7 @@
   background: #181c2b;
   border-radius: 12px;
   padding: 2rem 2rem 1.5rem 2rem;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -148,8 +152,8 @@
   margin: 5vh 0; /* Add vertical margin for top and bottom space */
   max-height: 90vh; /* Prevent modal from exceeding viewport */
   overflow-y: auto; /* Make modal scrollable if content is too tall */
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 .modalContent::-webkit-scrollbar {
@@ -196,4 +200,4 @@
 
 .modalClose:hover {
   color: #ffd700;
-} 
+}

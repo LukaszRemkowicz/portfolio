@@ -10,22 +10,22 @@ const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route 
-          path="/astrophotography" 
+        <Route path='/' element={<HomePage />} />
+        <Route
+          path='/astrophotography'
           element={
             <MainLayout>
               <AstroGallery />
             </MainLayout>
-          } 
+          }
         />
-        <Route 
-          path="/programming" 
+        <Route
+          path='/programming'
           element={
             <MainLayout>
               <Programming />
             </MainLayout>
-          } 
+          }
         />
       </Routes>
     </Router>

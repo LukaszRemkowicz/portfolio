@@ -6,28 +6,28 @@ import { UserProfile } from '../types';
 
 // Mock the API services
 jest.mock('../api/services', () => ({
-  fetchProfile: jest.fn()
+  fetchProfile: jest.fn(),
 }));
 
 import { fetchProfile } from '../api/services';
 
 /**
  * Test suite for the About component
- * 
+ *
  * The About component displays user profile information including:
  * - A section title "About me"
  * - User bio text (can contain multiple lines)
  * - An optional profile image
- * 
+ *
  * The component expects a UserProfile object with:
  * - bio: string - The user's biography text
  * - about_me_image: string | null - Optional profile image URL
- * 
+ *
  * The component handles:
  * - Loading states while profile data is being fetched
  * - Conditional rendering of the profile image
  * - Display of multi-line bio text with proper formatting
- * 
+ *
  * Testing Strategy:
  * - Verify component renders nothing when profile is not loaded
  * - Test bio text rendering after profile loads
@@ -35,7 +35,9 @@ import { fetchProfile } from '../api/services';
  * - Ensure proper handling of null/undefined profile data
  */
 
-const mockFetchProfile = fetchProfile as jest.MockedFunction<typeof fetchProfile>;
+const mockFetchProfile = fetchProfile as jest.MockedFunction<
+  typeof fetchProfile
+>;
 
 describe('About Component', () => {
   beforeEach(() => {
@@ -44,7 +46,7 @@ describe('About Component', () => {
 
   /**
    * Test: Renders nothing when profile is not loaded
-   * 
+   *
    * Verifies that the About component doesn't render any content
    * when the profile is not loaded from API. This ensures
    * the component gracefully handles missing data.
@@ -57,7 +59,7 @@ describe('About Component', () => {
 
   /**
    * Test: Renders profile bio after loading
-   * 
+   *
    * Verifies that the About component correctly displays the user's
    * biography text when profile data is available. Tests that:
    * - The "About me" section title is displayed
@@ -71,7 +73,7 @@ describe('About Component', () => {
       avatar: null,
       bio: 'This is a test bio with multiple lines.\nIt should display correctly.',
       about_me_image: null,
-      about_me_image2: null
+      about_me_image2: null,
     };
 
     mockFetchProfile.mockResolvedValue(mockProfile);
@@ -81,12 +83,14 @@ describe('About Component', () => {
       expect(screen.getByText('About me')).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/This is a test bio with multiple lines/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/This is a test bio with multiple lines/)
+    ).toBeInTheDocument();
   });
 
   /**
    * Test: Renders about me image when available
-   * 
+   *
    * Verifies that the About component correctly displays the profile
    * image when available in the profile data. Tests that:
    * - The image element is rendered with correct src attribute
@@ -100,7 +104,7 @@ describe('About Component', () => {
       avatar: null,
       bio: 'Test bio',
       about_me_image: '/test-image.jpg',
-      about_me_image2: null
+      about_me_image2: null,
     };
 
     mockFetchProfile.mockResolvedValue(mockProfile);

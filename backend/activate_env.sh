@@ -31,4 +31,4 @@ if [ -n "$VIRTUAL_ENV" ]; then
 else
     echo "❌ Failed to activate Poetry environment"
     exit 1
-fi 
+fi

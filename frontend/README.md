@@ -5,6 +5,7 @@ Modern React + TypeScript frontend for a personal portfolio showcasing astrophot
 ## 🚀 Features
 
 ### Core Functionality
+
 - **Dynamic Profile Loading** - Fetches user profile, bio, avatar, and social links from Django API
 - **Multi-page Navigation** - Home, Astrophotography, Programming, and Contact pages
 - **Responsive Design** - Mobile-first approach with CSS Modules
@@ -12,6 +13,7 @@ Modern React + TypeScript frontend for a personal portfolio showcasing astrophot
 - **Background Management** - Dynamic background images from backend API
 
 ### Technical Features
+
 - **100% TypeScript** - Full type safety across entire codebase
 - **React Router v6** - Client-side routing with nested layouts
 - **Axios HTTP Client** - API communication with error handling
@@ -70,18 +72,22 @@ src/
 ## 🔌 API Integration
 
 ### Endpoints Used
+
 - **Profile API**: `GET /api/v1/profile/` - User profile data
 - **Background API**: `GET /api/v1/background/` - Main page background
 - **Astro Images API**: `GET /api/v1/image/` - Astrophotography gallery
 
 ### Fallback Behavior
+
 When API is unavailable, the app gracefully falls back to:
+
 - Static logo: `/logo.png`
 - Default portrait: `/portrait_default.png`
 - Static gallery items from `galleryItems.js`
 - Empty bio content
 
 ### Error Handling
+
 - Loading states for all API calls
 - Error messages for failed requests
 - Graceful degradation when backend is offline
@@ -89,6 +95,7 @@ When API is unavailable, the app gracefully falls back to:
 ## 🛠️ Development Setup
 
 ### Prerequisites
+
 - Node.js 16+
 - npm or yarn
 - Docker (for containerized development)
@@ -97,23 +104,28 @@ When API is unavailable, the app gracefully falls back to:
 > **Docker Compose Version**: Check your Docker version with `docker --version`. Use `docker compose` (V2) or `docker-compose` (V1) accordingly.
 
 ### Installation
+
 ```bash
 cd frontend
 npm install
 ```
 
 ### Development Server
+
 ```bash
 npm start
 ```
+
 - Runs on `https://portfolio.local:3000/`
 - Hot reloading enabled
 - Requires backend API at `https://admin.portfolio.local/`
 
 ### Production Build
+
 ```bash
 npm run build
 ```
+
 - Creates optimized build in `dist/` directory
 - Minified CSS and JavaScript
 - Asset optimization
@@ -121,14 +133,17 @@ npm run build
 ### Testing
 
 #### Local Testing
+
 ```bash
 npm test
 ```
+
 - Jest test runner
 - React Testing Library for component tests
 - CSS Modules mock setup included
 
 #### Docker Testing
+
 ```bash
 # Run tests in Docker container (Docker Compose V2)
 docker compose exec portfolio-fe npm test
@@ -147,6 +162,7 @@ docker run --rm portfolio-frontend-test
 ## 🐳 Docker Integration
 
 ### With Docker Compose (Recommended)
+
 ```bash
 # Docker Compose V2 (newer versions)
 docker compose up --build
@@ -154,12 +170,14 @@ docker compose up --build
 # Docker Compose V1 (older versions)
 docker-compose up --build
 ```
+
 - Frontend: `https://portfolio.local/`
 - Backend: `https://admin.portfolio.local/`
 - Shared network configuration
 - Volume mounting for development
 
 ### Frontend-Only Docker
+
 ```bash
 cd frontend
 docker build -t portfolio-frontend .
@@ -169,6 +187,7 @@ docker run -p 3000:3000 portfolio-frontend
 ## 🎨 Styling Architecture
 
 ### CSS Organization
+
 The project uses a well-organized CSS architecture with clear separation of concerns:
 
 ```
@@ -188,18 +207,22 @@ src/styles/
 ```
 
 ### CSS Modules
+
 - **Scoped Styling**: Each component has its own CSS module
 - **No Global Conflicts**: Styles are automatically scoped to components
 - **Type Safety**: CSS class names are validated at build time
 
 ### Design System
+
 - **CSS Variables**: Consistent colors, spacing, typography, and other design tokens
 - **Utility Classes**: Reusable mixins for common patterns (flexbox, spacing, etc.)
 - **Responsive Design**: Mobile-first approach with consistent breakpoints
 - **Dark Mode Support**: Automatic dark mode detection with CSS variables
 
 ### Component Styles
+
 All component styles are organized in `styles/components/` directory:
+
 - **Modular Structure**: Each component has its dedicated CSS file
 - **Consistent Naming**: All files follow `ComponentName.module.css` convention
 - **Easy Maintenance**: Clear separation makes styles easy to find and modify
@@ -207,33 +230,39 @@ All component styles are organized in `styles/components/` directory:
 ## 📱 Pages & Components
 
 ### HomePage (`/`)
+
 - Hero section with dynamic background
 - User profile display
 - Quick gallery preview
 - About section with bio
 
 ### Astrophotography (`/astrophotography`)
+
 - Full-screen image gallery
 - Filter by celestial object type
 - Modal lightbox for image details
 - Equipment and processing info
 
 ### Programming (`/programming`)
+
 - Currently shows "under construction"
 - Planned: Project showcase with screenshots
 - Technology stacks and links
 
 ### Contact (`/contact`)
+
 - Link exists in navigation
 - Implementation pending
 
 ## 🔧 Configuration
 
 ### Environment Variables
+
 - `API_BASE_URL` - Backend API endpoint (default: `https://admin.portfolio.local`)
 - Custom domains configured in nginx
 
 ### Build Configuration
+
 - Webpack 5 with modern JavaScript features
 - CSS Modules support
 - Asset optimization
@@ -242,6 +271,7 @@ All component styles are organized in `styles/components/` directory:
 ## 🧪 Testing Strategy
 
 ### Current Tests
+
 - **Component Tests** - All major components have test coverage
 - **API Mocking** - Services are properly mocked for testing
 - **Router Testing** - Navigation components tested with React Router
@@ -250,6 +280,7 @@ All component styles are organized in `styles/components/` directory:
 - **CSS Modules Support** - Identity proxy configured for CSS Modules
 
 ### Test Structure
+
 ```bash
 src/
 ├── __tests__/                    # Test module
@@ -264,6 +295,7 @@ src/
 ```
 
 ### Test Configuration
+
 - **Jest Config** (`jest.config.js`) - Main Jest configuration with proper setup
 - **Test Match** - Automatically finds tests in `__tests__/` directory
 - **CSS Modules** - Identity proxy configured for CSS imports
@@ -272,6 +304,7 @@ src/
 - **Test Module README** - Complete guide for running and understanding tests
 
 ### Test Documentation
+
 - **Comprehensive JSDoc Comments** - Every test file and individual test is documented
 - **Test Module README** (`src/__tests__/README.md`) - Detailed guide for running and understanding tests
 - **Mock Strategy** - Clear documentation of how API services are mocked
@@ -289,6 +322,7 @@ src/
 ## ✅ Recently Completed
 
 ### 🎯 TypeScript Migration (COMPLETED)
+
 - ✅ **Full TypeScript Migration** - 100% TypeScript coverage across entire frontend
 - ✅ **23 Files Migrated** - All components, API services, data files, and tests
 - ✅ **Type Safety** - Strict TypeScript configuration with comprehensive interfaces
@@ -299,24 +333,26 @@ src/
 ## 📋 TODO / Future Improvements
 
 ### 🚀 Priority 1 - Critical
+
 - [ ] **Complete Programming Page** - Implement actual programming projects showcase
 - [ ] **Add Contact Page** - Create functional contact form with backend integration
 - [ ] **Accessibility Improvements** - Add ARIA labels, keyboard navigation, screen reader support
 
 ### ⚡ Priority 2 - Important
+
 - [ ] **Refactor Inline Styles** - Move inline styles from Programming.jsx to CSS modules
 - [ ] **Performance Optimizations** - Add React.memo(), useMemo(), useCallback() for better performance
 - [ ] **Better Error Handling** - Implement specific error types and better error messages
 - [ ] **Replace Static Gallery** - Make homepage gallery API-driven instead of static
 
 ### 🎯 Priority 3 - Nice to Have
+
 - [ ] **State Management** - Redux/Zustand for complex state management
 - [ ] **PWA Features** - Service worker, offline support
 - [ ] **Advanced Testing** - E2E tests with Playwright
 - [ ] **Image Optimization** - Advanced lazy loading and compression
 - [ ] **SEO Enhancement** - Meta tags, structured data, sitemap
 
-
 ---
 
-For backend setup and API documentation, see [Backend README](../backend/README.md). 
+For backend setup and API documentation, see [Backend README](../backend/README.md).
