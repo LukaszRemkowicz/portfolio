@@ -1,0 +1,147 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+        body: |
+          ## 🚀 Portfolio Release ${{ github.ref }}
+          
+          ### What's New
+          - Full TypeScript migration completed
+          - Enhanced CI/CD pipeline
+          - Improved testing coverage
+          - Security scanning integration
+          
+          ### Docker Images
+          - `${{ secrets.DOCKER_USERNAME }}/portfolio-frontend:${{ github.ref_name }}`
+          - `${{ secrets.DOCKER_USERNAME }}/portfolio-backend:${{ github.ref_name }}`
+          
+          ### Quick Start
+          ```bash
+          docker pull ${{ secrets.DOCKER_USERNAME }}/portfolio-frontend:${{ github.ref_name }}
+          docker pull ${{ secrets.DOCKER_USERNAME }}/portfolio-backend:${{ github.ref_name }}
+          ```
+
+  build-release-images:
+    name: Build Release Images
+    runs-on: ubuntu-latest
+    needs: create-release
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        
+    - name: Extract version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+    - name: Build and push frontend release image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        target: prod
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/portfolio-frontend:${{ steps.version.outputs.VERSION }}
+          ${{ secrets.DOCKER_USERNAME }}/portfolio-frontend:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Build and push backend release image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/portfolio-backend:${{ steps.version.outputs.VERSION }}
+          ${{ secrets.DOCKER_USERNAME }}/portfolio-backend:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  update-release:
+    name: Update Release
+    runs-on: ubuntu-latest
+    needs: [create-release, build-release-images]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Update Release
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: release } = await github.rest.repos.getRelease({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            release_id: context.payload.release.id
+          });
+          
+          await github.rest.repos.updateRelease({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            release_id: context.payload.release.id,
+            body: release.body + `
+              
+              ## ✅ Build Status
+              
+              | Component | Status | Image |
+              |-----------|--------|-------|
+              | Frontend | ✅ Built | \`${{ secrets.DOCKER_USERNAME }}/portfolio-frontend:${{ github.ref_name }}\` |
+              | Backend | ✅ Built | \`${{ secrets.DOCKER_USERNAME }}/portfolio-backend:${{ github.ref_name }}\` |
+              
+              ## 🐳 Docker Compose
+              
+              \`\`\`yaml
+              version: '3.8'
+              services:
+                frontend:
+                  image: ${{ secrets.DOCKER_USERNAME }}/portfolio-frontend:${{ github.ref_name }}
+                  ports:
+                    - "80:80"
+                    
+                backend:
+                  image: ${{ secrets.DOCKER_USERNAME }}/portfolio-backend:${{ github.ref_name }}
+                  ports:
+                    - "8000:8000"
+              \`\`\`
+            `
+          });
