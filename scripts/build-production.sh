@@ -111,179 +111,179 @@ cd "$PROJECT_DIR" || {
     exit 1
 }
 
-# Sprawdź czy to repozytorium git
+# Check if this is a git repository
 if [ ! -d ".git" ]; then
-    error "To nie jest repozytorium git!"
+    error "This is not a git repository!"
     exit 1
 fi
 
-# Sprawdź czy Docker jest dostępny
+# Check if Docker is available
 if ! command -v docker &> /dev/null; then
-    error "Docker nie jest zainstalowany lub nie jest dostępny!"
+    error "Docker is not installed or not available!"
     exit 1
 fi
 
 if ! command -v docker-compose &> /dev/null && ! command -v docker compose &> /dev/null; then
-    error "Docker Compose nie jest dostępny!"
+    error "Docker Compose is not available!"
     exit 1
 fi
 
-# Pokaż aktualny branch
+# Show current branch
 CURRENT_BRANCH=$(git branch --show-current)
-log "📋 Aktualny branch: $CURRENT_BRANCH"
+log "📋 Current branch: $CURRENT_BRANCH"
 
-# Git pull (jeśli nie wyłączone)
+# Git pull (if not disabled)
 if [ "$NO_PULL" = false ]; then
-    log "📥 Pobieram najnowszy kod z branch $BRANCH..."
+    log "📥 Pulling latest code from branch $BRANCH..."
     
-    # Przełącz na właściwy branch jeśli potrzeba
+    # Switch to correct branch if needed
     if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
-        log "🔄 Przełączam na branch $BRANCH..."
+        log "🔄 Switching to branch $BRANCH..."
         git checkout "$BRANCH" || {
-            error "Nie można przełączyć na branch $BRANCH"
+            error "Cannot switch to branch $BRANCH"
             exit 1
         }
     fi
     
-    # Pobierz najnowszy kod
+    # Pull latest code
     git pull origin "$BRANCH" || {
-        error "Nie udało się pobrać kodu z git!"
+        error "Failed to pull code from git!"
         exit 1
     }
     
-    success "✅ Kod pobrany pomyślnie"
+    success "✅ Code pulled successfully"
 else
-    info "⏭️  Pomijam git pull (--no-pull)"
+    info "⏭️  Skipping git pull (--no-pull)"
 fi
 
-# Pokaż aktualny commit
+# Show current commit
 CURRENT_COMMIT=$(git rev-parse --short HEAD)
-log "📌 Aktualny commit: $CURRENT_COMMIT"
+log "📌 Current commit: $CURRENT_COMMIT"
 
-# Sprawdź czy pliki Dockerfile istnieją
+# Check if Dockerfile files exist
 if [ "$BACKEND_ONLY" = false ]; then
     if [ ! -f "frontend/Dockerfile" ]; then
-        error "Plik frontend/Dockerfile nie istnieje!"
+        error "frontend/Dockerfile file does not exist!"
         exit 1
     fi
 fi
 
 if [ "$FRONTEND_ONLY" = false ]; then
     if [ ! -f "backend/Dockerfile" ]; then
-        error "Plik backend/Dockerfile nie istnieje!"
+        error "backend/Dockerfile file does not exist!"
         exit 1
     fi
 fi
 
-# Zatrzymaj istniejące kontenery (opcjonalnie)
-log "🛑 Zatrzymuję istniejące kontenery..."
+# Stop existing containers (optional)
+log "🛑 Stopping existing containers..."
 if command -v docker-compose &> /dev/null; then
-    docker-compose down || warning "Nie udało się zatrzymać kontenerów (może nie były uruchomione)"
+    docker-compose down || warning "Failed to stop containers (may not have been running)"
 else
-    docker compose down || warning "Nie udało się zatrzymać kontenerów (może nie były uruchomione)"
+    docker compose down || warning "Failed to stop containers (may not have been running)"
 fi
 
-# Buduj obrazy
+# Build images
 if [ "$BACKEND_ONLY" = false ]; then
-    log "🔨 Buduję obraz frontend (produkcja)..."
+    log "🔨 Building frontend image (production)..."
     
-    # Sprawdź czy target 'prod' istnieje w Dockerfile
+    # Check if 'prod' target exists in Dockerfile
     if grep -q "target.*prod" frontend/Dockerfile; then
         BUILD_TARGET="prod"
-        log "📦 Używam target: $BUILD_TARGET"
+        log "📦 Using target: $BUILD_TARGET"
     else
         BUILD_TARGET=""
-        warning "Brak target 'prod' w Dockerfile, buduję domyślny"
+        warning "No 'prod' target in Dockerfile, building default"
     fi
     
     if [ -n "$BUILD_TARGET" ]; then
         docker build -t portfolio-frontend:prod -t portfolio-frontend:latest -t portfolio-frontend:$CURRENT_COMMIT --target "$BUILD_TARGET" ./frontend || {
-            error "Błąd podczas budowania obrazu frontend!"
+            error "Error building frontend image!"
             exit 1
         }
     else
         docker build -t portfolio-frontend:prod -t portfolio-frontend:latest -t portfolio-frontend:$CURRENT_COMMIT ./frontend || {
-            error "Błąd podczas budowania obrazu frontend!"
+            error "Error building frontend image!"
             exit 1
         }
     fi
     
-    success "✅ Obraz frontend zbudowany pomyślnie"
-    info "📦 Tagi: portfolio-frontend:prod, portfolio-frontend:latest, portfolio-frontend:$CURRENT_COMMIT"
+    success "✅ Frontend image built successfully"
+    info "📦 Tags: portfolio-frontend:prod, portfolio-frontend:latest, portfolio-frontend:$CURRENT_COMMIT"
 fi
 
 if [ "$FRONTEND_ONLY" = false ]; then
-    log "🔨 Buduję obraz backend (produkcja)..."
+    log "🔨 Building backend image (production)..."
     
-    # Sprawdź czy target 'prod' istnieje w Dockerfile
+    # Check if 'prod' target exists in Dockerfile
     if grep -q "target.*prod" backend/Dockerfile; then
         BUILD_TARGET="prod"
-        log "📦 Używam target: $BUILD_TARGET"
+        log "📦 Using target: $BUILD_TARGET"
     else
         BUILD_TARGET=""
-        warning "Brak target 'prod' w Dockerfile, buduję domyślny"
+        warning "No 'prod' target in Dockerfile, building default"
     fi
     
     if [ -n "$BUILD_TARGET" ]; then
         docker build -t portfolio-backend:prod -t portfolio-backend:latest -t portfolio-backend:$CURRENT_COMMIT --target "$BUILD_TARGET" ./backend || {
-            error "Błąd podczas budowania obrazu backend!"
+            error "Error building backend image!"
             exit 1
         }
     else
         docker build -t portfolio-backend:prod -t portfolio-backend:latest -t portfolio-backend:$CURRENT_COMMIT ./backend || {
-            error "Błąd podczas budowania obrazu backend!"
+            error "Error building backend image!"
             exit 1
         }
     fi
     
-    success "✅ Obraz backend zbudowany pomyślnie"
-    info "📦 Tagi: portfolio-backend:prod, portfolio-backend:latest, portfolio-backend:$CURRENT_COMMIT"
+    success "✅ Backend image built successfully"
+    info "📦 Tags: portfolio-backend:prod, portfolio-backend:latest, portfolio-backend:$CURRENT_COMMIT"
 fi
 
-# Pokaż zbudowane obrazy
-log "📋 Zbudowane obrazy:"
-docker images | grep portfolio || warning "Brak obrazów portfolio"
+# Show built images
+log "📋 Built images:"
+docker images | grep portfolio || warning "No portfolio images found"
 
-# Opcjonalnie uruchom kontenery (zapytaj użytkownika)
+# Optionally run containers (ask user)
 echo ""
-read -p "🚀 Czy chcesz uruchomić kontenery produkcyjne? (y/N): " -n 1 -r
+read -p "🚀 Do you want to run production containers? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    log "🚀 Uruchamiam kontenery produkcyjne..."
+    log "🚀 Starting production containers..."
     
     if command -v docker-compose &> /dev/null; then
         docker-compose up -d || {
-            error "Błąd podczas uruchamiania kontenerów!"
+            error "Error starting containers!"
             exit 1
         }
     else
         docker compose up -d || {
-            error "Błąd podczas uruchamiania kontenerów!"
+            error "Error starting containers!"
             exit 1
         }
     fi
     
-    # Sprawdź status
+    # Check status
     sleep 3
-    log "📊 Status kontenerów:"
+    log "📊 Container status:"
     if command -v docker-compose &> /dev/null; then
         docker-compose ps
     else
         docker compose ps
     fi
     
-    success "✅ Kontenery uruchomione pomyślnie"
+    success "✅ Containers started successfully"
 else
-    info "⏭️  Pomijam uruchamianie kontenerów"
+    info "⏭️  Skipping container startup"
 fi
 
-# Pokaż podsumowanie
+# Show summary
 echo ""
-log "📊 Podsumowanie budowania:"
+log "📊 Build summary:"
 log "   - Branch: $BRANCH"
 log "   - Commit: $CURRENT_COMMIT"
-log "   - Data: $(date)"
-log "   - Zbudowane obrazy:"
+log "   - Date: $(date)"
+log "   - Built images:"
 
 if [ "$BACKEND_ONLY" = false ]; then
     log "     ✅ portfolio-frontend:prod"
@@ -298,10 +298,10 @@ if [ "$FRONTEND_ONLY" = false ]; then
 fi
 
 log ""
-success "🎉 Budowanie obrazów produkcyjnych zakończone pomyślnie!"
-log "📝 Log zapisany w: $LOG_FILE"
+success "🎉 Production image build completed successfully!"
+log "📝 Log saved to: $LOG_FILE"
 log ""
-info "💡 Wskazówki:"
-info "   - Użyj 'docker images | grep portfolio' aby zobaczyć obrazy"
-info "   - Użyj 'docker run -p 80:80 portfolio-frontend:prod' aby przetestować frontend"
-info "   - Użyj 'docker run -p 8000:8000 portfolio-backend:prod' aby przetestować backend"
+info "💡 Tips:"
+info "   - Use 'docker images | grep portfolio' to see images"
+info "   - Use 'docker run -p 80:80 portfolio-frontend:prod' to test frontend"
+info "   - Use 'docker run -p 8000:8000 portfolio-backend:prod' to test backend"
