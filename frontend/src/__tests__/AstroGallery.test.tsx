@@ -121,8 +121,18 @@ describe('AstroGallery Component', () => {
    */
   it('renders images from the API after loading', async () => {
     const mockImages: AstroImage[] = [
-      { pk: 1, url: '/test1.jpg', name: 'Test Image 1' },
-      { pk: 2, url: '/test2.jpg', name: 'Test Image 2' },
+      {
+        pk: 1,
+        url: '/test1.jpg',
+        name: 'Test Image 1',
+        description: 'Test description 1',
+      },
+      {
+        pk: 2,
+        url: '/test2.jpg',
+        name: 'Test Image 2',
+        description: 'Test description 2',
+      },
     ];
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
@@ -170,7 +180,12 @@ describe('AstroGallery Component', () => {
    */
   it('filters images when filter is clicked', async () => {
     const mockImages: AstroImage[] = [
-      { pk: 1, url: '/test1.jpg', name: 'Test Image 1' },
+      {
+        pk: 1,
+        url: '/test1.jpg',
+        name: 'Test Image 1',
+        description: 'Test description 1',
+      },
     ];
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
@@ -208,7 +223,12 @@ describe('AstroGallery Component', () => {
    */
   it('opens modal when image is clicked', async () => {
     const mockImages: AstroImage[] = [
-      { pk: 1, url: '/test1.jpg', name: 'Test Image 1' },
+      {
+        pk: 1,
+        url: '/test1.jpg',
+        name: 'Test Image 1',
+        description: 'Test description 1',
+      },
     ];
 
     const mockImageDetail: AstroImage = {

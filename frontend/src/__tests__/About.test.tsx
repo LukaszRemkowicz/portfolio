@@ -52,7 +52,14 @@ describe('About Component', () => {
    * the component gracefully handles missing data.
    */
   it('renders nothing when profile is not loaded', () => {
-    mockFetchProfile.mockResolvedValue(null);
+    mockFetchProfile.mockResolvedValue({
+      first_name: '',
+      last_name: '',
+      avatar: null,
+      bio: '',
+      about_me_image: null,
+      about_me_image2: null,
+    });
     const { container } = render(<About />);
     expect(container.firstChild).toBeNull();
   });

@@ -1,11 +1,13 @@
+import { ReactNode } from 'react';
+
 // API Response Types
 export interface UserProfile {
   first_name: string;
   last_name: string;
-  avatar?: string;
+  avatar?: string | null;
   bio?: string;
-  about_me_image?: string;
-  about_me_image2?: string;
+  about_me_image?: string | null;
+  about_me_image2?: string | null;
 }
 
 export interface BackgroundImage {
@@ -64,7 +66,7 @@ export interface NavLinkClassProps {
 }
 
 export interface MainLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 // HomePage state types
@@ -108,7 +110,7 @@ export type FilterType =
   | 'Northern Lights';
 
 // API Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T;
   status: number;
   statusText: string;
@@ -130,15 +132,4 @@ export interface ApiRoutes {
   astroImages: string;
   astroImage: string;
   contact: string;
-}
-
-// CSS Module Types
-declare module '*.module.css' {
-  const classes: { [key: string]: string };
-  export default classes;
-}
-
-declare module '*.css' {
-  const content: { [className: string]: string };
-  export default content;
 }

@@ -8,7 +8,7 @@ import Gallery from './Gallery';
 import PrelectionsAndCourses from './PrelectionsAndCourses';
 import styles from './styles/components/App.module.css';
 import { fetchProfile, fetchBackground } from './api/services';
-import { UserProfile, BackgroundImage } from './types';
+import { UserProfile } from './types';
 
 const DEFAULT_PORTRAIT = '/portrait_default.png';
 
@@ -29,7 +29,7 @@ const HomePage: React.FC = () => {
         setFirstName(profile.first_name || '');
         setLastName(profile.last_name || '');
 
-        const background: string = await fetchBackground();
+        const background: string | null = await fetchBackground();
         setBackgroundUrl(background);
       } catch (e: unknown) {
         console.error('Failed to load initial data:', e);

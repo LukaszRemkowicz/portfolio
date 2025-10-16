@@ -72,7 +72,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
         <li>
           <a
             href='#contact'
-            className={getLinkClass}
+            className={getLinkClass({ isActive: false })}
             onClick={handleContactClick}
           >
             Contact

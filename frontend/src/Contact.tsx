@@ -45,7 +45,7 @@ const Contact: React.FC = () => {
       await fetchContact(formData);
       setSubmitStatus('success');
       setFormData({ name: '', email: '', subject: '', message: '' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to send message:', error);
 
       // Handle validation errors from backend

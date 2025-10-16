@@ -5,7 +5,7 @@ import {
   fetchBackground,
   fetchAstroImage,
 } from './api/services';
-import { API_BASE_URL } from './api/routes';
+// import { API_BASE_URL } from './api/routes';
 import { AstroImage, FilterParams, FilterType } from './types';
 
 const GALLERY_BG = '/startrails.jpeg'; // fallback static image
@@ -51,14 +51,13 @@ const AstroGallery: React.FC = () => {
 
   useEffect(() => {
     loadImages(selectedFilter);
-    // eslint-disable-next-line
   }, [selectedFilter]);
 
   useEffect(() => {
     // Try to fetch a background from the backend, fallback to static
     const loadBackground = async (): Promise<void> => {
       try {
-        const bg: string = await fetchBackground();
+        const bg: string | null = await fetchBackground();
         if (bg) setBackground(bg);
       } catch {
         setBackground(GALLERY_BG);
@@ -80,8 +79,10 @@ const AstroGallery: React.FC = () => {
       })
       .catch(() => {
         setModalDescription('No description available.');
-      })
-      .finally(() => setModalDescriptionLoading(false));
+      });
+
+    // Always stop loading
+    setModalDescriptionLoading(false);
   }, [modalImage]);
 
   // Close modal on Escape key
