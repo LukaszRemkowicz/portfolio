@@ -1,24 +1,24 @@
 #!/bin/bash
 
 # Portfolio Deployment Script
-# Automatyczny deployment na serwer produkcyjny
-# Uruchamiany przez cron co 10-15 minut
+# Automatic deployment to production server
+# Run by cron every 10-15 minutes
 
-set -e  # Zatrzymaj przy błędzie
+set -e  # Stop on error
 
-# Konfiguracja
-PROJECT_DIR="/path/to/portfolio"  # ZMIEŃ NA SWOJĄ ŚCIEŻKĘ!
+# Configuration
+PROJECT_DIR="/path/to/portfolio"  # CHANGE TO YOUR PATH!
 BRANCH="main"
 LOG_FILE="/var/log/portfolio-deploy.log"
 
-# Kolory dla logów
+# Colors for logs
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Funkcja logowania
+# Logging function
 log() {
     echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE"
 }
@@ -37,141 +37,141 @@ warning() {
 
 # Sprawdź czy katalog projektu istnieje
 if [ ! -d "$PROJECT_DIR" ]; then
-    error "Katalog projektu nie istnieje: $PROJECT_DIR"
-    error "Zmień PROJECT_DIR w skrypcie na właściwą ścieżkę!"
+    error "Project directory does not exist: $PROJECT_DIR"
+    error "Change PROJECT_DIR in the script to the correct path!"
     exit 1
 fi
 
-log "🚀 Rozpoczynam deployment portfolio..."
+log "🚀 Starting portfolio deployment..."
 
-# Przejdź do katalogu projektu
+# Go to project directory
 cd "$PROJECT_DIR" || {
-    error "Nie można przejść do katalogu: $PROJECT_DIR"
+    error "Cannot access directory: $PROJECT_DIR"
     exit 1
 }
 
-# Sprawdź czy to repozytorium git
+# Check if this is a git repository
 if [ ! -d ".git" ]; then
-    error "To nie jest repozytorium git!"
+    error "This is not a git repository!"
     exit 1
 fi
 
-# Sprawdź czy Docker jest dostępny
+# Check if Docker is available
 if ! command -v docker &> /dev/null; then
-    error "Docker nie jest zainstalowany lub nie jest dostępny!"
+    error "Docker is not installed or not available!"
     exit 1
 fi
 
 if ! command -v docker-compose &> /dev/null && ! command -v docker compose &> /dev/null; then
-    error "Docker Compose nie jest dostępny!"
+    error "Docker Compose is not available!"
     exit 1
 fi
 
-# Sprawdź czy jest nowy kod do pobrania
-log "📥 Sprawdzam czy są nowe zmiany..."
+# Check if there is new code to pull
+log "📥 Checking for new changes..."
 git fetch origin
 
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/$BRANCH)
 
 if [ "$LOCAL" = "$REMOTE" ]; then
-    log "✅ Kod jest aktualny, brak zmian do deployowania"
+    log "✅ Code is up to date, no changes to deploy"
     exit 0
 fi
 
-log "📥 Znaleziono nowe zmiany, pobieram kod..."
+log "📥 Found new changes, pulling code..."
 
-# Pobierz najnowszy kod
+# Pull latest code
 git pull origin $BRANCH || {
-    error "Nie udało się pobrać kodu z git!"
+    error "Failed to pull code from git!"
     exit 1
 }
 
-success "✅ Kod pobrany pomyślnie"
+success "✅ Code pulled successfully"
 
-# Sprawdź czy docker-compose.yml istnieje
+# Check if docker-compose.yml exists
 if [ ! -f "docker-compose.yml" ]; then
-    error "Plik docker-compose.yml nie istnieje!"
+    error "docker-compose.yml file does not exist!"
     exit 1
 fi
 
-# Zatrzymaj istniejące kontenery
-log "🛑 Zatrzymuję istniejące kontenery..."
+# Stop existing containers
+log "🛑 Stopping existing containers..."
 if command -v docker-compose &> /dev/null; then
-    docker-compose down || warning "Nie udało się zatrzymać kontenerów (może nie były uruchomione)"
+    docker-compose down || warning "Failed to stop containers (may not have been running)"
 else
-    docker compose down || warning "Nie udało się zatrzymać kontenerów (może nie były uruchomione)"
+    docker compose down || warning "Failed to stop containers (may not have been running)"
 fi
 
-# Zbuduj nowe obrazy
-log "🔨 Buduję nowe obrazy Docker..."
+# Build new images
+log "🔨 Building new Docker images..."
 if command -v docker-compose &> /dev/null; then
     docker-compose build --no-cache || {
-        error "Błąd podczas budowania obrazów Docker!"
+        error "Error building Docker images!"
         exit 1
     }
 else
     docker compose build --no-cache || {
-        error "Błąd podczas budowania obrazów Docker!"
+        error "Error building Docker images!"
         exit 1
     }
 fi
 
-success "✅ Obrazy Docker zbudowane pomyślnie"
+success "✅ Docker images built successfully"
 
-# Uruchom kontenery
-log "🚀 Uruchamiam nowe kontenery..."
+# Start containers
+log "🚀 Starting new containers..."
 if command -v docker-compose &> /dev/null; then
     docker-compose up -d || {
-        error "Błąd podczas uruchamiania kontenerów!"
+        error "Error starting containers!"
         exit 1
     }
 else
     docker compose up -d || {
-        error "Błąd podczas uruchamiania kontenerów!"
+        error "Error starting containers!"
         exit 1
     }
 fi
 
-success "✅ Kontenery uruchomione pomyślnie"
+success "✅ Containers started successfully"
 
-# Sprawdź czy kontenery działają
-log "🔍 Sprawdzam status kontenerów..."
-sleep 5  # Daj czas na uruchomienie
+# Check if containers are running
+log "🔍 Checking container status..."
+sleep 5  # Give time to start
 
 if command -v docker-compose &> /dev/null; then
     if docker-compose ps | grep -q "Up"; then
-        success "✅ Kontenery działają poprawnie"
+        success "✅ Containers are running correctly"
     else
-        error "❌ Kontenery nie działają poprawnie!"
+        error "❌ Containers are not running correctly!"
         docker-compose ps
         exit 1
     fi
 else
     if docker compose ps | grep -q "Up"; then
-        success "✅ Kontenery działają poprawnie"
+        success "✅ Containers are running correctly"
     else
-        error "❌ Kontenery nie działają poprawnie!"
+        error "❌ Containers are not running correctly!"
         docker compose ps
         exit 1
     fi
 fi
 
-# Wyczyść stare obrazy (opcjonalnie)
-log "🧹 Czyszczę stare obrazy Docker..."
-docker system prune -f || warning "Nie udało się wyczyścić starych obrazów"
+# Clean old images (optional)
+log "🧹 Cleaning old Docker images..."
+docker system prune -f || warning "Failed to clean old images"
 
-# Pokaż podsumowanie
-log "📊 Podsumowanie deployment:"
-log "   - Kod pobrany z branch: $BRANCH"
+# Show summary
+log "📊 Deployment summary:"
+log "   - Code pulled from branch: $BRANCH"
 log "   - Commit: $(git rev-parse --short HEAD)"
-log "   - Data: $(date)"
-log "   - Status kontenerów:"
+log "   - Date: $(date)"
+log "   - Container status:"
 if command -v docker-compose &> /dev/null; then
     docker-compose ps
 else
     docker compose ps
 fi
 
-success "🎉 Deployment zakończony pomyślnie!"
-log "📝 Log zapisany w: $LOG_FILE"
+success "🎉 Deployment completed successfully!"
+log "📝 Log saved to: $LOG_FILE"
