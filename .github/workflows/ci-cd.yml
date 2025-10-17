@@ -135,7 +135,7 @@ jobs:
 
     - name: Run backend tests in Docker
       run: |
-        docker run --rm portfolio-backend:test python manage.py test
+        docker run --rm portfolio-backend:test
 
   # Security Scanning
   security-scan:
