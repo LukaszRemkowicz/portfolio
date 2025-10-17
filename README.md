@@ -26,6 +26,15 @@ A modern, API-driven personal portfolio web app with subpages for Astrophotograp
 - **SSL certificates** for local HTTPS development
 - **Environment-based configuration** for different deployment stages
 
+## TODO
+- [x] Navbar
+- [x] About me page
+- [x] Gallery page
+- [ ] Courses
+- [x] Contact form
+- [ ] CI/CD
+- [ ] Tests
+
 ## Quick Start
 
 ### 1. Clone the repository
