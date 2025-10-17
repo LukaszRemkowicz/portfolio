@@ -84,12 +84,10 @@ module = [
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "core.settings"
-python_files = ["tests.py", "test_*.py", "*_tests.py"]
-addopts = "--tb=short --strict-markers"
+DJANGO_SETTINGS_MODULE = "core.test_settings"
+addopts = "--tb=short --strict-markers --reuse-db"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
+    "django_db: marks tests that require database access",
 ]
-
-# Pre-commit hooks configuration moved to .pre-commit-config.yaml

@@ -1,9 +1,12 @@
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+
+from core.throttling import APIRateThrottle
 
 from .serializers import PublicUserSerializer
 
@@ -14,6 +17,7 @@ class UserViewSet(viewsets.ViewSet):
     """ViewSet for retrieving the user profile"""
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [APIRateThrottle, UserRateThrottle]
 
     @action(detail=False, methods=["get"])
     def profile(self, request):
