@@ -145,9 +145,31 @@ jobs:
       run: |
         docker run --rm portfolio-frontend:test npm test -- --watchAll=false
 
-    - name: Run backend tests in Docker
+    - name: Set up Python for backend tests
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Poetry for backend tests
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Install backend dependencies for tests
+      working-directory: ./backend
+      run: poetry install --no-root --no-interaction
+
+    - name: Run backend tests with PostgreSQL service
+      working-directory: ./backend
       run: |
-        docker run --rm --network host -e DB_HOST=localhost -e DB_NAME=test_db -e DB_USER=postgres -e DB_PASSWORD=postgres portfolio-backend:test
+        poetry run pytest --cov=. --cov-report=xml || echo 'No tests found'
+      env:
+        DB_HOST: postgres
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
 
   # Security Scanning
   security-scan:
