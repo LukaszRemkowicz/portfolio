@@ -49,9 +49,20 @@ const Contact: React.FC = () => {
       console.error('Failed to send message:', error);
 
       // Handle validation errors from backend
-      if (error.response && error.response.data && error.response.data.errors) {
-        setValidationErrors(error.response.data.errors);
-        setSubmitStatus('validation_error');
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as {
+          response?: { data?: { errors?: ValidationErrors } };
+        };
+        if (
+          axiosError.response &&
+          axiosError.response.data &&
+          axiosError.response.data.errors
+        ) {
+          setValidationErrors(axiosError.response.data.errors);
+          setSubmitStatus('validation_error');
+        } else {
+          setSubmitStatus('error');
+        }
       } else {
         setSubmitStatus('error');
       }

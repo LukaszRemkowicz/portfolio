@@ -59,7 +59,7 @@ module.exports = (env, argv) => {
       open: true,
       hot: true,
       historyApiFallback: true,
-      https: httpsConfig,
+      server: httpsConfig ? 'https' : 'http',
       allowedHosts: 'all',
       client: {
         webSocketURL: httpsConfig
