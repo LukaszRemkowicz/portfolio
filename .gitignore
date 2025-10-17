@@ -57,9 +57,6 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Docker
-.dockerignore
-
 # Environment variables
 .env
 .env.local
@@ -136,3 +133,4 @@ jspm_packages/
 nginx/ssl/certs/
 nginx/logs/
 .cursor/rules/
+/backend/core/local.py

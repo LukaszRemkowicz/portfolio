@@ -1,0 +1,22 @@
+name: "CodeQL Configuration"
+
+# Languages to analyze
+languages:
+  - javascript
+  - python
+
+# Paths to exclude from analysis
+paths-ignore:
+  - '**/node_modules/**'
+  - '**/dist/**'
+  - '**/build/**'
+  - '**/coverage/**'
+  - '**/__pycache__/**'
+  - '**/.venv/**'
+  - '**/venv/**'
+  - '**/migrations/**'
+
+# Queries to run
+queries:
+  - name: security-and-quality
+    uses: security-and-quality
