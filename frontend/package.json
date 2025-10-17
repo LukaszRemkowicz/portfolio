@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "react": "^18.0.0",
-    "react-dom": "^18.2.0",
+    "react-dom": "^19.2.0",
     "react-router-dom": "^6.22.3",
     "web-vitals": "^2.1.4",
     "axios": "^1.6.8"
@@ -36,7 +36,7 @@
     "css-loader": "^6.0.0",
     "typescript": "^5.0.0",
     "@types/react": "^18.0.0",
-    "@types/react-dom": "^18.0.0",
+    "@types/react-dom": "^19.2.2",
     "@types/jest": "^29.0.0",
     "@types/node": "^20.0.0",
     "ts-loader": "^9.0.0",
