@@ -58,3 +58,39 @@ For production deployment, use the provided `deploy.sh` script:
 ```
 
 No GitHub secrets needed for deployment!
+
+## Branch Protection Rules
+
+To enable branch protection for the main branch:
+
+1. Go to **Settings** → **Branches** → **Add rule**
+2. Set **Branch name pattern** to `main`
+3. Enable these settings:
+   - ✅ **Require a pull request before merging**
+   - ✅ **Require status checks to pass before merging**
+   - ✅ **Require branches to be up to date before merging**
+   - ✅ **Restrict pushes that create files**
+   - ✅ **Include administrators**
+
+4. In **Status checks that are required**:
+   - ✅ **Branch Protection Check**
+   - ✅ **Frontend Tests**
+   - ✅ **Backend Tests**
+   - ✅ **Docker Build & Test**
+   - ✅ **Security Scan**
+   - ✅ **All Checks Completed**
+
+5. **Allow force pushes**: ❌ (disabled)
+6. **Allow deletions**: ❌ (disabled)
+
+### Allowed branches to merge to main:
+- `dev` - Main development branch
+- `hotfix/*` - Emergency fixes
+- `release/*` - Release branches
+
+### Workflow:
+```
+feature/* → dev → main
+hotfix/* → main (direct)
+release/* → main (direct)
+```
