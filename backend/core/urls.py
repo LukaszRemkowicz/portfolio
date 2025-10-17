@@ -14,18 +14,20 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import path, include
-from django.conf import settings
-from django.conf.urls.static import static
-from django.http import FileResponse, HttpRequest, HttpResponse
-from django.views.static import serve
+
 import os
 
+from django.conf import settings
+from django.contrib import admin
+from django.http import FileResponse, HttpRequest
+from django.urls import include, path
+from django.views.static import serve
+
 # Admin site customization
-admin.site.site_header = 'Portfolio Administration'
-admin.site.site_title = 'Portfolio Admin Portal'
-admin.site.index_title = 'Welcome to Portfolio Admin Portal'
+admin.site.site_header = "Portfolio Administration"
+admin.site.site_title = "Portfolio Admin Portal"
+admin.site.index_title = "Welcome to Portfolio Admin Portal"
+
 
 def debug_serve_media(request: HttpRequest, path: str, document_root: str) -> FileResponse:
     print(f"Serving media file: {path}")
@@ -35,19 +37,24 @@ def debug_serve_media(request: HttpRequest, path: str, document_root: str) -> Fi
     print(f"File exists: {os.path.exists(full_path)}")
     return serve(request, path, document_root)
 
+
 # Base URL patterns (API endpoints)
 urlpatterns = [
-    path('api/v1/', include('users.urls')),
-    path('api/v1/', include('astrophotography.urls')),
-    path('api/v1/', include('inbox.urls')),
+    path("api/v1/", include("users.urls")),
+    path("api/v1/", include("astrophotography.urls")),
+    path("api/v1/", include("inbox.urls")),
 ]
 
 # Add admin URLs and media serving if we're on admin subdomain
 if settings.ADMIN_DOMAIN in settings.ALLOWED_HOSTS:
     urlpatterns += [
-        path('', admin.site.urls),
+        path("", admin.site.urls),
     ]
     # Always serve media files on admin subdomain with debug info
     urlpatterns += [
-        path('media/<path:path>', debug_serve_media, {'document_root': settings.MEDIA_ROOT}),
-]
+        path(
+            "media/<path:path>",
+            debug_serve_media,
+            {"document_root": settings.MEDIA_ROOT},
+        ),
+    ]

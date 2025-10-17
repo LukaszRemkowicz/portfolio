@@ -71,4 +71,4 @@ services:
       - ./backend/media:/app/media:ro
 
 volumes:
-  postgres_data: 
+  postgres_data:

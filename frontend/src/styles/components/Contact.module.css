@@ -18,7 +18,7 @@
   text-align: center;
   margin-bottom: 1rem;
   color: var(--color-text);
-  font-family: 'Montserrat', Arial, sans-serif;
+  font-family: "Montserrat", Arial, sans-serif;
 }
 
 .subtitle {
@@ -26,7 +26,7 @@
   text-align: center;
   margin-bottom: 3rem;
   color: var(--color-subtext);
-  font-family: 'Montserrat', Arial, sans-serif;
+  font-family: "Montserrat", Arial, sans-serif;
 }
 
 .contactForm {
@@ -51,7 +51,7 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-text);
-  font-family: 'Montserrat', Arial, sans-serif;
+  font-family: "Montserrat", Arial, sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -63,9 +63,11 @@
   border-radius: 4px;
   background-color: var(--color-bg1);
   color: var(--color-text);
-  font-family: 'Montserrat', Arial, sans-serif;
+  font-family: "Montserrat", Arial, sans-serif;
   font-size: 1rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .input:focus,
@@ -101,9 +103,11 @@
   border-radius: 4px;
   font-size: 1rem;
   font-weight: 600;
-  font-family: 'Montserrat', Arial, sans-serif;
+  font-family: "Montserrat", Arial, sans-serif;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.1s;
+  transition:
+    background-color 0.2s,
+    transform 0.1s;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-top: 1rem;
@@ -144,17 +148,17 @@
   .contactContent {
     padding: 0 1rem;
   }
-  
+
   .title {
     font-size: 2rem;
   }
-  
+
   .formRow {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
-  
+
   .submitButton {
     padding: 0.875rem 1.5rem;
   }
-} 
+}
