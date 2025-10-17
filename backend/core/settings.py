@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from typing import Any, cast
 
+import dj_database_url
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -118,14 +119,11 @@ WSGI_APPLICATION = "core.wsgi.application"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": env.str("DB_ENGINE", default=cast(Any, "django.db.backends.postgresql")),
-        "NAME": env.str("DB_NAME", default=cast(Any, "portfolio")),
-        "USER": env.str("DB_USER", default=cast(Any, "postgres")),
-        "PASSWORD": env.str("DB_PASSWORD", default=cast(Any, "postgres")),
-        "HOST": env.str("DB_HOST", default=cast(Any, "db")),
-        "PORT": env.int("DB_PORT", default=cast(Any, 5432)),
-    }
+    "default": dj_database_url.parse(
+        env.str(
+            "DATABASE_URL", default=cast(Any, "postgresql://postgres:postgres@db:5432/portfolio")
+        )
+    )
 }
 
 
