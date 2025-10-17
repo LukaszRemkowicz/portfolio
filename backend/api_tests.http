@@ -80,3 +80,36 @@ Content-Type: {{contentType}}
   "subject": "",
   "message": ""
 }
+
+### Test 11: Valid Contact Form - Different user
+POST {{baseUrl}}/contact/
+Content-Type: {{contentType}}
+
+{
+  "name": "Alice Johnson",
+  "email": "alice.johnson@example.com",
+  "subject": "Website Inquiry",
+  "message": "Hello! I'm interested in learning more about your astrophotography work. Could you provide more details about your equipment and techniques?"
+}
+
+### Test 12: Valid Contact Form - Business inquiry
+POST {{baseUrl}}/contact/
+Content-Type: {{contentType}}
+
+{
+  "name": "Bob Wilson",
+  "email": "bob.wilson@photography-mag.com",
+  "subject": "Collaboration Opportunity",
+  "message": "Hi there! I'm from Photography Magazine and we'd love to feature your astrophotography work in our upcoming issue. Would you be interested in collaborating?"
+}
+
+### Test 13: Valid Contact Form - Technical question
+POST {{baseUrl}}/contact/
+Content-Type: {{contentType}}
+
+{
+  "name": "Carol Davis",
+  "email": "carol.davis@example.com",
+  "subject": "Technical Question",
+  "message": "I'm a beginner in astrophotography and I'm wondering what camera settings you recommend for capturing the Milky Way. Any tips would be greatly appreciated!"
+}

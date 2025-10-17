@@ -6,8 +6,12 @@ from rest_framework.response import Response
 from django.conf import settings
 from django.core.mail import send_mail
 
+from core.throttling import ContactThrottle
+
 from .models import ContactMessage
 from .serializers import ContactMessageSerializer
+
+# Throttling handled by custom ContactThrottle
 
 
 class ContactMessageViewSet(viewsets.ModelViewSet):
@@ -17,17 +21,8 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
 
     queryset = ContactMessage.objects.all()
     serializer_class = ContactMessageSerializer
-
-    def get_permissions(self):
-        """
-        Allow anyone to create contact messages,
-        but require authentication for other actions
-        """
-        if self.action == "create" or self.action == "submit_contact_form":
-            permission_classes = [AllowAny]
-        else:
-            permission_classes = [IsAuthenticated]
-        return [permission() for permission in permission_classes]
+    permission_classes = [AllowAny]
+    throttle_classes = [ContactThrottle]
 
     def create(self, request, *args, **kwargs):
         """
