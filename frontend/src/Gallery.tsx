@@ -1,13 +1,13 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import styles from './styles/components/Gallery.module.css';
-import { galleryItems } from './data/galleryItems';
-import { GalleryItem } from './types';
+import React from "react";
+import { Link } from "react-router-dom";
+import styles from "./styles/components/Gallery.module.css";
+import { galleryItems } from "./data/galleryItems";
+import { GalleryItem } from "./types";
 
 const Gallery: React.FC = () => {
   const renderGalleryItem = (
     item: GalleryItem,
-    index: number
+    index: number,
   ): React.ReactNode => {
     const content = (
       <div
@@ -21,18 +21,18 @@ const Gallery: React.FC = () => {
     );
 
     // Make Astrophotography clickable
-    if (item.title.includes('ASTROPHOTOGRAPHY')) {
+    if (item.title.includes("ASTROPHOTOGRAPHY")) {
       return (
-        <Link key={index} to='/astrophotography' className={styles.galleryLink}>
+        <Link key={index} to="/astrophotography" className={styles.galleryLink}>
           {content}
         </Link>
       );
     }
 
     // Make Programming clickable
-    if (item.title.includes('PROGRAMMING')) {
+    if (item.title.includes("PROGRAMMING")) {
       return (
-        <Link key={index} to='/programming' className={styles.galleryLink}>
+        <Link key={index} to="/programming" className={styles.galleryLink}>
           {content}
         </Link>
       );
@@ -44,7 +44,7 @@ const Gallery: React.FC = () => {
   return (
     <section className={styles.gallery}>
       {galleryItems.map((item: GalleryItem, index: number) =>
-        renderGalleryItem(item, index)
+        renderGalleryItem(item, index),
       )}
     </section>
   );

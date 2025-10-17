@@ -1,6 +1,6 @@
 /* Import CSS Variables and Mixins */
-@import '../themes/variables.css';
-@import '../themes/mixins.css';
+@import "../themes/variables.css";
+@import "../themes/mixins.css";
 
 /* Global Reset and Base Styles */
 html,

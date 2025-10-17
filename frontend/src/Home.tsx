@@ -1,6 +1,6 @@
-import React from 'react';
-import styles from './styles/components/App.module.css';
-import { HomeProps } from './types';
+import React from "react";
+import styles from "./styles/components/App.module.css";
+import { HomeProps } from "./types";
 
 const Home: React.FC<HomeProps> = ({ portraitUrl, firstName, lastName }) => {
   return (
@@ -18,10 +18,10 @@ const Home: React.FC<HomeProps> = ({ portraitUrl, firstName, lastName }) => {
         </div>
       </section>
       <img
-        className={styles['astro-image']}
+        className={styles["astro-image"]}
         src={portraitUrl}
-        alt='Portrait'
-        loading='lazy'
+        alt="Portrait"
+        loading="lazy"
       />
     </>
   );

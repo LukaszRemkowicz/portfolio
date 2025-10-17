@@ -1,7 +1,7 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import Footer from '../Footer';
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import Footer from "../Footer";
 
 /**
  * Test suite for the Footer component
@@ -21,7 +21,7 @@ import Footer from '../Footer';
  * - Footer renders without errors
  * - Text content is properly formatted
  */
-describe('Footer Component', () => {
+describe("Footer Component", () => {
   /**
    * Test: Renders copyright text
    *
@@ -32,8 +32,8 @@ describe('Footer Component', () => {
    * - Footer component renders without errors
    * - Text is accessible and readable
    */
-  it('renders copyright text', () => {
+  it("renders copyright text", () => {
     render(<Footer />);
-    expect(screen.getByText('© 2025 Łukasz Remkowicz')).toBeInTheDocument();
+    expect(screen.getByText("© 2025 Łukasz Remkowicz")).toBeInTheDocument();
   });
 });

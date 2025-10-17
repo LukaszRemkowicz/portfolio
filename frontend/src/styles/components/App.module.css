@@ -1,6 +1,6 @@
 /* landingpage/src/App.module.css */
 
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Indie+Flower&family=Playfair+Display:wght@400;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Indie+Flower&family=Playfair+Display:wght@400;700&display=swap");
 
 :root {
   --color-bg1: #181c2b;
@@ -12,7 +12,7 @@
 
 .app-container {
   color: var(--color-text);
-  font-family: 'Montserrat', Arial, sans-serif;
+  font-family: "Montserrat", Arial, sans-serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -104,7 +104,7 @@ main {
 }
 
 .hero__name {
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-weight: 700;
   font-size: 1.5rem;
   color: var(--color-accent);
@@ -113,7 +113,7 @@ main {
 }
 
 .hero__title {
-  font-family: 'Montserrat', sans-serif;
+  font-family: "Montserrat", sans-serif;
   font-size: 0.9rem;
   color: var(--color-subtext);
   text-transform: uppercase;

@@ -1,8 +1,8 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
-import '@testing-library/jest-dom';
-import Gallery from '../Gallery';
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import { BrowserRouter } from "react-router-dom";
+import "@testing-library/jest-dom";
+import Gallery from "../Gallery";
 
 /**
  * Test suite for the Gallery component
@@ -30,7 +30,7 @@ import Gallery from '../Gallery';
  * - Verify React Router integration works correctly
  */
 
-describe('Gallery Component', () => {
+describe("Gallery Component", () => {
   /**
    * Test: Renders gallery items from static data
    *
@@ -40,16 +40,16 @@ describe('Gallery Component', () => {
    * - Gallery items are rendered from static data source
    * - No API calls are needed for this component
    */
-  it('renders gallery items from static data', () => {
+  it("renders gallery items from static data", () => {
     render(
       <BrowserRouter>
         <Gallery />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
-    expect(screen.getByText('ASTROPHOTOGRAPHY')).toBeInTheDocument();
-    expect(screen.getByText('LANDSCAPE PHOTOGRAPHY')).toBeInTheDocument();
-    expect(screen.getByText('PROGRAMMING')).toBeInTheDocument();
+    expect(screen.getByText("ASTROPHOTOGRAPHY")).toBeInTheDocument();
+    expect(screen.getByText("LANDSCAPE PHOTOGRAPHY")).toBeInTheDocument();
+    expect(screen.getByText("PROGRAMMING")).toBeInTheDocument();
   });
 
   /**
@@ -61,11 +61,11 @@ describe('Gallery Component', () => {
    * - Each category is properly represented in the gallery
    * - Gallery structure is consistent and complete
    */
-  it('renders correct number of gallery items', () => {
+  it("renders correct number of gallery items", () => {
     render(
       <BrowserRouter>
         <Gallery />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Gallery items use background images, so we check for gallery item containers by text content

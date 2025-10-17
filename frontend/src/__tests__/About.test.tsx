@@ -1,15 +1,15 @@
-import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import About from '../About';
-import { UserProfile } from '../types';
+import React from "react";
+import { render, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import About from "../About";
+import { UserProfile } from "../types";
 
 // Mock the API services
-jest.mock('../api/services', () => ({
+jest.mock("../api/services", () => ({
   fetchProfile: jest.fn(),
 }));
 
-import { fetchProfile } from '../api/services';
+import { fetchProfile } from "../api/services";
 
 /**
  * Test suite for the About component
@@ -39,7 +39,7 @@ const mockFetchProfile = fetchProfile as jest.MockedFunction<
   typeof fetchProfile
 >;
 
-describe('About Component', () => {
+describe("About Component", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -51,12 +51,12 @@ describe('About Component', () => {
    * when the profile is not loaded from API. This ensures
    * the component gracefully handles missing data.
    */
-  it('renders nothing when profile is not loaded', () => {
+  it("renders nothing when profile is not loaded", () => {
     mockFetchProfile.mockResolvedValue({
-      first_name: '',
-      last_name: '',
+      first_name: "",
+      last_name: "",
       avatar: null,
-      bio: '',
+      bio: "",
       about_me_image: null,
       about_me_image2: null,
     });
@@ -73,12 +73,12 @@ describe('About Component', () => {
    * - The bio text content is rendered correctly
    * - Multi-line bio text is handled properly
    */
-  it('renders profile bio after loading', async () => {
+  it("renders profile bio after loading", async () => {
     const mockProfile: UserProfile = {
-      first_name: 'John',
-      last_name: 'Doe',
+      first_name: "John",
+      last_name: "Doe",
       avatar: null,
-      bio: 'This is a test bio with multiple lines.\nIt should display correctly.',
+      bio: "This is a test bio with multiple lines.\nIt should display correctly.",
       about_me_image: null,
       about_me_image2: null,
     };
@@ -87,11 +87,11 @@ describe('About Component', () => {
     render(<About />);
 
     await waitFor(() => {
-      expect(screen.getByText('About me')).toBeInTheDocument();
+      expect(screen.getByText("About me")).toBeInTheDocument();
     });
 
     expect(
-      screen.getByText(/This is a test bio with multiple lines/)
+      screen.getByText(/This is a test bio with multiple lines/),
     ).toBeInTheDocument();
   });
 
@@ -104,13 +104,13 @@ describe('About Component', () => {
    * - The image has proper alt text
    * - The component handles image URLs correctly
    */
-  it('renders about me image when available', async () => {
+  it("renders about me image when available", async () => {
     const mockProfile: UserProfile = {
-      first_name: 'John',
-      last_name: 'Doe',
+      first_name: "John",
+      last_name: "Doe",
       avatar: null,
-      bio: 'Test bio',
-      about_me_image: '/test-image.jpg',
+      bio: "Test bio",
+      about_me_image: "/test-image.jpg",
       about_me_image2: null,
     };
 
@@ -118,10 +118,10 @@ describe('About Component', () => {
     render(<About />);
 
     await waitFor(() => {
-      expect(screen.getByText('About me')).toBeInTheDocument();
+      expect(screen.getByText("About me")).toBeInTheDocument();
     });
 
-    const image = screen.getByAltText('About me');
-    expect(image).toHaveAttribute('src', '/test-image.jpg');
+    const image = screen.getByAltText("About me");
+    expect(image).toHaveAttribute("src", "/test-image.jpg");
   });
 });

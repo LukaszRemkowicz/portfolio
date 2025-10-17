@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode } from "react";
 
 // API Response Types
 export interface UserProfile {
@@ -47,7 +47,7 @@ export interface ValidationErrors {
   message?: string[];
 }
 
-export type SubmitStatus = 'success' | 'validation_error' | 'error' | null;
+export type SubmitStatus = "success" | "validation_error" | "error" | null;
 
 // Component Props Types
 export interface HomeProps {
@@ -102,12 +102,12 @@ export interface FilterParams {
 }
 
 export type FilterType =
-  | 'Landscape'
-  | 'Deep Sky'
-  | 'Startrails'
-  | 'Solar System'
-  | 'Milky Way'
-  | 'Northern Lights';
+  | "Landscape"
+  | "Deep Sky"
+  | "Startrails"
+  | "Solar System"
+  | "Milky Way"
+  | "Northern Lights";
 
 // API Types
 export interface ApiResponse<T = unknown> {

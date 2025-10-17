@@ -1,9 +1,9 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
-import '@testing-library/jest-dom';
-import Navbar from '../Navbar';
-import { ReactElement } from 'react';
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import { BrowserRouter } from "react-router-dom";
+import "@testing-library/jest-dom";
+import Navbar from "../Navbar";
+import { ReactElement } from "react";
 
 /**
  * Helper function to render components with React Router context
@@ -31,7 +31,7 @@ const renderWithRouter = (component: ReactElement) => {
  * - Component renders without errors in Router context
  * - Styling classes are applied conditionally
  */
-describe('Navbar Component', () => {
+describe("Navbar Component", () => {
   /**
    * Test: Renders logo and navigation links
    *
@@ -42,13 +42,13 @@ describe('Navbar Component', () => {
    * - Component renders without errors
    * - Navigation structure is complete
    */
-  it('renders logo and navigation links', () => {
+  it("renders logo and navigation links", () => {
     renderWithRouter(<Navbar />);
 
-    expect(screen.getByAltText('Logo')).toBeInTheDocument();
-    expect(screen.getByText('Astrophotography')).toBeInTheDocument();
-    expect(screen.getByText('Programming')).toBeInTheDocument();
-    expect(screen.getByText('Contact')).toBeInTheDocument();
+    expect(screen.getByAltText("Logo")).toBeInTheDocument();
+    expect(screen.getByText("Astrophotography")).toBeInTheDocument();
+    expect(screen.getByText("Programming")).toBeInTheDocument();
+    expect(screen.getByText("Contact")).toBeInTheDocument();
   });
 
   /**
@@ -60,11 +60,11 @@ describe('Navbar Component', () => {
    * - Component handles conditional styling properly
    * - Transparent mode doesn't break navigation functionality
    */
-  it('applies transparent class when transparent prop is true', () => {
+  it("applies transparent class when transparent prop is true", () => {
     renderWithRouter(<Navbar transparent={true} />);
 
-    const navbar = screen.getByRole('navigation');
-    expect(navbar).toHaveClass('transparent');
+    const navbar = screen.getByRole("navigation");
+    expect(navbar).toHaveClass("transparent");
   });
 
   /**
@@ -76,10 +76,10 @@ describe('Navbar Component', () => {
    * - Component handles false/undefined transparent prop correctly
    * - Default styling is preserved when not in transparent mode
    */
-  it('does not apply transparent class when transparent prop is false', () => {
+  it("does not apply transparent class when transparent prop is false", () => {
     renderWithRouter(<Navbar transparent={false} />);
 
-    const navbar = screen.getByRole('navigation');
-    expect(navbar).not.toHaveClass('transparent');
+    const navbar = screen.getByRole("navigation");
+    expect(navbar).not.toHaveClass("transparent");
   });
 });

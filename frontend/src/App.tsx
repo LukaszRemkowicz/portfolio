@@ -1,18 +1,18 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import HomePage from './HomePage';
-import AstroGallery from './AstroGallery';
-import Programming from './Programming';
-import MainLayout from './MainLayout';
-import './styles/components/App.module.css';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import HomePage from "./HomePage";
+import AstroGallery from "./AstroGallery";
+import Programming from "./Programming";
+import MainLayout from "./MainLayout";
+import "./styles/components/App.module.css";
 
 const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path='/' element={<HomePage />} />
+        <Route path="/" element={<HomePage />} />
         <Route
-          path='/astrophotography'
+          path="/astrophotography"
           element={
             <MainLayout>
               <AstroGallery />
@@ -20,7 +20,7 @@ const App: React.FC = () => {
           }
         />
         <Route
-          path='/programming'
+          path="/programming"
           element={
             <MainLayout>
               <Programming />

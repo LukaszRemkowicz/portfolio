@@ -1,11 +1,11 @@
-import React from 'react';
-import { render, screen, waitFor, act } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import AstroGallery from '../AstroGallery';
-import { AstroImage } from '../types';
+import React from "react";
+import { render, screen, waitFor, act } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import AstroGallery from "../AstroGallery";
+import { AstroImage } from "../types";
 
 // Mock the API services
-jest.mock('../api/services', () => ({
+jest.mock("../api/services", () => ({
   fetchAstroImages: jest.fn(),
   fetchBackground: jest.fn(),
   fetchAstroImage: jest.fn(),
@@ -15,7 +15,7 @@ import {
   fetchAstroImages,
   fetchBackground,
   fetchAstroImage,
-} from '../api/services';
+} from "../api/services";
 
 /**
  * Test suite for the AstroGallery component
@@ -41,7 +41,7 @@ import {
  * - Component handles empty image arrays gracefully
  * - Background image is applied correctly
  */
-describe('AstroGallery Component', () => {
+describe("AstroGallery Component", () => {
   const mockFetchAstroImages = fetchAstroImages as jest.MockedFunction<
     typeof fetchAstroImages
   >;
@@ -65,20 +65,22 @@ describe('AstroGallery Component', () => {
    * - Loading state is visible before data is fetched
    * - Component handles async operations correctly
    */
-  it('shows loading state initially', async () => {
+  it("shows loading state initially", async () => {
     // Mock API calls to return promises that resolve after a delay
     mockFetchAstroImages.mockImplementation(
-      () => new Promise(resolve => setTimeout(() => resolve([]), 100))
+      () => new Promise((resolve) => setTimeout(() => resolve([]), 100)),
     );
 
     mockFetchBackground.mockImplementation(
       () =>
-        new Promise(resolve => setTimeout(() => resolve('/test-bg.jpg'), 100))
+        new Promise((resolve) =>
+          setTimeout(() => resolve("/test-bg.jpg"), 100),
+        ),
     );
 
     render(<AstroGallery />);
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
   /**
@@ -91,9 +93,9 @@ describe('AstroGallery Component', () => {
    * - Gallery structure is complete after loading
    * - Component transitions from loading to content state
    */
-  it('renders the gallery title and filter boxes after loading', async () => {
+  it("renders the gallery title and filter boxes after loading", async () => {
     mockFetchAstroImages.mockResolvedValue([]);
-    mockFetchBackground.mockResolvedValue('/test-bg.jpg');
+    mockFetchBackground.mockResolvedValue("/test-bg.jpg");
 
     render(<AstroGallery />);
 
@@ -119,29 +121,29 @@ describe('AstroGallery Component', () => {
    * - Images are clickable and interactive
    * - Gallery displays API data correctly
    */
-  it('renders images from the API after loading', async () => {
+  it("renders images from the API after loading", async () => {
     const mockImages: AstroImage[] = [
       {
         pk: 1,
-        url: '/test1.jpg',
-        name: 'Test Image 1',
-        description: 'Test description 1',
+        url: "/test1.jpg",
+        name: "Test Image 1",
+        description: "Test description 1",
       },
       {
         pk: 2,
-        url: '/test2.jpg',
-        name: 'Test Image 2',
-        description: 'Test description 2',
+        url: "/test2.jpg",
+        name: "Test Image 2",
+        description: "Test description 2",
       },
     ];
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
-    mockFetchBackground.mockResolvedValue('/test-bg.jpg');
+    mockFetchBackground.mockResolvedValue("/test-bg.jpg");
 
     render(<AstroGallery />);
 
     await waitFor(() => {
-      expect(screen.getAllByRole('img').length).toBe(2);
+      expect(screen.getAllByRole("img").length).toBe(2);
     });
   });
 
@@ -155,15 +157,15 @@ describe('AstroGallery Component', () => {
    * - User gets appropriate feedback for API failures
    * - Component recovers gracefully from errors
    */
-  it('handles API errors gracefully', async () => {
-    mockFetchAstroImages.mockRejectedValue(new Error('API Error'));
-    mockFetchBackground.mockRejectedValue(new Error('API Error'));
+  it("handles API errors gracefully", async () => {
+    mockFetchAstroImages.mockRejectedValue(new Error("API Error"));
+    mockFetchBackground.mockRejectedValue(new Error("API Error"));
 
     render(<AstroGallery />);
 
     await waitFor(() => {
       expect(
-        screen.getByText('Failed to load images. Please try again later.')
+        screen.getByText("Failed to load images. Please try again later."),
       ).toBeInTheDocument();
     });
   });
@@ -178,18 +180,18 @@ describe('AstroGallery Component', () => {
    * - API is called with appropriate filter values
    * - Filter functionality works as expected
    */
-  it('filters images when filter is clicked', async () => {
+  it("filters images when filter is clicked", async () => {
     const mockImages: AstroImage[] = [
       {
         pk: 1,
-        url: '/test1.jpg',
-        name: 'Test Image 1',
-        description: 'Test description 1',
+        url: "/test1.jpg",
+        name: "Test Image 1",
+        description: "Test description 1",
       },
     ];
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
-    mockFetchBackground.mockResolvedValue('/test-bg.jpg');
+    mockFetchBackground.mockResolvedValue("/test-bg.jpg");
 
     render(<AstroGallery />);
 
@@ -207,7 +209,7 @@ describe('AstroGallery Component', () => {
     });
 
     await waitFor(() => {
-      expect(fetchAstroImages).toHaveBeenCalledWith({ filter: 'Landscape' });
+      expect(fetchAstroImages).toHaveBeenCalledWith({ filter: "Landscape" });
     });
   });
 
@@ -221,25 +223,25 @@ describe('AstroGallery Component', () => {
    * - Image click events are handled correctly
    * - Modal functionality works as expected
    */
-  it('opens modal when image is clicked', async () => {
+  it("opens modal when image is clicked", async () => {
     const mockImages: AstroImage[] = [
       {
         pk: 1,
-        url: '/test1.jpg',
-        name: 'Test Image 1',
-        description: 'Test description 1',
+        url: "/test1.jpg",
+        name: "Test Image 1",
+        description: "Test description 1",
       },
     ];
 
     const mockImageDetail: AstroImage = {
       pk: 1,
-      url: '/test1.jpg',
-      name: 'Test Image 1',
-      description: 'Test description',
+      url: "/test1.jpg",
+      name: "Test Image 1",
+      description: "Test description",
     };
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
-    mockFetchBackground.mockResolvedValue('/test-bg.jpg');
+    mockFetchBackground.mockResolvedValue("/test-bg.jpg");
     mockFetchAstroImage.mockResolvedValue(mockImageDetail);
 
     render(<AstroGallery />);
@@ -248,14 +250,14 @@ describe('AstroGallery Component', () => {
       expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
     });
 
-    const firstImage = screen.getAllByRole('img')[0];
+    const firstImage = screen.getAllByRole("img")[0];
 
     await act(async () => {
       firstImage.click();
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Test description')).toBeInTheDocument();
+      expect(screen.getByText("Test description")).toBeInTheDocument();
     });
   });
 });

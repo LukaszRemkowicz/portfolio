@@ -28,7 +28,7 @@
   gap: 2rem;
   margin: 0;
   padding: 0;
-  font-family: 'Montserrat', Arial, sans-serif;
+  font-family: "Montserrat", Arial, sans-serif;
 }
 
 :local(.navbar__link) {
@@ -36,7 +36,7 @@
   text-decoration: none;
   font-size: 1.1rem;
   transition: color 0.2s;
-  font-family: 'Montserrat', Arial, sans-serif;
+  font-family: "Montserrat", Arial, sans-serif;
 }
 
 :local(.navbar__link:hover) {

@@ -111,7 +111,7 @@ jobs:
     - name: Build frontend Docker image
       uses: docker/build-push-action@v5
       with:
-        context: ./frontend
+        context: .
         file: ./frontend/Dockerfile
         target: test
         tags: portfolio-frontend:test
@@ -163,9 +163,22 @@ jobs:
       working-directory: ./frontend
       run: npm audit --audit-level=moderate
 
+    - name: Set up Python for backend security
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Poetry for backend security
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
     - name: Run safety check for backend
       working-directory: ./backend
       run: |
+        poetry install --only main
         poetry run pip install safety
         poetry run safety check || true
 

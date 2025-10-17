@@ -1,38 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import styles from './styles/components/AstroGallery.module.css';
+import React, { useState, useEffect } from "react";
+import styles from "./styles/components/AstroGallery.module.css";
 import {
   fetchAstroImages,
   fetchBackground,
   fetchAstroImage,
-} from './api/services';
+} from "./api/services";
 // import { API_BASE_URL } from './api/routes';
-import { AstroImage, FilterParams, FilterType } from './types';
+import { AstroImage, FilterParams, FilterType } from "./types";
 
-const GALLERY_BG = '/startrails.jpeg'; // fallback static image
+const GALLERY_BG = "/startrails.jpeg"; // fallback static image
 
 const FILTERS: FilterType[] = [
-  'Landscape',
-  'Deep Sky',
-  'Startrails',
-  'Solar System',
-  'Milky Way',
-  'Northern Lights',
+  "Landscape",
+  "Deep Sky",
+  "Startrails",
+  "Solar System",
+  "Milky Way",
+  "Northern Lights",
 ];
 
 const AstroGallery: React.FC = () => {
   const [images, setImages] = useState<AstroImage[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [background, setBackground] = useState<string>(GALLERY_BG);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
-  const [modalDescription, setModalDescription] = useState<string>('');
+  const [modalDescription, setModalDescription] = useState<string>("");
   const [modalDescriptionLoading, setModalDescriptionLoading] =
     useState<boolean>(false);
 
   const loadImages = async (filter: string | null = null): Promise<void> => {
     try {
-      setError('');
+      setError("");
       setLoading(true);
       let params: FilterParams = {};
       if (filter) {
@@ -41,7 +41,7 @@ const AstroGallery: React.FC = () => {
       const data: AstroImage[] = await fetchAstroImages(params);
       setImages(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
-      setError('Failed to load images. Please try again later.');
+      setError("Failed to load images. Please try again later.");
       setImages([]); // Ensure images is always an array on error
       console.error(err);
     } finally {
@@ -69,16 +69,16 @@ const AstroGallery: React.FC = () => {
   // Fetch description when modalImage changes
   useEffect(() => {
     if (!modalImage) return;
-    setModalDescription('');
+    setModalDescription("");
     setModalDescriptionLoading(true);
     fetchAstroImage(modalImage.pk)
       .then((data: AstroImage) => {
-        setModalDescription(data.description || 'No description available.');
+        setModalDescription(data.description || "No description available.");
         // Optionally update modalImage with full data if needed
         // setModalImage(img => ({ ...img, ...data }));
       })
       .catch(() => {
-        setModalDescription('No description available.');
+        setModalDescription("No description available.");
       });
 
     // Always stop loading
@@ -89,12 +89,12 @@ const AstroGallery: React.FC = () => {
   useEffect(() => {
     if (!modalImage) return;
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         closeModal();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [modalImage]);
 
   const closeModal = (): void => setModalImage(null);
@@ -112,7 +112,7 @@ const AstroGallery: React.FC = () => {
   };
 
   const handleModalContentClick = (
-    e: React.MouseEvent<HTMLDivElement>
+    e: React.MouseEvent<HTMLDivElement>,
   ): void => {
     e.stopPropagation();
   };
@@ -133,7 +133,7 @@ const AstroGallery: React.FC = () => {
           <div
             key={filter}
             className={`${styles.filterBox} ${
-              selectedFilter === filter ? styles.activeFilter : ''
+              selectedFilter === filter ? styles.activeFilter : ""
             }`}
             onClick={() => handleFilterClick(filter)}
           >
@@ -148,7 +148,7 @@ const AstroGallery: React.FC = () => {
               src={image.url}
               alt={`Astro Image ${image.pk}`}
               onClick={() => handleImageClick(image)}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: "pointer" }}
             />
           </div>
         ))}
@@ -164,12 +164,12 @@ const AstroGallery: React.FC = () => {
             </button>
             <img
               src={modalImage.url}
-              alt='Astro Large'
+              alt="Astro Large"
               className={styles.modalImage}
             />
             <div className={styles.modalDescription}>
               {modalDescriptionLoading
-                ? 'Loading description...'
+                ? "Loading description..."
                 : modalDescription}
             </div>
           </div>

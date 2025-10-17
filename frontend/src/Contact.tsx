@@ -1,32 +1,32 @@
-import React, { useState } from 'react';
-import { fetchContact } from './api/services';
-import styles from './styles/components/Contact.module.css';
-import { ContactFormData, ValidationErrors, SubmitStatus } from './types';
+import React, { useState } from "react";
+import { fetchContact } from "./api/services";
+import styles from "./styles/components/Contact.module.css";
+import { ContactFormData, ValidationErrors, SubmitStatus } from "./types";
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState<ContactFormData>({
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
+    {},
   );
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ): void => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
     // Clear validation error for this field when user starts typing
     if (validationErrors[name as keyof ValidationErrors]) {
-      setValidationErrors(prev => ({
+      setValidationErrors((prev) => ({
         ...prev,
         [name]: undefined,
       }));
@@ -34,7 +34,7 @@ const Contact: React.FC = () => {
   };
 
   const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
+    e: React.FormEvent<HTMLFormElement>,
   ): Promise<void> => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -43,13 +43,13 @@ const Contact: React.FC = () => {
 
     try {
       await fetchContact(formData);
-      setSubmitStatus('success');
-      setFormData({ name: '', email: '', subject: '', message: '' });
+      setSubmitStatus("success");
+      setFormData({ name: "", email: "", subject: "", message: "" });
     } catch (error: unknown) {
-      console.error('Failed to send message:', error);
+      console.error("Failed to send message:", error);
 
       // Handle validation errors from backend
-      if (error && typeof error === 'object' && 'response' in error) {
+      if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as {
           response?: { data?: { errors?: ValidationErrors } };
         };
@@ -59,12 +59,12 @@ const Contact: React.FC = () => {
           axiosError.response.data.errors
         ) {
           setValidationErrors(axiosError.response.data.errors);
-          setSubmitStatus('validation_error');
+          setSubmitStatus("validation_error");
         } else {
-          setSubmitStatus('error');
+          setSubmitStatus("error");
         }
       } else {
-        setSubmitStatus('error');
+        setSubmitStatus("error");
       }
     } finally {
       setIsSubmitting(false);
@@ -72,7 +72,7 @@ const Contact: React.FC = () => {
   };
 
   return (
-    <section id='contact' className={styles.contactContainer}>
+    <section id="contact" className={styles.contactContainer}>
       <div className={styles.contactContent}>
         <h2 className={styles.title}>Get in Touch</h2>
         <p className={styles.subtitle}>
@@ -82,17 +82,17 @@ const Contact: React.FC = () => {
         <form className={styles.contactForm} onSubmit={handleSubmit}>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label htmlFor='name' className={styles.label}>
+              <label htmlFor="name" className={styles.label}>
                 Name
               </label>
               <input
-                type='text'
-                id='name'
-                name='name'
+                type="text"
+                id="name"
+                name="name"
                 value={formData.name}
                 onChange={handleChange}
                 className={`${styles.input} ${
-                  validationErrors.name ? styles.inputError : ''
+                  validationErrors.name ? styles.inputError : ""
                 }`}
                 required
               />
@@ -103,17 +103,17 @@ const Contact: React.FC = () => {
               )}
             </div>
             <div className={styles.formGroup}>
-              <label htmlFor='email' className={styles.label}>
+              <label htmlFor="email" className={styles.label}>
                 Email
               </label>
               <input
-                type='email'
-                id='email'
-                name='email'
+                type="email"
+                id="email"
+                name="email"
                 value={formData.email}
                 onChange={handleChange}
                 className={`${styles.input} ${
-                  validationErrors.email ? styles.inputError : ''
+                  validationErrors.email ? styles.inputError : ""
                 }`}
                 required
               />
@@ -126,17 +126,17 @@ const Contact: React.FC = () => {
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor='subject' className={styles.label}>
+            <label htmlFor="subject" className={styles.label}>
               Subject
             </label>
             <input
-              type='text'
-              id='subject'
-              name='subject'
+              type="text"
+              id="subject"
+              name="subject"
               value={formData.subject}
               onChange={handleChange}
               className={`${styles.input} ${
-                validationErrors.subject ? styles.inputError : ''
+                validationErrors.subject ? styles.inputError : ""
               }`}
               required
             />
@@ -148,16 +148,16 @@ const Contact: React.FC = () => {
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor='message' className={styles.label}>
+            <label htmlFor="message" className={styles.label}>
               Message
             </label>
             <textarea
-              id='message'
-              name='message'
+              id="message"
+              name="message"
               value={formData.message}
               onChange={handleChange}
               className={`${styles.textarea} ${
-                validationErrors.message ? styles.inputError : ''
+                validationErrors.message ? styles.inputError : ""
               }`}
               rows={5}
               required
@@ -170,26 +170,26 @@ const Contact: React.FC = () => {
           </div>
 
           <button
-            type='submit'
+            type="submit"
             className={styles.submitButton}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Sending...' : 'Send Message'}
+            {isSubmitting ? "Sending..." : "Send Message"}
           </button>
 
-          {submitStatus === 'success' && (
+          {submitStatus === "success" && (
             <p className={styles.successMessage}>
               Thank you! Your message has been sent successfully.
             </p>
           )}
 
-          {submitStatus === 'validation_error' && (
+          {submitStatus === "validation_error" && (
             <p className={styles.errorMessage}>
               Please correct the errors above and try again.
             </p>
           )}
 
-          {submitStatus === 'error' && (
+          {submitStatus === "error" && (
             <p className={styles.errorMessage}>
               Sorry, there was an error sending your message. Please try again.
             </p>
