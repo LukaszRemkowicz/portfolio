@@ -1,17 +1,14 @@
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from django.urls import include, path
+app_name = 'astroimages'
 
-from .views import AstroImageDetailView, AstroImageListView, BackgroundMainPageView
-
-app_name = "astroimages"
+from .views import BackgroundMainPageView
 
 router = DefaultRouter()
-router.register("background", BackgroundMainPageView, basename="backgroundImage")
+router.register('background', BackgroundMainPageView, basename='backgroundImage')
 
 
 urlpatterns = [
-    path("", include(router.urls)),
-    path("image/", AstroImageListView.as_view(), name="astroimage-list"),
-    path("image/<int:pk>/", AstroImageDetailView.as_view(), name="astroimage-detail"),
-]
+    path('', include(router.urls)),
+] 

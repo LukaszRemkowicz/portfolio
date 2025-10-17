@@ -7,43 +7,30 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = []
+    dependencies = [
+    ]
 
     operations = [
         migrations.CreateModel(
-            name="AstroImage",
+            name='AstroImage',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
-                ("updated_at", models.DateTimeField(auto_now=True)),
-                ("path", models.ImageField(upload_to="images/")),
-                ("name", models.CharField(max_length=255)),
-                ("description", models.TextField(blank=True)),
-                ("capture_date", models.DateField()),
-                ("location", models.CharField(max_length=255)),
-                ("equipment", models.TextField(blank=True)),
-                ("exposure_details", models.TextField(blank=True)),
-                ("processing_details", models.TextField(blank=True)),
-                ("celestial_object", models.CharField(max_length=255)),
-                (
-                    "astrobin_url",
-                    models.URLField(
-                        blank=True,
-                        help_text="Link to this image on Astrobin (e.g., https://www.astrobin.com/XXXXX/)",  # noqa: E501
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('path', models.ImageField(upload_to='images/')),
+                ('name', models.CharField(max_length=255)),
+                ('description', models.TextField(blank=True)),
+                ('capture_date', models.DateField()),
+                ('location', models.CharField(max_length=255)),
+                ('equipment', models.TextField(blank=True)),
+                ('exposure_details', models.TextField(blank=True)),
+                ('processing_details', models.TextField(blank=True)),
+                ('celestial_object', models.CharField(max_length=255)),
+                ('astrobin_url', models.URLField(blank=True, help_text='Link to this image on Astrobin (e.g., https://www.astrobin.com/XXXXX/)')),
             ],
             options={
-                "verbose_name": "Astrophotography Image",
-                "verbose_name_plural": "Astrophotography Images",
+                'verbose_name': 'Astrophotography Image',
+                'verbose_name_plural': 'Astrophotography Images',
             },
         ),
     ]

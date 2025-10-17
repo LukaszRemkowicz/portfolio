@@ -8,4 +8,4 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout certs/portfolio.local.key \
     -out certs/portfolio.local.crt \
     -subj "/C=PL/ST=State/L=City/O=Organization/CN=portfolio.local" \
-    -addext "subjectAltName=DNS:portfolio.local,DNS:admin.portfolio.local"
+    -addext "subjectAltName=DNS:portfolio.local,DNS:admin.portfolio.local" 
