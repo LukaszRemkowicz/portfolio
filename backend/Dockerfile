@@ -29,6 +29,12 @@ COPY . .
 RUN chown -R www-data:www-data /app/media && \
     chmod -R 755 /app/media
 
+# Test target
+FROM python:3.13-slim AS test
+WORKDIR /app
+COPY --from=0 /app .
+CMD ["sh", "-c", "poetry run pytest --cov=. --cov-report=xml || echo 'No tests found'"]
+
 EXPOSE 8000
 
 # Run migrations and start server

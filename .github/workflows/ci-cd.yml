@@ -117,6 +117,7 @@ jobs:
         tags: portfolio-frontend:test
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        load: true
 
     - name: Build backend Docker image
       uses: docker/build-push-action@v5
@@ -126,6 +127,7 @@ jobs:
         tags: portfolio-backend:test
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        load: true
 
     - name: Run frontend tests in Docker
       run: |
