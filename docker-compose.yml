@@ -33,8 +33,6 @@ services:
       - ./backend:/app
     ports:
       - "8000:8000"
-    environment:
-      DOCKER_ENV: true
     depends_on:
       - db
 
@@ -71,4 +69,4 @@ services:
       - ./backend/media:/app/media:ro
 
 volumes:
-  postgres_data:
+  postgres_data: 

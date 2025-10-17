@@ -1,0 +1,9 @@
+/* landingpage/src/Footer.module.css */
+
+:local(.footer) {
+  background: #22223b;
+  color: #fff;
+  text-align: center;
+  padding: 1rem 0;
+  font-size: 0.95rem;
+} 
