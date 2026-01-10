@@ -31,6 +31,7 @@ class AstroImage(BaseImage):
     class Meta:
         verbose_name = "Astrophotography Image"
         verbose_name_plural = "Astrophotography Images"
+        ordering = ["-created_at"]
 
 
 class BackgroundMainPage(models.Model):

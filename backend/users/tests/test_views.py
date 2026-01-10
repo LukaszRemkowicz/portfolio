@@ -3,17 +3,17 @@
 Tests for users views
 """
 
-import pytest
 from typing import Any, List
 from unittest.mock import patch
 
+import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from django.contrib.auth import get_user_model
-from django.conf import settings
-from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -22,15 +22,17 @@ User = get_user_model()
 def test_profile_endpoint_returns_active_user(client: Client) -> None:
     """Test that profile endpoint returns the user (singleton pattern)"""
     # Create the single user with profile data (singleton pattern)
-    user = User(email="test@example.com", first_name="John", last_name="Doe", bio="Test bio", is_active=True)
+    user = User(
+        email="test@example.com", first_name="John", last_name="Doe", bio="Test bio", is_active=True
+    )
     user.set_password("testpass123")
     user.save()
-    
+
     api_client: APIClient = APIClient()
     url: str = reverse("users:profile-profile")
-    
+
     response: Any = api_client.get(url)
-    
+
     assert response.status_code == status.HTTP_200_OK
     assert "first_name" in response.data
     assert "last_name" in response.data
@@ -43,15 +45,17 @@ def test_profile_endpoint_returns_active_user(client: Client) -> None:
 def test_profile_endpoint_returns_404_when_no_active_user(client: Client) -> None:
     """Test that profile endpoint returns 404 when user is inactive"""
     # Create the single user as inactive (singleton pattern)
-    user = User(email="inactive@example.com", first_name="Inactive", last_name="User", is_active=False)
+    user = User(
+        email="inactive@example.com", first_name="Inactive", last_name="User", is_active=False
+    )
     user.set_password("testpass123")
     user.save()
-    
+
     api_client: APIClient = APIClient()
     url: str = reverse("users:profile-profile")
-    
+
     response: Any = api_client.get(url)
-    
+
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "detail" in response.data
     assert "User is not active" in response.data["detail"]
@@ -64,12 +68,12 @@ def test_profile_endpoint_returns_user(client: Client) -> None:
     user = User(email="single@example.com", first_name="Single", last_name="User", is_active=True)
     user.set_password("testpass123")
     user.save()
-    
+
     api_client: APIClient = APIClient()
     url: str = reverse("users:profile-profile")
-    
+
     response: Any = api_client.get(url)
-    
+
     assert response.status_code == status.HTTP_200_OK
     assert response.data["first_name"] == "Single"
     assert response.data["last_name"] == "User"
@@ -93,12 +97,12 @@ def test_profile_endpoint_includes_all_required_fields(client: Client) -> None:
     )
     user.set_password("testpass123")
     user.save()
-    
+
     api_client: APIClient = APIClient()
     url: str = reverse("users:profile-profile")
-    
+
     response: Any = api_client.get(url)
-    
+
     assert response.status_code == status.HTTP_200_OK
     required_fields: List[str] = [
         "first_name",
@@ -124,12 +128,12 @@ def test_profile_endpoint_handles_empty_fields(client: Client) -> None:
     user = User(email="empty@example.com", first_name="Empty", last_name="User", is_active=True)
     user.set_password("testpass123")
     user.save()
-    
+
     api_client: APIClient = APIClient()
     url: str = reverse("users:profile-profile")
-    
+
     response: Any = api_client.get(url)
-    
+
     assert response.status_code == status.HTTP_200_OK
     assert response.data["first_name"] == "Empty"
     assert response.data["last_name"] == "User"
@@ -146,23 +150,48 @@ def test_profile_endpoint_constructs_image_urls_correctly(client: Client) -> Non
     user = User(email="images@example.com", first_name="Images", last_name="User", is_active=True)
     user.set_password("testpass123")
     user.save()
-    
+
     # Note: We can't easily set image paths in tests without actual files
     # But we can verify the URL construction logic works when paths exist
     # The actual image URL construction is tested by checking the response structure
     api_client: APIClient = APIClient()
     url: str = reverse("users:profile-profile")
-    
+
     response: Any = api_client.get(url)
-    
+
     assert response.status_code == status.HTTP_200_OK
     # Avatar, about_me_image, about_me_image2 should be in response
     assert "avatar" in response.data
     assert "about_me_image" in response.data
     assert "about_me_image2" in response.data
     # If image paths exist, they should be full URLs starting with media URL
-    if response.data["avatar"]:
-        assert response.data["avatar"].startswith(settings.MEDIA_URL)
+    # (Branch with avatar is tested in test_profile_endpoint_with_avatar)
+
+
+@pytest.mark.django_db
+def test_profile_endpoint_with_avatar(client: Client) -> None:
+    """Test that profile endpoint returns full URL for avatar"""
+    # Create user with an avatar
+    avatar = SimpleUploadedFile("avatar.jpg", b"content", content_type="image/jpeg")
+    User.objects.create(
+        email="avatar@example.com",
+        first_name="Avatar",
+        last_name="User",
+        is_active=True,
+        avatar=avatar,
+    )
+
+    api_client: APIClient = APIClient()
+    url: str = reverse("users:profile-profile")
+
+    response: Any = api_client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["avatar"] is not None
+    # DRF ModelSerializer with 'request' in context returns absolute URLs
+    assert response.data["avatar"].startswith("http")
+    assert "avatar" in response.data["avatar"]
+    assert ".jpg" in response.data["avatar"]
 
 
 @pytest.mark.django_db
@@ -170,13 +199,13 @@ def test_profile_endpoint_handles_database_error(client: Client) -> None:
     """Test that profile endpoint handles database errors gracefully"""
     api_client: APIClient = APIClient()
     url: str = reverse("users:profile-profile")
-    
+
     # Mock User.get_user to raise an exception
     with patch("users.views.User.get_user") as mock_get_user:
         mock_get_user.side_effect = Exception("Database connection error")
-        
+
         response: Any = api_client.get(url)
-        
+
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         assert "detail" in response.data
         assert "Error retrieving profile" in response.data["detail"]
@@ -189,13 +218,13 @@ def test_profile_endpoint_allows_anonymous_access(client: Client) -> None:
     user = User(email="public@example.com", first_name="Public", last_name="User", is_active=True)
     user.set_password("testpass123")
     user.save()
-    
+
     api_client: APIClient = APIClient()
     # Don't authenticate - should work without auth
     url: str = reverse("users:profile-profile")
-    
+
     response: Any = api_client.get(url)
-    
+
     assert response.status_code == status.HTTP_200_OK
     assert "first_name" in response.data
 
@@ -205,9 +234,9 @@ def test_profile_endpoint_returns_404_when_no_user(client: Client) -> None:
     """Test that profile endpoint returns 404 when no user exists"""
     api_client: APIClient = APIClient()
     url: str = reverse("users:profile-profile")
-    
+
     response: Any = api_client.get(url)
-    
+
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "detail" in response.data
     assert "No user found" in response.data["detail"]

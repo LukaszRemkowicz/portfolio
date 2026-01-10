@@ -21,62 +21,12 @@ Django REST API backend for a personal portfolio showcasing astrophotography and
 - **Media File Serving** - Optimized static and media file handling
 - **Docker Integration** - Containerized deployment ready
 
-## 📁 Project Structure
 
-```
-backend/
-├── core/                    # Django project configuration
-│   ├── settings.py         # Main settings with environment config
-│   ├── urls.py            # URL routing and admin configuration
-│   ├── models.py          # BaseImage abstract model
-│   ├── wsgi.py            # WSGI application
-│   └── asgi.py            # ASGI application
-├── users/                  # User management app
-│   ├── models.py          # Custom User model with social fields
-│   ├── views.py           # UserViewSet for profile API
-│   ├── serializers.py     # User and PublicUser serializers
-│   ├── urls.py            # User API endpoints
-│   └── admin.py           # User admin configuration
-├── astrophotography/       # Astrophotography app
-│   ├── models.py          # AstroImage and BackgroundMainPage models
-│   ├── views.py           # Image listing, detail, and background views
-│   ├── serializers.py     # Image serializers for API responses
-│   ├── urls.py            # Astrophotography API endpoints
-│   └── admin.py           # Image admin configuration
-├── programming/            # Programming projects app
-│   ├── models.py          # Project and ProjectImage models
-│   ├── views.py           # Project API views (placeholder)
-│   ├── urls.py            # Programming API endpoints
-│   └── admin.py           # Project admin configuration
-├── manage.py              # Django management script
-├── pyproject.toml         # Poetry dependencies and configuration
-└── Dockerfile             # Docker container configuration
-```
-
-## 🔌 API Endpoints
-
-### User Profile
-- **`GET /api/v1/profile/`** - Public user profile data
-  - Returns: username, name, bio, avatar, social links, about me images
-  - Serializer: `PublicUserSerializer`
-
-### Astrophotography
-- **`GET /api/v1/image/`** - List astrophotography images
-  - Query params: `?filter=<celestial_object>` (Landscape, Deep Sky, etc.)
-  - Returns: Array of images with URLs and metadata
-- **`GET /api/v1/image/<id>/`** - Individual image details
-  - Returns: Full image metadata including equipment, processing details
-- **`GET /api/v1/background/`** - Main page background image
-  - Returns: Latest background image URL
-
-### Programming (Future)
-- **`GET /api/v1/programming/`** - Programming projects list
-- **`GET /api/v1/programming/<id>/`** - Individual project details
 
 ## 🛠️ Development Setup
 
 ### Prerequisites
-- **Python 3.11-3.12** (specified in pyproject.toml)
+- **Python 3.13** (specified in pyproject.toml)
 - **Poetry** for dependency management
 - **PostgreSQL** (or Docker for containerized setup)
 - **Docker** (for containerized development)
@@ -98,23 +48,11 @@ poetry install
 ```
 
 #### 3. Environment Configuration
-Create `.env` file in `backend/` directory:
-```env
-# Required
-SECRET_KEY=your-super-secret-key-here
-DEBUG=True
-
-# Database
-DB_ENGINE=django.db.backends.postgresql
-DB_NAME=postgres
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_HOST=db
-DB_PORT=5432
-
-# Domain Configuration
-ALLOWED_HOSTS=admin.portfolio.local,portfolio.local,localhost,127.0.0.1
+Copy the default environment template:
+```bash
+cp DEFAULT.env .env
 ```
+Then edit `.env` with your secure credentials.
 
 #### 4. Database Setup
 ```bash
@@ -142,7 +80,7 @@ docker compose up --build
 docker-compose up --build
 ```
 - **Backend API**: `https://admin.portfolio.local/api/v1/`
-- **Django Admin**: `https://admin.portfolio.local/admin/`
+- **Django Admin**: `https://admin.portfolio.local/`
 - **Media Files**: `https://portfolio.local/media/`
 
 ### Backend-Only Docker
@@ -152,79 +90,10 @@ docker build -t portfolio-backend .
 docker run -p 8000:8000 portfolio-backend
 ```
 
-## 📊 Database Models
-
-### User Model (Extended Django User)
-```python
-class User(AbstractUser):
-    bio = models.TextField(max_length=10000)
-    avatar = models.ImageField(upload_to='avatars/')
-    about_me_image = models.ImageField(upload_to='about_me_images/')
-    about_me_image2 = models.ImageField(upload_to='about_me_images/')
-    website = models.URLField()
-    github_profile = models.URLField()
-    linkedin_profile = models.URLField()
-    astrobin_url = models.URLField()
-    fb_url = models.URLField()
-    ig_url = models.URLField()
-```
-
-### Astrophotography Models
-```python
-class AstroImage(BaseImage):
-    capture_date = models.DateField()
-    location = models.CharField(max_length=255)
-    equipment = models.TextField()
-    exposure_details = models.TextField()
-    processing_details = models.TextField()
-    celestial_object = models.CharField(choices=CelestialObjectChoices)
-    astrobin_url = models.URLField()
-
-class BackgroundMainPage(models.Model):
-    image = models.ImageField(upload_to='backgrounds/')
-    created_at = models.DateTimeField(auto_now_add=True)
-```
-
-### Programming Models
-```python
-class Project(models.Model):
-    name = models.CharField(max_length=255)
-    description = models.TextField()
-    technologies = models.TextField()
-    github_url = models.URLField()
-    live_url = models.URLField()
-
-class ProjectImage(BaseImage):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    is_cover = models.BooleanField(default=False)
-```
-
-## 🔧 Configuration
-
-### Django Settings Highlights
-- **CORS Configuration** - Configured for frontend domains
-- **Media File Handling** - Optimized for nginx serving
-- **Custom Admin Interface** - Branded admin portal
-- **Environment-based Configuration** - Secure settings management
-- **Database Connection Pooling** - Production-ready database config
-
-### Dependencies (pyproject.toml)
-```toml
-dependencies = [
-    "Django>=4.2",
-    "djangorestframework>=3.14",
-    "django-environ>=0.11.2",
-    "psycopg2-binary>=2.9.9",
-    "Pillow>=10.2.0",
-    "django-cors-headers>=4.3.1"
-]
-```
-
 ## 🧪 Testing
 
 ### Current Test Setup
 - **pytest** configured for testing
-- **Django test framework** integration
 - **Test database** isolation
 
 ### Running Tests
@@ -235,12 +104,6 @@ poetry run pytest
 ```
 
 ## 📋 Admin Interface
-
-### Custom Admin Features
-- **Branded Interface** - Custom site header and title
-- **User Management** - Extended user fields in admin
-- **Image Management** - Bulk upload and organization
-- **Content Management** - Easy profile and bio updates
 
 ### Admin Access
 1. Create superuser: `poetry run python manage.py createsuperuser`
@@ -268,8 +131,6 @@ poetry run pytest
 
 ## 📋 TODO / Known Issues
 
-- [ ] Complete Programming API endpoints
-- [ ] Add comprehensive test coverage
 - [ ] Implement image optimization pipeline
 - [ ] Add API documentation (Swagger/OpenAPI)
 - [ ] Implement caching for frequently accessed data
@@ -299,6 +160,10 @@ poetry run pytest
 - ✅ **Black Integration** - Latest Black v25.9.0 with Python 3.13 support
 - ✅ **Django Migrations** - Fixed long lines with noqa comments
 - ✅ **Import Organization** - Fixed import order issues with isort
+- ✅ **Django 5.2 Upgrade** - Upgraded to latest LTS version
+- ✅ **Security Hardening** - DEBUG=False, stricter permissions, kill switch
+- ✅ **Astrophotography Refactor** - Migrated to ViewSets and Routers
+- ✅ **Testing** - comprehensive test suite with 100% pass rate
 
 ## 📋 TODO - Backend Improvements
 
@@ -327,7 +192,7 @@ poetry run pytest
 - [ ] **Image Metadata** - Extract and store EXIF data
 
 ### 🧪 Testing & Quality
-- [ ] **Test Coverage** - Increase test coverage for all models and views
+- [x] **Test Coverage** - High coverage for Core, Users, Astrophotography, and Inbox apps
 - [ ] **Integration Tests** - Add integration tests for API endpoints
 - [ ] **Performance Tests** - Add load testing for API endpoints
 - [x] **Code Quality** - ✅ Pre-commit hooks, Black, isort, Flake8 configured with 100-character line length

@@ -207,3 +207,11 @@ Content-Type: {{contentType}}
   "subject": "Middleware Test - Different Path",
   "message": "Testing middleware with different path /api/v1/profile/"
 }
+
+### ============================================================
+### FEATURE FLAG TESTS
+### ============================================================
+
+### Test 21: Check Enabled Features
+GET {{baseUrl}}/whats-enabled/
+Content-Type: {{contentType}}

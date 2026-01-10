@@ -24,6 +24,8 @@ from django.http import FileResponse, HttpRequest
 from django.urls import include, path
 from django.views.static import serve
 
+from .views import FeaturesEnabledView
+
 # Admin site customization
 admin.site.site_header = "Portfolio Administration"
 admin.site.site_title = "Portfolio Admin Portal"
@@ -44,6 +46,7 @@ urlpatterns = [
     path("api/v1/", include("users.urls")),
     path("api/v1/", include("astrophotography.urls")),
     path("api/v1/", include("inbox.urls")),
+    path("api/v1/whats-enabled/", FeaturesEnabledView.as_view(), name="whats-enabled"),
 ]
 
 # Add admin URLs and media serving if we're on admin subdomain
