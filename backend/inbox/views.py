@@ -31,8 +31,23 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
 
     queryset = ContactMessage.objects.all()
     serializer_class = ContactMessageSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # Create is public, other actions restricted below
     throttle_classes = [ContactFormThrottle]  # DRF handles throttling before validation
+
+    def get_permissions(self):
+        """
+        Restrict list, retrieve, update, delete to authenticated users.
+        Only create (contact form submission) is public.
+        """
+        if self.action == "create":
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def get_throttles(self):
+        """Only throttle create action (contact form submissions)"""
+        if self.action == "create":
+            return [throttle() for throttle in self.throttle_classes]
+        return super().get_throttles()  # Use default throttling for other actions (or none)
 
     def throttled(self, request: Request, wait: int) -> None:
         """Custom throttled response with user-friendly message"""
@@ -53,44 +68,29 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
 
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
-        Create a new contact message with enhanced security checks
+        Create a new contact message with enhanced security checks.
+        Note: Kill switch check is handled by ContactFormKillSwitchMiddleware before this view.
         """
         client_ip: str = self.get_client_ip(request)
         logger.info(f"Contact form submission attempt from IP: {client_ip}")
-        
+
         # Log incoming data (sanitized for security - no sensitive content)
-        incoming_data: dict = dict(request.data) if hasattr(request.data, "__dict__") else request.data
-        sanitized_data: dict = {}
-        for k, v in incoming_data.items():
-            if k == "message":
-                # Log message length only, not content
-                sanitized_data[k] = f"<{len(str(v))} chars>"
-            elif k == "email":
-                # Log email domain only for privacy
-                email_str = str(v)
-                if "@" in email_str:
-                    parts = email_str.split("@")
-                    sanitized_data[k] = f"{parts[0][:2]}***@{parts[1]}"
-                else:
-                    sanitized_data[k] = "***"
-            else:
-                sanitized_data[k] = f"{str(v)[:100]}..." if len(str(v)) > 100 else v
-        logger.info(f"Contact form data received from IP {client_ip}: {sanitized_data}")
-        
+        self._log_incoming_data(request, client_ip)
         # Check request size limit (prevent DoS via large payloads)
         content_length: Optional[str] = request.META.get("CONTENT_LENGTH")
         if content_length:
             try:
                 content_length_int: int = int(content_length)
                 if content_length_int > 10000:
-                    logger.warning(f"Request too large: {content_length_int} bytes from {client_ip}")
+                    logger.warning(
+                        f"Request too large: {content_length_int} bytes from {client_ip}"
+                    )
                     return Response(
                         {"message": "Request payload too large."},
                         status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                     )
             except (ValueError, TypeError):
                 pass
-
         # Validate
         # Note: Throttling already happened via DRF's throttle_classes (before validation)
         # This is intentional - library handles bot filtering, frontend prevents user throttling on invalid data
@@ -102,37 +102,39 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
             if hasattr(serializer, "errors"):
                 logger.error(
                     f"Contact form validation failed for IP {client_ip}: "
-                    f"Errors: {serializer.errors}, Data keys: {list(incoming_data.keys())}"
+                    f"Errors: {serializer.errors}, Data keys: {list(request.data.keys())}"
                 )
             else:
                 logger.error(f"Contact form validation failed for IP {client_ip}: {str(e)}")
             raise  # Re-raise to let DRF handle the 400 response
-
         # Extract validated data
         email: Optional[str] = serializer.validated_data.get("email")
         subject: Optional[str] = serializer.validated_data.get("subject")
-
         # Check for duplicate messages (same email + subject in last 5 minutes) before saving
         if email and subject:
             recent_duplicate: bool = ContactMessage.objects.filter(
-                email=email, subject=subject, created_at__gte=timezone.now() - timezone.timedelta(minutes=5)
+                email=email,
+                subject=subject,
+                created_at__gte=timezone.now() - timezone.timedelta(minutes=5),
             ).exists()
             if recent_duplicate:
-                logger.warning(f"Duplicate message attempt from {email} with subject '{subject}' at IP {client_ip}")
+                logger.warning(
+                    f"Duplicate message attempt from {email} with subject '{subject}' at IP {client_ip}"
+                )
                 return Response(
-                    {"message": "Please wait before submitting another message with the same subject."},
+                    {
+                        "message": "Please wait before submitting another message with the same subject."
+                    },
                     status=status.HTTP_429_TOO_MANY_REQUESTS,
                 )
-
         # Save message
         contact_message: ContactMessage = serializer.save()
-
         # Send email notification asynchronously (prevent email DoS)
         ContactMessageEmailService.send_notification_email_async(contact_message)
-
         # Log successful submission
-        logger.info(f"Contact message created: ID={contact_message.id}, Email={email}, IP={self.get_client_ip(request)}")
-
+        logger.info(
+            f"Contact message created: ID={contact_message.id}, Email={email}, IP={self.get_client_ip(request)}"
+        )
         return Response(
             {
                 "message": "Thank you! Your message has been sent successfully.",
@@ -159,3 +161,25 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
         """
         count: int = ContactMessage.objects.filter(is_read=False).count()
         return Response({"unread_count": count})
+
+    def _log_incoming_data(self, request: Request, client_ip: str) -> None:
+        """Helper to log sanitized incoming data"""
+        incoming_data: dict = (
+            dict(request.data) if hasattr(request.data, "__dict__") else request.data
+        )
+        sanitized_data: dict = {}
+        for k, v in incoming_data.items():
+            if k == "message":
+                # Log message length only, not content
+                sanitized_data[k] = f"<{len(str(v))} chars>"
+            elif k == "email":
+                # Log email domain only for privacy
+                email_str = str(v)
+                if "@" in email_str:
+                    parts = email_str.split("@")
+                    sanitized_data[k] = f"{parts[0][:2]}***@{parts[1]}"
+                else:
+                    sanitized_data[k] = "***"
+            else:
+                sanitized_data[k] = f"{str(v)[:100]}..." if len(str(v)) > 100 else v
+        logger.info(f"Contact form data received from IP {client_ip}: {sanitized_data}")

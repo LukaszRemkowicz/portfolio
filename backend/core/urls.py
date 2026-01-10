@@ -1,3 +1,4 @@
+# backend/core/urls.py
 """
 URL configuration for core project.
 

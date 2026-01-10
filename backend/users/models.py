@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 # Django limitation: AbstractUser's default manager expects 'username' parameter.
 # We MUST override create_superuser to accept 'email' for createsuperuser command to work.
 class UserManager(BaseUserManager):
-    def create_superuser(self, email: str, password: Optional[str] = None, **extra_fields: dict) -> "User":
+    def create_superuser(
+        self, email: str, password: Optional[str] = None, **extra_fields: dict
+    ) -> "User":
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         if not email:
@@ -88,7 +90,7 @@ class User(AbstractUser):
                 f"Only one user is allowed. User already exists: {existing_user.email}. "
                 "Update the existing user instead."
             )
-        
+
         try:
             super().save(*args, **kwargs)
         except IntegrityError as error:
@@ -117,8 +119,6 @@ class UserLoginAttempts(models.Model):
         default=1,
         help_text="Number of login attempts (counter)",
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "User Login Attempt"

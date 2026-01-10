@@ -1,8 +1,8 @@
 # backend/users/admin.py
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
-from django.contrib.auth import get_user_model
 
 from .models import UserLoginAttempts
 
@@ -90,6 +90,7 @@ class UserAdmin(DjangoUserAdmin):
         if user and user.pk:
             from django.shortcuts import redirect
             from django.urls import reverse
+
             return redirect(reverse("admin:users_user_change", args=[user.pk]))
         return super().changelist_view(request, extra_context)
 
@@ -98,12 +99,11 @@ class UserAdmin(DjangoUserAdmin):
 class UserLoginAttemptsAdmin(admin.ModelAdmin):
     """Admin interface for UserLoginAttempts model"""
 
-    list_display = ("id", "attempted_at", "counter", "created_at", "updated_at")
+    list_display = ("id", "attempted_at", "counter")
     list_display_links = ("id", "attempted_at")
-    list_filter = ("attempted_at", "created_at")
+    list_filter = ("attempted_at",)
     search_fields = ("id",)
     ordering = ("-attempted_at",)
-    readonly_fields = ("created_at", "updated_at")
 
     fieldsets = (
         (
@@ -114,9 +114,5 @@ class UserLoginAttemptsAdmin(admin.ModelAdmin):
                     "counter",
                 )
             },
-        ),
-        (
-            "Timestamps",
-            {"fields": ("created_at", "updated_at")},
         ),
     )

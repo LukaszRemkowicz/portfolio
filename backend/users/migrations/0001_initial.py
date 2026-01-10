@@ -3,6 +3,8 @@
 import django.utils.timezone
 from django.db import migrations, models
 
+import users.models
+
 
 class Migration(migrations.Migration):
 
@@ -48,9 +50,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "email",
-                    models.EmailField(
-                        max_length=254, unique=True, verbose_name="email address"
-                    ),
+                    models.EmailField(max_length=254, unique=True, verbose_name="email address"),
                 ),
                 (
                     "is_staff",
@@ -144,7 +144,7 @@ class Migration(migrations.Migration):
                 "verbose_name_plural": "Users",
             },
             managers=[
-                ("objects", "users.models.UserManager"),
+                ("objects", users.models.UserManager()),
             ],
         ),
         migrations.CreateModel(
@@ -168,9 +168,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "counter",
-                    models.IntegerField(
-                        default=1, help_text="Number of login attempts (counter)"
-                    ),
+                    models.IntegerField(default=1, help_text="Number of login attempts (counter)"),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),

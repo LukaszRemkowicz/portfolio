@@ -1,4 +1,6 @@
+# backend/astrophotography/views.py
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.viewsets import ViewSet
@@ -38,7 +40,7 @@ class AstroImageDetailView(RetrieveAPIView):
 class BackgroundMainPageView(ViewSet):
     throttle_classes = [APIRateThrottle, UserRateThrottle]
 
-    def list(self, request):
+    def list(self, request: Request) -> Response:
         instance = BackgroundMainPage.objects.order_by("-created_at").first()
         if instance:
             serializer = BackgroundMainPageSerializer(instance, context={"request": request})

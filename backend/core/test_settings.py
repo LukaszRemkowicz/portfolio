@@ -1,23 +1,17 @@
+# backend/core/test_settings.py
 """
 Test settings for pytest
 """
 
 from .settings import *  # noqa: F401,F403
 
-# Override database settings for tests
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "test_portfolio",
-        "USER": "test_user",
-        "PASSWORD": "test_password",
-        "HOST": "localhost",
-        "PORT": "5433",  # Fixed port for test database
-    }
+# Configure test database name
+# pytest-django automatically creates a test database with this name
+# It will prefix with 'test_' if not specified, but we make it explicit
+production_db_name = DATABASES["default"].get("NAME", "portfolio")  # noqa: F405
+DATABASES["default"]["TEST"] = {  # noqa: F405
+    "NAME": f"test_{production_db_name}",
 }
-
-# Enable migrations - pytest will check them before tests
-# MIGRATION_MODULES = DisableMigrations()  # Keep migrations enabled
 
 # Faster test settings
 PASSWORD_HASHERS = [
