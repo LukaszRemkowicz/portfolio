@@ -12,7 +12,6 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id",
-            "username",
             "email",
             "first_name",
             "last_name",
@@ -34,8 +33,13 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        """Create and return a new user with encrypted password"""
-        return User.objects.create_user(**validated_data)
+        """Create and return a new user with encrypted password. Not used - no registration feature."""
+        password = validated_data.pop("password", None)
+        user = User(**validated_data)
+        if password:
+            user.set_password(password)
+        user.save()
+        return user
 
     def update(self, instance, validated_data):
         """Update and return an existing user"""
@@ -55,7 +59,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            "username",
+            "email",
             "first_name",
             "last_name",
             "bio",
