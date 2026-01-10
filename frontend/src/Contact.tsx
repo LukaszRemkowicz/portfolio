@@ -9,6 +9,7 @@ const Contact: React.FC = () => {
     email: "",
     subject: "",
     message: "",
+    website: "", // Honeypot field - should remain empty
   });
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>(null);
@@ -33,6 +34,45 @@ const Contact: React.FC = () => {
     }
   };
 
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+
+    // Validate name (at least 2 characters)
+    if (!formData.name || formData.name.trim().length < 2) {
+      errors.name = ["Name must be at least 2 characters long."];
+    }
+
+    // Validate email (must be valid email format)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email || !emailRegex.test(formData.email)) {
+      errors.email = ["Please provide a valid email address."];
+    }
+
+    // Validate subject (at least 5 characters)
+    if (!formData.subject || formData.subject.trim().length < 5) {
+      errors.subject = ["Subject must be at least 5 characters long."];
+    }
+
+    // Validate message (at least 10 characters)
+    if (!formData.message || formData.message.trim().length < 10) {
+      errors.message = ["Message must be at least 10 characters long."];
+    }
+
+    // Check honeypot field (should be empty for humans)
+    if (formData.website && formData.website.trim().length > 0) {
+      // Bot detected - silently fail (don't show error to bot)
+      errors.name = ["Please correct the errors above and try again."];
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      setSubmitStatus("validation_error");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>,
   ): Promise<void> => {
@@ -41,25 +81,62 @@ const Contact: React.FC = () => {
     setSubmitStatus(null);
     setValidationErrors({});
 
+    // Frontend validation FIRST - don't send invalid data to backend
+    if (!validateForm()) {
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       await fetchContact(formData);
       setSubmitStatus("success");
-      setFormData({ name: "", email: "", subject: "", message: "" });
+      setFormData({ name: "", email: "", subject: "", message: "", website: "" });
     } catch (error: unknown) {
       console.error("Failed to send message:", error);
 
-      // Handle validation errors from backend
+      // Handle validation errors and rate limiting from backend
       if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as {
-          response?: { data?: { errors?: ValidationErrors } };
+          response?: {
+            status?: number;
+            data?: ValidationErrors | { message?: string; detail?: string; errors?: ValidationErrors };
+          };
         };
-        if (
-          axiosError.response &&
-          axiosError.response.data &&
-          axiosError.response.data.errors
-        ) {
-          setValidationErrors(axiosError.response.data.errors);
-          setSubmitStatus("validation_error");
+        const statusCode = axiosError.response?.status;
+        const responseData = axiosError.response?.data;
+        
+        if (statusCode === 429) {
+          // Rate limit exceeded - show special message with custom UI
+          // Backend provides custom message in response.data.detail or response.data.message
+          const message = 
+            (responseData && "detail" in responseData && responseData.detail) ||
+            (responseData && "message" in responseData && responseData.message);
+          if (message) {
+            console.log(`Rate limit message: ${message}`);
+          }
+          setSubmitStatus("rate_limited");
+          setValidationErrors({});
+        } else if (statusCode === 400 && responseData) {
+          // DRF returns validation errors directly in response.data as {field: ["error"]}
+          // Check if response.data has validation error fields (name, email, subject, message)
+          const hasValidationErrors = 
+            "name" in responseData ||
+            "email" in responseData ||
+            "subject" in responseData ||
+            "message" in responseData ||
+            ("errors" in responseData && responseData.errors);
+          
+          if (hasValidationErrors) {
+            // DRF format: {field: ["error"]} directly in response.data
+            // Or wrapped format: {errors: {field: ["error"]}}
+            const errors = 
+              ("errors" in responseData && responseData.errors) ||
+              (responseData as ValidationErrors);
+            setValidationErrors(errors as ValidationErrors);
+            setSubmitStatus("validation_error");
+          } else {
+            setSubmitStatus("error");
+          }
         } else {
           setSubmitStatus("error");
         }
@@ -80,6 +157,24 @@ const Contact: React.FC = () => {
         </p>
 
         <form className={styles.contactForm} onSubmit={handleSubmit}>
+          {/* Honeypot field - invisible to humans, bots will fill it */}
+          <input
+            type="text"
+            name="website"
+            value={formData.website || ""}
+            onChange={handleChange}
+            tabIndex={-1}
+            autoComplete="off"
+            style={{
+              position: "absolute",
+              left: "-9999px",
+              opacity: 0,
+              pointerEvents: "none",
+              height: 0,
+              width: 0,
+            }}
+            aria-hidden="true"
+          />
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label htmlFor="name" className={styles.label}>
@@ -187,6 +282,17 @@ const Contact: React.FC = () => {
             <p className={styles.errorMessage}>
               Please correct the errors above and try again.
             </p>
+          )}
+
+          {submitStatus === "rate_limited" && (
+            <div className={styles.rateLimitMessage}>
+              <p className={styles.rateLimitTitle}>
+                Too many requests
+              </p>
+              <p className={styles.rateLimitText}>
+                You've submitted too many messages recently. Please wait up to 1 hour before trying again.
+              </p>
+            </div>
           )}
 
           {submitStatus === "error" && (

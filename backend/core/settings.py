@@ -170,6 +170,16 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
+# Cache Configuration (for rate limiting and throttling)
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
+        "TIMEOUT": 3600,  # 1 hour default timeout
+        "OPTIONS": {"MAX_ENTRIES": 10000},
+    }
+}
+
 # File Upload Settings
 FILE_UPLOAD_PERMISSIONS = 0o644
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
@@ -199,6 +209,38 @@ REST_FRAMEWORK = {
     },
 }
 
+# Django Axes Configuration (Admin Login Protection)
+AXES_FAILURE_LIMIT = 5  # Number of failed login attempts before lockout
+AXES_COOLOFF_TIME = 1  # Hours to lockout after limit exceeded
+AXES_RESET_ON_SUCCESS = True  # Reset failure count on successful login
+AXES_ENABLE_ADMIN = True  # Enable Axes admin interface
+AXES_VERBOSE = True  # Enable verbose logging
+AXES_USERNAME_FORM_FIELD = (
+    "username"  # Field name in login form (admin uses 'username' but it's actually email)
+)
+AXES_HANDLER = "core.axes_backend.EmailAxesHandler"  # Custom handler for email-based authentication
+
+# Authentication backends with axes protection
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",  # Standard Django backend
+    "core.axes_backend.EmailAxesBackend",  # Custom backend for email authentication
+]
+
+# Email Configuration
+EMAIL_BACKEND = env.str(
+    "EMAIL_BACKEND",
+    default=cast(Any, "django.core.mail.backends.smtp.EmailBackend"),
+)
+EMAIL_HOST = env.str("EMAIL_HOST", default=cast(Any, "smtp.gmail.com"))
+EMAIL_PORT = env.int("EMAIL_PORT", default=cast(Any, 587))
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=cast(Any, True))
+EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default=cast(Any, ""))
+EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default=cast(Any, ""))
+DEFAULT_FROM_EMAIL = env.str(
+    "DEFAULT_FROM_EMAIL",
+    default=cast(Any, "lremkowicz@gmail.com"),
+)
+CONTACT_EMAIL = env.str("CONTACT_EMAIL", default=cast(Any, "lremkowicz@gmail.com"))
 # Import local settings if available (for local development)
 try:
     from .local import *  # noqa: F401,F403

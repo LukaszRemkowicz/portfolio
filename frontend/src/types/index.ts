@@ -8,6 +8,7 @@ export interface UserProfile {
   bio?: string;
   about_me_image?: string | null;
   about_me_image2?: string | null;
+  prelections?: boolean;
 }
 
 export interface BackgroundImage {
@@ -33,6 +34,7 @@ export interface ContactFormData {
   email: string;
   subject: string;
   message: string;
+  website?: string; // Honeypot field - invisible to humans, bots will fill it
 }
 
 export interface ContactResponse {
@@ -47,7 +49,7 @@ export interface ValidationErrors {
   message?: string[];
 }
 
-export type SubmitStatus = "success" | "validation_error" | "error" | null;
+export type SubmitStatus = "success" | "validation_error" | "rate_limited" | "error" | null;
 
 // Component Props Types
 export interface HomeProps {

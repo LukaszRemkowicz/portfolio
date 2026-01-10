@@ -22,6 +22,7 @@ services:
       - ./frontend/package.json:/app/package.json
       - ./frontend/webpack.config.js:/app/webpack.config.js
       - ./frontend/.babelrc:/app/.babelrc
+      - ./frontend/node_modules/@types:/app/node_modules/@types
       - ./nginx/ssl/certs:/etc/ssl/certs:ro
 
   portfolio-be:

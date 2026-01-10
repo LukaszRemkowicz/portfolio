@@ -17,6 +17,7 @@ const HomePage: React.FC = () => {
   const [firstName, setFirstName] = useState<string>("");
   const [lastName, setLastName] = useState<string>("");
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
+  const [prelections, setPrelections] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +29,7 @@ const HomePage: React.FC = () => {
         if (profile.avatar) setPortraitUrl(profile.avatar);
         setFirstName(profile.first_name || "");
         setLastName(profile.last_name || "");
+        setPrelections(profile.prelections ?? false);
 
         const background: string | null = await fetchBackground();
         setBackgroundUrl(background);
@@ -69,7 +71,7 @@ const HomePage: React.FC = () => {
         <Gallery />
       </div>
       <About />
-      <PrelectionsAndCourses />
+      {prelections && <PrelectionsAndCourses />}
       <Contact />
       <Footer />
     </>

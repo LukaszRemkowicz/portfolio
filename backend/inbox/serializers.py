@@ -5,13 +5,39 @@ from .models import ContactMessage
 
 class ContactMessageSerializer(serializers.ModelSerializer):
     """
-    Serializer for ContactMessage model
+    Serializer for ContactMessage model with honeypot field for bot protection
     """
+
+    # Honeypot field - invisible to humans, bots will fill it
+    website = serializers.CharField(required=False, allow_blank=True, write_only=True)
 
     class Meta:
         model = ContactMessage
-        fields = ["id", "name", "email", "subject", "message", "created_at", "is_read"]
+        fields = [
+            "id",
+            "name",
+            "email",
+            "subject",
+            "message",
+            "website",
+            "created_at",
+            "is_read",
+        ]
         read_only_fields = ["id", "created_at", "is_read"]
+
+    def validate_website(self, value):
+        """Honeypot validation - if filled, it's a bot"""
+        if value:
+            raise serializers.ValidationError("Bot detected.")
+        return value
+
+    def validate(self, attrs):
+        """Additional validation for message content"""
+        attrs.pop("website", None)
+        message = attrs.get("message", "")
+        if len(message) > 5000:
+            raise serializers.ValidationError({"message": "Message is too long (max 5000 characters)."})
+        return attrs
 
     def validate_name(self, value):
         """Validate name field"""
