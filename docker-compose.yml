@@ -5,6 +5,19 @@ networks:
       config:
         - subnet: 172.10.0.0/16
 
+x-backend-common: &backend-common
+  build:
+    context: ./backend
+    target: development
+  networks:
+    - portfolio_network
+  volumes:
+    - ./backend:/app
+  environment:
+    DOCKER_ENV: true
+  depends_on:
+    - db
+
 services:
   portfolio-fe:
     build:
@@ -26,20 +39,18 @@ services:
       - ./nginx/ssl/certs:/etc/ssl/certs:ro
 
   portfolio-be:
-    build:
-      context: ./backend
-      target: development
+    <<: *backend-common
     networks:
       portfolio_network:
         ipv4_address: 172.10.0.3
-    volumes:
-      - ./backend:/app
     ports:
       - "8000:8000"
-    environment:
-      DOCKER_ENV: true
-    depends_on:
-      - db
+
+  portfolio-test:
+    <<: *backend-common
+    profiles:
+      - test
+    command: pytest
 
   db:
     image: postgres:15
