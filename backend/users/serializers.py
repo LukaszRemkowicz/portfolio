@@ -1,13 +1,31 @@
 # backend/users/serializers.py
 from rest_framework import serializers
 
-from django.contrib.auth import get_user_model
+from .models import Profile, User
 
-User = get_user_model()
+
+class ProfileSerializer(serializers.ModelSerializer):
+    """Serializer for niche-specific profile content"""
+
+    class Meta:
+        model = Profile
+        fields = [
+            "type",
+            "is_active",
+            "title",
+            "specific_bio",
+            "github_url",
+            "linkedin_url",
+            "astrobin_url",
+            "fb_url",
+            "ig_url",
+        ]
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Serializer for the User model profile"""
+    """Serializer for the User model profile with nested profiles"""
+
+    profiles = ProfileSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
@@ -18,10 +36,5 @@ class UserSerializer(serializers.ModelSerializer):
             "avatar",
             "about_me_image",
             "about_me_image2",
-            "website",
-            "github_profile",
-            "linkedin_profile",
-            "astrobin_url",
-            "fb_url",
-            "ig_url",
+            "profiles",
         ]

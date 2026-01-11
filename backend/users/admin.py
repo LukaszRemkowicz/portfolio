@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
 
-from .models import UserLoginAttempts
+from .models import Profile
 
 User = get_user_model()
 
@@ -28,19 +28,6 @@ class UserAdmin(DjangoUserAdmin):
                     "avatar",
                     "about_me_image",
                     "about_me_image2",
-                )
-            },
-        ),
-        (
-            _("Social Media"),
-            {
-                "fields": (
-                    "website",
-                    "github_profile",
-                    "linkedin_profile",
-                    "astrobin_url",
-                    "fb_url",
-                    "ig_url",
                 )
             },
         ),
@@ -85,7 +72,10 @@ class UserAdmin(DjangoUserAdmin):
         return False
 
     def changelist_view(self, request, extra_context=None):
-        """Redirect to edit form if user exists, otherwise allow add"""
+        """
+        Redirect to the change view if a user instance already exists.
+        This provides a better UX for the singleton pattern by skipping the list view.
+        """
         user = User.get_user()
         if user and user.pk:
             from django.shortcuts import redirect
@@ -95,24 +85,41 @@ class UserAdmin(DjangoUserAdmin):
         return super().changelist_view(request, extra_context)
 
 
-@admin.register(UserLoginAttempts)
-class UserLoginAttemptsAdmin(admin.ModelAdmin):
-    """Admin interface for UserLoginAttempts model"""
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    """Admin interface for managing different user profiles"""
 
-    list_display = ("id", "attempted_at", "counter")
-    list_display_links = ("id", "attempted_at")
-    list_filter = ("attempted_at",)
-    search_fields = ("id",)
-    ordering = ("-attempted_at",)
+    list_display = ("type", "title", "is_active", "updated_at")
+    list_filter = ("type", "is_active")
+    search_fields = ("title", "specific_bio")
 
     fieldsets = (
+        (None, {"fields": ("type", "user", "is_active")}),
         (
-            "Login Attempt Info",
+            "Content",
             {
                 "fields": (
-                    "attempted_at",
-                    "counter",
+                    "title",
+                    "specific_bio",
                 )
             },
         ),
+        (
+            "Links",
+            {
+                "fields": (
+                    "github_url",
+                    "linkedin_url",
+                    "astrobin_url",
+                    "fb_url",
+                    "ig_url",
+                )
+            },
+        ),
+        ("Metadata", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
+    readonly_fields = ("created_at", "updated_at")
+
+    def has_add_permission(self, request) -> bool:
+        """Limit profiles to the defined types (Programming, Astro)"""
+        return Profile.objects.count() < 2

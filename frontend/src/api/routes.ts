@@ -14,9 +14,13 @@ export const API_ROUTES: ApiRoutes = {
 // Helper function to get full media URL
 export const getMediaUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
-  // Ensure we don't have double slashes
-  if (path.startsWith("/")) {
-    path = path.substring(1);
+
+  // If the path is already an absolute URL, return it as-is
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
   }
-  return `${API_BASE_URL}/${path}`;
+
+  // Ensure we don't have double slashes for relative paths
+  const cleanPath = path.startsWith("/") ? path.substring(1) : path;
+  return `${API_BASE_URL}/${cleanPath}`;
 };

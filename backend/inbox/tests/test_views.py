@@ -4,7 +4,6 @@ Tests for inbox views
 
 import pytest
 from rest_framework import status
-from rest_framework.test import APIClient
 
 from django.urls import reverse
 
@@ -12,9 +11,11 @@ from django.urls import reverse
 
 
 @pytest.mark.django_db
-def test_contact_throttling_success(mock_email_service, contact_form_settings):
+def test_contact_throttling_success(mock_email_service, contact_form_settings, api_client):
     """Test that first 5 contact form submissions succeed"""
-    client = APIClient()
+    contact_form_settings.enabled = True
+    contact_form_settings.save()
+
     url = reverse("inbox:contact-message-list")
 
     # Use unique data for each request to avoid duplicate detection
@@ -27,7 +28,7 @@ def test_contact_throttling_success(mock_email_service, contact_form_settings):
             "message": f"Test message content {request_number}",
         }
 
-        response = client.post(url, data, format="json")
+        response = api_client.post(url, data, format="json")
         assert (
             response.status_code == status.HTTP_201_CREATED
         ), f"Request {request_number} should succeed, got {response.status_code}"
@@ -42,9 +43,11 @@ def test_contact_throttling_success(mock_email_service, contact_form_settings):
 
 
 @pytest.mark.django_db
-def test_contact_throttling_limit_exceeded(mock_email_service, contact_form_settings):
+def test_contact_throttling_limit_exceeded(mock_email_service, contact_form_settings, api_client):
     """Test that contact form submission is throttled after limit"""
-    client = APIClient()
+    contact_form_settings.enabled = True
+    contact_form_settings.save()
+
     url = reverse("inbox:contact-message-list")
 
     # Use same email but different subjects to hit throttling limit (5/hour per IP)
@@ -62,7 +65,7 @@ def test_contact_throttling_limit_exceeded(mock_email_service, contact_form_sett
             "message": f"Test message content {request_number}",
         }
 
-        response = client.post(url, data, format="json")
+        response = api_client.post(url, data, format="json")
 
         if response.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             throttled = True
@@ -85,9 +88,8 @@ def test_contact_throttling_limit_exceeded(mock_email_service, contact_form_sett
 
 
 @pytest.mark.django_db
-def test_contact_throttling_headers(mock_email_service, contact_form_settings):
+def test_contact_throttling_headers(mock_email_service, contact_form_settings, api_client):
     """Test that throttling response includes proper headers"""
-    client = APIClient()
     url = reverse("inbox:contact-message-list")
 
     # Use same email to hit throttling
@@ -102,7 +104,7 @@ def test_contact_throttling_headers(mock_email_service, contact_form_settings):
             "subject": f"Header Test Subject {request_number}",
             "message": f"Test message content {request_number}",
         }
-        response = client.post(url, data, format="json")
+        response = api_client.post(url, data, format="json")
         if response.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             break
 
@@ -122,10 +124,9 @@ def test_contact_throttling_headers(mock_email_service, contact_form_settings):
 
 
 @pytest.mark.django_db
-def test_contact_endpoint_disallows_get():
+def test_contact_endpoint_disallows_get(api_client):
     """Test that GET requests to the contact endpoint return 405 Method Not Allowed"""
-    client = APIClient()
     url = reverse("inbox:contact-message-list")
 
-    response = client.get(url)
+    response = api_client.get(url)
     assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED

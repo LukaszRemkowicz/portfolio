@@ -90,7 +90,13 @@ const Contact: React.FC = () => {
     try {
       await fetchContact(formData);
       setSubmitStatus("success");
-      setFormData({ name: "", email: "", subject: "", message: "", website: "" });
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+        website: "",
+      });
     } catch (error: unknown) {
       console.error("Failed to send message:", error);
 
@@ -99,16 +105,22 @@ const Contact: React.FC = () => {
         const axiosError = error as {
           response?: {
             status?: number;
-            data?: ValidationErrors | { message?: string; detail?: string; errors?: ValidationErrors };
+            data?:
+              | ValidationErrors
+              | {
+                  message?: string;
+                  detail?: string;
+                  errors?: ValidationErrors;
+                };
           };
         };
         const statusCode = axiosError.response?.status;
         const responseData = axiosError.response?.data;
-        
+
         if (statusCode === 429) {
           // Rate limit exceeded - show special message with custom UI
           // Backend provides custom message in response.data.detail or response.data.message
-          const message = 
+          const message =
             (responseData && "detail" in responseData && responseData.detail) ||
             (responseData && "message" in responseData && responseData.message);
           if (message) {
@@ -119,17 +131,17 @@ const Contact: React.FC = () => {
         } else if (statusCode === 400 && responseData) {
           // DRF returns validation errors directly in response.data as {field: ["error"]}
           // Check if response.data has validation error fields (name, email, subject, message)
-          const hasValidationErrors = 
+          const hasValidationErrors =
             "name" in responseData ||
             "email" in responseData ||
             "subject" in responseData ||
             "message" in responseData ||
             ("errors" in responseData && responseData.errors);
-          
+
           if (hasValidationErrors) {
             // DRF format: {field: ["error"]} directly in response.data
             // Or wrapped format: {errors: {field: ["error"]}}
-            const errors = 
+            const errors =
               ("errors" in responseData && responseData.errors) ||
               (responseData as ValidationErrors);
             setValidationErrors(errors as ValidationErrors);
@@ -286,11 +298,10 @@ const Contact: React.FC = () => {
 
           {submitStatus === "rate_limited" && (
             <div className={styles.rateLimitMessage}>
-              <p className={styles.rateLimitTitle}>
-                Too many requests
-              </p>
+              <p className={styles.rateLimitTitle}>Too many requests</p>
               <p className={styles.rateLimitText}>
-                You've submitted too many messages recently. Please wait up to 1 hour before trying again.
+                You've submitted too many messages recently. Please wait up to 1
+                hour before trying again.
               </p>
             </div>
           )}

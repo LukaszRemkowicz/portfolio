@@ -4,7 +4,6 @@ from typing import Optional
 
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import IntegrityError, models
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 logger = logging.getLogger(__name__)
@@ -39,28 +38,11 @@ class User(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
-    bio = models.TextField(max_length=10000, blank=True)
+    bio = models.TextField(max_length=10000, blank=True, help_text="General/Global bio about you")
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     about_me_image = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
     about_me_image2 = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
-    website = models.URLField(max_length=200, blank=True)
-    github_profile = models.URLField(max_length=200, blank=True)
-    linkedin_profile = models.URLField(max_length=200, blank=True)
-    astrobin_url = models.URLField(
-        max_length=200,
-        blank=True,
-        help_text=(
-            "Your Astrobin profile URL " "(e.g., https://www.astrobin.com/users/yourusername/)"
-        ),
-    )
-    fb_url = models.URLField(
-        max_length=200, blank=True, help_text="Your Facebook profile or page URL"
-    )
-    ig_url = models.URLField(
-        max_length=200,
-        blank=True,
-        help_text=("Your Instagram profile URL " "(e.g., https://www.instagram.com/yourusername/)"),
-    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -105,25 +87,46 @@ class User(AbstractUser):
             raise
 
 
-class UserLoginAttempts(models.Model):
+class Profile(models.Model):
     """
-    Model to track user login attempts for bot/brute force protection.
-    Stores datetime and counter for login attempts.
+    Model representing different niche profiles for the same user.
+    Enables specific content for different personas (Programming, Astrophotography).
     """
 
-    attempted_at = models.DateTimeField(
-        default=timezone.now,
-        help_text="Datetime when the login attempt occurred",
+    class ProfileType(models.TextChoices):
+        PROGRAMMING = "PROGRAMMING", _("Programming")
+        ASTRO = "ASTRO", _("Astrophotography")
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="profiles")
+    type = models.CharField(
+        max_length=20,
+        choices=ProfileType.choices,
+        unique=True,
+        help_text="The niche this profile represents",
     )
-    counter = models.IntegerField(
-        default=1,
-        help_text="Number of login attempts (counter)",
+    is_active = models.BooleanField(default=True)
+
+    title = models.CharField(max_length=255, help_text="Public title, e.g. 'Software Engineer'")
+    specific_bio = models.TextField(help_text="Persona-specific bio/description")
+
+    # Persona-specific links
+    github_url = models.URLField(max_length=200, blank=True)
+    linkedin_url = models.URLField(max_length=200, blank=True)
+    astrobin_url = models.URLField(
+        max_length=200,
+        blank=True,
+        help_text="Link to your Astrobin profile",
     )
+    fb_url = models.URLField(max_length=200, blank=True)
+    ig_url = models.URLField(max_length=200, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "User Login Attempt"
-        verbose_name_plural = "User Login Attempts"
-        ordering = ["-attempted_at"]
+        verbose_name = "Profile"
+        verbose_name_plural = "Profiles"
+        ordering = ["type"]
 
     def __str__(self) -> str:
-        return f"Login Attempt at {self.attempted_at} (counter: {self.counter})"
+        return f"{self.get_type_display()} Profile"

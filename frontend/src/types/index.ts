@@ -49,7 +49,12 @@ export interface ValidationErrors {
   message?: string[];
 }
 
-export type SubmitStatus = "success" | "validation_error" | "rate_limited" | "error" | null;
+export type SubmitStatus =
+  | "success"
+  | "validation_error"
+  | "rate_limited"
+  | "error"
+  | null;
 
 // Component Props Types
 export interface HomeProps {

@@ -4,10 +4,12 @@ from unittest.mock import patch
 import pytest
 
 from django.contrib.admin.sites import AdminSite
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from users.admin import UserAdmin, UserLoginAttemptsAdmin
-from users.models import User, UserLoginAttempts
+from users.admin import UserAdmin
+
+User = get_user_model()
 
 
 class MockRequest:
@@ -59,15 +61,3 @@ class TestUserAdmin:
         expected_url = reverse("admin:users_user_change", args=[user.pk])
         assert response.status_code == 302
         assert response.url == expected_url
-
-
-@pytest.mark.django_db
-class TestUserLoginAttemptsAdmin:
-    def setup_method(self):
-        self.site = AdminSite()
-        self.admin = UserLoginAttemptsAdmin(UserLoginAttempts, self.site)
-
-    def test_admin_setup(self):
-        """Verify admin config"""
-        assert "attempted_at" in self.admin.list_display
-        assert "counter" in self.admin.list_display

@@ -3,64 +3,52 @@
 Tests for users models
 """
 
-from datetime import datetime, timedelta
-from typing import List
 from unittest.mock import patch
 
 import pytest
 
+from django.contrib.auth import get_user_model
 from django.db import IntegrityError
-from django.utils import timezone
 
-from users.models import User, UserLoginAttempts
+from users.models import Profile
 
-
-@pytest.mark.django_db
-def test_user_login_attempts_creation():
-    """Test that UserLoginAttempts can be created with datetime and counter"""
-    attempted_at: datetime = timezone.now()
-    attempt: UserLoginAttempts = UserLoginAttempts.objects.create(
-        attempted_at=attempted_at,
-        counter=1,
-    )
-
-    assert attempt.id is not None
-    assert attempt.attempted_at == attempted_at
-    assert attempt.counter == 1
+User = get_user_model()
 
 
 @pytest.mark.django_db
-def test_user_login_attempts_counter_increments():
-    """Test that counter field can be incremented"""
-    attempt: UserLoginAttempts = UserLoginAttempts.objects.create(
-        attempted_at=timezone.now(),
-        counter=1,
+def test_profile_creation():
+    """Test that Profile can be created correctly"""
+    user = User.objects.create(email="test@example.com", is_active=True)
+    profile = Profile.objects.create(
+        user=user,
+        type=Profile.ProfileType.PROGRAMMING,
+        title="Software Engineer",
+        specific_bio="Specific bio",
     )
 
-    attempt.counter = 5
-    attempt.save()
-
-    assert attempt.counter == 5
+    assert profile.id is not None
+    assert profile.user == user
+    assert profile.type == Profile.ProfileType.PROGRAMMING
+    assert profile.title == "Software Engineer"
+    assert str(profile) == "Programming Profile"
 
 
 @pytest.mark.django_db
-def test_user_login_attempts_ordering():
-    """Test that UserLoginAttempts can be ordered by datetime"""
-    first_attempt: UserLoginAttempts = UserLoginAttempts.objects.create(
-        attempted_at=timezone.now() - timedelta(hours=1),
-        counter=1,
-    )
-    second_attempt: UserLoginAttempts = UserLoginAttempts.objects.create(
-        attempted_at=timezone.now(),
-        counter=1,
+def test_profile_type_uniqueness():
+    """Test that a user cannot have duplicate profile types"""
+    user = User.objects.create(email="unique@example.com", is_active=True)
+    Profile.objects.create(
+        user=user,
+        type=Profile.ProfileType.PROGRAMMING,
+        title="First",
     )
 
-    attempts: List[UserLoginAttempts] = list(
-        UserLoginAttempts.objects.all().order_by("attempted_at")
-    )
-
-    assert attempts[0].id == first_attempt.id
-    assert attempts[1].id == second_attempt.id
+    with pytest.raises(IntegrityError):
+        Profile.objects.create(
+            user=user,
+            type=Profile.ProfileType.PROGRAMMING,
+            title="Second",
+        )
 
 
 @pytest.mark.django_db
@@ -127,15 +115,6 @@ def test_user_str_method() -> None:
     email = "test@example.com"
     user = User(email=email)
     assert str(user) == email
-
-
-@pytest.mark.django_db
-def test_user_login_attempts_str_method() -> None:
-    """Test UserLoginAttempts.__str__ method"""
-    now = timezone.now()
-    attempt = UserLoginAttempts(attempted_at=now, counter=3)
-    expected_str = f"Login Attempt at {now} (counter: 3)"
-    assert str(attempt) == expected_str
 
 
 @pytest.mark.django_db
