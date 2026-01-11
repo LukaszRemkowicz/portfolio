@@ -133,4 +133,5 @@ jspm_packages/
 nginx/ssl/certs/
 nginx/logs/
 .cursor/rules/
+.gemini/
 /backend/core/local.py
