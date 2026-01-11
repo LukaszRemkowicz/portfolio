@@ -12,7 +12,7 @@ from django.urls import reverse
 
 
 @pytest.mark.django_db
-def test_contact_throttling_success(mock_email_service):
+def test_contact_throttling_success(mock_email_service, contact_form_settings):
     """Test that first 5 contact form submissions succeed"""
     client = APIClient()
     url = reverse("inbox:contact-message-list")
@@ -42,7 +42,7 @@ def test_contact_throttling_success(mock_email_service):
 
 
 @pytest.mark.django_db
-def test_contact_throttling_limit_exceeded(mock_email_service):
+def test_contact_throttling_limit_exceeded(mock_email_service, contact_form_settings):
     """Test that contact form submission is throttled after limit"""
     client = APIClient()
     url = reverse("inbox:contact-message-list")
@@ -85,7 +85,7 @@ def test_contact_throttling_limit_exceeded(mock_email_service):
 
 
 @pytest.mark.django_db
-def test_contact_throttling_headers(mock_email_service):
+def test_contact_throttling_headers(mock_email_service, contact_form_settings):
     """Test that throttling response includes proper headers"""
     client = APIClient()
     url = reverse("inbox:contact-message-list")

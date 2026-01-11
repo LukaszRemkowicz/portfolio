@@ -10,9 +10,9 @@ from rest_framework.test import APIClient
 from django.test import Client
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def get_user_model():
-    """Get user model fixture - lazy import"""
+    """Get user model fixture - session scoped as it never changes"""
     from django.contrib.auth import get_user_model
 
     return get_user_model()
@@ -28,7 +28,7 @@ def client():
 def user(get_user_model):
     """Create a test user"""
     User = get_user_model
-    user = User(email="test@example.com")
+    user = User.objects.create_user(email="test@example.com")
     user.set_password("testpass123")
     user.save()
     return user
@@ -37,7 +37,7 @@ def user(get_user_model):
 @pytest.fixture
 def admin_user(get_user_model):
     """Create a test admin user - tests create_superuser method"""
-    User = get_user_model()
+    User = get_user_model
     return User.objects.create_superuser(email="admin@example.com", password="adminpass123")
 
 
@@ -56,31 +56,36 @@ def admin_client(client, admin_user):
 
 
 @pytest.fixture(autouse=True)
-def enable_contact_form_and_clear_cache(db):
+def clear_django_cache():
     """
-    Enable contact form and clear cache/messages for all view tests.
-    Automatically runs before each test to ensure consistent test state.
+    Automatically clear cache for all tests to ensure isolation.
+    Lightweight and fast.
     """
     from django.core.cache import cache as django_cache
 
+    django_cache.clear()
+    yield
+    django_cache.clear()
+
+
+@pytest.fixture
+def contact_form_settings(db):
+    """
+    Enable contact form and clear existing messages.
+    Non-autouse to avoid DB overhead in unrelated tests.
+    """
     from inbox.models import ContactFormSettings, ContactMessage
 
     # Enable contact form
     settings = ContactFormSettings.get_settings()
-    settings.enabled = True
-    settings.save()
+    if not settings.enabled:
+        settings.enabled = True
+        settings.save()
 
-    # Clear cache to avoid throttling issues between tests
-    django_cache.clear()
-
-    # Clear existing contact messages to avoid duplicate detection
+    # Clear existing contact messages
     ContactMessage.objects.all().delete()
 
-    yield
-
-    # Cleanup
-    django_cache.clear()
-    ContactMessage.objects.all().delete()
+    return settings
 
 
 @pytest.fixture
@@ -99,20 +104,11 @@ def request_factory():
     return RequestFactory()
 
 
-@pytest.fixture
-def contact_form_settings(db):
-    """Create or get contact form settings instance for testing"""
-    from inbox.models import ContactFormSettings
-
-    return ContactFormSettings.get_settings()
-
-
 @pytest.fixture(autouse=True)
 def mock_email_service():
     """
     Automatically mock email service for all tests.
     Prevents actual emails from being sent during tests.
-    Mocks both the service method and Django's send_mail to ensure no emails are sent.
     """
     with (
         patch(
@@ -121,7 +117,7 @@ def mock_email_service():
         patch("django.core.mail.send_mail") as mock_send_mail,
     ):
         mock_async.return_value = None
-        mock_send_mail.return_value = 1  # send_mail returns number of emails sent
+        mock_send_mail.return_value = 1
         yield mock_async
 
 
