@@ -119,3 +119,13 @@ def test_contact_throttling_headers(mock_email_service, contact_form_settings):
         # At least one throttling header should be present, or just check status code
         throttling_headers_found = any(header in response for header in possible_headers)
         assert throttling_headers_found or response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+
+
+@pytest.mark.django_db
+def test_contact_endpoint_disallows_get():
+    """Test that GET requests to the contact endpoint return 405 Method Not Allowed"""
+    client = APIClient()
+    url = reverse("inbox:contact-message-list")
+
+    response = client.get(url)
+    assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED

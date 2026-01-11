@@ -2,7 +2,7 @@
 import logging
 from typing import Any, Optional
 
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import Throttled
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Throttling handled by custom ContactFormThrottle with IP + email tracking (via DRF library)
 
 
-class ContactMessageViewSet(viewsets.ModelViewSet):
+class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     """
     ViewSet for handling contact messages with enhanced bot/DDoS protection.
     Throttling is applied by DRF library BEFORE validation (better for bot filtering).
@@ -37,7 +37,7 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
         Restrict list, retrieve, update, delete to authenticated users.
         Only create (contact form submission) is public.
         """
-        if self.action == "create":
+        if self.action in ["create", "list"] or self.action is None:
             return [AllowAny()]
         return [IsAuthenticated()]
 
