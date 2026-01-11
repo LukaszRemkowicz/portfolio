@@ -103,3 +103,6 @@ markers = [
     "integration: marks tests as integration tests",
     "django_db: marks tests that require database access",
 ]
+
+[tool.coverage.run]
+omit = ["manage.py"]
