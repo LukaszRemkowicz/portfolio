@@ -21,8 +21,6 @@ Django REST API backend for a personal portfolio showcasing astrophotography and
 - **Media File Serving** - Optimized static and media file handling
 - **Docker Integration** - Containerized deployment ready
 
-
-
 ## 🛠️ Development Setup
 
 ### Prerequisites
@@ -33,7 +31,7 @@ Django REST API backend for a personal portfolio showcasing astrophotography and
 
 > **Docker Compose Version**: Check your Docker version with `docker --version`. Use `docker compose` (V2) or `docker-compose` (V1) accordingly.
 
-### Installation
+### 快速开始 (Quick Start)
 
 #### 1. Install Poetry
 ```bash
@@ -68,47 +66,60 @@ poetry run python manage.py createsuperuser
 poetry run python manage.py runserver 0.0.0.0:8000
 ```
 
+## 🧪 Testing & Quality
+
+### Running Tests
+```bash
+# Run all tests with pytest
+poetry run pytest
+
+# Run with coverage
+poetry run pytest --cov=. --cov-report=term-missing
+```
+
+### Code Quality Tools
+```bash
+# Run Flake8 linting
+poetry run flake8 .
+
+# Run MyPy type checking
+poetry run mypy .
+
+# Format code with Black
+poetry run black .
+
+# Sort imports with isort
+poetry run isort .
+```
+
+### Security Scanning
+```bash
+# Run security scan for vulnerabilities
+poetry run safety scan
+```
+
 ## 🐳 Docker Integration
 
 ### With Docker Compose (Recommended)
 ```bash
 # From project root
-# Docker Compose V2 (newer versions)
 docker compose up --build
-
-# Docker Compose V1 (older versions)
-docker-compose up --build
 ```
 - **Backend API**: `https://admin.portfolio.local/api/v1/`
-- **Django Admin**: `https://admin.portfolio.local/`
+- **Django Admin**: `https://admin.portfolio.local/admin/`
 - **Media Files**: `https://portfolio.local/media/`
 
-### Backend-Only Docker
+### Run Tests in Docker
 ```bash
-cd backend
-docker build -t portfolio-backend .
-docker run -p 8000:8000 portfolio-backend
+# Run backend tests inside the container
+docker compose exec portfolio-be pytest
 ```
 
-## 🧪 Testing
-
-### Current Test Setup
-- **pytest** configured for testing
-- **Test database** isolation
-
-### Running Tests
-```bash
-poetry run python manage.py test
-# or
-poetry run pytest
-```
-
-## 📋 Admin Interface
-
-### Admin Access
-1. Create superuser: `poetry run python manage.py createsuperuser`
-2. Access admin: `https://admin.portfolio.local/admin/`
-3. Configure profile, upload images, manage content
+## 📋 API Endpoints
+- `/api/v1/profile/` - User profile
+- `/api/v1/background/` - Background images
+- `/api/v1/image/` - Astrophotography images
+- `/api/v1/contact/` - Contact form submission
 
 ## 🚀 Production Considerations
 
@@ -117,26 +128,19 @@ poetry run pytest
 - CORS properly configured
 - Media file serving through nginx
 - Database connection security
+- Non-root user execution in Docker
 
 ### Performance
+- Gunicorn WSGI server for production
 - Database query optimization
 - Media file CDN ready
 - Static file serving optimization
-- Docker container optimization
-
-### Monitoring
-- Django logging configuration
-- Error tracking ready
-- Health check endpoints available
-
-
 
 ## 📋 TODO - Backend Improvements
 
 - [ ] Implement image optimization pipeline
 - [ ] Implement caching for frequently accessed data
 - [ ] Printify email messages (add html template)
-
 
 ### 🚀 API & Documentation
 - [ ] **API Documentation** - Add OpenAPI/Swagger documentation with interactive docs
@@ -150,7 +154,6 @@ poetry run pytest
 - [x] **Database Migrations** - Automated production-ready migrations in Docker
 - [ ] **Performance Monitoring** - Add database query monitoring
 - [ ] **Backup** - Add backup and restore functionality
-
 
 ### 🔒 Security & Authentication
 - [x] **Rate Limiting** - Implement API rate limiting and DDoS protection
@@ -178,7 +181,6 @@ poetry run pytest
 ### Devops
 - [x] **Production Server** - Gunicorn WSGI server implementation
 - [ ] ***Container orchestration*** - Docker Swarm or Kubernetes
-
 
 ---
 
