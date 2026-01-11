@@ -20,17 +20,6 @@ Content-Type: {{contentType}}
   "message": "This is a test message to verify the contact form is working properly."
 }
 
-### Test 2: Create Contact Message (New ViewSet endpoint)
-POST {{baseUrl}}/contact-messages/
-Content-Type: {{contentType}}
-
-{
-  "name": "Jane Smith",
-  "email": "jane.smith@example.com",
-  "subject": "Another Test Message",
-  "message": "This is another test message using the new ViewSet endpoint."
-}
-
 
 ### Test 9: Invalid Contact Form (Missing required fields)
 POST {{baseUrl}}/contact/
