@@ -30,7 +30,8 @@ class ContactFormKillSwitchMiddleware(MiddlewareMixin):
         We check for the exact router-created path: /api/v1/contact/
         """
         # Only check POST requests to exact contact endpoint
-        # Router creates: /api/v1/contact/ (list/create) and /api/v1/contact/{id}/ (detail/update/delete)
+        # Router creates: /api/v1/contact/ (list/create)
+        # and /api/v1/contact/{id}/ (detail/update/delete)
         # We only want to check the base endpoint for form submissions
         if request.method != "POST" or request.path != self.CONTACT_PATH:
             return None
@@ -47,7 +48,8 @@ class ContactFormKillSwitchMiddleware(MiddlewareMixin):
                     client_ip = str(request.META.get("REMOTE_ADDR", "unknown"))
 
                 logger.warning(
-                    f"Contact form request blocked - form disabled. IP: {client_ip}, Path: {request.path}"
+                    f"Contact form request blocked - form disabled. IP: {client_ip}, "
+                    f"Path: {request.path}"
                 )
 
                 # Return HTTP 400 Bad Request as requested

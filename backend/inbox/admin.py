@@ -50,7 +50,7 @@ class ContactFormSettingsAdmin(admin.ModelAdmin):
             {
                 "fields": ("enabled",),
                 "description": "Use this as a kill switch to disable the contact form endpoint. "
-                "When disabled, all submission attempts will be rejected immediately with HTTP 503.",
+                "When disabled, submissions will be rejected immediately with HTTP 503.",
             },
         ),
         ("Timestamps", {"fields": ("updated_at",), "classes": ("collapse",)}),
