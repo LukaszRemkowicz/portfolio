@@ -4,7 +4,7 @@ from rest_framework import status
 
 from django.urls import reverse
 
-from astrophotography.models import AstroImage, BackgroundMainPage
+from astrophotography.models import BackgroundMainPage
 
 
 @pytest.mark.django_db
@@ -15,7 +15,7 @@ class TestAstroImageViewSet:
         response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
-        assert response.data[0]["pk"] == astro_image.pk
+        assert response.data[0]["pk"] == str(astro_image.pk)
 
     def test_retrieve_astro_image(self, api_client, astro_image):
         """Test retrieving a single image via the router generated URL"""
@@ -45,7 +45,7 @@ class TestBackgroundMainPageView:
         """Test retrieving the latest background image"""
         # Create two images, should retrieve the latest one
         BackgroundMainPage.objects.create(image="old.jpg")
-        AstroImage.objects.create(image="new.jpg")
+        BackgroundMainPage.objects.create(image="new.jpg")
 
         url = reverse("astroimages:backgroundImage-list")
         response = api_client.get(url)

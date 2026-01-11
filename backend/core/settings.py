@@ -76,6 +76,9 @@ INSTALLED_APPS = [
     "inbox.apps.InboxConfig",
 ]
 
+# Security Settings (for Nginx SSL termination)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # Must be before CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
@@ -212,7 +215,7 @@ AXES_RESET_ON_SUCCESS = True  # Reset failure count on successful login
 AXES_ENABLE_ADMIN = True  # Enable Axes admin interface
 AXES_VERBOSE = True  # Enable verbose logging
 # Axes configuration - works directly with email since USERNAME_FIELD = 'email'
-AXES_USERNAME_FORM_FIELD = "username"  # Django admin form uses 'username' field name but value is email (USERNAME_FIELD = 'email')
+AXES_USERNAME_FORM_FIELD = "username"  # Value is email (USERNAME_FIELD = 'email')
 
 # Authentication backends with axes protection
 # Axes backend must be first to intercept login attempts
