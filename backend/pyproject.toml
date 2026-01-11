@@ -106,10 +106,13 @@ markers = [
 
 [tool.coverage.run]
 omit = [
-    "manage.py",
+    "**/manage.py",
+    "**/conftest.py",
+    "**/core/scripts.py",
     "**/__init__.py",
     "**/wsgi.py",
     "**/asgi.py",
     "**/urls.py",
     "**/migrations/*",
+    "**/tests/*",
 ]
