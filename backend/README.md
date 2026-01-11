@@ -74,8 +74,12 @@ We've defined shortcuts in `pyproject.toml` to simplify common tasks:
 ```bash
 poetry run test        # Run all tests
 poetry run test-cov    # Run tests with coverage report
-poetry run lint        # Auto-format and lint (Black, Isort, Flake8)
 poetry run security    # Run security scan on dependencies (Safety)
+```
+
+To manually run linters and formatters (equivalent to what runs on commit):
+```bash
+pre-commit run --all-files
 ```
 
 ### Manual Testing & Quality Tools

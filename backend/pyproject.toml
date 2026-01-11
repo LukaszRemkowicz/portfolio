@@ -8,7 +8,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.13,<4.0"
 dependencies = [
-    "django>=5.2",
+    "django (>=6.0.1)",
     "djangorestframework>=3.14.0",
     "pillow>=10.0.0",
     "django-environ>=0.11.2",
@@ -24,7 +24,6 @@ packages = [{include = "astrophotography"}, {include = "programming"}, {include 
 [tool.poetry.scripts]
 test = "core.scripts:test"
 test-cov = "core.scripts:test_cov"
-lint = "core.scripts:lint"
 security = "core.scripts:safety_check"
 
 [tool.poetry.group.dev.dependencies]

@@ -14,17 +14,6 @@ def test_cov():
     sys.exit(result.returncode)
 
 
-def lint():
-    """Run all linters and formatters."""
-    print("Running Black...")
-    subprocess.run(["black", "."])
-    print("\nRunning Isort...")
-    subprocess.run(["isort", "."])
-    print("\nRunning Flake8...")
-    result = subprocess.run(["flake8", "."])
-    sys.exit(result.returncode)
-
-
 def safety_check():
     """Run security scan on dependencies."""
     result = subprocess.run(["safety", "scan"])
