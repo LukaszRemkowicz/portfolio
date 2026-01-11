@@ -129,13 +129,14 @@ poetry run pytest
 - Error tracking ready
 - Health check endpoints available
 
-## 📋 TODO / Known Issues
-
-- [ ] Implement image optimization pipeline
-- [ ] Implement caching for frequently accessed data
 
 
 ## 📋 TODO - Backend Improvements
+
+- [ ] Implement image optimization pipeline
+- [ ] Implement caching for frequently accessed data
+- [ ] Printify email messages (add html template)
+
 
 ### 🚀 API & Documentation
 - [ ] **API Documentation** - Add OpenAPI/Swagger documentation with interactive docs
@@ -171,6 +172,10 @@ poetry run pytest
 - [ ] **Error Tracking** - Add error tracking and monitoring (sentry)
 - [x] **Health Checks** - Add health check endpoints
 - [ ] **Metrics Collection** - Add application metrics collection
+
+### Devops
+- [ ] ***Container orchestration*** - Docker Swarm or Kubernetes
+
 
 ---
 

@@ -8,6 +8,8 @@ RUN npm ci
 FROM base AS dev
 COPY . .
 EXPOSE 3000
+RUN chown -R node:node /app
+USER node
 CMD ["npm", "start"]
 
 # --- Production build ---
@@ -24,6 +26,7 @@ CMD ["npm", "test", "--", "--passWithNoTests"]
 FROM node:20-alpine AS prod
 WORKDIR /app
 RUN npm install -g serve
+USER node
 COPY --from=build /app/dist ./dist
 EXPOSE 3000
 CMD ["serve", "-s", "dist", "-l", "3000"]
