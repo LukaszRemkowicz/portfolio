@@ -21,6 +21,12 @@ dependencies = [
 [tool.poetry]
 packages = [{include = "astrophotography"}, {include = "programming"}, {include = "users"}, {include = "inbox"}, {include = "core"}]
 
+[tool.poetry.scripts]
+test = "core.scripts:test"
+test-cov = "core.scripts:test_cov"
+lint = "core.scripts:lint"
+security = "core.scripts:safety_check"
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
 pytest-django = "^4.5.0"

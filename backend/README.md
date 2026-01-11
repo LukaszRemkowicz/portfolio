@@ -68,33 +68,33 @@ poetry run python manage.py runserver 0.0.0.0:8000
 
 ## 🧪 Testing & Quality
 
-### Running Tests
+### Helper Scripts (Poetry)
+We've defined shortcuts in `pyproject.toml` to simplify common tasks:
+
+```bash
+poetry run test        # Run all tests
+poetry run test-cov    # Run tests with coverage report
+poetry run lint        # Auto-format and lint (Black, Isort, Flake8)
+poetry run security    # Run security scan on dependencies (Safety)
+```
+
+### Manual Testing & Quality Tools
+If you prefer running tools individually:
+
 ```bash
 # Run all tests with pytest
 poetry run pytest
 
-# Run with coverage
+# Run with coverage (manual)
 poetry run pytest --cov=. --cov-report=term-missing
-```
 
-### Code Quality Tools
-```bash
-# Run Flake8 linting
+# Run individual quality tools
 poetry run flake8 .
-
-# Run MyPy type checking
 poetry run mypy .
-
-# Format code with Black
 poetry run black .
-
-# Sort imports with isort
 poetry run isort .
-```
 
-### Security Scanning
-```bash
-# Run security scan for vulnerabilities
+# Run security scan
 poetry run safety scan
 ```
 
