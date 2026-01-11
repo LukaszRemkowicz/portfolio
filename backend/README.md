@@ -68,13 +68,13 @@ poetry run python manage.py runserver 0.0.0.0:8000
 
 ## 🧪 Testing & Quality
 
-### Helper Scripts (Poetry)
-We've defined shortcuts in `pyproject.toml` to simplify common tasks:
+### Helper Scripts
+We use custom Poetry scripts to run tasks directly in the Docker environment from your host:
 
 ```bash
-poetry run test        # Run all tests
-poetry run test-cov    # Run tests with coverage report
-poetry run security    # Run security scan on dependencies (Safety)
+poetry run test        # Run all tests in Docker
+poetry run test-cov    # Run tests with coverage in Docker
+poetry run security    # Run security scan in Docker
 ```
 
 To manually run linters and formatters (equivalent to what runs on commit):

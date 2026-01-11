@@ -2,19 +2,28 @@ import subprocess
 import sys
 
 
-def test():
-    """Run all tests using pytest."""
-    result = subprocess.run(["pytest"])
+def run_in_docker(command):
+    """Run a command inside the portfolio-test container."""
+    full_cmd = ["docker", "compose", "run", "--rm"]
+    if "safety" in command:
+        full_cmd.extend(["--user", "root"])
+    full_cmd.append("portfolio-test")
+    full_cmd.extend(command)
+
+    result = subprocess.run(full_cmd)
     sys.exit(result.returncode)
+
+
+def test():
+    """Run tests in Docker with optional arguments."""
+    run_in_docker(["pytest"] + sys.argv[1:])
 
 
 def test_cov():
-    """Run tests with coverage report."""
-    result = subprocess.run(["pytest", "--cov=.", "--cov-report=term-missing"])
-    sys.exit(result.returncode)
+    """Run tests with coverage in Docker with optional arguments."""
+    run_in_docker(["pytest", "--cov=.", "--cov-report=term-missing"] + sys.argv[1:])
 
 
-def safety_check():
-    """Run security scan on dependencies."""
-    result = subprocess.run(["safety", "scan"])
-    sys.exit(result.returncode)
+def security():
+    """Run security scan in Docker with optional arguments."""
+    run_in_docker(["safety", "scan"] + sys.argv[1:])

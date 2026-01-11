@@ -47,7 +47,6 @@ urlpatterns = [
     path("api/v1/", include("astrophotography.urls")),
     path("api/v1/", include("inbox.urls")),
     path("api/v1/whats-enabled/", FeaturesEnabledView.as_view(), name="whats-enabled"),
-    # API 404 Catch-all (must be last in API section)
     path("api/v1/<path:path>", api_404_view),
 ]
 
