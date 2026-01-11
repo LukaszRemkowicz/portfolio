@@ -107,10 +107,12 @@ class ContactSubmissionService:
             DuplicateSubmission: If duplicate message detected
             ValidationError: If serializer validation fails
         """
-        logger.info(f"Contact form submission attempt from IP: {client_ip}")
+        # Sanitize IP for logging to prevent log injection
+        safe_ip = client_ip.replace("\n", "").replace("\r", "")
+        logger.info(f"Contact form submission attempt from IP: {safe_ip}")
 
         # 1. Log sanitized incoming data
-        ContactSubmissionService.log_incoming_data(request, client_ip)
+        ContactSubmissionService.log_incoming_data(request, safe_ip)
 
         # 2. Check request size limit
         content_length: Optional[str] = request.META.get("CONTENT_LENGTH")
@@ -118,9 +120,7 @@ class ContactSubmissionService:
             try:
                 content_length_int: int = int(content_length)
                 if content_length_int > 10000:
-                    logger.warning(
-                        f"Request too large: {content_length_int} bytes from {client_ip}"
-                    )
+                    logger.warning(f"Request too large: {content_length_int} bytes from {safe_ip}")
                     raise PayloadTooLarge()
             except (ValueError, TypeError):
                 pass
@@ -132,16 +132,20 @@ class ContactSubmissionService:
         except Exception as e:
             if hasattr(serializer, "errors"):
                 logger.error(
-                    f"Contact form validation failed for IP {client_ip}: "
+                    f"Contact form validation failed for IP {safe_ip}: "
                     f"Errors: {serializer.errors}, Data keys: {list(request.data.keys())}"
                 )
             else:
-                logger.error(f"Contact form validation failed for IP {client_ip}: {str(e)}")
+                logger.error(f"Contact form validation failed for IP {safe_ip}: {str(e)}")
             raise
 
         # 4. Extract validated data
         email: Optional[str] = serializer.validated_data.get("email")
         subject: Optional[str] = serializer.validated_data.get("subject")
+
+        # Sanitize email and subject for logging
+        safe_email = email.replace("\n", "").replace("\r", "") if email else ""
+        safe_subject = subject.replace("\n", "").replace("\r", "") if subject else ""
 
         # 5. Check for duplicate messages
         if email and subject:
@@ -152,7 +156,8 @@ class ContactSubmissionService:
             ).exists()
             if recent_duplicate:
                 logger.warning(
-                    f"Duplicate message from {email} w/ subject '{subject}' at IP {client_ip}"
+                    f"Duplicate message from {safe_email} w/ subject '{safe_subject}' "
+                    f"at IP {safe_ip}"
                 )
                 raise DuplicateSubmission()
 
@@ -163,7 +168,7 @@ class ContactSubmissionService:
         ContactMessageEmailService.send_notification_email_async(contact_message)
 
         logger.info(
-            f"Contact message created: ID={contact_message.id}, Email={email}, IP={client_ip}"
+            f"Contact message created: ID={contact_message.id}, Email={safe_email}, IP={safe_ip}"
         )
         return contact_message
 
