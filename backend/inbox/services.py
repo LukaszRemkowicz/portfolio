@@ -91,6 +91,11 @@ class ContactSubmissionService:
     """
 
     @staticmethod
+    def _sanitize_for_logging(value: Any) -> str:
+        """Sanitize value for logging to prevent injection"""
+        return str(value).replace("\n", "").replace("\r", "")
+
+    @staticmethod
     def process_submission(request: Request, client_ip: str) -> ContactMessage:
         """
         Process a contact form submission request.
@@ -123,7 +128,8 @@ class ContactSubmissionService:
                     logger.warning(f"Request too large: {content_length_int} bytes from {safe_ip}")
                     raise PayloadTooLarge()
             except (ValueError, TypeError):
-                pass
+                # Log that content length was invalid but proceed safely
+                logger.debug(f"Invalid CONTENT_LENGTH '{content_length}' from {safe_ip}")
 
         # 3. Validate data using serializer
         serializer = ContactMessageSerializer(data=request.data)
@@ -131,9 +137,13 @@ class ContactSubmissionService:
             serializer.is_valid(raise_exception=True)
         except Exception as e:
             if hasattr(serializer, "errors"):
+                safe_errors = ContactSubmissionService._sanitize_for_logging(serializer.errors)
+                safe_keys = ContactSubmissionService._sanitize_for_logging(
+                    list(request.data.keys())
+                )
                 logger.error(
                     f"Contact form validation failed for IP {safe_ip}: "
-                    f"Errors: {serializer.errors}, Data keys: {list(request.data.keys())}"
+                    f"Errors: {safe_errors}, Data keys: {safe_keys}"
                 )
             else:
                 logger.error(f"Contact form validation failed for IP {safe_ip}: {str(e)}")

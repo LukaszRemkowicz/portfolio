@@ -228,7 +228,7 @@ def test_profile_endpoint_handles_database_error(api_client: APIClient) -> None:
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         assert "detail" in response.data
-        assert "Error retrieving profile" in response.data["detail"]
+        assert "An internal error occurred while retrieving the profile" in response.data["detail"]
 
 
 @pytest.mark.django_db

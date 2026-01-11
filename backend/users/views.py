@@ -1,5 +1,7 @@
 # backend/users/views.py
 
+import logging
+
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
@@ -13,6 +15,9 @@ from core.throttling import APIRateThrottle
 from .serializers import UserSerializer
 
 User = get_user_model()
+
+
+logger = logging.getLogger(__name__)
 
 
 class UserViewSet(viewsets.ViewSet):
@@ -33,8 +38,9 @@ class UserViewSet(viewsets.ViewSet):
 
             serializer = UserSerializer(user, context={"request": request})
             return Response(serializer.data)
-        except Exception as error:
+        except Exception:
+            logger.exception("Error retrieving user profile")
             return Response(
-                {"detail": f"Error retrieving profile: {str(error)}"},
+                {"detail": "An internal error occurred while retrieving the profile."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
