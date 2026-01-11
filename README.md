@@ -65,33 +65,18 @@ docker-compose exec portfolio-fe npm test    # Run frontend tests
 
 ## Testing
 
-### Using `exec` (Services must be running)
-Recommended for development (fastest):
+### Backend (Dedicated Service)
+The backend tests now run in a dedicated, isolated environment using Docker Compose Profiles. This inherits your development configuration but remains isolated.
+
 ```bash
-docker compose exec portfolio-fe npm test    # Frontend
-docker compose exec portfolio-be pytest     # Backend
+docker compose run --rm portfolio-test
 ```
 
-### Using `run` (One-off isolated container)
-Recommended for CI or isolated runs:
+### Frontend
 ```bash
-docker compose run --rm portfolio-fe npm test -- --watchAll=false
-docker compose run --rm portfolio-be pytest
+docker compose exec portfolio-fe npm test    # Local development (fastest)
+docker compose run --rm portfolio-fe npm test -- --watchAll=false  # Isolated
 ```
-
-
-## ✅ Recently Completed
-
-### 🎯 Major Achievements (Latest Session)
-
-- ✅ **Full TypeScript Migration** - 100% TypeScript coverage across entire frontend
-- ✅ **CI/CD Pipeline Setup** - Complete GitHub Actions workflow with testing, security scanning, and Docker builds
-- ✅ **Pre-commit Hooks** - Automated code formatting and quality checks (Black, isort, Flake8, Prettier)
-- ✅ **Code Quality Tools** - ESLint, Prettier, Black configured with 100-character line length
-- ✅ **Security Scanning** - CodeQL integration for vulnerability detection
-- ✅ **Dependency Management** - Dependabot configured for automatic updates
-- ✅ **Production Deployment** - Deploy scripts for production server deployment
-- ✅ **Documentation Updates** - All README files updated with current project state
 
 ## TODO - Project Improvements
 

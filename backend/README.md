@@ -31,7 +31,7 @@ Django REST API backend for a personal portfolio showcasing astrophotography and
 
 > **Docker Compose Version**: Check your Docker version with `docker --version`. Use `docker compose` (V2) or `docker-compose` (V1) accordingly.
 
-### 快速开始 (Quick Start)
+### Quick Start
 
 #### 1. Install Poetry
 ```bash
@@ -110,16 +110,16 @@ docker compose up --build
 - **Media Files**: `https://portfolio.local/media/`
 
 ### Run Tests in Docker
+Dedicated test service (recommended):
 ```bash
-# Run backend tests inside the container
-docker compose exec portfolio-be pytest
+# Isolated test execution
+docker compose run --rm portfolio-test
 ```
 
-## 📋 API Endpoints
-- `/api/v1/profile/` - User profile
-- `/api/v1/background/` - Background images
-- `/api/v1/image/` - Astrophotography images
-- `/api/v1/contact/` - Contact form submission
+Standard execution (if service already running):
+```bash
+docker compose exec portfolio-be pytest
+```
 
 ## 🚀 Production Considerations
 
@@ -181,7 +181,3 @@ docker compose exec portfolio-be pytest
 ### Devops
 - [x] **Production Server** - Gunicorn WSGI server implementation
 - [ ] ***Container orchestration*** - Docker Swarm or Kubernetes
-
----
-
-For frontend setup and integration, see [Frontend README](../frontend/README.md).
