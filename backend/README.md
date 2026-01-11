@@ -69,12 +69,17 @@ poetry run python manage.py runserver 0.0.0.0:8000
 ## 🧪 Testing & Quality
 
 ### Helper Scripts
-We use custom Poetry scripts to run tasks directly in the Docker environment from your host:
+We use custom Poetry scripts to run tasks. Tests run directly in the Docker environment, while security scans run on your host:
 
 ```bash
-poetry run test        # Run all tests in Docker
-poetry run test-cov    # Run tests with coverage in Docker
-poetry run security    # Run security scan in Docker
+# Run all tests in Docker
+poetry run test
+
+# Run tests with coverage in Docker
+poetry run test-cov
+
+# Run security scan on the host (Local)
+poetry run security
 ```
 
 To manually run linters and formatters (equivalent to what runs on commit):

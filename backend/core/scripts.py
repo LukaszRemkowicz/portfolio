@@ -5,8 +5,6 @@ import sys
 def run_in_docker(command):
     """Run a command inside the portfolio-test container."""
     full_cmd = ["docker", "compose", "run", "--rm"]
-    if "safety" in command:
-        full_cmd.extend(["--user", "root"])
     full_cmd.append("portfolio-test")
     full_cmd.extend(command)
 
@@ -25,5 +23,7 @@ def test_cov():
 
 
 def security():
-    """Run security scan in Docker with optional arguments."""
-    run_in_docker(["safety", "scan"] + sys.argv[1:])
+    """Run security scan locally with optional arguments."""
+    cmd = ["safety", "scan"] + sys.argv[1:]
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
