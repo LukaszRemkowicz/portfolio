@@ -181,7 +181,7 @@ jobs:
         poetry run pytest --cov=. --cov-report=xml || echo 'No tests found'
 
       env:
-        DB_HOST: postgres
+        DB_HOST: localhost
         DB_NAME: test_db
         DB_USER: postgres
         DB_PASSWORD: postgres
