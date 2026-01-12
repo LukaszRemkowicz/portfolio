@@ -20,6 +20,3 @@ PASSWORD_HASHERS = [
 
 # Disable logging during tests
 LOGGING_CONFIG = None
-
-
-DEFAULT_FROM_EMAIL = "test@example.com"

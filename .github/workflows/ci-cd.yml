@@ -47,6 +47,11 @@ jobs:
     name: Backend Tests
     runs-on: ubuntu-latest
 
+    environment: portfolio_tests
+    env:
+      DEFAULT_FROM_EMAIL: ${{ vars.DEFAULT_FROM_EMAIL }}
+      CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
+
     services:
       postgres:
         image: postgres:15
@@ -93,7 +98,11 @@ jobs:
       working-directory: ./backend
       run: poetry run python manage.py test
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        DB_HOST: localhost
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_PORT: 5432
 
   # Docker Build & Test
   docker-build:
@@ -170,6 +179,8 @@ jobs:
         DB_NAME: test_db
         DB_USER: postgres
         DB_PASSWORD: postgres
+        DEFAULT_FROM_EMAIL: test@example.com
+        CONTACT_EMAIL: test@example.com
 
   # Security Scanning
   security-scan:
