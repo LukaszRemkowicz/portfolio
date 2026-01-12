@@ -129,7 +129,8 @@ class ContactSubmissionService:
                     raise PayloadTooLarge()
             except (ValueError, TypeError):
                 # Log that content length was invalid but proceed safely
-                logger.debug(f"Invalid CONTENT_LENGTH '{content_length}' from {safe_ip}")
+                safe_len = ContactSubmissionService._sanitize_for_logging(content_length)
+                logger.debug(f"Invalid CONTENT_LENGTH '{safe_len}' from {safe_ip}")
 
         # 3. Validate data using serializer
         serializer = ContactMessageSerializer(data=request.data)
