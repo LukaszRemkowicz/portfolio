@@ -9,9 +9,11 @@ from .settings import *  # noqa: F401,F403
 # pytest-django automatically creates a test database with this name
 # It will prefix with 'test_' if not specified, but we make it explicit
 production_db_name = DATABASES["default"].get("NAME", "portfolio")  # noqa: F405
-DATABASES["default"]["TEST"] = {  # noqa: F405
-    "NAME": f"test_{production_db_name}",
-}
+DATABASES["default"].setdefault("TEST", {}).update(  # noqa: F405
+    {
+        "NAME": f"test_{production_db_name}",
+    }
+)
 
 # Faster test settings
 PASSWORD_HASHERS = [

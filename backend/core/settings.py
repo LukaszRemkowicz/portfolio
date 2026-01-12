@@ -245,8 +245,8 @@ EMAIL_PORT = env.int("EMAIL_PORT", default=cast(Any, 587))
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=cast(Any, True))
 EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default=cast(Any, ""))
 EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default=cast(Any, ""))
-DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL")
-CONTACT_EMAIL = env.str("CONTACT_EMAIL")
+DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="noreply@example.com")
+CONTACT_EMAIL = env.str("CONTACT_EMAIL", default="admin@example.com")
 
 # Import local settings if available (for local development)
 try:
