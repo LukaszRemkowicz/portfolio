@@ -131,6 +131,8 @@ jobs:
         DB_USER: postgres
         DB_PASSWORD: postgres
         DB_PORT: 5432
+        DEFAULT_FROM_EMAIL: test@example.com
+        CONTACT_EMAIL: test@example.com
 
     - name: Generate backend coverage report
       working-directory: ./backend
