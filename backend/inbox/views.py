@@ -52,12 +52,12 @@ class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             try:
                 content_length_int: int = int(content_length)
                 if content_length_int > 10000:
-                    logger.warning(
-                        f"Request too large: {content_length_int} bytes from {client_ip}"
-                    )
+                    safe_ip = client_ip.replace("\n", "").replace("\r", "")
+                    logger.warning(f"Request too large: {content_length_int} bytes from {safe_ip}")
                     raise PayloadTooLarge()
             except (ValueError, TypeError):
-                logger.debug(f"Invalid CONTENT_LENGTH from {client_ip}")
+                safe_ip = client_ip.replace("\n", "").replace("\r", "")
+                logger.debug(f"Invalid CONTENT_LENGTH from {safe_ip}")
 
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """

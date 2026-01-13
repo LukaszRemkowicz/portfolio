@@ -5,13 +5,14 @@ Test settings for pytest
 
 # Set required environment variables BEFORE importing settings
 import os
+
 os.environ.setdefault("ADMIN_DOMAIN", "testadmin.local")
 os.environ.setdefault("API_DOMAIN", "testapi.local")
 os.environ.setdefault("CSRF_COOKIE_DOMAIN", ".testapi.local")
 # Override DB_HOST for local test execution (tests run outside Docker)
 os.environ.setdefault("DB_HOST", "localhost")
 
-from .settings import *  # noqa: F401,F403
+from .settings import *  # noqa: F401,F403,E402
 
 # Configure test database name
 # pytest-django automatically creates a test database with this name
