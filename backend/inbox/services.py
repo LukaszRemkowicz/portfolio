@@ -168,4 +168,5 @@ class ContactSubmissionService:
                     sanitized_data[key] = "***"
             else:
                 sanitized_data[key] = f"{str(value)[:100]}..." if len(str(value)) > 100 else value
-        logger.info(f"Contact form data received from IP {client_ip}: {sanitized_data}")
+        safe_ip = ContactSubmissionService._sanitize_for_logging(client_ip)
+        logger.info(f"Contact form data received from IP {safe_ip}: {sanitized_data}")
