@@ -26,4 +26,5 @@ class BackgroundMainPageFactory(DjangoModelFactory):
     class Meta:
         model = BackgroundMainPage
 
-    image = factory.django.ImageField()
+    name = factory.Faker("sentence", nb_words=2)
+    path = factory.django.ImageField()

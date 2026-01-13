@@ -1,6 +1,4 @@
 # backend/astrophotography/models.py
-import uuid
-
 from django.db import models
 
 from core.models import BaseImage
@@ -36,12 +34,14 @@ class AstroImage(BaseImage):
         ordering = ["-created_at"]
 
 
-class BackgroundMainPage(models.Model):
+class BackgroundMainPage(BaseImage):
     """Model for the main page background image"""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    image = models.ImageField(upload_to="backgrounds/")
-    created_at = models.DateTimeField(auto_now_add=True)
+    # Override fields with appropriate defaults
+    name = models.CharField(max_length=255, default="Background Image")
+    path = models.ImageField(upload_to="backgrounds/")
 
-    def __str__(self):
-        return f"BackgroundMainPage {self.pk}"
+    class Meta:
+        verbose_name = "Background Main Page"
+        verbose_name_plural = "Background Main Pages"
+        ordering = ["-created_at"]

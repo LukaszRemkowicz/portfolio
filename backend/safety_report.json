@@ -1,0 +1,19 @@
+Safety 3.7.0 scanning /Users/lukaszremkowicz/Projects/landingpage/backend
+2026-01-13 18:04:00 UTC
+
+Account: Łukasz Remkowicz, janouinteria@gmail.com 
+ Git branch: feat/prepering_to_mvp
+ Environment: Stage.development
+ Scan policy: None, using Safety CLI default policies
+
+Python detected. Found 1 Python pyproject.toml file and 1 Python poetry lock 
+file
+
+✅ pyproject.toml: No issues found.
+
+✅ poetry.lock: No issues found.
+
+Tested 93 dependencies for security issues using default Safety CLI policies
+6 vulnerabilities found, 6 ignored due to policy.
+0 fixes suggested, resolving 0 vulnerabilities.
+

@@ -26,6 +26,15 @@ class APIRateThrottle(AnonRateThrottle):
     scope = "api"
 
 
+class GalleryRateThrottle(AnonRateThrottle):
+    """
+    Relaxed throttle for gallery views (images, background).
+    Allows higher volume of requests for browsing.
+    """
+
+    scope = "gallery"
+
+
 class ContactFormThrottle(BaseThrottle):
     """
     Enhanced throttle for contact form with IP + email combination tracking.

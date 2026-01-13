@@ -25,7 +25,7 @@ class AstroImageSerializer(serializers.ModelSerializer):
 
 
 class BackgroundMainPageSerializer(serializers.ModelSerializer):
-    url = serializers.ImageField(source="image")
+    url = serializers.ImageField(source="path")
 
     class Meta:
         model = BackgroundMainPage

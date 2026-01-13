@@ -65,7 +65,7 @@ class TestBackgroundMainPageView:
 
         assert response.status_code == status.HTTP_200_OK
         # Serializer uses 'url' field mapped from 'image'
-        assert latest.image.name in response.data["url"]
+        assert latest.path.name in response.data["url"]
 
     def test_list_background_image_empty(self, api_client):
         """Test retrieving background when none exist"""

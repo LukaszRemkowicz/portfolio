@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
-from core.throttling import APIRateThrottle
+from core.throttling import GalleryRateThrottle
 
 from .models import AstroImage, BackgroundMainPage
 from .serializers import (
@@ -13,8 +13,6 @@ from .serializers import (
     BackgroundMainPageSerializer,
 )
 
-# Create your views here.
-
 
 class AstroImageViewSet(ReadOnlyModelViewSet):
     """
@@ -22,7 +20,7 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
     Supports filtering by celestial_object via 'filter' query parameter.
     """
 
-    throttle_classes = [APIRateThrottle, UserRateThrottle]
+    throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
     def get_queryset(self):
         queryset = AstroImage.objects.all().order_by("-capture_date")
@@ -38,7 +36,7 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
 
 
 class BackgroundMainPageView(ViewSet):
-    throttle_classes = [APIRateThrottle, UserRateThrottle]
+    throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
     def list(self, request: Request) -> Response:
         instance = BackgroundMainPage.objects.order_by("-created_at").first()

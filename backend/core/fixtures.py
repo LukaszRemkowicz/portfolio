@@ -12,7 +12,7 @@ def api_client() -> Any:
 
 
 @pytest.fixture
-def client() -> Any:
+def client() -> "Client":  # noqa: F821
     """Django test client fixture"""
     from django.test import Client
 
@@ -32,7 +32,7 @@ def clear_django_cache() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def request_factory() -> Any:
+def request_factory() -> "RequestFactory":  # noqa: F821
     """Create RequestFactory instance for testing"""
     from django.test import RequestFactory
 
@@ -40,7 +40,7 @@ def request_factory() -> Any:
 
 
 @pytest.fixture
-def api_request_factory() -> Any:
+def api_request_factory() -> "APIRequestFactory":  # noqa: F821
     """DRF API Request Factory fixture"""
     from rest_framework.test import APIRequestFactory
 

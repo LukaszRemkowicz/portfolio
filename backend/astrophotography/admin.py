@@ -44,5 +44,12 @@ class AstroImageAdmin(admin.ModelAdmin):
 
 @admin.register(BackgroundMainPage)
 class BackgroundMainPageAdmin(admin.ModelAdmin):
-    list_display = ("id", "image", "created_at")
-    readonly_fields = ("created_at",)
+    list_display = ("name", "path", "created_at")
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (None, {"fields": ("name", "description", "path")}),
+        (
+            "Metadata",
+            {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
+        ),
+    )

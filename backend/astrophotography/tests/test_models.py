@@ -27,4 +27,4 @@ class TestBackgroundMainPageModel:
     def test_string_representation(self):
         """Test BackgroundMainPage string representation"""
         bg = BackgroundMainPageFactory()
-        assert str(bg) == f"BackgroundMainPage {bg.pk}"
+        assert str(bg) == bg.name

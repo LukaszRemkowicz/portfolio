@@ -225,6 +225,7 @@ REST_FRAMEWORK = {
         "user": "1000/hour",
         "contact": "5/hour",  # Contact form - more restrictive
         "api": "200/hour",  # General API calls
+        "gallery": "2000/hour",  # Gallery views - relaxed for browsing
     },
 }
 
