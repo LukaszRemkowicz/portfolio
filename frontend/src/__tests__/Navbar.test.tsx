@@ -82,4 +82,18 @@ describe("Navbar Component", () => {
     const navbar = screen.getByRole("navigation");
     expect(navbar).not.toHaveClass("transparent");
   });
+
+  /**
+   * Test: Applies programming background when programmingBg prop is true and transparent is true
+   *
+   * Verifies that the correct under construction image is applied
+   * as an inline style when both transparent and programmingBg are true.
+   */
+  it("applies programming background when transparent and programmingBg are true", () => {
+    renderWithRouter(<Navbar transparent={true} programmingBg={true} />);
+
+    const navbar = screen.getByRole("navigation");
+    // For CSS variables or assets, we check the style attribute
+    expect(navbar).toHaveStyle(`background-image: url(/underconstruction.jpg)`);
+  });
 });

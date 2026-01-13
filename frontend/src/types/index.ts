@@ -63,6 +63,10 @@ export interface HomeProps {
   lastName: string;
 }
 
+export interface AboutProps {
+  profile: UserProfile | null;
+}
+
 export interface NavbarProps {
   transparent?: boolean;
   programmingBg?: boolean;
@@ -133,10 +137,16 @@ export interface ApiError {
   message: string;
 }
 
+export interface EnabledFeatures {
+  programming?: boolean;
+  contactForm?: boolean;
+}
+
 export interface ApiRoutes {
   profile: string;
   background: string;
   astroImages: string;
   astroImage: string;
   contact: string;
+  whatsEnabled: string;
 }

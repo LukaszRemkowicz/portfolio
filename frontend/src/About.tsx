@@ -1,23 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { fetchProfile } from "./api/services";
+import React from "react";
 import styles from "./styles/components/About.module.css";
-import { UserProfile } from "./types";
+import { AboutProps } from "./types";
 
-const About: React.FC = () => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-
-  useEffect(() => {
-    const loadProfile = async (): Promise<void> => {
-      try {
-        const profileData: UserProfile = await fetchProfile();
-        setProfile(profileData);
-      } catch (e: unknown) {
-        console.error("Failed to load profile for About section:", e);
-      }
-    };
-    loadProfile();
-  }, []);
-
+const About: React.FC<AboutProps> = ({ profile }) => {
   if (!profile) {
     return null; // Or a loading spinner
   }

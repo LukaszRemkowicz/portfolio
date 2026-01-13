@@ -13,11 +13,8 @@ import { UserProfile } from "./types";
 const DEFAULT_PORTRAIT = "/portrait_default.png";
 
 const HomePage: React.FC = () => {
-  const [portraitUrl, setPortraitUrl] = useState<string>(DEFAULT_PORTRAIT);
-  const [firstName, setFirstName] = useState<string>("");
-  const [lastName, setLastName] = useState<string>("");
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
-  const [prelections, setPrelections] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,18 +22,14 @@ const HomePage: React.FC = () => {
     const loadData = async (): Promise<void> => {
       setLoading(true);
       try {
-        const profile: UserProfile = await fetchProfile();
-        if (profile.avatar) setPortraitUrl(profile.avatar);
-        setFirstName(profile.first_name || "");
-        setLastName(profile.last_name || "");
-        setPrelections(profile.prelections ?? false);
+        const profileData: UserProfile = await fetchProfile();
+        setProfile(profileData);
 
         const background: string | null = await fetchBackground();
         setBackgroundUrl(background);
       } catch (e: unknown) {
         console.error("Failed to load initial data:", e);
         setError("Failed to load page content. Please try again later.");
-        setPortraitUrl(DEFAULT_PORTRAIT);
       } finally {
         setLoading(false);
       }
@@ -63,15 +56,15 @@ const HomePage: React.FC = () => {
         <Navbar transparent />
         <main className={styles["main-content"]}>
           <Home
-            portraitUrl={portraitUrl}
-            firstName={firstName}
-            lastName={lastName}
+            portraitUrl={profile?.avatar || DEFAULT_PORTRAIT}
+            firstName={profile?.first_name || ""}
+            lastName={profile?.last_name || ""}
           />
         </main>
         <Gallery />
       </div>
-      <About />
-      {prelections && <PrelectionsAndCourses />}
+      <About profile={profile} />
+      {profile?.prelections && <PrelectionsAndCourses />}
       <Contact />
       <Footer />
     </>

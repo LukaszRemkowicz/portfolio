@@ -1,9 +1,9 @@
 /* landingpage/src/Footer.module.css */
 
 :local(.footer) {
-  background: #22223b;
-  color: #fff;
+  background: transparent;
+  color: var(--portfolio-text-muted);
   text-align: center;
-  padding: 1rem 0;
-  font-size: 0.95rem;
+  padding: var(--space-4) 0;
+  font-size: var(--font-size-sm);
 }

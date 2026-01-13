@@ -2,8 +2,7 @@ import React from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import styles from "./styles/components/Navbar.module.css";
 import { NavbarProps, NavLinkClassProps } from "./types";
-
-const DEFAULT_LOGO = "/logo.png";
+import { ASSETS } from "./api/routes";
 
 const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
   const location = useLocation();
@@ -14,16 +13,6 @@ const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
       : styles.navbar__link;
   };
 
-  const navbarStyle: React.CSSProperties =
-    transparent && programmingBg
-      ? {
-          backgroundImage: `url('/underconstruction.jpg')`,
-          backgroundSize: "contain",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center",
-        }
-      : {};
-
   const handleContactClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     const contactSection = document.getElementById("contact");
@@ -32,13 +21,25 @@ const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
     }
   };
 
+  const navbarStyle: React.CSSProperties =
+    transparent && programmingBg
+      ? {
+          backgroundImage: `url(${ASSETS.underConstruction})`,
+          backgroundSize: "contain",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "center",
+        }
+      : {};
+
   return (
     <nav
-      className={`${styles.navbar} ${transparent ? styles.transparent : ""}`}
+      className={`${styles.navbar} ${transparent ? styles.transparent : ""} ${
+        programmingBg ? styles.programmingBg : ""
+      }`}
       style={navbarStyle}
     >
       <Link to="/" className={styles.navbar__logo_link}>
-        <img src={DEFAULT_LOGO} alt="Logo" className={styles.navbar__logo} />
+        <img src={ASSETS.logo} alt="Logo" className={styles.navbar__logo} />
       </Link>
       <ul className={styles.navbar__links}>
         <li>

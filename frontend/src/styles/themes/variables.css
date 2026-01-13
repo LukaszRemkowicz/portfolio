@@ -25,10 +25,15 @@
   --text-muted: #adb5bd;
 
   /* Accent Colors */
-  --accent-gold: #ffc107;
+  --accent-gold: #ffb800; /* Updated from design */
   --accent-blue: #17a2b8;
   --accent-green: #28a745;
   --accent-red: #dc3545;
+
+  /* Theme Specific (Portfolio) */
+  --portfolio-bg-dark: #181c2b;
+  --portfolio-bg-light: #232946;
+  --portfolio-text-muted: #c9c9c9;
 
   /* Border Colors */
   --border-light: #dee2e6;

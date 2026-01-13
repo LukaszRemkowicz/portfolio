@@ -5,25 +5,14 @@ import {
   fetchBackground,
   fetchAstroImage,
 } from "./api/services";
-// import { API_BASE_URL } from './api/routes';
+import { ASSETS } from "./api/routes";
 import { AstroImage, FilterParams, FilterType } from "./types";
-
-const GALLERY_BG = "/startrails.jpeg"; // fallback static image
-
-const FILTERS: FilterType[] = [
-  "Landscape",
-  "Deep Sky",
-  "Startrails",
-  "Solar System",
-  "Milky Way",
-  "Northern Lights",
-];
 
 const AstroGallery: React.FC = () => {
   const [images, setImages] = useState<AstroImage[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
-  const [background, setBackground] = useState<string>(GALLERY_BG);
+  const [background, setBackground] = useState<string>(ASSETS.galleryFallback);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
   const [modalDescription, setModalDescription] = useState<string>("");
@@ -36,13 +25,13 @@ const AstroGallery: React.FC = () => {
       setLoading(true);
       let params: FilterParams = {};
       if (filter) {
-        params.filter = filter; // send as-is
+        params.filter = filter;
       }
       const data: AstroImage[] = await fetchAstroImages(params);
       setImages(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
       setError("Failed to load images. Please try again later.");
-      setImages([]); // Ensure images is always an array on error
+      setImages([]);
       console.error(err);
     } finally {
       setLoading(false);
@@ -54,19 +43,17 @@ const AstroGallery: React.FC = () => {
   }, [selectedFilter]);
 
   useEffect(() => {
-    // Try to fetch a background from the backend, fallback to static
     const loadBackground = async (): Promise<void> => {
       try {
         const bg: string | null = await fetchBackground();
         if (bg) setBackground(bg);
       } catch {
-        setBackground(GALLERY_BG);
+        setBackground(ASSETS.galleryFallback);
       }
     };
     loadBackground();
   }, []);
 
-  // Fetch description when modalImage changes
   useEffect(() => {
     if (!modalImage) return;
     setModalDescription("");
@@ -74,18 +61,15 @@ const AstroGallery: React.FC = () => {
     fetchAstroImage(modalImage.pk)
       .then((data: AstroImage) => {
         setModalDescription(data.description || "No description available.");
-        // Optionally update modalImage with full data if needed
-        // setModalImage(img => ({ ...img, ...data }));
       })
       .catch(() => {
         setModalDescription("No description available.");
+      })
+      .finally(() => {
+        setModalDescriptionLoading(false);
       });
-
-    // Always stop loading
-    setModalDescriptionLoading(false);
   }, [modalImage]);
 
-  // Close modal on Escape key
   useEffect(() => {
     if (!modalImage) return;
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -119,6 +103,15 @@ const AstroGallery: React.FC = () => {
 
   if (loading) return <div className={styles.loading}>Loading...</div>;
   if (error) return <div className={styles.error}>{error}</div>;
+
+  const FILTERS: FilterType[] = [
+    "Landscape",
+    "Deep Sky",
+    "Startrails",
+    "Solar System",
+    "Milky Way",
+    "Northern Lights",
+  ];
 
   return (
     <div className={styles.container}>

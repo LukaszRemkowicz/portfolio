@@ -1,23 +1,28 @@
 /* landingpage/src/Navbar.module.css */
 
 :local(.navbar) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.2rem 2rem;
-  background: transparent;
-  color: #fff;
+  padding: var(--space-8) var(--space-12);
+  z-index: var(--z-fixed);
+  transition: background-color var(--transition-normal);
+  background-color: var(--portfolio-bg-dark);
   box-sizing: border-box;
   overflow-x: visible;
 }
 
 :local(.navbar__logo) {
-  height: 100px;
+  height: var(--space-10);
+  width: auto;
   background: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  filter: drop-shadow(
-    0 2px 8px rgba(0, 0, 0, 0.25)
-  ); /* subtle shadow for visibility */
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25));
+  /* subtle shadow for visibility */
   display: block;
   opacity: 50%;
 }
@@ -32,15 +37,23 @@
 }
 
 :local(.navbar__link) {
-  color: #fff;
+  color: var(--text-light);
   text-decoration: none;
-  font-size: 1.1rem;
-  transition: color 0.2s;
-  font-family: "Montserrat", Arial, sans-serif;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-base);
+  transition: color var(--transition-fast);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 :local(.navbar__link:hover) {
-  color: #9a8c98;
+  color: var(--accent-gold);
+}
+
+:local(.navbar__link_active),
+.active {
+  color: var(--accent-gold) !important;
+  font-weight: var(--font-weight-bold);
 }
 
 @media (max-width: 600px) {
@@ -49,11 +62,16 @@
     align-items: flex-start;
     padding: 1rem;
   }
+
   :local(.navbar__links) {
     gap: 1rem;
     flex-direction: column;
     width: 100%;
   }
+}
+
+.programmingBg {
+  background-color: #000;
 }
 
 .transparent {

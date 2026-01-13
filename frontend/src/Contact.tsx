@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { fetchContact } from "./api/services";
+import React, { useState, useEffect } from "react";
+import { fetchContact, fetchEnabledFeatures } from "./api/services";
 import styles from "./styles/components/Contact.module.css";
 import { ContactFormData, ValidationErrors, SubmitStatus } from "./types";
 
@@ -16,6 +16,23 @@ const Contact: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
     {},
   );
+  const [isEnabled, setIsEnabled] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const checkEnablement = async () => {
+      try {
+        const features = await fetchEnabledFeatures();
+        setIsEnabled(features.contactForm === true);
+      } catch (error) {
+        console.error("Failed to check feature enablement:", error);
+        setIsEnabled(false); // Fallback to disabled on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkEnablement();
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -160,6 +177,10 @@ const Contact: React.FC = () => {
     }
   };
 
+  if (isLoading || isEnabled === false) {
+    return null;
+  }
+
   return (
     <section id="contact" className={styles.contactContainer}>
       <div className={styles.contactContent}>
@@ -300,8 +321,8 @@ const Contact: React.FC = () => {
             <div className={styles.rateLimitMessage}>
               <p className={styles.rateLimitTitle}>Too many requests</p>
               <p className={styles.rateLimitText}>
-                You've submitted too many messages recently. Please wait up to 1
-                hour before trying again.
+                You&apos;ve submitted too many messages recently. Please wait up
+                to 1 hour before trying again.
               </p>
             </div>
           )}

@@ -7,6 +7,7 @@ import {
   AstroImage,
   ContactFormData,
   FilterParams,
+  EnabledFeatures,
 } from "../types";
 
 const handleResponse = <T>(response: AxiosResponse<T>): T => {
@@ -41,7 +42,19 @@ export const fetchProfile = async (): Promise<UserProfile> => {
       };
     }
     return data;
-  } catch (error: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
+      console.warn("Profile not found, using fallbacks");
+      return {
+        first_name: "Portfolio",
+        last_name: "Owner",
+        avatar: null,
+        bio: "",
+        about_me_image: null,
+        about_me_image2: null,
+      };
+    }
     console.error("Error fetching profile:", error);
     throw error;
   }
@@ -57,7 +70,12 @@ export const fetchBackground = async (): Promise<string | null> => {
       return data.url;
     }
     return null;
-  } catch (error: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
+      console.warn("Background image not found");
+      return null;
+    }
     console.error("Error fetching background:", error);
     throw error;
   }
@@ -107,5 +125,19 @@ export const fetchContact = async (
   } catch (error: unknown) {
     console.error("Error sending contact form:", error);
     throw error;
+  }
+};
+
+export const fetchEnabledFeatures = async (): Promise<EnabledFeatures> => {
+  try {
+    const response: AxiosResponse<EnabledFeatures> = await api.get(
+      API_ROUTES.whatsEnabled,
+    );
+    return handleResponse<EnabledFeatures>(response);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    console.error("Error fetching enabled features:", error);
+    // Return empty object on error - safer than crashing
+    return {};
   }
 };

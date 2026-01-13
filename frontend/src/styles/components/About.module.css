@@ -1,9 +1,9 @@
 .aboutContainer {
-  background-color: #fff;
-  color: #333;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   padding: 4rem 2rem;
-  font-family: "Helvetica Neue", Arial, sans-serif;
-  line-height: 1.6;
+  font-family: var(--font-family-primary);
+  line-height: var(--line-height-relaxed);
 }
 
 .aboutContent {
@@ -21,8 +21,8 @@
 .aboutImage {
   width: 100%;
   height: auto;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .textWrapper {
@@ -30,15 +30,16 @@
 }
 
 .title {
-  font-size: 2.5rem;
-  font-weight: bold;
-  margin-bottom: 1.5rem;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-6);
+  font-family: var(--font-family-heading);
 }
 
 .subtitle {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 2rem;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-8);
 }
 
 .highlight {
