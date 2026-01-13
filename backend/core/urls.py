@@ -16,11 +16,9 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-import os
 
 from django.conf import settings
 from django.contrib import admin
-from django.http import FileResponse, HttpRequest
 from django.urls import include, path
 from django.views.static import serve
 
@@ -30,15 +28,6 @@ from .views import FeaturesEnabledView, api_404_view
 admin.site.site_header = "Portfolio Administration"
 admin.site.site_title = "Portfolio Admin Portal"
 admin.site.index_title = "Welcome to Portfolio Admin Portal"
-
-
-def debug_serve_media(request: HttpRequest, path: str, document_root: str) -> FileResponse:
-    print(f"Serving media file: {path}")
-    print(f"Document root: {document_root}")
-    full_path = os.path.join(document_root, path)
-    print(f"Full path: {full_path}")
-    print(f"File exists: {os.path.exists(full_path)}")
-    return serve(request, path, document_root)
 
 
 # Base URL patterns (API endpoints)
@@ -55,11 +44,11 @@ if settings.ADMIN_DOMAIN in settings.ALLOWED_HOSTS:
     urlpatterns += [
         path("", admin.site.urls),
     ]
-    # Always serve media files on admin subdomain with debug info
+    # Always serve media files on admin subdomain
     urlpatterns += [
         path(
-            "media/<path:path>",
-            debug_serve_media,
+            f"{settings.MEDIA_URL.lstrip('/')}<path:path>",
+            serve,
             {"document_root": settings.MEDIA_ROOT},
         ),
     ]

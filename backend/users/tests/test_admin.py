@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from users.admin import UserAdmin
+from users.tests.factories import UserFactory
 
 User = get_user_model()
 
@@ -30,7 +31,7 @@ class TestUserAdmin:
 
     def test_has_add_permission_with_user(self):
         """Should NOT have add permission if a user already exists"""
-        User.objects.create(email="test@example.com")
+        UserFactory()
         assert User.objects.count() == 1
         assert self.admin.has_add_permission(MockRequest()) is False
 
@@ -53,7 +54,7 @@ class TestUserAdmin:
 
     def test_changelist_view_redirects_if_user_exists(self):
         """Should redirect to change view if user exists"""
-        user = User.objects.create(email="test@example.com")
+        user = UserFactory()
         request = MockRequest()
 
         response = self.admin.changelist_view(request)

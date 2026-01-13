@@ -14,12 +14,11 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from users.models import Profile
+from users.tests.factories import AstroProfileFactory, ProgrammingProfileFactory
 
 User = get_user_model()
 
 
-@pytest.mark.django_db
 @pytest.mark.django_db
 def test_profile_endpoint_returns_active_user(api_client: APIClient, user: User) -> None:
     """Test that profile endpoint returns the user (singleton pattern)"""
@@ -81,24 +80,21 @@ def test_profile_endpoint_includes_all_required_fields(api_client: APIClient, us
     user.save()
 
     # Create persona profiles only once needed
-    if not Profile.objects.filter(user=user).exists():
-        Profile.objects.create(
-            user=user,
-            type=Profile.ProfileType.PROGRAMMING,
-            title="Software Engineer",
-            specific_bio="Code bio",
-            github_url="https://github.com/user",
-            linkedin_url="https://linkedin.com/in/user",
-        )
-        Profile.objects.create(
-            user=user,
-            type=Profile.ProfileType.ASTRO,
-            title="Astrophotographer",
-            specific_bio="Astro bio",
-            astrobin_url="https://astrobin.com/users/user",
-            fb_url="https://facebook.com/user",
-            ig_url="https://instagram.com/user",
-        )
+    ProgrammingProfileFactory(
+        user=user,
+        title="Software Engineer",
+        specific_bio="Code bio",
+        github_url="https://github.com/user",
+        linkedin_url="https://linkedin.com/in/user",
+    )
+    AstroProfileFactory(
+        user=user,
+        title="Astrophotographer",
+        specific_bio="Astro bio",
+        astrobin_url="https://astrobin.com/users/user",
+        fb_url="https://facebook.com/user",
+        ig_url="https://instagram.com/user",
+    )
 
     url = reverse("users:profile-profile")
 
@@ -121,12 +117,8 @@ def test_profile_endpoint_includes_all_required_fields(api_client: APIClient, us
 @pytest.mark.django_db
 def test_profile_structure(api_client: APIClient, user: User) -> None:
     """Test the structure of the profiles list within the response"""
-    Profile.objects.create(
-        user=user, type=Profile.ProfileType.PROGRAMMING, title="Dev", specific_bio="Bio"
-    )
-    Profile.objects.create(
-        user=user, type=Profile.ProfileType.ASTRO, title="Astro", specific_bio="Bio"
-    )
+    ProgrammingProfileFactory(user=user)
+    AstroProfileFactory(user=user)
 
     url: str = reverse("users:profile-profile")
     response: Any = api_client.get(url)

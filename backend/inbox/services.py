@@ -4,14 +4,12 @@ import threading
 from typing import Any, Dict, List, Optional
 
 from rest_framework.exceptions import APIException
-from rest_framework.request import Request
 
 from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
 
 from .models import ContactMessage
-from .serializers import ContactMessageSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -96,69 +94,28 @@ class ContactSubmissionService:
         return str(value).replace("\n", "").replace("\r", "")
 
     @staticmethod
-    def process_submission(request: Request, client_ip: str) -> ContactMessage:
+    def check_duplicate(validated_data: Dict[str, Any], client_ip: str) -> None:
         """
-        Process a contact form submission request.
+        Check for duplicate messages within a short timeframe.
 
         Args:
-            request: The DRF Request object
+            validated_data: Dictionary of validated message data
             client_ip: The IP address of the client
 
-        Returns:
-            ContactMessage: The created message instance
-
         Raises:
-            PayloadTooLarge: If content length > 10000 bytes
             DuplicateSubmission: If duplicate message detected
-            ValidationError: If serializer validation fails
         """
         # Sanitize IP for logging to prevent log injection
         safe_ip = client_ip.replace("\n", "").replace("\r", "")
         logger.info(f"Contact form submission attempt from IP: {safe_ip}")
 
-        # 1. Log sanitized incoming data
-        ContactSubmissionService.log_incoming_data(request, safe_ip)
-
-        # 2. Check request size limit
-        content_length: Optional[str] = request.META.get("CONTENT_LENGTH")
-        if content_length:
-            try:
-                content_length_int: int = int(content_length)
-                if content_length_int > 10000:
-                    logger.warning(f"Request too large: {content_length_int} bytes from {safe_ip}")
-                    raise PayloadTooLarge()
-            except (ValueError, TypeError):
-                # Log that content length was invalid but proceed safely
-                safe_len = ContactSubmissionService._sanitize_for_logging(content_length)
-                logger.debug(f"Invalid CONTENT_LENGTH '{safe_len}' from {safe_ip}")
-
-        # 3. Validate data using serializer
-        serializer = ContactMessageSerializer(data=request.data)
-        try:
-            serializer.is_valid(raise_exception=True)
-        except Exception as e:
-            if hasattr(serializer, "errors"):
-                safe_errors = ContactSubmissionService._sanitize_for_logging(serializer.errors)
-                safe_keys = ContactSubmissionService._sanitize_for_logging(
-                    list(request.data.keys())
-                )
-                logger.error(
-                    f"Contact form validation failed for IP {safe_ip}: "
-                    f"Errors: {safe_errors}, Data keys: {safe_keys}"
-                )
-            else:
-                logger.error(f"Contact form validation failed for IP {safe_ip}: {str(e)}")
-            raise
-
-        # 4. Extract validated data
-        email: Optional[str] = serializer.validated_data.get("email")
-        subject: Optional[str] = serializer.validated_data.get("subject")
+        email: Optional[str] = validated_data.get("email")
+        subject: Optional[str] = validated_data.get("subject")
 
         # Sanitize email and subject for logging
         safe_email = email.replace("\n", "").replace("\r", "") if email else ""
         safe_subject = subject.replace("\n", "").replace("\r", "") if subject else ""
 
-        # 5. Check for duplicate messages
         if email and subject:
             recent_duplicate: bool = ContactMessage.objects.filter(
                 email=email,
@@ -172,25 +129,34 @@ class ContactSubmissionService:
                 )
                 raise DuplicateSubmission()
 
-        # 6. Save message
-        contact_message: ContactMessage = serializer.save()
+    @staticmethod
+    def finalize_submission(contact_message: ContactMessage, client_ip: str) -> None:
+        """
+        Handle post-persistence tasks for a contact message.
 
-        # 7. Send email notification
+        Args:
+            contact_message: The created ContactMessage instance
+            client_ip: The IP address of the client
+        """
+        safe_ip = client_ip.replace("\n", "").replace("\r", "")
+        safe_email = (
+            contact_message.email.replace("\n", "").replace("\r", "")
+            if contact_message.email
+            else ""
+        )
+
+        # 1. Send email notification
         ContactMessageEmailService.send_notification_email_async(contact_message)
 
         logger.info(
             f"Contact message created: ID={contact_message.id}, Email={safe_email}, IP={safe_ip}"
         )
-        return contact_message
 
     @staticmethod
-    def log_incoming_data(request: Request, client_ip: str) -> None:
+    def log_incoming_data(data: Dict[str, Any], client_ip: str) -> None:
         """Helper to log sanitized incoming data"""
-        incoming_data: Dict[str, Any] = (
-            dict(request.data) if hasattr(request.data, "__dict__") else request.data
-        )
         sanitized_data: Dict[str, Any] = {}
-        for key, value in incoming_data.items():
+        for key, value in data.items():
             if key == "message":
                 sanitized_data[key] = f"<{len(str(value))} chars>"
             elif key == "email":

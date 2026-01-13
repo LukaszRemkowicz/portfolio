@@ -1,21 +1,23 @@
-# backend/inbox/tests/test_kill_switch_middleware.py
-"""
-Tests for contact form kill switch kill_switch_middleware
-"""
-
 from unittest.mock import patch
 
 import pytest
 
+from django.db import DatabaseError
 from django.http import JsonResponse
+from django.test import RequestFactory
+
+from inbox.middleware import ContactFormKillSwitchMiddleware
+from inbox.models import ContactFormSettings
 
 # Middleware, request_factory, and contact_form_settings fixtures are provided by conftest.py
 
 
 @pytest.mark.django_db
 def test_kill_switch_middleware_allows_post_when_enabled(
-    kill_switch_middleware, request_factory, contact_form_settings
-):
+    kill_switch_middleware: ContactFormKillSwitchMiddleware,
+    request_factory: RequestFactory,
+    contact_form_settings: ContactFormSettings,
+) -> None:
     """Test kill_switch_middleware allows POST requests when form is enabled"""
     contact_form_settings.enabled = True
     contact_form_settings.save()
@@ -28,8 +30,10 @@ def test_kill_switch_middleware_allows_post_when_enabled(
 
 @pytest.mark.django_db
 def test_kill_switch_middleware_blocks_post_when_disabled(
-    kill_switch_middleware, request_factory, contact_form_settings
-):
+    kill_switch_middleware: ContactFormKillSwitchMiddleware,
+    request_factory: RequestFactory,
+    contact_form_settings: ContactFormSettings,
+) -> None:
     """Test kill_switch_middleware blocks POST requests when form is disabled"""
     contact_form_settings.enabled = False
     contact_form_settings.save()
@@ -50,8 +54,10 @@ def test_kill_switch_middleware_blocks_post_when_disabled(
 
 @pytest.mark.django_db
 def test_kill_switch_middleware_ignores_non_post_requests(
-    kill_switch_middleware, request_factory, contact_form_settings
-):
+    kill_switch_middleware: ContactFormKillSwitchMiddleware,
+    request_factory: RequestFactory,
+    contact_form_settings: ContactFormSettings,
+) -> None:
     """Test kill_switch_middleware ignores GET, PUT, DELETE, etc. requests"""
     contact_form_settings.enabled = False  # Disabled, but should still allow non-POST
     contact_form_settings.save()
@@ -64,8 +70,10 @@ def test_kill_switch_middleware_ignores_non_post_requests(
 
 @pytest.mark.django_db
 def test_kill_switch_middleware_only_checks_contact_endpoint(
-    kill_switch_middleware, request_factory, contact_form_settings
-):
+    kill_switch_middleware: ContactFormKillSwitchMiddleware,
+    request_factory: RequestFactory,
+    contact_form_settings: ContactFormSettings,
+) -> None:
     """Test kill_switch_middleware only checks contact endpoint, ignores other paths"""
     contact_form_settings.enabled = False  # Disabled
     contact_form_settings.save()
@@ -88,8 +96,10 @@ def test_kill_switch_middleware_only_checks_contact_endpoint(
 
 @pytest.mark.django_db
 def test_kill_switch_middleware_only_checks_exact_router_path(
-    kill_switch_middleware, request_factory, contact_form_settings
-):
+    kill_switch_middleware: ContactFormKillSwitchMiddleware,
+    request_factory: RequestFactory,
+    contact_form_settings: ContactFormSettings,
+) -> None:
     """Test kill_switch_middleware only checks exact DRF router path with trailing slash"""
     contact_form_settings.enabled = False
     contact_form_settings.save()
@@ -114,24 +124,29 @@ def test_kill_switch_middleware_only_checks_exact_router_path(
 
 
 @pytest.mark.django_db
-def test_kill_switch_middleware_fails_open_on_settings_error(
-    kill_switch_middleware, request_factory
-):
-    """Test kill_switch_middleware fails open (allows request) if settings check fails"""
+def test_kill_switch_middleware_fails_closed_on_settings_error(
+    kill_switch_middleware: ContactFormKillSwitchMiddleware, request_factory: RequestFactory
+) -> None:
+    """Test kill_switch_middleware fails closed (blocks request) if settings check fails"""
     request = request_factory.post("/api/v1/contact/")
 
-    # Mock get_settings to raise an exception
+    # Mock get_settings to raise a DatabaseError
     with patch(
-        "inbox.middleware.ContactFormSettings.get_settings", side_effect=Exception("Database error")
+        "inbox.middleware.ContactFormSettings.get_settings",
+        side_effect=DatabaseError("Database error"),
     ):
         response = kill_switch_middleware.process_request(request)
-        assert response is None, "Middleware should fail open (allow request) on error"
+        assert response is not None, "Middleware should fail closed (block request) on error"
+        assert response.status_code == 500
 
 
 @pytest.mark.django_db
 def test_kill_switch_middleware_logs_blocked_requests(
-    kill_switch_middleware, request_factory, contact_form_settings, caplog
-):
+    kill_switch_middleware: ContactFormKillSwitchMiddleware,
+    request_factory: RequestFactory,
+    contact_form_settings: ContactFormSettings,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test kill_switch_middleware logs blocked requests"""
     import logging
 
@@ -149,7 +164,11 @@ def test_kill_switch_middleware_logs_blocked_requests(
 
 
 @pytest.mark.django_db
-def test_kill_switch_middleware_logs_errors(kill_switch_middleware, request_factory, caplog):
+def test_kill_switch_middleware_logs_errors(
+    kill_switch_middleware: ContactFormKillSwitchMiddleware,
+    request_factory: RequestFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test kill_switch_middleware logs errors when settings check fails"""
     import logging
 
@@ -158,50 +177,10 @@ def test_kill_switch_middleware_logs_errors(kill_switch_middleware, request_fact
     request = request_factory.post("/api/v1/contact/")
 
     with patch(
-        "inbox.middleware.ContactFormSettings.get_settings", side_effect=Exception("Database error")
+        "inbox.middleware.ContactFormSettings.get_settings",
+        side_effect=DatabaseError("Database error"),
     ):
         kill_switch_middleware.process_request(request)
 
-    assert any("error" in record.message.lower() for record in caplog.records)
+    assert any("database error" in record.message.lower() for record in caplog.records)
     assert any("settings" in record.message.lower() for record in caplog.records)
-
-
-@pytest.mark.django_db
-def test_kill_switch_middleware_extracts_client_ip(
-    kill_switch_middleware, request_factory, contact_form_settings, caplog
-):
-    """Test kill_switch_middleware correctly extracts client IP for logging"""
-    import logging
-
-    caplog.set_level(logging.WARNING)
-
-    contact_form_settings.enabled = False
-    contact_form_settings.save()
-
-    # Test with X-Forwarded-For header (proxy scenario)
-    request = request_factory.post("/api/v1/contact/", HTTP_X_FORWARDED_FOR="192.168.1.1, 10.0.0.1")
-    response = kill_switch_middleware.process_request(request)
-
-    assert response is not None
-    # IP should be logged (first IP from X-Forwarded-For)
-    log_messages = " ".join([record.message for record in caplog.records])
-    assert "192.168.1.1" in log_messages or "IP:" in log_messages
-
-
-@pytest.mark.django_db
-def test_kill_switch_middleware_handles_missing_x_forwarded_for(
-    kill_switch_middleware, request_factory, contact_form_settings
-):
-    """Test kill_switch_middleware handles requests without X-Forwarded-For header"""
-    contact_form_settings.enabled = False
-    contact_form_settings.save()
-
-    request = request_factory.post("/api/v1/contact/")
-    # Ensure REMOTE_ADDR is set
-    request.META["REMOTE_ADDR"] = "127.0.0.1"
-    if "HTTP_X_FORWARDED_FOR" in request.META:
-        del request.META["HTTP_X_FORWARDED_FOR"]
-
-    response = kill_switch_middleware.process_request(request)
-    assert response is not None
-    assert response.status_code == 400

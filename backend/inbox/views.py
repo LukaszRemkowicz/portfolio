@@ -3,9 +3,8 @@ import logging
 from typing import Any, Optional
 
 from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action
 from rest_framework.exceptions import Throttled
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -13,7 +12,7 @@ from core.throttling import ContactFormThrottle
 
 from .models import ContactMessage
 from .serializers import ContactMessageSerializer
-from .services import ContactSubmissionService
+from .services import ContactSubmissionService, PayloadTooLarge
 
 logger = logging.getLogger(__name__)
 
@@ -29,23 +28,8 @@ class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     queryset = ContactMessage.objects.all()
     serializer_class = ContactMessageSerializer
-    permission_classes = [AllowAny]  # Create is public, other actions restricted below
+    permission_classes = [AllowAny]  # Publicly accessible for contact form submissions
     throttle_classes = [ContactFormThrottle]  # DRF handles throttling before validation
-
-    def get_permissions(self):
-        """
-        Restrict list, retrieve, update, delete to authenticated users.
-        Only create (contact form submission) is public.
-        """
-        if self.action in ["create", "list"] or self.action is None:
-            return [AllowAny()]
-        return [IsAuthenticated()]
-
-    def get_throttles(self):
-        """Only throttle create action (contact form submissions)"""
-        if self.action == "create":
-            return [throttle() for throttle in self.throttle_classes]
-        return super().get_throttles()  # Use default throttling for other actions (or none)
 
     def throttled(self, request: Request, wait: int) -> None:
         """Custom throttled response with user-friendly message"""
@@ -61,6 +45,20 @@ class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             return x_forwarded_for.split(",")[0].strip()
         return str(request.META.get("REMOTE_ADDR", "unknown"))
 
+    def _check_payload_size(self, request: Request, client_ip: str) -> None:
+        """Check if request payload size exceeds limit"""
+        content_length: Optional[str] = request.META.get("CONTENT_LENGTH")
+        if content_length:
+            try:
+                content_length_int: int = int(content_length)
+                if content_length_int > 10000:
+                    logger.warning(
+                        f"Request too large: {content_length_int} bytes from {client_ip}"
+                    )
+                    raise PayloadTooLarge()
+            except (ValueError, TypeError):
+                logger.debug(f"Invalid CONTENT_LENGTH from {client_ip}")
+
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Create a new contact message with enhanced security checks.
@@ -68,7 +66,25 @@ class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         Logic delegated to ContactSubmissionService.
         """
         client_ip = self.get_client_ip(request)
-        contact_message = ContactSubmissionService.process_submission(request, client_ip)
+
+        # 1. Check request size limit (first, to reject large requests before processing)
+        self._check_payload_size(request, client_ip)
+
+        # 2. Validate data using serializer
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # 3. Log sanitized incoming data
+        ContactSubmissionService.log_incoming_data(serializer.validated_data, client_ip)
+
+        # 4. Check for duplicates
+        ContactSubmissionService.check_duplicate(serializer.validated_data, client_ip)
+
+        # 5. Save message
+        contact_message = serializer.save()
+
+        # 6. Finalize submission (email, etc.)
+        ContactSubmissionService.finalize_submission(contact_message, client_ip)
 
         return Response(
             {
@@ -77,22 +93,3 @@ class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
-
-    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
-    def mark_as_read(self, request: Request, pk: Optional[str] = None) -> Response:
-        """
-        Mark a contact message as read
-        """
-        contact_message: ContactMessage = self.get_object()
-        contact_message.is_read = True
-        contact_message.save()
-
-        return Response({"message": "Message marked as read", "id": contact_message.id})
-
-    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
-    def unread_count(self, request: Request) -> Response:
-        """
-        Get count of unread messages
-        """
-        count: int = ContactMessage.objects.filter(is_read=False).count()
-        return Response({"unread_count": count})

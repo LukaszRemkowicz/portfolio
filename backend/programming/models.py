@@ -4,8 +4,6 @@ from django.db import models
 
 from core.models import BaseImage
 
-# Create your models here.
-
 
 class Project(models.Model):
     """Model for programming projects"""
@@ -57,7 +55,10 @@ class ProgrammingPageConfig(models.Model):
     def save(self, *args: tuple, **kwargs: dict) -> None:
         """Enforce singleton pattern"""
         if not self.pk and ProgrammingPageConfig.objects.exists():
-            return  # Prevent creation of multiple instances
+            raise ValueError(
+                "Only one config is allowed. Programming config already exists. "
+                "Update the existing config instead."
+            )
         super().save(*args, **kwargs)
 
     @classmethod

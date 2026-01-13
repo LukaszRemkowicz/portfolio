@@ -17,6 +17,7 @@ x-backend-common: &backend-common
     - ./backend/.env
   environment:
     DOCKER_ENV: true
+    PYTHONPATH: "."
   depends_on:
     - db
 

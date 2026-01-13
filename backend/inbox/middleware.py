@@ -2,6 +2,7 @@
 import logging
 from typing import Optional
 
+from django.db import DatabaseError
 from django.http import HttpRequest, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
@@ -40,16 +41,8 @@ class ContactFormKillSwitchMiddleware(MiddlewareMixin):
         try:
             settings: ContactFormSettings = ContactFormSettings.get_settings()
             if not settings.enabled:
-                # Get client IP for logging
-                x_forwarded_for: Optional[str] = request.META.get("HTTP_X_FORWARDED_FOR")
-                if x_forwarded_for:
-                    client_ip: str = x_forwarded_for.split(",")[0].strip()
-                else:
-                    client_ip = str(request.META.get("REMOTE_ADDR", "unknown"))
-
                 logger.warning(
-                    f"Contact form request blocked - form disabled. IP: {client_ip}, "
-                    f"Path: {request.path}"
+                    f"Contact form request blocked - form disabled. Path: {request.path}"
                 )
 
                 # Return HTTP 400 Bad Request as requested
@@ -57,11 +50,13 @@ class ContactFormKillSwitchMiddleware(MiddlewareMixin):
                     {"message": "Contact form is currently disabled. Please try again later."},
                     status=400,
                 )
-        except Exception as error:
-            # If there's an error accessing settings, log and allow request to continue
-            # (fail open - better to allow submissions than block everything on error)
-            logger.error(f"Error checking contact form settings in middleware: {error}")
-            return None
+        except DatabaseError as error:
+            # If there's a database error accessing settings, fail closed (block request)
+            logger.error(f"Database error checking contact form settings in middleware: {error}")
+            return JsonResponse(
+                {"message": "Contact form is currently unavailable. Please try again later."},
+                status=500,
+            )
 
         # Form is enabled, continue processing
         return None

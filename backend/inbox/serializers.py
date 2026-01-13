@@ -23,10 +23,8 @@ class ContactMessageSerializer(serializers.ModelSerializer):
             "subject",
             "message",
             "website",
-            "created_at",
-            "is_read",
         ]
-        read_only_fields = ["id", "created_at", "is_read"]
+        read_only_fields = ["id"]
 
     def validate_website(self, value: Optional[str]) -> str:
         """Honeypot validation - if filled, it's a bot"""
@@ -35,13 +33,8 @@ class ContactMessageSerializer(serializers.ModelSerializer):
         return value or ""
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
-        """Additional validation for message content"""
+        """Additional validation for contact message"""
         attrs.pop("website", None)
-        message: str = attrs.get("message", "")
-        if len(message) > 5000:
-            raise serializers.ValidationError(
-                {"message": "Message is too long (max 5000 characters)."}
-            )
         return attrs
 
     def validate_name(self, value: str) -> str:
@@ -58,43 +51,15 @@ class ContactMessageSerializer(serializers.ModelSerializer):
 
     def validate_message(self, value: str) -> str:
         """Validate message field"""
-        if len(value.strip()) < 10:
+        stripped_value = value.strip()
+        if len(stripped_value) < 10:
             raise serializers.ValidationError("Message must be at least 10 characters long.")
-        return value.strip()
+        if len(stripped_value) > 5000:
+            raise serializers.ValidationError("Message is too long (max 5000 characters).")
+        return stripped_value
 
     def validate_email(self, value: str) -> str:
         """Validate email field"""
         if not value or "@" not in value:
             raise serializers.ValidationError("Please provide a valid email address.")
         return value.lower().strip()
-
-
-class ContactMessageListSerializer(serializers.ModelSerializer):
-    """
-    Serializer for listing contact messages (admin use)
-    """
-
-    class Meta:
-        model = ContactMessage
-        fields = ["id", "name", "email", "subject", "created_at", "is_read"]
-        read_only_fields = ["id", "created_at"]
-
-
-class ContactMessageDetailSerializer(serializers.ModelSerializer):
-    """
-    Serializer for detailed contact message view (admin use)
-    """
-
-    class Meta:
-        model = ContactMessage
-        fields = [
-            "id",
-            "name",
-            "email",
-            "subject",
-            "message",
-            "created_at",
-            "updated_at",
-            "is_read",
-        ]
-        read_only_fields = ["id", "created_at", "updated_at"]

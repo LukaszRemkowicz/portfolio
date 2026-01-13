@@ -5,6 +5,7 @@ from rest_framework import status
 from django.urls import reverse
 
 from astrophotography.models import BackgroundMainPage
+from astrophotography.tests.factories import AstroImageFactory, BackgroundMainPageFactory
 
 
 @pytest.mark.django_db
@@ -16,6 +17,7 @@ class TestAstroImageViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
         assert response.data[0]["pk"] == str(astro_image.pk)
+        assert "url" in response.data[0]
 
     def test_retrieve_astro_image(self, api_client, astro_image):
         """Test retrieving a single image via the router generated URL"""
@@ -24,12 +26,23 @@ class TestAstroImageViewSet:
         assert response.status_code == status.HTTP_200_OK
         # Detail serializer doesn't include ID, check another field
         assert response.data["capture_date"] == str(astro_image.capture_date)
+        assert response.data["celestial_object"] == astro_image.celestial_object
 
-    def test_filter_astro_images(self, api_client, astro_image):
+    def test_filter_astro_images(self, api_client):
         """Test filtering images by celestial_object"""
+        AstroImageFactory(celestial_object="Deep Sky")
+        AstroImageFactory(celestial_object="Deep Sky")
+        AstroImageFactory(celestial_object="Landscape")
+
         url = reverse("astroimages:astroimage-list")
-        # Filter matching
+
+        # Filter matching "Deep Sky"
         response = api_client.get(url, {"filter": "Deep Sky"})
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 2
+
+        # Filter matching "Landscape"
+        response = api_client.get(url, {"filter": "Landscape"})
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
 
@@ -44,16 +57,15 @@ class TestBackgroundMainPageView:
     def test_list_background_image(self, api_client):
         """Test retrieving the latest background image"""
         # Create two images, should retrieve the latest one
-        BackgroundMainPage.objects.create(image="old.jpg")
-        BackgroundMainPage.objects.create(image="new.jpg")
+        BackgroundMainPageFactory()
+        latest = BackgroundMainPageFactory()
 
         url = reverse("astroimages:backgroundImage-list")
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
         # Serializer uses 'url' field mapped from 'image'
-        # Note: testing full URL requires request context which we have
-        assert "new.jpg" in response.data["url"]
+        assert latest.image.name in response.data["url"]
 
     def test_list_background_image_empty(self, api_client):
         """Test retrieving background when none exist"""

@@ -33,28 +33,37 @@ SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=True)
 SECURE_CONTENT_TYPE_NOSNIFF = env.bool("SECURE_CONTENT_TYPE_NOSNIFF", default=True)
 SECURE_BROWSER_XSS_FILTER = env.bool("SECURE_BROWSER_XSS_FILTER", default=True)
 
-# CORS Settings
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[]) + [
-    "https://portfolio.local",
-    "http://portfolio.local",
-    "http://portfolio.local:3000",
-]
-CORS_ALLOW_CREDENTIALS = True
-
 # Domain settings
-ADMIN_DOMAIN = "admin.portfolio.local"
-API_DOMAIN = "portfolio.local"
+ADMIN_DOMAIN = env("ADMIN_DOMAIN")
+API_DOMAIN = env("API_DOMAIN")
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + [
     ADMIN_DOMAIN,
     API_DOMAIN,
-    "localhost",
-    "127.0.0.1",
-    "0.0.0.0",
-    "172.10.0.3",
-    "backend",
 ]
+
+if DEBUG:
+    ALLOWED_HOSTS += [
+        "localhost",
+        "127.0.0.1",
+        "0.0.0.0",
+    ]
+
+
+# CORS Settings
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[]) + [
+    f"https://{ADMIN_DOMAIN}",
+    f"https://{API_DOMAIN}",
+]
+
+if DEBUG:
+    CORS_ALLOWED_ORIGINS += [
+        f"http://{API_DOMAIN}",
+        f"http://{API_DOMAIN}:3000",
+    ]
+
+CORS_ALLOW_CREDENTIALS = True
 
 # Custom user model - this needs to be set before INSTALLED_APPS
 AUTH_USER_MODEL = "users.User"
@@ -64,7 +73,7 @@ CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[]) + [
     f"https://{ADMIN_DOMAIN}",
     f"https://{API_DOMAIN}",
 ]
-CSRF_COOKIE_DOMAIN = ".portfolio.local"
+CSRF_COOKIE_DOMAIN = env("CSRF_COOKIE_DOMAIN")
 CSRF_USE_SESSIONS = True
 CSRF_COOKIE_SECURE = True
 
@@ -247,9 +256,3 @@ EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default=cast(Any, ""))
 EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default=cast(Any, ""))
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="noreply@example.com")
 CONTACT_EMAIL = env.str("CONTACT_EMAIL", default="admin@example.com")
-
-# Import local settings if available (for local development)
-try:
-    from .local import *  # noqa: F401,F403
-except ImportError:
-    pass

@@ -11,58 +11,43 @@ from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 
 from users.models import Profile
+from users.tests.factories import ProgrammingProfileFactory, UserFactory
 
 User = get_user_model()
 
 
 @pytest.mark.django_db
-def test_profile_creation():
+def test_profile_creation(user: User):
     """Test that Profile can be created correctly"""
-    user = User.objects.create(email="test@example.com", is_active=True)
-    profile = Profile.objects.create(
-        user=user,
-        type=Profile.ProfileType.PROGRAMMING,
-        title="Software Engineer",
-        specific_bio="Specific bio",
-    )
+    profile = ProgrammingProfileFactory(user=user)
 
     assert profile.id is not None
     assert profile.user == user
     assert profile.type == Profile.ProfileType.PROGRAMMING
-    assert profile.title == "Software Engineer"
+    assert profile.title == "Dev"
     assert str(profile) == "Programming Profile"
 
 
 @pytest.mark.django_db
-def test_profile_type_uniqueness():
+def test_profile_type_uniqueness(user: User):
     """Test that a user cannot have duplicate profile types"""
-    user = User.objects.create(email="unique@example.com", is_active=True)
-    Profile.objects.create(
-        user=user,
-        type=Profile.ProfileType.PROGRAMMING,
-        title="First",
-    )
+    ProgrammingProfileFactory(user=user)
 
     with pytest.raises(IntegrityError):
-        Profile.objects.create(
-            user=user,
-            type=Profile.ProfileType.PROGRAMMING,
-            title="Second",
-        )
+        ProgrammingProfileFactory(user=user)
 
 
 @pytest.mark.django_db
 def test_user_singleton_pattern_only_one_user_allowed() -> None:
     """Test that only one user can exist (singleton pattern)"""
     # Create first user - should succeed
-    first_user = User(email="first@example.com", first_name="First", is_active=True)
-    first_user.set_password("password123")
-    first_user.save()
+    UserFactory(email="first@example.com", first_name="First")
     assert User.objects.count() == 1
 
     # Try to create second user - should raise ValueError
-    second_user = User(email="second@example.com", first_name="Second", is_active=True)
-    second_user.set_password("password123")
+    # We use build() then save() to trigger the model's clean/save logic manually
+    # or just another Factory call which calls save()
+    second_user = UserFactory.build(email="second@example.com", first_name="Second")
     with pytest.raises(ValueError, match="Only one user is allowed"):
         second_user.save()
 
@@ -78,9 +63,7 @@ def test_user_get_user_method() -> None:
     assert User.get_user() is None
 
     # Create user
-    user = User(email="test@example.com", first_name="Test", is_active=True)
-    user.set_password("password123")
-    user.save()
+    user = UserFactory(email="test@example.com", first_name="Test")
 
     # get_user() should return the user
     retrieved_user = User.get_user()
@@ -113,14 +96,14 @@ def test_user_manager_create_superuser_missing_email() -> None:
 def test_user_str_method() -> None:
     """Test User.__str__ method"""
     email = "test@example.com"
-    user = User(email=email)
+    user = UserFactory.build(email=email)
     assert str(user) == email
 
 
 @pytest.mark.django_db
 def test_user_save_integrity_error() -> None:
     """Test handling of IntegrityError in User.save()"""
-    user = User(email="test@example.com")
+    user = UserFactory.build(email="test@example.com")
     with patch("django.db.models.Model.save") as mock_save:
         mock_save.side_effect = IntegrityError("Duplicate entry")
         with pytest.raises(ValueError, match="Failed to save user. Only one user is allowed."):
@@ -130,7 +113,7 @@ def test_user_save_integrity_error() -> None:
 @pytest.mark.django_db
 def test_user_save_generic_exception() -> None:
     """Test handling of generic Exception in User.save()"""
-    user = User(email="test@example.com")
+    user = UserFactory.build(email="test@example.com")
     with patch("django.db.models.Model.save") as mock_save:
         mock_save.side_effect = Exception("Some other error")
         with pytest.raises(Exception, match="Some other error"):

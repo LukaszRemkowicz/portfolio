@@ -150,6 +150,8 @@ docker compose exec portfolio-be pytest
 - [ ] Implement image optimization pipeline
 - [ ] Implement caching for frequently accessed data
 - [ ] Printify email messages (add html template)
+- [ ] Think about changing (uuid) and saving in db
+- [ ] contact message
 
 ### 🚀 API & Documentation
 - [ ] **API Documentation** - Add OpenAPI/Swagger documentation with interactive docs

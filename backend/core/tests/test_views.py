@@ -4,7 +4,9 @@ from rest_framework import status
 from django.urls import reverse
 
 from inbox.models import ContactFormSettings
+from inbox.tests.factories import ContactFormSettingsFactory
 from programming.models import ProgrammingPageConfig
+from programming.tests.factories import ProgrammingPageConfigFactory
 
 
 @pytest.mark.django_db
@@ -21,8 +23,8 @@ class TestFeaturesEnabledView:
     def test_whats_enabled_all_disabled(self, api_client):
         """Test that the endpoint returns an empty dictionary when all features are disabled"""
         # Ensure singletons exist and are disabled (default)
-        ProgrammingPageConfig.get_config()
-        ContactFormSettings.get_settings()
+        ProgrammingPageConfigFactory(enabled=False)
+        ContactFormSettingsFactory(enabled=False)
 
         response = api_client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
@@ -30,12 +32,10 @@ class TestFeaturesEnabledView:
 
     def test_whats_enabled_programming_only(self, api_client):
         """Test that only 'programming' is returned when it's enabled"""
-        config = ProgrammingPageConfig.get_config()
-        config.enabled = True
-        config.save()
+        ProgrammingPageConfigFactory(enabled=True)
 
         # Contact form disabled by default
-        ContactFormSettings.get_settings()
+        ContactFormSettingsFactory(enabled=False)
 
         response = api_client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
@@ -43,12 +43,10 @@ class TestFeaturesEnabledView:
 
     def test_whats_enabled_contact_form_only(self, api_client):
         """Test that only 'contactForm' is returned when it's enabled"""
-        settings = ContactFormSettings.get_settings()
-        settings.enabled = True
-        settings.save()
+        ContactFormSettingsFactory(enabled=True)
 
         # Programming disabled by default
-        ProgrammingPageConfig.get_config()
+        ProgrammingPageConfigFactory(enabled=False)
 
         response = api_client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
@@ -56,13 +54,8 @@ class TestFeaturesEnabledView:
 
     def test_whats_enabled_all_enabled(self, api_client):
         """Test that both features are returned when they are both enabled"""
-        config = ProgrammingPageConfig.get_config()
-        config.enabled = True
-        config.save()
-
-        settings = ContactFormSettings.get_settings()
-        settings.enabled = True
-        settings.save()
+        ProgrammingPageConfigFactory(enabled=True)
+        ContactFormSettingsFactory(enabled=True)
 
         response = api_client.get(self.url)
         assert response.status_code == status.HTTP_200_OK

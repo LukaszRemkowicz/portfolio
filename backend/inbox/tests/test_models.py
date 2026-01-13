@@ -4,23 +4,23 @@ import pytest
 
 from django.db import IntegrityError
 
-from inbox.models import ContactFormSettings, ContactMessage
+from inbox.models import ContactFormSettings
+from inbox.tests.factories import ContactFormSettingsFactory, ContactMessageFactory
 
 
 @pytest.mark.django_db
 class TestInboxModels:
     def test_contact_message_str(self):
         """Verify ContactMessage string representation"""
-        message = ContactMessage.objects.create(
-            name="Alice", email="alice@example.com", subject="Question", message="Hi there"
+        message = ContactMessageFactory()
+        expected_str = (
+            f"{message.name} - {message.subject} ({message.created_at.strftime('%Y-%m-%d %H:%M')})"
         )
-        expected_str = f"Alice - Question ({message.created_at.strftime('%Y-%m-%d %H:%M')})"
         assert str(message) == expected_str
 
     def test_contact_form_settings_str(self):
         """Verify ContactFormSettings string representation"""
-        settings = ContactFormSettings.get_settings()
-        settings.enabled = True
+        settings = ContactFormSettingsFactory(enabled=True)
         assert str(settings) == "Contact Form Settings (Enabled: True)"
 
     def test_contact_form_settings_singleton_get_settings(self):
@@ -37,12 +37,12 @@ class TestInboxModels:
 
     def test_contact_form_settings_save_enforces_pk1(self):
         """Verify that save() always sets pk=1"""
-        settings = ContactFormSettings(enabled=True)
+        settings = ContactFormSettingsFactory.build(enabled=True)
         settings.save()
         assert settings.pk == 1
 
         # Try to save another instance with different PK
-        settings_other = ContactFormSettings(pk=2, enabled=False)
+        settings_other = ContactFormSettingsFactory.build(pk=2, enabled=False)
         settings_other.save()
         assert settings_other.pk == 1
 
@@ -51,13 +51,13 @@ class TestInboxModels:
     def test_contact_form_settings_save_integrity_error_handling(self):
         """Verify handling of IntegrityError during save (race condition)"""
         # Create initial real record
-        ContactFormSettings.objects.create(pk=1, enabled=False)
+        ContactFormSettingsFactory(pk=1, enabled=False)
 
         # Now mock the super().save to raise IntegrityError
         with patch("django.db.models.Model.save") as mock_super_save:
             mock_super_save.side_effect = IntegrityError("Unique constraint")
 
-            settings = ContactFormSettings(pk=1, enabled=True)
+            settings = ContactFormSettingsFactory.build(pk=1, enabled=True)
             # Should catch IntegrityError and call update()
             settings.save()
 
@@ -71,7 +71,7 @@ class TestInboxModels:
         """Verify logging of unexpected errors during save"""
         mock_super_save.side_effect = Exception("Boom")
 
-        settings = ContactFormSettings(pk=1)
+        settings = ContactFormSettingsFactory.build(pk=1)
         with pytest.raises(Exception, match="Boom"):
             settings.save()
 

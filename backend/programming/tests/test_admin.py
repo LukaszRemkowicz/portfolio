@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from programming.admin import ProgrammingPageConfigAdmin
 from programming.models import ProgrammingPageConfig
+from programming.tests.factories import ProgrammingPageConfigFactory
 
 
 @pytest.mark.django_db
@@ -21,7 +22,7 @@ class TestProgrammingPageConfigAdmin:
         request = MagicMock()
         assert self.admin.has_add_permission(request) is True
 
-        ProgrammingPageConfig.objects.create(pk=1)
+        ProgrammingPageConfigFactory(pk=1)
         assert self.admin.has_add_permission(request) is False
 
     def test_has_delete_permission(self):
@@ -30,7 +31,7 @@ class TestProgrammingPageConfigAdmin:
 
     def test_changelist_view_redirects_to_singleton(self, rf):
         """Verify redirect to the change view if config exists"""
-        config = ProgrammingPageConfig.get_config()
+        config = ProgrammingPageConfigFactory()
         # Ensure it has a PK (get_config should ensure this but good to be explicit)
         assert config.pk is not None
 
