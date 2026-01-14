@@ -1,46 +1,51 @@
 import React from "react";
 import styles from "./styles/components/App.module.css";
 import { HomeProps } from "./types";
-import ExperienceStats from "./ExperienceStats";
 
 const Home: React.FC<HomeProps> = ({ portraitUrl, shortDescription }) => {
-  const displayDescription =
-    shortDescription || "Landscape and Astrophotography";
-  const dotIndex = displayDescription.indexOf(".");
-
-  const renderHeadline = () => {
-    if (dotIndex === -1) {
-      return (
-        <span className={styles.hero__headline_main}>{displayDescription}</span>
-      );
-    }
-    const boldPart = displayDescription.substring(0, dotIndex + 1);
-    const normalPart = displayDescription.substring(dotIndex + 1);
-    return (
-      <>
-        <span className={styles.hero__headline_main}>{boldPart}</span>
-        <span className={styles.hero__headline_sub}>{normalPart}</span>
-      </>
-    );
-  };
-
   return (
-    <>
-      <section className={styles.hero}>
-        <div className={styles.hero__headline}>{renderHeadline()}</div>
-        {/* TODO: Enable ExperienceStats once backend integration is ready */}
-        {/* <ExperienceStats /> */}
-      </section>
-      <div className={styles["side-title"]}>
-        EST. 2024 — REDEFINING THE NIGHT SKY
+    <div className={styles.heroContainer}>
+      <div className={styles.heroGlowLeft}></div>
+      <div className={styles.planetIcon}>
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <circle
+            cx="100"
+            cy="100"
+            r="80"
+            fill="none"
+            stroke="white"
+            strokeWidth="0.5"
+            strokeDasharray="4 4"
+          />
+          <circle cx="100" cy="100" r="40" fill="url(#planetGradient)" />
+          <defs>
+            <radialGradient id="planetGradient">
+              <stop offset="0%" stopColor="#38bdf8" />
+              <stop offset="100%" stopColor="#1e1b4b" />
+            </radialGradient>
+          </defs>
+        </svg>
       </div>
-      <img
-        className={styles["astro-image"]}
-        src={portraitUrl}
-        alt="Portrait"
-        loading="lazy"
-      />
-    </>
+
+      <h1 className={styles.heroTitle}>
+        Capturing the <span className={styles.accent}>Cosmos</span>
+      </h1>
+
+      <p className={styles.heroSub}>
+        I am a dedicated astrophotographer exploring the silent beauty of our
+        universe through long-exposure imagery. My work bridges the gap between
+        scientific observation and fine art.
+      </p>
+
+      <div className={styles.heroActions}>
+        <a href="#gallery" className={styles.primaryBtn}>
+          View Collection
+        </a>
+        <a href="#about" className={styles.secondaryBtn}>
+          My Story
+        </a>
+      </div>
+    </div>
   );
 };
 

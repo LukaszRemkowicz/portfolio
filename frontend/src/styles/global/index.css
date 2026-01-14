@@ -15,7 +15,6 @@ body,
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
   color: var(--text-primary);
-  background-color: var(--bg-primary);
 }
 
 *,
@@ -25,7 +24,8 @@ body,
 }
 
 body {
-  overflow-x: hidden; /* Prevents horizontal scrollbar */
+  overflow-x: hidden;
+  /* Prevents horizontal scrollbar */
 }
 
 /* Typography */
@@ -44,18 +44,23 @@ h6 {
 h1 {
   font-size: var(--font-size-5xl);
 }
+
 h2 {
   font-size: var(--font-size-4xl);
 }
+
 h3 {
   font-size: var(--font-size-3xl);
 }
+
 h4 {
   font-size: var(--font-size-2xl);
 }
+
 h5 {
   font-size: var(--font-size-xl);
 }
+
 h6 {
   font-size: var(--font-size-lg);
 }

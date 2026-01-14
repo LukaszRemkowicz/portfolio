@@ -5,16 +5,15 @@ import Contact from "./Contact";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import Gallery from "./Gallery";
-import PrelectionsAndCourses from "./PrelectionsAndCourses";
+import StarBackground from "./StarBackground";
 import styles from "./styles/components/App.module.css";
-import { fetchProfile, fetchBackground } from "./api/services";
+import { fetchProfile } from "./api/services";
 import { UserProfile } from "./types";
 
 const DEFAULT_PORTRAIT = "/portrait_default.png";
 
 const HomePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,14 +21,11 @@ const HomePage: React.FC = () => {
     const loadData = async (): Promise<void> => {
       setLoading(true);
       try {
-        const profileData: UserProfile = await fetchProfile();
+        const profileData = await fetchProfile();
         setProfile(profileData);
-
-        const background: string | null = await fetchBackground();
-        setBackgroundUrl(background);
       } catch (e: unknown) {
         console.error("Failed to load initial data:", e);
-        setError("Failed to load page content. Please try again later.");
+        setError("Failed to load page content.");
       } finally {
         setLoading(false);
       }
@@ -37,35 +33,24 @@ const HomePage: React.FC = () => {
     loadData();
   }, []);
 
-  const heroViewportStyle = (
-    backgroundUrl
-      ? {
-          "--hero-bg-url": `url(${backgroundUrl})`,
-        }
-      : {}
-  ) as React.CSSProperties;
-
-  if (loading)
-    return <div className={styles["loading-indicator"]}>Loading...</div>;
-  if (error) return <div className={styles["error-message"]}>{error}</div>;
+  if (loading) return <div className={styles.loading}>Loading...</div>;
+  if (error) return <div className={styles.error}>{error}</div>;
 
   return (
-    <>
-      <div className={styles["hero-viewport"]} style={heroViewportStyle}>
-        <Navbar transparent />
-        <main className={styles["main-content"]}>
-          <Home
-            portraitUrl={profile?.avatar || DEFAULT_PORTRAIT}
-            shortDescription={profile?.short_description || ""}
-          />
-        </main>
-        <Gallery />
-      </div>
+    <div className={styles.appContainer}>
+      <StarBackground />
+      <Navbar transparent />
+      <main className={styles.mainContent}>
+        <Home
+          portraitUrl={profile?.avatar || DEFAULT_PORTRAIT}
+          shortDescription={profile?.short_description || ""}
+        />
+      </main>
+      <Gallery />
       <About profile={profile} />
-      {profile?.prelections && <PrelectionsAndCourses />}
       <Contact />
       <Footer />
-    </>
+    </div>
   );
 };
 

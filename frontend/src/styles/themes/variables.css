@@ -12,17 +12,18 @@
   --secondary-dark: #495057;
   --secondary-light: #adb5bd;
 
-  /* Background Colors */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f9fa;
-  --bg-dark: #212529;
-  --bg-overlay: rgba(0, 0, 0, 0.5);
+  /* New Celestial Palette */
+  --celestial-bg: #020617;
+  --celestial-bg-accent: #1e293b;
+  --celestial-blue: #38bdf8;
+  --celestial-white: #f8fafc;
+  --celestial-glass: rgba(15, 23, 42, 0.6);
 
-  /* Text Colors */
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
-  --text-light: #ffffff;
-  --text-muted: #adb5bd;
+  /* Semantic Colors */
+  --portfolio-bg-dark: var(--celestial-bg);
+  --text-light: var(--celestial-white);
+  --text-muted: #94a3b8;
+  --accent-primary: var(--celestial-blue);
 
   /* Accent Colors */
   --accent-gold: #e2c275;
@@ -42,7 +43,7 @@
 
   /* Typography */
   --font-family-primary: "Outfit", sans-serif;
-  --font-family-heading: "Cormorant Garamond", serif;
+  --font-family-heading: "Outfit", sans-serif;
   --font-family-mono: "Courier New", monospace;
 
   /* Font Sizes */
@@ -133,9 +134,10 @@
   --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Effects */
-  --glass-bg: rgba(24, 28, 43, 0.7);
+  --glass-bg: var(--celestial-glass);
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-blur: blur(12px);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
 
   /* Z-Index Scale */
   --z-dropdown: 1000;

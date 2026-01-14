@@ -1,9 +1,62 @@
-/* landingpage/src/Footer.module.css */
+.footer {
+  padding: 4rem 6vw;
+  border-top: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  margin-top: 5rem;
+}
 
-:local(.footer) {
-  background: transparent;
-  color: var(--portfolio-text-muted);
-  text-align: center;
-  padding: var(--space-4) 0;
-  font-size: var(--font-size-sm);
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.branding {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--celestial-white);
+}
+
+.logoIcon {
+  color: var(--celestial-blue);
+}
+
+.logoText {
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+}
+
+.copyright {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.socials {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.socialLink {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.socialLink:hover {
+  color: var(--celestial-blue);
+}
+
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+    text-align: center;
+  }
 }

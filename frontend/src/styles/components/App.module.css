@@ -56,7 +56,7 @@ main {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background-color: var(--portfolio-bg-dark);
+  background-color: transparent;
   position: relative;
   overflow: hidden;
 }
@@ -94,55 +94,147 @@ main {
   z-index: 2;
 }
 
-.main-content {
+.mainContent {
   flex: 1;
-  /* Allow main content to grow and push gallery down */
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  /* Changed from center to move it up */
+  min-height: 100vh;
+  padding: 6vw 4rem;
+  padding-top: 8rem;
+  /* Balanced top padding */
+  position: relative;
+  background: transparent;
+}
+
+.heroContainer {
+  width: 100%;
+  max-width: 1152px;
+  /* tailwind max-w-6xl */
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  z-index: 10;
+}
+
+.heroGlowLeft {
+  position: absolute;
+  top: -80px;
+  /* -top-20 (5rem) */
+  left: -80px;
+  /* -left-20 (5rem) */
+  width: 16rem;
+  /* w-64 */
+  height: 16rem;
+  /* h-64 */
+  background: rgba(56, 189, 248, 0.1);
+  /* bg-sky-500/10 */
+  border-radius: 9999px;
+  /* rounded-full */
+  filter: blur(64px);
+  /* blur-3xl */
+  z-index: -1;
+}
+
+.planetIcon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  opacity: 0.2;
+  animation: pulse 4s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.1;
+  }
+
+  50% {
+    transform: scale(1.05);
+    opacity: 0.3;
+  }
+}
+
+.heroTitle {
+  font-size: clamp(2.5rem, 12vw, 5rem);
+  font-weight: 800;
+  margin-bottom: 2rem;
+  letter-spacing: -0.01em;
+  color: var(--celestial-white);
+  line-height: 1.1;
+  position: relative;
+  z-index: 2;
+}
+
+.accent {
+  color: var(--celestial-blue);
+}
+
+.heroSub {
+  font-size: 1.5rem;
+  color: rgb(203 213 225 / var(--tw-text-opacity, 1));
+  line-height: 2rem;
+  max-width: 600px;
+  margin: 0 auto 3rem;
+}
+
+.heroActions {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.primaryBtn {
+  background: var(--celestial-blue);
+  color: #f8fafc;
+  padding: 0.75rem 2rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5rem;
-  padding: 2rem 6vw;
-  position: relative;
+  transition:
+    transform var(--transition-fast),
+    background var(--transition-fast);
 }
 
-.hero {
-  max-width: 50vw;
-  z-index: 2;
-  animation: revealRight 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+.primaryBtn:hover {
+  background: var(--sky-400, #38bdf8);
+  transform: translateY(-2px);
+  color: #ffffff;
+  /* Keep it solid white */
 }
 
-.hero__headline {
-  margin-bottom: 1.2rem;
-  line-height: 1.1;
-  color: var(--text-light);
-  text-shadow: 0 2px 16px #000a;
+.secondaryBtn {
+  background: var(--glass-bg);
+  color: var(--celestial-white);
+  padding: 0.75rem 2rem;
+  /* Unified padding */
+  border-radius: 9999px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  display: inline-flex;
+  /* Unified centering */
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.hero__headline_main {
-  font-size: clamp(3.5rem, 8vw, 6rem);
-  font-weight: 300;
-  letter-spacing: -0.02em;
-  display: block;
-  margin-bottom: 0.5rem;
-  font-family: var(--font-family-heading);
-  line-height: 0.95;
-  color: var(--text-light);
-  animation: revealUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: 0.2s;
-}
-
-.hero__headline_sub {
-  font-size: clamp(1.2rem, 2vw, 1.8rem);
-  font-weight: 400;
-  font-style: italic;
-  font-family: var(--font-family-heading);
-  opacity: 0.8;
-  display: block;
-  position: relative;
-  transform: translateY(2rem);
-  max-width: 400px;
-  animation: revealUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: 0.4s;
+.secondaryBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  color: var(--celestial-white);
+  /* Explicitly keep text color same */
 }
 
 .hero__sub {
