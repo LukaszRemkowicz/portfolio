@@ -24,9 +24,17 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
 
     def get_queryset(self):
         queryset = AstroImage.objects.all().order_by("-capture_date")
+
+        # Filter by Celestial Object
         filter_value = self.request.query_params.get("filter")
         if filter_value:
             queryset = queryset.filter(celestial_object=filter_value)
+
+        # Filter by Tags
+        tag_slug = self.request.query_params.get("tag")
+        if tag_slug:
+            queryset = queryset.filter(tags__name__in=[tag_slug])
+
         return queryset
 
     def get_serializer_class(self):

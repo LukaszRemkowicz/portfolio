@@ -21,6 +21,12 @@ class TestAstroImageModel:
         assert qs[0] == image2
         assert qs[1] == image1
 
+    def test_thumbnail_generation(self):
+        """Test that a thumbnail is automatically generated on save"""
+        image = AstroImageFactory(name="Test Nebula")
+        assert image.thumbnail is not None
+        assert image.thumbnail.name.startswith("thumbnails/thumb_")
+
 
 @pytest.mark.django_db
 class TestBackgroundMainPageModel:

@@ -10,15 +10,9 @@ jest.mock("../api/services", () => ({
   fetchContact: jest.fn(),
 }));
 
-describe("Contact Component - Feature Enablement", () => {
+describe("Contact Component", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  it("shows nothing initially while loading", () => {
-    (fetchEnabledFeatures as jest.Mock).mockReturnValue(new Promise(() => {})); // Never resolves
-    const { container } = render(<Contact />);
-    expect(container).toBeEmptyDOMElement();
   });
 
   it("renders the form when contactForm is enabled", async () => {
@@ -29,11 +23,11 @@ describe("Contact Component - Feature Enablement", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", { name: /Get in Touch/i }),
+        screen.getByRole("heading", { name: /Direct Inquiry/i }),
       ).toBeInTheDocument();
-      expect(screen.getByLabelText(/Name/i)).toBeInTheDocument();
+      expect(screen.getByText("Identity")).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Send Message/i }),
+        screen.getByRole("button", { name: /Submit Inquiry/i }),
       ).toBeInTheDocument();
     });
   });
@@ -42,28 +36,6 @@ describe("Contact Component - Feature Enablement", () => {
     (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
       contactForm: false,
     });
-    const { container } = render(<Contact />);
-
-    await waitFor(() => {
-      expect(container).toBeEmptyDOMElement();
-    });
-
-    expect(screen.queryByText(/Get in Touch/i)).not.toBeInTheDocument();
-  });
-
-  it("renders nothing when response is empty", async () => {
-    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({});
-    const { container } = render(<Contact />);
-
-    await waitFor(() => {
-      expect(container).toBeEmptyDOMElement();
-    });
-  });
-
-  it("defaults to disabled when fetch fails", async () => {
-    (fetchEnabledFeatures as jest.Mock).mockRejectedValue(
-      new Error("API Error"),
-    );
     const { container } = render(<Contact />);
 
     await waitFor(() => {

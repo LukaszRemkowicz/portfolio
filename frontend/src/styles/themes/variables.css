@@ -13,11 +13,12 @@
   --secondary-light: #adb5bd;
 
   /* New Celestial Palette */
-  --celestial-bg: #020617;
-  --celestial-bg-accent: #1e293b;
+  --celestial-bg: #02040a;
+  --celestial-bg-accent: #0c1120;
   --celestial-blue: #38bdf8;
   --celestial-white: #f8fafc;
   --celestial-glass: rgba(15, 23, 42, 0.6);
+  --nebula-glow: rgba(56, 189, 248, 0.07);
 
   /* Semantic Colors */
   --portfolio-bg-dark: var(--celestial-bg);
@@ -42,8 +43,8 @@
   --border-dark: #343a40;
 
   /* Typography */
-  --font-family-primary: "Outfit", sans-serif;
-  --font-family-heading: "Outfit", sans-serif;
+  --font-family-primary: "Inter", sans-serif;
+  --font-family-heading: "Space Grotesk", sans-serif;
   --font-family-mono: "Courier New", monospace;
 
   /* Font Sizes */

@@ -2,50 +2,55 @@ import React from "react";
 import styles from "./styles/components/App.module.css";
 import { HomeProps } from "./types";
 
-const Home: React.FC<HomeProps> = ({ portraitUrl, shortDescription }) => {
+const Home: React.FC<HomeProps> = ({
+  portraitUrl,
+  shortDescription,
+  backgroundUrl,
+}) => {
   return (
-    <div className={styles.heroContainer}>
-      <div className={styles.heroGlowLeft}></div>
-      <div className={styles.planetIcon}>
-        <svg width="200" height="200" viewBox="0 0 200 200">
-          <circle
-            cx="100"
-            cy="100"
-            r="80"
-            fill="none"
-            stroke="white"
-            strokeWidth="0.5"
-            strokeDasharray="4 4"
-          />
-          <circle cx="100" cy="100" r="40" fill="url(#planetGradient)" />
-          <defs>
-            <radialGradient id="planetGradient">
-              <stop offset="0%" stopColor="#38bdf8" />
-              <stop offset="100%" stopColor="#1e1b4b" />
-            </radialGradient>
-          </defs>
-        </svg>
+    <header
+      className={styles.heroSection}
+      style={
+        backgroundUrl
+          ? {
+              backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${backgroundUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }
+          : undefined
+      }
+    >
+      <div className={styles.heroContent}>
+        <span className={styles.heroSubtitle}>Documenting the Cosmos</span>
+        <h1 className={styles.heroTitle}>
+          The Beauty of <br />
+          <span className={styles.heroTitleAccent}>Ancient Light.</span>
+        </h1>
+        <p className={styles.heroDescription}>
+          {shortDescription ||
+            "I am a professional astrophotographer capturing the silent majesty of deep-space phenomena. My work bridges the gap between scientific observation and cinematic fine art."}
+        </p>
+
+        {portraitUrl && (
+          <div className={styles.portraitWrapper}>
+            <img
+              src={portraitUrl}
+              alt="Portrait"
+              className={styles.heroPortrait}
+            />
+          </div>
+        )}
+
+        <div className={styles.heroActions}>
+          <a href="#gallery" className={styles.primaryBtn}>
+            View Portfolio
+          </a>
+          <a href="#about" className={styles.secondaryBtn}>
+            Learn Process
+          </a>
+        </div>
       </div>
-
-      <h1 className={styles.heroTitle}>
-        Capturing the <span className={styles.accent}>Cosmos</span>
-      </h1>
-
-      <p className={styles.heroSub}>
-        I am a dedicated astrophotographer exploring the silent beauty of our
-        universe through long-exposure imagery. My work bridges the gap between
-        scientific observation and fine art.
-      </p>
-
-      <div className={styles.heroActions}>
-        <a href="#gallery" className={styles.primaryBtn}>
-          View Collection
-        </a>
-        <a href="#about" className={styles.secondaryBtn}>
-          My Story
-        </a>
-      </div>
-    </div>
+    </header>
   );
 };
 

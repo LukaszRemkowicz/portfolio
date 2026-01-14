@@ -19,6 +19,8 @@ export interface BackgroundImage {
 export interface AstroImage {
   pk: number;
   url: string;
+  thumbnail_url?: string;
+  tags?: string[];
   name: string;
   description: string;
   capture_date?: string;
@@ -61,6 +63,7 @@ export type SubmitStatus =
 export interface HomeProps {
   portraitUrl: string;
   shortDescription: string;
+  backgroundUrl?: string | null;
 }
 
 export interface AboutProps {
@@ -110,6 +113,7 @@ export interface AstroGalleryState {
 
 export interface FilterParams {
   filter?: string;
+  limit?: number;
 }
 
 export type FilterType =

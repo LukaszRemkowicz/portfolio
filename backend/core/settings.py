@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     "astrophotography.apps.AstrophotographyConfig",
     "programming.apps.ProgrammingConfig",
     "inbox.apps.InboxConfig",
+    "taggit",
 ]
 
 # Security Settings (for Nginx SSL termination)

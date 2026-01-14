@@ -1,49 +1,47 @@
 import React from "react";
 import styles from "./styles/components/About.module.css";
+import { Camera } from "lucide-react";
 import { AboutProps } from "./types";
 
 const About: React.FC<AboutProps> = ({ profile }) => {
+  if (!profile) return null;
+
   return (
     <section id="about" className={styles.section}>
       <div className={styles.container}>
-        <div className={styles.visual}>
-          <div className={styles.imageBox}>
-            <div className={styles.placeholderIcon}>✦</div>
-            <div className={styles.overlay}>
-              <p className={styles.role}>Founder & Photographer</p>
-              <h3 className={styles.name}>
-                {profile?.name || "Kamil Gwiezdny"}
-              </h3>
+        <div className={styles.info}>
+          <h2 className={styles.title}>
+            Beyond the <br />
+            <span className={styles.titleAccent}>Atmosphere.</span>
+          </h2>
+          <div className={styles.line}></div>
+          <p className={styles.description}>
+            {profile.bio ||
+              "Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye."}
+          </p>
+          <div className={styles.stats}>
+            <div className={styles.statItem}>
+              <p className={styles.statValue}>Bortle 1</p>
+              <p className={styles.statLabel}>Site Quality</p>
+            </div>
+            <div className={styles.statItem}>
+              <p className={styles.statValue}>130mm</p>
+              <p className={styles.statLabel}>Primary Optics</p>
             </div>
           </div>
         </div>
-
-        <div className={styles.content}>
-          <h2 className={styles.title}>
-            Beneath the <span className={styles.accent}>Atmosphere</span>
-          </h2>
-          <p className={styles.text}>
-            My journey started with a small telescope and a massive curiosity.
-            For over a decade, I've chased clear skies across the globe, from
-            the high deserts of Chile to the frozen landscapes of the Arctic
-            Circle.
-          </p>
-          <p className={styles.text}>
-            Astrophotography is more than just clicking a shutter; it's a
-            technical dance with physics, light, and patience. I specialize in
-            narrow-band imaging and composite night landscapes that bring the
-            invisible majesty of our galaxy to life.
-          </p>
-
-          <div className={styles.stats}>
-            <div className={styles.statCard}>
-              <p className={styles.statValue}>100+</p>
-              <p className={styles.statLabel}>Clear Nights Per Year</p>
-            </div>
-            <div className={styles.statCard}>
-              <p className={styles.statValue}>12k+</p>
-              <p className={styles.statLabel}>Light Frames Captured</p>
-            </div>
+        <div className={styles.visual}>
+          <div className={styles.glassCard}>
+            <div className={styles.cardGradient}></div>
+            {profile.about_me_image ? (
+              <img
+                src={profile.about_me_image}
+                alt="About me"
+                className={styles.aboutImage}
+              />
+            ) : (
+              <Camera size={100} className={styles.cardIcon} />
+            )}
           </div>
         </div>
       </div>

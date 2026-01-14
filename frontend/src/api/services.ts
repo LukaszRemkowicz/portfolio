@@ -90,7 +90,15 @@ export const fetchAstroImages = async (
       API_ROUTES.astroImages,
       { params },
     );
-    return handleResponse<AstroImage[]>(response);
+    const data = handleResponse<AstroImage[]>(response);
+    if (Array.isArray(data)) {
+      return data.map((image) => ({
+        ...image,
+        url: getMediaUrl(image.url) || "",
+        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+      }));
+    }
+    return data;
   } catch (error: unknown) {
     console.error("Error fetching astro images:", error);
     throw error;
@@ -105,7 +113,15 @@ export const fetchAstroImage = async (
   try {
     const url = API_ROUTES.astroImage.replace(":id", String(id));
     const response: AxiosResponse<AstroImage> = await api.get(url);
-    return handleResponse<AstroImage>(response);
+    const image = handleResponse<AstroImage>(response);
+    if (image) {
+      return {
+        ...image,
+        url: getMediaUrl(image.url) || "",
+        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+      };
+    }
+    return image;
   } catch (error: unknown) {
     console.error("Error fetching astro image:", error);
     throw error;

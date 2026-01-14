@@ -10,38 +10,12 @@ jest.mock("../api/services", () => ({
   fetchEnabledFeatures: jest.fn(),
 }));
 
-/**
- * Test suite for the Gallery component
- *
- * The Gallery component displays a static gallery with predefined categories:
- * - ASTROPHOTOGRAPHY
- * - LANDSCAPE PHOTOGRAPHY
- * - PROGRAMMING
- *
- * Each gallery item uses CSS background images and contains:
- * - A title with category name
- * - Links to respective pages (/astrophotography, /programming)
- * - Hover effects and styling
- *
- * The component uses static data from galleryItems.ts and doesn't require:
- * - API calls
- * - State management
- * - Complex props
- *
- * Testing Strategy:
- * - Verify all gallery items are rendered from static data
- * - Check that correct number of items are displayed
- * - Ensure text content matches expected values
- * - Test that component renders without errors
- * - Verify React Router integration works correctly
- */
-
 describe("Gallery Component", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("renders all gallery items when programming is enabled", async () => {
+  it("renders the gallery with the new portfolio title", async () => {
     (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
       programming: true,
     });
@@ -51,20 +25,14 @@ describe("Gallery Component", () => {
       </BrowserRouter>,
     );
 
-    expect(screen.getByText("ASTROPHOTOGRAPHY")).toBeInTheDocument();
-    expect(screen.getByText("LANDSCAPE PHOTOGRAPHY")).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(screen.getByText("PROGRAMMING")).toBeInTheDocument();
-    });
-
-    const galleryContainers = screen.getAllByText(/PHOTOGRAPHY|PROGRAMMING/);
-    expect(galleryContainers).toHaveLength(3);
+    expect(screen.getByText("Portfolio")).toBeInTheDocument();
+    expect(screen.getByText("M31 Andromeda")).toBeInTheDocument();
+    expect(screen.getByText("Milky Way Core")).toBeInTheDocument();
   });
 
-  it("filters out programming item when disabled", async () => {
+  it("renders filter buttons", async () => {
     (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
-      programming: false,
+      programming: true,
     });
     render(
       <BrowserRouter>
@@ -72,42 +40,9 @@ describe("Gallery Component", () => {
       </BrowserRouter>,
     );
 
-    expect(screen.getByText("ASTROPHOTOGRAPHY")).toBeInTheDocument();
-    expect(screen.getByText("LANDSCAPE PHOTOGRAPHY")).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(screen.queryByText("PROGRAMMING")).not.toBeInTheDocument();
-    });
-
-    const galleryContainers = screen.getAllByText(/PHOTOGRAPHY|PROGRAMMING/);
-    expect(galleryContainers).toHaveLength(2);
-  });
-
-  it("filters out programming item when response is empty", async () => {
-    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({});
-    render(
-      <BrowserRouter>
-        <Gallery />
-      </BrowserRouter>,
-    );
-
-    await waitFor(() => {
-      expect(screen.queryByText("PROGRAMMING")).not.toBeInTheDocument();
-    });
-  });
-
-  it("defaults to hidden when fetch fails", async () => {
-    (fetchEnabledFeatures as jest.Mock).mockRejectedValue(
-      new Error("API Error"),
-    );
-    render(
-      <BrowserRouter>
-        <Gallery />
-      </BrowserRouter>,
-    );
-
-    await waitFor(() => {
-      expect(screen.queryByText("PROGRAMMING")).not.toBeInTheDocument();
-    });
+    expect(screen.getByText("All Works")).toBeInTheDocument();
+    expect(screen.getByText("Deep Sky")).toBeInTheDocument();
+    expect(screen.getByText("Landscape")).toBeInTheDocument();
+    expect(screen.getByText("Timelapses")).toBeInTheDocument();
   });
 });

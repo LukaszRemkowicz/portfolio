@@ -173,3 +173,16 @@ Content-Type: {{contentType}}
 ### Test 21: Check Enabled Features
 GET {{baseUrl}}/whats-enabled/
 Content-Type: {{contentType}}
+
+### ============================================================
+### ASTROPHOTOGRAPHY API TESTS
+### ============================================================
+
+### Test 22: Fetch All Astro Images
+GET {{baseUrl}}/image/
+Content-Type: {{contentType}}
+
+### Test 23: Filter Images by Tag
+# Prerequisite: Ensure an image has the tag 'nebula' (or change to an existing tag)
+GET {{baseUrl}}/image/?tag=nebula
+Content-Type: {{contentType}}

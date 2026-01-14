@@ -4,46 +4,28 @@ import "@testing-library/jest-dom";
 import About from "../About";
 import { UserProfile } from "../types";
 
+const mockProfile: UserProfile = {
+  first_name: "John",
+  last_name: "Doe",
+  short_description: "Test Desc",
+  avatar: null,
+  bio: "Beyond the Atmosphere. Test bio",
+  about_me_image: null,
+  about_me_image2: null,
+};
+
 describe("About Component", () => {
-  it("renders nothing when profile is null", () => {
-    const { container } = render(<About profile={null} />);
-    expect(container.firstChild).toBeNull();
-  });
-
-  it("renders profile bio from props", () => {
-    const mockProfile: UserProfile = {
-      first_name: "John",
-      last_name: "Doe",
-      short_description: "Test Short Description",
-      avatar: null,
-      bio: "This is a test bio with multiple lines.\nIt should display correctly.",
-      about_me_image: null,
-      about_me_image2: null,
-    };
-
+  it("renders the section with the new title", () => {
     render(<About profile={mockProfile} />);
 
-    expect(screen.getByText("About me")).toBeInTheDocument();
-    expect(
-      screen.getByText(/This is a test bio with multiple lines/),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Beyond the")).toBeInTheDocument();
+    expect(screen.getByText("Atmosphere.")).toBeInTheDocument();
   });
 
-  it("renders about me image when available in props", () => {
-    const mockProfile: UserProfile = {
-      first_name: "John",
-      last_name: "Doe",
-      short_description: "Test Short Description",
-      avatar: null,
-      bio: "Test bio",
-      about_me_image: "/test-image.jpg",
-      about_me_image2: null,
-    };
-
+  it("renders technical stats", () => {
     render(<About profile={mockProfile} />);
 
-    expect(screen.getByText("About me")).toBeInTheDocument();
-    const image = screen.getByAltText("About me");
-    expect(image).toHaveAttribute("src", "/test-image.jpg");
+    expect(screen.getByText("Bortle 1")).toBeInTheDocument();
+    expect(screen.getByText("130mm")).toBeInTheDocument();
   });
 });

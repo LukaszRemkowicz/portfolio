@@ -12,7 +12,7 @@ class AstroImageFactory(DjangoModelFactory):
 
     name = factory.Faker("sentence", nb_words=3)
     description = factory.Faker("paragraph")
-    path = factory.Faker("file_name", extension="jpg")
+    path = factory.django.ImageField()
     capture_date = factory.LazyFunction(lambda: timezone.now().date())
     location = "Dark Site, Poland"
     equipment = "EQ6-R, Newton 200/1000, ASI2600MC"

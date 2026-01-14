@@ -1,27 +1,23 @@
 import React from "react";
 import styles from "./styles/components/Footer.module.css";
+import { Sparkles } from "lucide-react";
 
 const Footer: React.FC = () => {
   return (
     <footer className={styles.footer}>
       <div className={styles.container}>
         <div className={styles.branding}>
-          <span className={styles.logoIcon}>✦</span>
-          <span className={styles.logoText}>CELESTIAL CAPTURES</span>
+          <Sparkles size={16} className={styles.logoIcon} />
+          <span className={styles.logoText}>Celestial © 2024</span>
         </div>
-
-        <p className={styles.copyright}>
-          © 2024 Alex Stargazer Portfolio. All Rights Reserved.
-        </p>
-
-        <div className={styles.socials}>
-          <a href="#" className={styles.socialLink}>
+        <div className={styles.links}>
+          <a href="#" className={styles.link}>
             Instagram
           </a>
-          <a href="#" className={styles.socialLink}>
-            Twitter
+          <a href="#" className={styles.link}>
+            Astrobin
           </a>
-          <a href="#" className={styles.socialLink}>
+          <a href="#" className={styles.link}>
             Email
           </a>
         </div>

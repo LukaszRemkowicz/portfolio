@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import styles from "./styles/components/AstroGallery.module.css";
+import { Calendar, MapPin } from "lucide-react";
 import {
   fetchAstroImages,
   fetchBackground,
@@ -138,8 +139,8 @@ const AstroGallery: React.FC = () => {
         {images.map((image: AstroImage) => (
           <div key={image.pk} className={styles.gridItem}>
             <img
-              src={image.url}
-              alt={`Astro Image ${image.pk}`}
+              src={image.thumbnail_url || image.url}
+              alt={image.name || `Astro Image ${image.pk}`}
               onClick={() => handleImageClick(image)}
               style={{ cursor: "pointer" }}
             />
@@ -160,6 +161,25 @@ const AstroGallery: React.FC = () => {
               alt="Astro Large"
               className={styles.modalImage}
             />
+            <div className={styles.modalMetadata}>
+              <div className={styles.metaItem}>
+                <Calendar size={16} className={styles.metaIcon} />
+                <span>{modalImage.capture_date}</span>
+              </div>
+              <div className={styles.metaItem}>
+                <MapPin size={16} className={styles.metaIcon} />
+                <span>{modalImage.location}</span>
+              </div>
+              {modalImage.tags && modalImage.tags.length > 0 && (
+                <div className={styles.tagsContainer}>
+                  {modalImage.tags.map((tag, index) => (
+                    <span key={index} className={styles.tagBadge}>
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className={styles.modalDescription}>
               {modalDescriptionLoading
                 ? "Loading description..."
