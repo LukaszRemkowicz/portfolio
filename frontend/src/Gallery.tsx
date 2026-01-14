@@ -1,10 +1,29 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import styles from "./styles/components/Gallery.module.css";
 import { galleryItems } from "./data/galleryItems";
 import { GalleryItem } from "./types";
+import { fetchEnabledFeatures } from "./api/services";
 
 const Gallery: React.FC = () => {
+  const [isProgrammingEnabled, setIsProgrammingEnabled] =
+    useState<boolean>(false);
+
+  useEffect(() => {
+    const checkEnablement = async () => {
+      try {
+        const features = await fetchEnabledFeatures();
+        setIsProgrammingEnabled(features.programming === true);
+      } catch (error) {
+        console.error(
+          "Failed to check programming enablement in Gallery:",
+          error,
+        );
+        setIsProgrammingEnabled(false);
+      }
+    };
+    checkEnablement();
+  }, []);
   const renderGalleryItem = (
     item: GalleryItem,
     index: number,
@@ -41,9 +60,16 @@ const Gallery: React.FC = () => {
     return <div key={index}>{content}</div>;
   };
 
+  const filteredItems = galleryItems.filter((item) => {
+    if (item.title.includes("PROGRAMMING")) {
+      return isProgrammingEnabled;
+    }
+    return true;
+  });
+
   return (
     <section className={styles.gallery}>
-      {galleryItems.map((item: GalleryItem, index: number) =>
+      {filteredItems.map((item: GalleryItem, index: number) =>
         renderGalleryItem(item, index),
       )}
     </section>

@@ -14,6 +14,7 @@ describe("About Component", () => {
     const mockProfile: UserProfile = {
       first_name: "John",
       last_name: "Doe",
+      short_description: "Test Short Description",
       avatar: null,
       bio: "This is a test bio with multiple lines.\nIt should display correctly.",
       about_me_image: null,
@@ -32,6 +33,7 @@ describe("About Component", () => {
     const mockProfile: UserProfile = {
       first_name: "John",
       last_name: "Doe",
+      short_description: "Test Short Description",
       avatar: null,
       bio: "Test bio",
       about_me_image: "/test-image.jpg",

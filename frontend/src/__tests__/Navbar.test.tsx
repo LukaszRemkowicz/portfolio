@@ -1,16 +1,15 @@
-import React from "react";
-import { render, screen } from "@testing-library/react";
+import React, { ReactElement } from "react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
 import Navbar from "../Navbar";
-import { ReactElement } from "react";
+import { fetchEnabledFeatures } from "../api/services";
 
-/**
- * Helper function to render components with React Router context
- *
- * The Navbar component uses React Router's Link components,
- * so it needs to be wrapped in a Router context for testing.
- */
+// Mock the services
+jest.mock("../api/services", () => ({
+  fetchEnabledFeatures: jest.fn(),
+}));
+
 const renderWithRouter = (component: ReactElement) => {
   return render(<BrowserRouter>{component}</BrowserRouter>);
 };
@@ -32,23 +31,58 @@ const renderWithRouter = (component: ReactElement) => {
  * - Styling classes are applied conditionally
  */
 describe("Navbar Component", () => {
-  /**
-   * Test: Renders logo and navigation links
-   *
-   * Verifies that:
-   * - Logo image is displayed with correct alt text
-   * - All navigation links are present (Astrophotography, Programming, Contact)
-   * - Links have proper text content
-   * - Component renders without errors
-   * - Navigation structure is complete
-   */
-  it("renders logo and navigation links", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("renders logo and navigation links when enabled", async () => {
+    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
+      programming: true,
+    });
     renderWithRouter(<Navbar />);
 
     expect(screen.getByAltText("Logo")).toBeInTheDocument();
     expect(screen.getByText("Astrophotography")).toBeInTheDocument();
-    expect(screen.getByText("Programming")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("Programming")).toBeInTheDocument();
+    });
     expect(screen.getByText("Contact")).toBeInTheDocument();
+  });
+
+  it("hides Programming link when disabled", async () => {
+    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
+      programming: false,
+    });
+    renderWithRouter(<Navbar />);
+
+    expect(screen.getByAltText("Logo")).toBeInTheDocument();
+    expect(screen.getByText("Astrophotography")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.queryByText("Programming")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Contact")).toBeInTheDocument();
+  });
+
+  it("hides Programming link when response is empty", async () => {
+    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({});
+    renderWithRouter(<Navbar />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Programming")).not.toBeInTheDocument();
+    });
+  });
+
+  it("defaults to disabled when fetch fails", async () => {
+    (fetchEnabledFeatures as jest.Mock).mockRejectedValue(
+      new Error("API Error"),
+    );
+    renderWithRouter(<Navbar />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Programming")).not.toBeInTheDocument();
+    });
   });
 
   /**

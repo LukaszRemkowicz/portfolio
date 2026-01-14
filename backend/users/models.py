@@ -38,6 +38,13 @@ class User(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
+    short_description = models.TextField(
+        blank=True,
+        help_text=_(
+            "Hero section text. Split by the first period ('.'): "
+            "the first segment will be large/bold, following text will be smaller."
+        ),
+    )
     bio = models.TextField(max_length=10000, blank=True, help_text="General/Global bio about you")
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     about_me_image = models.ImageField(upload_to="about_me_images/", null=True, blank=True)

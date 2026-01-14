@@ -65,6 +65,7 @@ describe("HomePage Component", () => {
               resolve({
                 first_name: "John",
                 last_name: "Doe",
+                short_description: "Professional Photographer",
                 avatar: null,
                 bio: "Test bio",
                 about_me_image: null,
@@ -105,6 +106,7 @@ describe("HomePage Component", () => {
     const mockProfile: UserProfile = {
       first_name: "John",
       last_name: "Doe",
+      short_description: "Professional Photographer",
       avatar: "/test-avatar.jpg",
       bio: "This is a test bio",
       about_me_image: null,
@@ -121,7 +123,7 @@ describe("HomePage Component", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("John Doe")).toBeInTheDocument();
+      expect(screen.queryByText("John Doe")).not.toBeInTheDocument();
     });
 
     // Bio is displayed in the About component, not directly in HomePage
@@ -173,6 +175,7 @@ describe("HomePage Component", () => {
     const mockProfile: UserProfile = {
       first_name: "John",
       last_name: "Doe",
+      short_description: "Professional Photographer",
       avatar: null, // No avatar from API
       bio: "Test bio",
       about_me_image: null,
@@ -189,7 +192,7 @@ describe("HomePage Component", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("John Doe")).toBeInTheDocument();
+      expect(screen.queryByText("John Doe")).not.toBeInTheDocument();
     });
 
     // Should use default portrait since API avatar is null
@@ -210,6 +213,7 @@ describe("HomePage Component", () => {
     const mockProfile: UserProfile = {
       first_name: "John",
       last_name: "Doe",
+      short_description: "Professional Photographer",
       avatar: "/api-avatar.jpg",
       bio: "Test bio",
       about_me_image: null,
@@ -226,7 +230,7 @@ describe("HomePage Component", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("John Doe")).toBeInTheDocument();
+      expect(screen.queryByText("John Doe")).not.toBeInTheDocument();
     });
 
     // Should use API avatar
@@ -247,6 +251,7 @@ describe("HomePage Component", () => {
     const mockProfile: UserProfile = {
       first_name: "John",
       last_name: "Doe",
+      short_description: "Professional Photographer",
       avatar: null,
       bio: "Test bio",
       about_me_image: null,
@@ -263,7 +268,7 @@ describe("HomePage Component", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("John Doe")).toBeInTheDocument();
+      expect(screen.queryByText("John Doe")).not.toBeInTheDocument();
     });
 
     // Should fall back to default portrait

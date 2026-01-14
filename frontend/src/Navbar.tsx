@@ -1,11 +1,27 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import styles from "./styles/components/Navbar.module.css";
 import { NavbarProps, NavLinkClassProps } from "./types";
 import { ASSETS } from "./api/routes";
+import { fetchEnabledFeatures } from "./api/services";
 
 const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
   const location = useLocation();
+  const [isProgrammingEnabled, setIsProgrammingEnabled] =
+    useState<boolean>(false);
+
+  useEffect(() => {
+    const checkEnablement = async () => {
+      try {
+        const features = await fetchEnabledFeatures();
+        setIsProgrammingEnabled(features.programming === true);
+      } catch (error) {
+        console.error("Failed to check programming enablement:", error);
+        setIsProgrammingEnabled(false);
+      }
+    };
+    checkEnablement();
+  }, []);
 
   const getLinkClass = ({ isActive }: NavLinkClassProps): string => {
     return isActive
@@ -56,20 +72,22 @@ const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
             Astrophotography
           </NavLink>
         </li>
-        <li>
-          <NavLink
-            to="/programming"
-            className={
-              location.pathname === "/programming"
-                ? styles.active
-                : getLinkClass({
-                    isActive: location.pathname === "/programming",
-                  })
-            }
-          >
-            Programming
-          </NavLink>
-        </li>
+        {isProgrammingEnabled && (
+          <li>
+            <NavLink
+              to="/programming"
+              className={
+                location.pathname === "/programming"
+                  ? styles.active
+                  : getLinkClass({
+                      isActive: location.pathname === "/programming",
+                    })
+              }
+            >
+              Programming
+            </NavLink>
+          </li>
+        )}
         <li>
           <a
             href="#contact"

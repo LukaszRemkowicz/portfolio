@@ -37,14 +37,13 @@ const HomePage: React.FC = () => {
     loadData();
   }, []);
 
-  const heroViewportStyle: React.CSSProperties = backgroundUrl
-    ? {
-        backgroundImage: `url(${backgroundUrl})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-      }
-    : {};
+  const heroViewportStyle = (
+    backgroundUrl
+      ? {
+          "--hero-bg-url": `url(${backgroundUrl})`,
+        }
+      : {}
+  ) as React.CSSProperties;
 
   if (loading)
     return <div className={styles["loading-indicator"]}>Loading...</div>;
@@ -57,8 +56,7 @@ const HomePage: React.FC = () => {
         <main className={styles["main-content"]}>
           <Home
             portraitUrl={profile?.avatar || DEFAULT_PORTRAIT}
-            firstName={profile?.first_name || ""}
-            lastName={profile?.last_name || ""}
+            shortDescription={profile?.short_description || ""}
           />
         </main>
         <Gallery />

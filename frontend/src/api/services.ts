@@ -49,6 +49,7 @@ export const fetchProfile = async (): Promise<UserProfile> => {
       return {
         first_name: "Portfolio",
         last_name: "Owner",
+        short_description: "Landscape and Astrophotography",
         avatar: null,
         bio: "",
         about_me_image: null,

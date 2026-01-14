@@ -37,9 +37,17 @@
 }
 
 .subtitle {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  margin-bottom: var(--space-8);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--space-6);
+  color: var(--text-primary);
+}
+
+.bioParagraph {
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--space-4);
+  color: var(--text-secondary);
 }
 
 .highlight {

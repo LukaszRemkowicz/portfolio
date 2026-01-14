@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 export interface UserProfile {
   first_name: string;
   last_name: string;
+  short_description: string;
   avatar?: string | null;
   bio?: string;
   about_me_image?: string | null;
@@ -59,8 +60,7 @@ export type SubmitStatus =
 // Component Props Types
 export interface HomeProps {
   portraitUrl: string;
-  firstName: string;
-  lastName: string;
+  shortDescription: string;
 }
 
 export interface AboutProps {

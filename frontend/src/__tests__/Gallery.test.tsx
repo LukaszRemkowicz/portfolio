@@ -1,8 +1,14 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
 import Gallery from "../Gallery";
+import { fetchEnabledFeatures } from "../api/services";
+
+// Mock the services
+jest.mock("../api/services", () => ({
+  fetchEnabledFeatures: jest.fn(),
+}));
 
 /**
  * Test suite for the Gallery component
@@ -31,16 +37,14 @@ import Gallery from "../Gallery";
  */
 
 describe("Gallery Component", () => {
-  /**
-   * Test: Renders gallery items from static data
-   *
-   * Verifies that:
-   * - All three gallery categories are displayed
-   * - Text content matches the static data exactly
-   * - Gallery items are rendered from static data source
-   * - No API calls are needed for this component
-   */
-  it("renders gallery items from static data", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("renders all gallery items when programming is enabled", async () => {
+    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
+      programming: true,
+    });
     render(
       <BrowserRouter>
         <Gallery />
@@ -49,27 +53,61 @@ describe("Gallery Component", () => {
 
     expect(screen.getByText("ASTROPHOTOGRAPHY")).toBeInTheDocument();
     expect(screen.getByText("LANDSCAPE PHOTOGRAPHY")).toBeInTheDocument();
-    expect(screen.getByText("PROGRAMMING")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("PROGRAMMING")).toBeInTheDocument();
+    });
+
+    const galleryContainers = screen.getAllByText(/PHOTOGRAPHY|PROGRAMMING/);
+    expect(galleryContainers).toHaveLength(3);
   });
 
-  /**
-   * Test: Renders correct number of gallery items
-   *
-   * Verifies that:
-   * - Gallery items use background images (not img tags)
-   * - Text content can be found using regex patterns
-   * - Each category is properly represented in the gallery
-   * - Gallery structure is consistent and complete
-   */
-  it("renders correct number of gallery items", () => {
+  it("filters out programming item when disabled", async () => {
+    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
+      programming: false,
+    });
     render(
       <BrowserRouter>
         <Gallery />
       </BrowserRouter>,
     );
 
-    // Gallery items use background images, so we check for gallery item containers by text content
+    expect(screen.getByText("ASTROPHOTOGRAPHY")).toBeInTheDocument();
+    expect(screen.getByText("LANDSCAPE PHOTOGRAPHY")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.queryByText("PROGRAMMING")).not.toBeInTheDocument();
+    });
+
     const galleryContainers = screen.getAllByText(/PHOTOGRAPHY|PROGRAMMING/);
-    expect(galleryContainers).toHaveLength(3);
+    expect(galleryContainers).toHaveLength(2);
+  });
+
+  it("filters out programming item when response is empty", async () => {
+    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({});
+    render(
+      <BrowserRouter>
+        <Gallery />
+      </BrowserRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("PROGRAMMING")).not.toBeInTheDocument();
+    });
+  });
+
+  it("defaults to hidden when fetch fails", async () => {
+    (fetchEnabledFeatures as jest.Mock).mockRejectedValue(
+      new Error("API Error"),
+    );
+    render(
+      <BrowserRouter>
+        <Gallery />
+      </BrowserRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("PROGRAMMING")).not.toBeInTheDocument();
+    });
   });
 });

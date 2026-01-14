@@ -22,7 +22,10 @@ const About: React.FC<AboutProps> = ({ profile }) => {
         <div className={styles.textWrapper}>
           <h2 className={styles.title}>About me</h2>
           {profile.bio?.split("\n").map((paragraph: string, index: number) => (
-            <p key={index} className={index === 0 ? styles.subtitle : ""}>
+            <p
+              key={index}
+              className={index === 0 ? styles.subtitle : styles.bioParagraph}
+            >
               {paragraph}
             </p>
           ))}

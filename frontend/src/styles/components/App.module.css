@@ -33,7 +33,28 @@ main {
   flex-direction: column;
   justify-content: space-between;
   background-color: var(--portfolio-bg-dark);
-  /* Fallback for when image fails */
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-viewport::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: var(--hero-bg-url);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hero-viewport > * {
+  position: relative;
+  z-index: 1;
 }
 
 .main-content {
@@ -53,12 +74,24 @@ main {
 }
 
 .hero__headline {
-  font-size: 2.2rem;
-  font-weight: 700;
   margin-bottom: 1.2rem;
   line-height: 1.1;
   color: var(--text-light);
   text-shadow: 0 2px 16px #000a;
+}
+
+.hero__headline_main {
+  font-size: 2.8rem;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.hero__headline_sub {
+  font-size: 1.8rem;
+  font-weight: 400;
+  font-style: italic;
+  opacity: 0.9;
 }
 
 .hero__sub {
