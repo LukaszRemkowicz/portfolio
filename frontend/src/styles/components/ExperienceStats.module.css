@@ -1,0 +1,47 @@
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+  padding: 2rem 0;
+  margin-top: 2rem;
+  animation: revealUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 1s;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.number {
+  font-size: 1.5rem;
+  font-weight: 300;
+  font-family: var(--font-family-heading);
+  color: var(--accent-gold);
+}
+
+.label {
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--glass-border);
+}
+
+@media (max-width: 600px) {
+  .stats {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+
+  .divider {
+    display: none;
+  }
+}

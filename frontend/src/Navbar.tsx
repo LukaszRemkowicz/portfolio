@@ -4,6 +4,7 @@ import styles from "./styles/components/Navbar.module.css";
 import { NavbarProps, NavLinkClassProps } from "./types";
 import { ASSETS } from "./api/routes";
 import { fetchEnabledFeatures } from "./api/services";
+import CelestialWidget from "./CelestialWidget";
 
 const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
   const location = useLocation();
@@ -57,7 +58,25 @@ const Navbar: React.FC<NavbarProps> = ({ transparent, programmingBg }) => {
       <Link to="/" className={styles.navbar__logo_link}>
         <img src={ASSETS.logo} alt="Logo" className={styles.navbar__logo} />
       </Link>
+      <div className={styles.navbar__center}>
+        {/* TODO: Enable CelestialWidget once backend integration is ready */}
+        {/* <CelestialWidget /> */}
+      </div>
       <ul className={styles.navbar__links}>
+        <li>
+          <NavLink
+            to="/"
+            className={
+              location.pathname === "/"
+                ? styles.active
+                : getLinkClass({
+                    isActive: location.pathname === "/",
+                  })
+            }
+          >
+            HOME
+          </NavLink>
+        </li>
         <li>
           <NavLink
             to="/astrophotography"

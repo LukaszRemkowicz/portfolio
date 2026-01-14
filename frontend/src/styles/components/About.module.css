@@ -1,28 +1,42 @@
 .aboutContainer {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  padding: 4rem 2rem;
+  background-color: var(--portfolio-bg-dark);
+  color: var(--text-light);
+  padding: clamp(4rem, 10vw, 8rem) 6vw;
   font-family: var(--font-family-primary);
   line-height: var(--line-height-relaxed);
+  position: relative;
+  overflow: hidden;
 }
 
 .aboutContent {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   display: flex;
-  gap: 3rem;
-  align-items: center;
+  gap: 8vw;
+  align-items: flex-start;
 }
 
 .imageWrapper {
   flex: 1;
+  position: sticky;
+  top: 10rem;
 }
 
 .aboutImage {
   width: 100%;
-  height: auto;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  aspect-ratio: 4/5;
+  object-fit: cover;
+  border-radius: 2px;
+  /* Brutalist sharp edge */
+  filter: grayscale(0.2);
+  box-shadow: 40px 40px 0px var(--accent-gold);
+  transition: all var(--transition-normal);
+}
+
+.aboutImage:hover {
+  filter: grayscale(0);
+  transform: translate(-10px, -10px);
+  box-shadow: 60px 60px 0px var(--accent-gold);
 }
 
 .textWrapper {
@@ -30,17 +44,21 @@
 }
 
 .title {
-  font-size: var(--font-size-4xl);
-  font-weight: var(--font-weight-bold);
-  margin-bottom: var(--space-6);
+  font-size: clamp(3rem, 6vw, 5rem);
+  font-weight: 300;
+  margin-bottom: var(--space-10);
   font-family: var(--font-family-heading);
+  letter-spacing: -0.01em;
+  color: var(--accent-gold);
 }
 
 .subtitle {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-medium);
-  margin-bottom: var(--space-6);
-  color: var(--text-primary);
+  font-size: var(--font-size-2xl);
+  font-weight: 300;
+  font-family: var(--font-family-heading);
+  margin-bottom: var(--space-8);
+  color: var(--text-light);
+  line-height: 1.2;
 }
 
 .bioParagraph {

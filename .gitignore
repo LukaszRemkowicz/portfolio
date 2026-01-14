@@ -134,4 +134,5 @@ nginx/ssl/certs/
 nginx/logs/
 .cursor/rules/
 .gemini/
+.agent/
 /backend/core/local.py

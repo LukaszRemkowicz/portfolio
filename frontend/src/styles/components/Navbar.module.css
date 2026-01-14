@@ -8,12 +8,22 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-8) var(--space-12);
+  padding: var(--space-6) var(--space-12);
   z-index: var(--z-fixed);
-  transition: background-color var(--transition-normal);
-  background-color: var(--portfolio-bg-dark);
+  transition: all var(--transition-normal);
+  background-color: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
   box-sizing: border-box;
   overflow-x: visible;
+}
+
+:local(.navbar__center) {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 :local(.navbar__logo) {
@@ -76,6 +86,8 @@
 
 .transparent {
   background: transparent !important;
+  backdrop-filter: none !important;
+  border-bottom-color: transparent !important;
   position: absolute;
   top: 0;
   left: 0;
