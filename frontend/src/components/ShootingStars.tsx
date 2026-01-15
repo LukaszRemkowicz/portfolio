@@ -109,7 +109,8 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                         driftX: (Math.random() - 0.5) * 20,
                         driftY: (Math.random() - 0.5) * 20,
                         duration: 2.0 + Math.random() * 1.5,
-                        delay: duration * progress, // Precise timing
+                        // Start appearing only after the bolid is gone
+                        delay: duration + (duration * progress),
                     });
                 }
             }

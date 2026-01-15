@@ -45,5 +45,5 @@ export const CONFIG = {
     /**
      * Smoke opacity range.
      */
-    smokeOpacityRange: [0.4, 0.8] as [number, number],
+    smokeOpacityRange: [0.5, 0.8] as [number, number],
 };
