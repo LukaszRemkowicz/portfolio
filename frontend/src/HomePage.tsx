@@ -12,6 +12,7 @@ const Contact = lazy(() => import("./components/Contact"));
 import styles from "./styles/components/App.module.css";
 import { fetchProfile, fetchBackground } from "./api/services";
 import { UserProfile } from "./types";
+import { NetworkError, ServerError } from "./api/errors";
 
 const DEFAULT_PORTRAIT = "/portrait_default.png";
 
@@ -32,8 +33,14 @@ const HomePage: React.FC = () => {
         setProfile(profileData);
         setBackgroundUrl(bgUrl);
       } catch (e: unknown) {
-        console.error("Failed to load initial data:", e);
-        setError("Failed to load page content.");
+        if (e instanceof NetworkError) {
+          setError("Signal lost. Please check your network connection and retry.");
+        } else if (e instanceof ServerError) {
+          setError("The cosmic archives are temporarily unreachable. Our engineers are investigating.");
+        } else {
+          setError("An unexpected anomaly occurred while loading the cosmos.");
+        }
+        console.error("Critical failure:", e);
       } finally {
         setLoading(false);
       }

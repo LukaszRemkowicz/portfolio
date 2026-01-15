@@ -4,6 +4,7 @@ import styles from "../styles/components/Gallery.module.css";
 import { Camera, Calendar, MapPin } from "lucide-react";
 import { fetchAstroImages, fetchAstroImage } from "../api/services";
 import { AstroImage } from "../types";
+import { AppError, NetworkError, ServerError } from "../api/errors";
 
 interface GalleryCardProps {
   item: AstroImage;
@@ -59,6 +60,7 @@ const Gallery: React.FC = () => {
   const [filter, setFilter] = useState("all");
   const [images, setImages] = useState<AstroImage[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
   const [modalDescription, setModalDescription] = useState<string>("");
   const [modalDescriptionLoading, setModalDescriptionLoading] =
@@ -71,8 +73,16 @@ const Gallery: React.FC = () => {
         // Fetch a larger batch of images once on mount
         const data = await fetchAstroImages({ limit: 50 });
         setImages(data);
-      } catch (error) {
-        console.error("Failed to fetch gallery images:", error);
+        setError(null);
+      } catch (err: unknown) {
+        if (err instanceof NetworkError) {
+          setError("Connection failed. The cosmic relay is currently offline.");
+        } else if (err instanceof ServerError) {
+          setError("Server collision detected. Please try again later.");
+        } else {
+          setError("An unexpected error occurred while loading the gallery.");
+        }
+        console.error("Gallery sync failure:", err);
       } finally {
         setLoading(false);
       }
@@ -197,6 +207,8 @@ const Gallery: React.FC = () => {
       <div className={styles.grid}>
         {loading ? (
           <div className={styles.loading}>Loading Portfolio...</div>
+        ) : error ? (
+          <div className={styles.error}>{error}</div>
         ) : filteredImages.length > 0 ? (
           filteredImages.map((item) => (
             <GalleryCard

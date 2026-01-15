@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { fetchContact, fetchEnabledFeatures } from "../api/services";
 import styles from "../styles/components/Contact.module.css";
 import { ContactFormData, ValidationErrors, SubmitStatus } from "../types";
+import { AppError, ValidationError } from "../api/errors";
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState<ContactFormData>({
@@ -104,8 +105,17 @@ const Contact: React.FC = () => {
           website: "",
         });
       } catch (error: unknown) {
-        console.error("Failed to send message:", error);
-        setSubmitStatus("error");
+        if (error instanceof ValidationError) {
+          setValidationErrors(error.errors);
+          setSubmitStatus("validation_error");
+        } else if (error instanceof AppError) {
+          setSubmitStatus("error");
+          // Optionally store the specific error message to display to the user
+          console.error(`Status code ${error.statusCode}: ${error.message}`);
+        } else {
+          console.error("Unknown error:", error);
+          setSubmitStatus("error");
+        }
       } finally {
         setIsSubmitting(false);
       }
@@ -243,8 +253,12 @@ const Contact: React.FC = () => {
             )}
             {submitStatus === "error" && (
               <p className={styles.errorMessage} role="alert">
-                Sorry, there was an error sending your message. Please try
-                again.
+                Transmission failure. Please check your signal or try again later.
+              </p>
+            )}
+            {submitStatus === "validation_error" && (
+              <p className={styles.errorMessage} role="alert">
+                One or more details in your inquiry require adjustment.
               </p>
             )}
           </form>

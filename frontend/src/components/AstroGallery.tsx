@@ -8,6 +8,7 @@ import {
 } from "../api/services";
 import { ASSETS } from "../api/routes";
 import { AstroImage, FilterParams, FilterType } from "../types";
+import { AppError, NetworkError, ServerError } from "../api/errors";
 
 const AstroGallery: React.FC = () => {
   const [images, setImages] = useState<AstroImage[]>([]);
@@ -31,9 +32,15 @@ const AstroGallery: React.FC = () => {
       const data: AstroImage[] = await fetchAstroImages(params);
       setImages(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
-      setError("Failed to load images. Please try again later.");
+      if (err instanceof NetworkError) {
+        setError("Connection failure. The astronomical database is unreachable.");
+      } else if (err instanceof ServerError) {
+        setError("Deep space server error. Please retry your scan later.");
+      } else {
+        setError("An unexpected anomaly occurred while fetching images.");
+      }
       setImages([]);
-      console.error(err);
+      console.error("Gallery scan failed:", err);
     } finally {
       setLoading(false);
     }
@@ -126,9 +133,8 @@ const AstroGallery: React.FC = () => {
         {FILTERS.map((filter: FilterType) => (
           <div
             key={filter}
-            className={`${styles.filterBox} ${
-              selectedFilter === filter ? styles.activeFilter : ""
-            }`}
+            className={`${styles.filterBox} ${selectedFilter === filter ? styles.activeFilter : ""
+              }`}
             onClick={() => handleFilterClick(filter)}
           >
             {filter}
