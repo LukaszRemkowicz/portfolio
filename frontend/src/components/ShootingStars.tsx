@@ -2,6 +2,17 @@ import React, { useState, useEffect } from "react";
 import styles from "../styles/components/ShootingStars.module.css";
 import { CONFIG } from "../config";
 
+interface DustParticle {
+    id: number;
+    offsetX: number;
+    offsetY: number;
+    size: number;
+    driftX: number;
+    driftY: number;
+    duration: number;
+    delay: number;
+}
+
 interface ShootingStar {
     id: number;
     left: string;
@@ -12,6 +23,7 @@ interface ShootingStar {
     width: number;
     opacity: number;
     isBolid?: boolean;
+    dustParticles?: DustParticle[];
 }
 
 interface ShootingStarsProps {
@@ -70,7 +82,25 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const maxPath = Math.max(p1, p2);
             const distance = random ? Math.random() * (maxPath - minPath) + minPath : 600;
 
-            const newStar = { id, left, top, duration, angle, distance, width, opacity, isBolid };
+            // Generate dust particles for bolids
+            const dustParticles: DustParticle[] = [];
+            if (isBolid) {
+                const particleCount = 6 + Math.floor(Math.random() * 5); // 6-10 particles
+                for (let i = 0; i < particleCount; i++) {
+                    dustParticles.push({
+                        id: Math.random(),
+                        offsetX: (Math.random() - 0.5) * 10,
+                        offsetY: (Math.random() - 0.5) * 10,
+                        size: 1 + Math.random() * 3,
+                        driftX: (Math.random() - 0.5) * 50,
+                        driftY: (Math.random() - 0.5) * 50,
+                        duration: 0.8 + Math.random() * 1.2,
+                        delay: duration * 0.6 + (Math.random() - 0.5) * 0.1, // Near flash point
+                    });
+                }
+            }
+
+            const newStar = { id, left, top, duration, angle, distance, width, opacity, isBolid, dustParticles };
             setShootingStars((prev) => [...prev, newStar]);
 
             // Remove the star after its animation completes
@@ -107,13 +137,30 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                     }
                 >
                     {star.isBolid && (
-                        <div
-                            className={styles.bolidFlash}
-                            style={{
-                                animation: `${styles.explode} ${star.duration * 0.4}s ease-out forwards`,
-                                animationDelay: `${star.duration * 0.6}s`,
-                            }}
-                        />
+                        <>
+                            <div
+                                className={styles.bolidFlash}
+                                style={{
+                                    animation: `${styles.explode} ${star.duration * 0.4}s ease-out forwards`,
+                                    animationDelay: `${star.duration * 0.6}s`,
+                                }}
+                            />
+                            {star.dustParticles?.map((particle) => (
+                                <div
+                                    key={particle.id}
+                                    className={styles.bolidDust}
+                                    style={{
+                                        "--p-size": `${particle.size}px`,
+                                        "--p-x": `${particle.offsetX}px`,
+                                        "--p-y": `${particle.offsetY}px`,
+                                        "--p-drift-x": `${particle.driftX}px`,
+                                        "--p-drift-y": `${particle.driftY}px`,
+                                        animation: `${styles.driftAndFade} ${particle.duration}s ease-out forwards`,
+                                        animationDelay: `${particle.delay}s`,
+                                    } as React.CSSProperties}
+                                />
+                            ))}
+                        </>
                     )}
                 </div>
             ))}

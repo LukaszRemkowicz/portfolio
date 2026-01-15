@@ -80,3 +80,27 @@
         opacity: 0;
     }
 }
+
+.bolidDust {
+    position: absolute;
+    width: var(--p-size);
+    height: var(--p-size);
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    filter: blur(1px);
+    opacity: 0;
+    left: 0;
+    top: 50%;
+}
+
+@keyframes driftAndFade {
+    0% {
+        transform: translate(var(--p-x), calc(-50% + var(--p-y))) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(var(--p-x) + var(--p-drift-x)), calc(-50% + var(--p-y) + var(--p-drift-y))) scale(0.5);
+        opacity: 0;
+    }
+}
