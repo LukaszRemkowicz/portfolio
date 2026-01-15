@@ -12,11 +12,11 @@ export const CONFIG = {
      * Chance of a shooting star being a bolid (fireball).
      * 0.05 = 5% chance.
      */
-    bolidChance: 0.95,
+    bolidChance: 0.1,
     /**
      * Minimum interval between bolids in seconds (e.g., 60 = 1 minute).
      */
-    bolidMinInterval: 1,
+    bolidMinInterval: 60,
     /**
      * Duration ranges (in seconds) on screen.
      * Speed = PathDistance / Duration.

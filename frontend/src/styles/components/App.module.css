@@ -1,12 +1,14 @@
 .heroSection {
   position: relative;
-  padding: 0 1.5rem;
+  /* Subtract navbar height (approx 72px) from centering calculation */
+  padding: 72px 1.5rem 0;
   text-align: center;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   height: 100vh;
+  box-sizing: border-box;
 }
 
 .heroContent {
