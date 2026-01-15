@@ -17,4 +17,10 @@ export const CONFIG = {
      * Minimum interval between bolids in seconds (e.g., 60 = 1 minute).
      */
     bolidMinInterval: 1,
+    /**
+     * Duration ranges (in seconds) for animations.
+     * Lower values = faster speed.
+     */
+    starDurationRange: [1.0, 3.0] as [number, number],
+    bolidDurationRange: [0.5, 1.5] as [number, number],
 };

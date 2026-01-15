@@ -38,12 +38,6 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const id = now;
             const left = `${Math.random() * (window.innerWidth + 300)}px`;
             const top = `${Math.random() * (window.innerHeight / 2)}px`;
-            const duration = Math.random() * 1.5 + 1;
-
-            // Use fixed trajectory if random is false
-            const angle = random ? Math.random() * 90 - 45 : -45;
-            const distance = random ? Math.random() * 400 + 400 : 600;
-
             // Bolid logic
             const timeSinceLastBolid = now - lastBolidTime;
             const canSpawnBolid = timeSinceLastBolid >= CONFIG.bolidMinInterval * 1000;
@@ -52,6 +46,14 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             if (isBolid) {
                 setLastBolidTime(now);
             }
+
+            // Duration (speed) randomization
+            const [minDur, maxDur] = isBolid ? CONFIG.bolidDurationRange : CONFIG.starDurationRange;
+            const duration = Math.random() * (maxDur - minDur) + minDur;
+
+            // Use fixed trajectory if random is false
+            const angle = random ? Math.random() * 90 - 45 : -45;
+            const distance = random ? Math.random() * 400 + 400 : 600;
 
             const newStar = { id, left, top, duration, angle, distance, isBolid };
             setShootingStars((prev) => [...prev, newStar]);
