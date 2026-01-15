@@ -55,7 +55,9 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const angle = random ? Math.random() * 90 - 45 : -45;
 
             // Path distance (length of travel) randomization
-            const [minPath, maxPath] = isBolid ? CONFIG.bolidPathRange : CONFIG.starPathRange;
+            const [p1, p2] = isBolid ? CONFIG.bolidPathRange : CONFIG.starPathRange;
+            const minPath = Math.min(p1, p2);
+            const maxPath = Math.max(p1, p2);
             const distance = random ? Math.random() * (maxPath - minPath) + minPath : 600;
 
             const newStar = { id, left, top, duration, angle, distance, isBolid };

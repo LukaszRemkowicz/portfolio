@@ -26,6 +26,6 @@ export const CONFIG = {
     /**
      * Path distance ranges (total travel) in pixels.
      */
-    starPathRange: [400, 500] as [number, number],
-    bolidPathRange: [600, 500] as [number, number],
+    starPathRange: [300, 800] as [number, number],
+    bolidPathRange: [600, 1400] as [number, number],
 };
