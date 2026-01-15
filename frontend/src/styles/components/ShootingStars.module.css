@@ -80,33 +80,3 @@
         opacity: 0;
     }
 }
-
-@keyframes bolidFall {
-    0% {
-        transform: rotate(var(--angle)) translateX(0);
-        opacity: 0;
-        width: 250px;
-        filter: brightness(1);
-    }
-
-    10% {
-        opacity: 1;
-        filter: brightness(1.2);
-    }
-
-    /* Explosion phase - synchronized with flash at 80% */
-    80% {
-        transform: rotate(var(--angle)) translateX(calc(var(--distance) * -0.8));
-        opacity: 1;
-        width: 250px;
-        filter: brightness(2) drop-shadow(0 0 10px white);
-    }
-
-    /* Fading out in place (no further translation) */
-    100% {
-        transform: rotate(var(--angle)) translateX(calc(var(--distance) * -0.8));
-        opacity: 0;
-        width: 150px;
-        filter: brightness(0.2);
-    }
-}
