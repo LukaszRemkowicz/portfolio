@@ -136,3 +136,5 @@ nginx/logs/
 .gemini/
 .agent/
 /backend/core/local.py
+frontend/playwright-report/
+frontend/test-results/
