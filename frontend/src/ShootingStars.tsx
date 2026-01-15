@@ -6,6 +6,8 @@ interface ShootingStar {
     left: string;
     top: string;
     duration: number;
+    angle: number;
+    distance: number;
 }
 
 interface ShootingStarsProps {
@@ -31,8 +33,10 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const left = `${Math.random() * (window.innerWidth + 300)}px`;
             const top = `${Math.random() * (window.innerHeight / 2)}px`;
             const duration = Math.random() * 1.5 + 1;
+            const angle = Math.random() * 90 - 45; // -45 to 45 degrees
+            const distance = Math.random() * 400 + 400; // 400 to 800px
 
-            const newStar = { id, left, top, duration };
+            const newStar = { id, left, top, duration, angle, distance };
             setShootingStars((prev) => [...prev, newStar]);
 
             // Remove the star after its animation completes
@@ -56,11 +60,15 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                 <div
                     key={star.id}
                     className={styles.shootingStar}
-                    style={{
-                        left: star.left,
-                        top: star.top,
-                        animation: `${styles.fall} ${star.duration}s linear forwards`,
-                    }}
+                    style={
+                        {
+                            left: star.left,
+                            top: star.top,
+                            animation: `${styles.fall} ${star.duration}s linear forwards`,
+                            "--angle": `${star.angle}deg`,
+                            "--distance": `${star.distance}px`,
+                        } as React.CSSProperties
+                    }
                 />
             ))}
         </div>
