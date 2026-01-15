@@ -1,6 +1,7 @@
 import React from "react";
 import styles from "./styles/components/App.module.css";
 import { HomeProps } from "./types";
+import ShootingStars from "./ShootingStars";
 
 const Home: React.FC<HomeProps> = ({
   portraitUrl,
@@ -13,13 +14,14 @@ const Home: React.FC<HomeProps> = ({
       style={
         backgroundUrl
           ? {
-              backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${backgroundUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }
+            backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${backgroundUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }
           : undefined
       }
     >
+      <ShootingStars />
       <div className={styles.heroContent}>
         <span className={styles.heroSubtitle}>Documenting the Cosmos</span>
         <h1 className={styles.heroTitle}>
