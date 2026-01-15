@@ -98,8 +98,8 @@
     /* Elongated "line" segment look */
     width: var(--p-size);
     height: calc(var(--p-size) * 0.15);
-    /* Soft brush stroke gradient */
-    background: radial-gradient(ellipse at center, rgba(30, 30, 35, var(--p-opacity, 0.8)) 0%, rgba(15, 15, 20, calc(var(--p-opacity, 0.8) * 0.5)) 50%, transparent 100%);
+    /* Soft brush stroke gradient - slightly lighter grey for visibility */
+    background: radial-gradient(ellipse at center, rgba(80, 80, 90, var(--p-opacity, 0.8)) 0%, rgba(40, 40, 50, calc(var(--p-opacity, 0.8) * 0.5)) 50%, transparent 100%);
     border-radius: 40%;
     filter: blur(var(--p-blur, 3px));
     opacity: 0;
@@ -118,9 +118,9 @@
         opacity: var(--p-opacity, 0.7);
     }
 
-    /* Jittery drift */
+    /* Jittery drift with larger expansion */
     100% {
-        transform: translate(calc(var(--p-x) + var(--p-drift-x)), calc(-50% + var(--p-y) + var(--p-drift-y))) rotate(calc(var(--p-rotate) + 20deg)) scale(1.8);
+        transform: translate(calc(var(--p-x) + var(--p-drift-x)), calc(-50% + var(--p-y) + var(--p-drift-y))) rotate(calc(var(--p-rotate) + 20deg)) scale(2.5);
         opacity: 0;
     }
 }
