@@ -330,6 +330,26 @@ src/
 - ✅ **Professional Grade** - Enterprise-level TypeScript codebase
 - ✅ **All Tests Passing** - 21/21 tests with full TypeScript support
 
+## 🌐 Deployment Checklist (Production)
+
+> [!IMPORTANT]
+> The current SEO and discovery files use `portfolio.local` for development. Before deploying to production, ensure the following manual updates are made:
+
+- **`public/index.html`**:
+    - Update `<meta property="og:url" content="..." />`
+    - Update `<meta property="og:image" content="..." />`
+    - Update `<meta property="twitter:url" content="..." />`
+    - Update `<meta property="twitter:image" content="..." />`
+    - Update `<script type="application/ld+json">` (Update `@id`, `url`, and `sameAs` links)
+- **`public/sitemap.xml`**:
+    - Replace all instances of `https://portfolio.local/` with your actual production domain.
+- **`public/robots.txt`**:
+    - Update the `Sitemap:` directive link.
+- **Environment Variables**:
+    - Set `API_URL` to your production backend URL (e.g., `https://api.yourdomain.com`).
+
+---
+
 ## 📋 TODO / Future Improvements
 
 ### 🚀 Priority 1 - Critical
