@@ -7,7 +7,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 1.25rem 2rem;
+  padding: 0.75rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -44,8 +44,8 @@
 
 .logoMarkWrapper {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
 }
 
 .logoCircleBg {
@@ -81,6 +81,7 @@
 }
 
 @keyframes twinkle {
+
   0%,
   100% {
     opacity: 0.3;
@@ -170,8 +171,8 @@
 .mobileDrawer {
   position: fixed;
   inset: 0;
-  top: 64px;
-  /* Adjust based on navbar height */
+  top: 72px;
+  /* Adjust based on new navbar height (approx 48px + 1.5rem padding) */
   background: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(20px);
   z-index: 1999;

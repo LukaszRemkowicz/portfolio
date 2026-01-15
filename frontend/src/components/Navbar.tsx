@@ -31,8 +31,8 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
         <Link to="/" className={styles.logo}>
           <div className={styles.logoMarkWrapper}>
             <svg
-              width="64"
-              height="64"
+              width="48"
+              height="48"
               viewBox="0 0 100 100"
               className={styles.logoMark}
             >
