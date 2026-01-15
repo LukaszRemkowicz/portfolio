@@ -19,10 +19,14 @@
     z-index: 10;
 }
 
-/* Base class for bolid that overrides some defaults but animation handles the rest */
 .bolid {
+    width: 250px;
     height: 2px;
-    z-index: 11;
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 1),
+            rgba(56, 189, 248, 0.5),
+            transparent);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
 }
 
 .bolidFlash {
@@ -74,53 +78,5 @@
     100% {
         transform: rotate(var(--angle)) translateX(calc(var(--distance) * -1));
         opacity: 0;
-    }
-}
-
-@keyframes bolidFall {
-    0% {
-        transform: rotate(var(--angle)) translateX(0);
-        opacity: 0;
-        width: 150px;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
-        filter: brightness(1);
-    }
-
-    10% {
-        opacity: 1;
-    }
-
-    /* Descent Phase (80% of its path) - Still looks like a normal star */
-    79% {
-        width: 150px;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
-        filter: brightness(1);
-    }
-
-    /* Fireball Explosion! */
-    80% {
-        transform: rotate(var(--angle)) translateX(calc(var(--distance) * -0.8));
-        opacity: 1;
-        width: 300px;
-        background: linear-gradient(90deg,
-                rgba(255, 255, 255, 1),
-                rgba(56, 189, 248, 0.8),
-                transparent);
-        filter: brightness(2.5) drop-shadow(0 0 15px white);
-    }
-
-    /* Fading out in place (no further translation) */
-    81% {
-        transform: rotate(var(--angle)) translateX(calc(var(--distance) * -0.8));
-        width: 200px;
-        filter: brightness(0.5);
-        opacity: 0.8;
-    }
-
-    100% {
-        transform: rotate(var(--angle)) translateX(calc(var(--distance) * -0.8));
-        opacity: 0;
-        width: 100px;
-        filter: brightness(0.1);
     }
 }
