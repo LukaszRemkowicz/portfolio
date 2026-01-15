@@ -42,4 +42,8 @@ export const CONFIG = {
      */
     starOpacityRange: [0.4, 0.8] as [number, number],
     bolidOpacityRange: [0.7, 1.0] as [number, number],
+    /**
+     * Smoke opacity range.
+     */
+    smokeOpacityRange: [0.1, 0.2] as [number, number],
 };

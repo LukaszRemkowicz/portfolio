@@ -10,6 +10,7 @@ interface DustParticle {
     blur: number;
     rotate: string;
     skew: string;
+    opacity: number;
     driftX: number;
     driftY: number;
     duration: number;
@@ -103,6 +104,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                         blur: 2 + Math.random() * 4,
                         rotate: `${Math.random() * 360}deg`,
                         skew: `${(Math.random() - 0.5) * 40}deg`,
+                        opacity: Math.random() * (CONFIG.smokeOpacityRange[1] - CONFIG.smokeOpacityRange[0]) + CONFIG.smokeOpacityRange[0],
                         driftX: (Math.random() - 0.5) * 40,
                         driftY: (Math.random() - 0.5) * 40,
                         duration: 2.0 + Math.random() * 1.5,
@@ -179,6 +181,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                                     style={{
                                         "--p-size": `${particle.size}px`,
                                         "--p-blur": `${particle.blur}px`,
+                                        "--p-opacity": particle.opacity,
                                         "--p-rotate": particle.rotate,
                                         "--p-skew": particle.skew,
                                         "--p-x": `${particle.offsetX}px`,
