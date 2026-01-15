@@ -16,5 +16,5 @@ export const CONFIG = {
     /**
      * Minimum interval between bolids in seconds (e.g., 60 = 1 minute).
      */
-    bolidMinInterval: 60,
+    bolidMinInterval: 6,
 };
