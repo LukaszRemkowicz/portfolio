@@ -7,10 +7,8 @@ const Programming: React.FC = () => (
     <div
       className={styles.container}
       style={{
-        backgroundImage: `url(${ASSETS.underConstruction})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
+        "--bg-image": `url(${ASSETS.underConstruction})`,
+      } as React.CSSProperties}
     >
       <div className={styles.overlay}></div>
       <div className={styles.text}>
