@@ -16,8 +16,8 @@ describe("Programming Component", () => {
     const { container } = render(<Programming />);
     // The container with background is the second div (index 1) or we can look for the class
     const backgroundDiv = container.querySelector('[class*="container"]');
-    expect(backgroundDiv).toHaveStyle(
-      `background-image: url(${ASSETS.underConstruction})`,
-    );
+    expect(backgroundDiv).toHaveStyle({
+      "--bg-image": `url(${ASSETS.underConstruction})`,
+    });
   });
 });

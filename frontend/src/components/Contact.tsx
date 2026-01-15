@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { fetchContact, fetchEnabledFeatures } from "../api/services";
+import React, { useState, useCallback } from "react";
+import { fetchContact } from "../api/services";
+import { useAppStore } from "../store/useStore";
 import styles from "../styles/components/Contact.module.css";
 import { ContactFormData, ValidationErrors, SubmitStatus } from "../types";
 import { AppError, ValidationError } from "../api/errors";
@@ -17,23 +18,8 @@ const Contact: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
     {},
   );
-  const [isEnabled, setIsEnabled] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    const checkEnablement = async () => {
-      try {
-        const features = await fetchEnabledFeatures();
-        setIsEnabled(features.contactForm === true);
-      } catch (error) {
-        console.error("Failed to check feature enablement:", error);
-        setIsEnabled(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    checkEnablement();
-  }, []);
+  const { features, isInitialLoading: isLoading } = useAppStore();
+  const isEnabled = features?.contactForm === true;
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
@@ -52,7 +38,7 @@ const Contact: React.FC = () => {
         return prev;
       });
     },
-    []
+    [],
   );
 
   const validateForm = useCallback((): boolean => {
@@ -120,7 +106,7 @@ const Contact: React.FC = () => {
         setIsSubmitting(false);
       }
     },
-    [formData, validateForm]
+    [formData, validateForm],
   );
 
   if (isLoading || isEnabled === false) {
@@ -152,7 +138,9 @@ const Contact: React.FC = () => {
             />
             <div className={styles.formGrid}>
               <div className={styles.formField}>
-                <label className={styles.fieldLabel} htmlFor="name">Identity</label>
+                <label className={styles.fieldLabel} htmlFor="name">
+                  Identity
+                </label>
                 <input
                   id="name"
                   type="text"
@@ -163,17 +151,25 @@ const Contact: React.FC = () => {
                   required
                   aria-required="true"
                   aria-invalid={!!validationErrors.name}
-                  aria-describedby={validationErrors.name ? "name-error" : undefined}
+                  aria-describedby={
+                    validationErrors.name ? "name-error" : undefined
+                  }
                   className={`${styles.formInput} ${validationErrors.name ? styles.inputError : ""}`}
                 />
                 {validationErrors.name && (
-                  <span className={styles.errorText} id="name-error" role="alert">
+                  <span
+                    className={styles.errorText}
+                    id="name-error"
+                    role="alert"
+                  >
                     {validationErrors.name[0]}
                   </span>
                 )}
               </div>
               <div className={styles.formField}>
-                <label className={styles.fieldLabel} htmlFor="email">Communication</label>
+                <label className={styles.fieldLabel} htmlFor="email">
+                  Communication
+                </label>
                 <input
                   id="email"
                   type="email"
@@ -184,17 +180,25 @@ const Contact: React.FC = () => {
                   required
                   aria-required="true"
                   aria-invalid={!!validationErrors.email}
-                  aria-describedby={validationErrors.email ? "email-error" : undefined}
+                  aria-describedby={
+                    validationErrors.email ? "email-error" : undefined
+                  }
                   className={`${styles.formInput} ${validationErrors.email ? styles.inputError : ""}`}
                 />
                 {validationErrors.email && (
-                  <span className={styles.errorText} id="email-error" role="alert">
+                  <span
+                    className={styles.errorText}
+                    id="email-error"
+                    role="alert"
+                  >
                     {validationErrors.email[0]}
                   </span>
                 )}
               </div>
               <div className={styles.formField}>
-                <label className={styles.fieldLabel} htmlFor="subject">Topic</label>
+                <label className={styles.fieldLabel} htmlFor="subject">
+                  Topic
+                </label>
                 <input
                   id="subject"
                   type="text"
@@ -205,17 +209,25 @@ const Contact: React.FC = () => {
                   required
                   aria-required="true"
                   aria-invalid={!!validationErrors.subject}
-                  aria-describedby={validationErrors.subject ? "subject-error" : undefined}
+                  aria-describedby={
+                    validationErrors.subject ? "subject-error" : undefined
+                  }
                   className={`${styles.formInput} ${validationErrors.subject ? styles.inputError : ""}`}
                 />
                 {validationErrors.subject && (
-                  <span className={styles.errorText} id="subject-error" role="alert">
+                  <span
+                    className={styles.errorText}
+                    id="subject-error"
+                    role="alert"
+                  >
                     {validationErrors.subject[0]}
                   </span>
                 )}
               </div>
               <div className={`${styles.formField} ${styles.fullWidth}`}>
-                <label className={styles.fieldLabel} htmlFor="message">Transmission</label>
+                <label className={styles.fieldLabel} htmlFor="message">
+                  Transmission
+                </label>
                 <textarea
                   id="message"
                   name="message"
@@ -226,11 +238,17 @@ const Contact: React.FC = () => {
                   required
                   aria-required="true"
                   aria-invalid={!!validationErrors.message}
-                  aria-describedby={validationErrors.message ? "message-error" : undefined}
+                  aria-describedby={
+                    validationErrors.message ? "message-error" : undefined
+                  }
                   className={`${styles.formInput} ${validationErrors.message ? styles.inputError : ""}`}
                 ></textarea>
                 {validationErrors.message && (
-                  <span className={styles.errorText} id="message-error" role="alert">
+                  <span
+                    className={styles.errorText}
+                    id="message-error"
+                    role="alert"
+                  >
                     {validationErrors.message[0]}
                   </span>
                 )}
@@ -247,13 +265,18 @@ const Contact: React.FC = () => {
             </div>
 
             {submitStatus === "success" && (
-              <p className={styles.successMessage} role="status" aria-live="polite">
+              <p
+                className={styles.successMessage}
+                role="status"
+                aria-live="polite"
+              >
                 Thank you! Your message has been sent successfully.
               </p>
             )}
             {submitStatus === "error" && (
               <p className={styles.errorMessage} role="alert">
-                Transmission failure. Please check your signal or try again later.
+                Transmission failure. Please check your signal or try again
+                later.
               </p>
             )}
             {submitStatus === "validation_error" && (

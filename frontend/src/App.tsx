@@ -7,12 +7,13 @@ const AstroGallery = lazy(() => import("./components/AstroGallery"));
 const Programming = lazy(() => import("./components/Programming"));
 import MainLayout from "./components/MainLayout";
 
+import LoadingScreen from "./components/common/LoadingScreen";
 import "./styles/components/App.module.css";
 
 const App: React.FC = () => {
   return (
     <Router>
-      <Suspense fallback={<div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#02040a', color: 'white' }}>Loading...</div>}>
+      <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route

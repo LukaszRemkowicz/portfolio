@@ -84,34 +84,6 @@ export interface MainLayoutProps {
   children: ReactNode;
 }
 
-// HomePage state types
-export interface HomePageState {
-  portraitUrl: string;
-  firstName: string;
-  lastName: string;
-  backgroundUrl: string | null;
-  loading: boolean;
-  error: string | null;
-}
-
-export interface GalleryItem {
-  id: number;
-  title: string;
-  imageUrl: string;
-}
-
-// AstroGallery types
-export interface AstroGalleryState {
-  images: AstroImage[];
-  loading: boolean;
-  error: string;
-  background: string;
-  selectedFilter: string | null;
-  modalImage: AstroImage | null;
-  modalDescription: string;
-  modalDescriptionLoading: boolean;
-}
-
 export interface FilterParams {
   filter?: string;
   limit?: number;

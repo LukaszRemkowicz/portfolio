@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Suspense, lazy } from "react";
+import React, { useEffect, Suspense, lazy } from "react";
 import Home from "./components/Home";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -11,6 +11,7 @@ const Contact = lazy(() => import("./components/Contact"));
 
 import styles from "./styles/components/App.module.css";
 import { useAppStore } from "./store/useStore";
+import LoadingScreen from "./components/common/LoadingScreen";
 
 const DEFAULT_PORTRAIT = "/portrait_default.png";
 
@@ -20,14 +21,14 @@ const HomePage: React.FC = () => {
     backgroundUrl,
     isInitialLoading: loading,
     error,
-    loadInitialData
+    loadInitialData,
   } = useAppStore();
 
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
 
-  if (loading) return <div className={styles.loading}>Loading...</div>;
+  if (loading) return <LoadingScreen />;
   if (error) return <div className={styles.error}>{error}</div>;
 
   return (
@@ -41,7 +42,11 @@ const HomePage: React.FC = () => {
           backgroundUrl={backgroundUrl}
         />
       </main>
-      <Suspense fallback={<div className={styles.loading}>Loading section...</div>}>
+      <Suspense
+        fallback={
+          <LoadingScreen fullScreen={false} message="Aligning sectors..." />
+        }
+      >
         <Gallery />
         <About profile={profile} />
         <Contact />

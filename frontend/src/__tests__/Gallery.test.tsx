@@ -33,6 +33,7 @@ describe("Gallery Component", () => {
       profile: null,
       backgroundUrl: null,
       images: [],
+      features: null,
       isInitialLoading: false,
       isImagesLoading: false,
       error: null,

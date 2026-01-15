@@ -63,6 +63,24 @@ docker-compose up --build    # Start all services
 docker-compose exec portfolio-fe npm test    # Run frontend tests
 ```
 
+
+## 🚀 Production Deployment
+
+### 1. Build and Run
+Use the `docker-compose.prod.yml` override to enable production mode (optimized assets, no hot-reloading, security hardening).
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+### 2. Deployment Checklist
+- [ ] **SSL Certificates**: Replace the local dev certificates in `./nginx/ssl/certs` with valid ones (e.g., Let's Encrypt).
+- [ ] **Environment Variables**: Update `backend/.env`:
+    - `DEBUG=False`
+    - `SECRET_KEY=<strong-random-string>`
+    - `DJANGO_ALLOWED_HOSTS=<your-domain.com>`
+- [ ] **Data Backup**: Ensure the `postgres_data` volume is backed up.
+
 ## Testing
 
 ### Backend (Dedicated Service)

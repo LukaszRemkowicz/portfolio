@@ -27,6 +27,7 @@ describe("HomePage Component", () => {
       profile: null,
       backgroundUrl: null,
       images: [],
+      features: null,
       isInitialLoading: false,
       isImagesLoading: false,
       error: null,
@@ -34,7 +35,7 @@ describe("HomePage Component", () => {
   });
 
   it("shows loading state initially", async () => {
-    mockFetchProfile.mockReturnValue(new Promise(() => { })); // Never resolves
+    mockFetchProfile.mockReturnValue(new Promise(() => {})); // Never resolves
 
     render(
       <BrowserRouter>
@@ -42,7 +43,9 @@ describe("HomePage Component", () => {
       </BrowserRouter>,
     );
 
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Synchronizing/i)).toBeInTheDocument();
+    });
   });
 
   it("renders profile data after loading", async () => {
@@ -64,9 +67,12 @@ describe("HomePage Component", () => {
       </BrowserRouter>,
     );
 
-    await waitFor(() => {
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByText(/Synchronizing/i)).not.toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
 
     expect(screen.getByText(/The Beauty of/i)).toBeInTheDocument();
     expect(screen.getByText("This is a test bio")).toBeInTheDocument();

@@ -71,14 +71,17 @@ module.exports = (env, argv) => {
       }),
       new webpack.DefinePlugin({
         "process.env.API_URL": JSON.stringify(apiUrl),
-        "process.env": JSON.stringify({
-          API_URL: apiUrl,
-        }),
       }),
-      new InjectManifest({
-        swSrc: "./src/service-worker.ts",
-        swDest: "service-worker.js",
-      }),
+      // Only include the service worker plugin in production to avoid HMR issues
+      ...(argv.mode !== "development"
+        ? [
+            new InjectManifest({
+              swSrc: "./src/service-worker.ts",
+              swDest: "service-worker.js",
+              exclude: [/\.map$/, /asset-manifest\.json$/, /LICENSE/],
+            }),
+          ]
+        : []),
     ],
     devServer: {
       static: {
@@ -87,14 +90,12 @@ module.exports = (env, argv) => {
       host: "0.0.0.0",
       port: 3000,
       open: true,
-      hot: true,
+      hot: false,
       historyApiFallback: true,
-      server: httpsConfig ? "https" : "http",
+      server: "http",
       allowedHosts: "all",
       client: {
-        webSocketURL: httpsConfig
-          ? "wss://portfolio.local/ws"
-          : "ws://portfolio.local/ws",
+        webSocketURL: "wss://portfolio.local/ws",
       },
     },
     resolve: {

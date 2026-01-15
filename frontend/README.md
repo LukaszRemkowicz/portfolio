@@ -128,7 +128,11 @@ npm run build
 
 - Creates optimized build in `dist/` directory
 - Minified CSS and JavaScript
+- Creates optimized build in `dist/` directory
+- Minified CSS and JavaScript
 - Asset optimization
+
+> **Deployment**: For full production deployment with Docker (including backend and Nginx), refer to the **Root README** "Production Deployment" section.
 
 ### Testing
 
@@ -336,43 +340,28 @@ src/
 > The current SEO and discovery files use `portfolio.local` for development. Before deploying to production, ensure the following manual updates are made:
 
 - **`public/index.html`**:
-    - Update `<meta property="og:url" content="..." />`
-    - Update `<meta property="og:image" content="..." />`
-    - Update `<meta property="twitter:url" content="..." />`
-    - Update `<meta property="twitter:image" content="..." />`
-    - Update `<script type="application/ld+json">` (Update `@id`, `url`, and `sameAs` links)
+  - Update `<meta property="og:url" content="..." />`
+  - Update `<meta property="og:image" content="..." />`
+  - Update `<meta property="twitter:url" content="..." />`
+  - Update `<meta property="twitter:image" content="..." />`
+  - Update `<script type="application/ld+json">` (Update `@id`, `url`, and `sameAs` links)
 - **`public/sitemap.xml`**:
-    - Replace all instances of `https://portfolio.local/` with your actual production domain.
+  - Replace all instances of `https://portfolio.local/` with your actual production domain.
 - **`public/robots.txt`**:
-    - Update the `Sitemap:` directive link.
+  - Update the `Sitemap:` directive link.
 - **Environment Variables**:
-    - Set `API_URL` to your production backend URL (e.g., `https://api.yourdomain.com`).
+  - Set `API_URL` to your production backend URL (e.g., `https://api.yourdomain.com`).
 
 ---
 
 ## 📋 TODO / Future Improvements
 
-### 🚀 Priority 1 - Critical
-
-- [x] **Add Contact Page** - Create functional contact form with backend integration
-- [x] **Accessibility Improvements** - Add ARIA labels, keyboard navigation, screen reader support
-
-### ⚡ Priority 2 - Important
+### ⚡ Priority 1 - Important
 
 - [ ] **Add Equipment Section** - Document astronomical gear and setups
-- [x] **Refactor Inline Styles** - Move inline styles from Programming.jsx to CSS modules
-- [x] **Performance Optimizations** - Add React.memo(), useMemo(), useCallback() for better performance
-- [x] **Better Error Handling** - Implement specific error types and better error messages
-- [x] **Replace Static Gallery** - Make homepage gallery API-driven instead of static
 
-### 🎯 Priority 3 - Nice to Have
+### 🎯 Priority 2 - Nice to Have
 
-- [x] **State Management** - Redux/Zustand for complex state management
-- [x] **PWA Features** - Service worker, offline support
-- [x] **Advanced Testing** - E2E tests with Playwright
-- [x] **Image Optimization** - Advanced lazy loading and compression
-- [x] **Thumbnail Hover Effects** - Add hover state to thumbnails with descriptive text (Post-MVP)
-- [x] **SEO Enhancement** - Meta tags, structured data, sitemap
 - [ ] **Complete Programming Page** - Implement actual programming projects showcase
 
 ---

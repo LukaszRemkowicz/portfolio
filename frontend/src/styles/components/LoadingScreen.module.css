@@ -1,0 +1,47 @@
+.loadingScreen {
+  position: fixed;
+  inset: 0;
+  background: #02040a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  color: white;
+}
+
+.spinner {
+  width: 4rem;
+  height: 4rem;
+  border: 2px solid rgba(56, 189, 248, 0.1);
+  border-top-color: var(--celestial-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 2rem;
+}
+
+.text {
+  font-family: var(--font-family-heading);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--celestial-blue);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}

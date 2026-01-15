@@ -9,13 +9,18 @@ jest.mock("../api/services", () => ({
   fetchAstroImages: jest.fn(),
   fetchBackground: jest.fn(),
   fetchAstroImage: jest.fn(),
+  fetchEnabledFeatures: jest.fn(),
+  fetchProfile: jest.fn(),
 }));
 
 import {
   fetchAstroImages,
   fetchBackground,
   fetchAstroImage,
+  fetchEnabledFeatures,
+  fetchProfile,
 } from "../api/services";
+import { useAppStore } from "../store/useStore";
 
 /**
  * Test suite for the AstroGallery component
@@ -54,6 +59,27 @@ describe("AstroGallery Component", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
+      programming: true,
+    });
+    (fetchProfile as jest.Mock).mockResolvedValue({ first_name: "Test" });
+    (fetchBackground as jest.Mock).mockResolvedValue("/test-bg.jpg");
+    (fetchAstroImages as jest.Mock).mockResolvedValue([]);
+    (fetchAstroImage as jest.Mock).mockResolvedValue({
+      pk: 1,
+      name: "Test",
+      description: "Test",
+    });
+
+    useAppStore.setState({
+      profile: null,
+      backgroundUrl: null,
+      images: [],
+      features: null,
+      isInitialLoading: false,
+      isImagesLoading: false,
+      error: null,
+    });
   });
 
   /**
@@ -80,7 +106,9 @@ describe("AstroGallery Component", () => {
 
     render(<AstroGallery />);
 
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Synchronizing/i)).toBeInTheDocument();
+    });
   });
 
   /**
@@ -165,7 +193,7 @@ describe("AstroGallery Component", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Failed to load images. Please try again later."),
+        screen.getByText(/An unexpected anomaly occurred/i),
       ).toBeInTheDocument();
     });
   });
@@ -250,7 +278,8 @@ describe("AstroGallery Component", () => {
       expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
     });
 
-    const firstImage = screen.getAllByRole("img")[0];
+    const images = await screen.findAllByRole("img");
+    const firstImage = images[0];
 
     await act(async () => {
       firstImage.click();

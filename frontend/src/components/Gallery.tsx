@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
-import { createPortal } from "react-dom";
 import styles from "../styles/components/Gallery.module.css";
-import { Camera, Calendar, MapPin } from "lucide-react";
-import { fetchAstroImage } from "../api/services";
+import { Camera, MapPin } from "lucide-react";
 import { AstroImage } from "../types";
 import { useAppStore } from "../store/useStore";
+import ImageModal from "./common/ImageModal";
 
 interface GalleryCardProps {
   item: AstroImage;
@@ -24,7 +23,9 @@ const GalleryCard = memo(({ item, onClick, isNew }: GalleryCardProps) => {
     >
       {isNew(item.created_at) && <div className={styles.newBadge}>NEW</div>}
       <div className={styles.imageWrapper} aria-hidden="true">
-        <div className={`${styles.placeholder} ${isLoaded ? styles.hide : ""}`} />
+        <div
+          className={`${styles.placeholder} ${isLoaded ? styles.hide : ""}`}
+        />
         <img
           src={item.thumbnail_url || item.url}
           alt=""
@@ -58,47 +59,12 @@ GalleryCard.displayName = "GalleryCard";
 
 const Gallery: React.FC = () => {
   const [filter, setFilter] = useState("all");
-  const {
-    images,
-    isImagesLoading: loading,
-    error,
-    loadImages
-  } = useAppStore();
+  const { images, isImagesLoading: loading, error, loadImages } = useAppStore();
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
-  const [modalDescription, setModalDescription] = useState<string>("");
-  const [modalDescriptionLoading, setModalDescriptionLoading] =
-    useState<boolean>(false);
 
   useEffect(() => {
     loadImages({ limit: 50 });
   }, [loadImages]);
-
-  useEffect(() => {
-    if (!modalImage) return;
-    setModalDescription("");
-    setModalDescriptionLoading(true);
-    fetchAstroImage(modalImage.pk)
-      .then((data: AstroImage) => {
-        setModalDescription(data.description || "No description available.");
-      })
-      .catch(() => {
-        setModalDescription("No description available.");
-      })
-      .finally(() => {
-        setModalDescriptionLoading(false);
-      });
-  }, [modalImage]);
-
-  useEffect(() => {
-    if (!modalImage) return;
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        closeModal();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [modalImage]);
 
   const filteredImages = useMemo(() => {
     if (filter === "all") return images.slice(0, 9);
@@ -130,23 +96,10 @@ const Gallery: React.FC = () => {
     return diffDays < 7;
   }, []);
 
-  const closeModal = useCallback((): void => setModalImage(null), []);
-
   const handleImageClick = useCallback((image: AstroImage): void => {
     console.log("Card clicked!", image.name);
     setModalImage(image);
   }, []);
-
-  const handleModalOverlayClick = useCallback((): void => {
-    closeModal();
-  }, [closeModal]);
-
-  const handleModalContentClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>): void => {
-      e.stopPropagation();
-    },
-    []
-  );
 
   // Only hide the entire section if we have finished loading and there are NO images at all in the backend
   if (!loading && images.length === 0) return null;
@@ -208,52 +161,7 @@ const Gallery: React.FC = () => {
         )}
       </div>
 
-      {modalImage &&
-        createPortal(
-          <div
-            className={styles.modalOverlay}
-            onClick={handleModalOverlayClick}
-          >
-            <div
-              className={styles.modalContent}
-              onClick={handleModalContentClick}
-            >
-              <button className={styles.modalClose} onClick={closeModal}>
-                &times;
-              </button>
-              <img
-                src={modalImage.url}
-                alt="Astro Large"
-                className={styles.modalImage}
-              />
-              <div className={styles.modalMetadata}>
-                <div className={styles.metaItem}>
-                  <Calendar size={16} className={styles.metaIcon} />
-                  <span>{modalImage.capture_date}</span>
-                </div>
-                <div className={styles.metaItem}>
-                  <MapPin size={16} className={styles.metaIcon} />
-                  <span>{modalImage.location}</span>
-                </div>
-                {modalImage.tags && modalImage.tags.length > 0 && (
-                  <div className={styles.tagsContainer}>
-                    {modalImage.tags.map((tag, index) => (
-                      <span key={index} className={styles.tagBadge}>
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className={styles.modalDescription}>
-                {modalDescriptionLoading
-                  ? "Loading description..."
-                  : modalDescription}
-              </div>
-            </div>
-          </div>,
-          document.body as HTMLElement,
-        )}
+      <ImageModal image={modalImage} onClose={() => setModalImage(null)} />
     </section>
   );
 };
