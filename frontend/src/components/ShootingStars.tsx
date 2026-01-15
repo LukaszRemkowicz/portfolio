@@ -81,7 +81,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                         {
                             left: star.left,
                             top: star.top,
-                            animation: `${styles.fall} ${star.duration}s linear forwards`,
+                            animation: `${star.isBolid ? styles.bolidFall : styles.fall} ${star.duration}s linear forwards`,
                             "--angle": `${star.angle}deg`,
                             "--distance": `${star.distance}px`,
                         } as React.CSSProperties
@@ -91,8 +91,8 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                         <div
                             className={styles.bolidFlash}
                             style={{
-                                animation: `${styles.explode} ${star.duration * 0.4}s ease-out forwards`,
-                                animationDelay: `${star.duration * 0.6}s`,
+                                animation: `${styles.explode} ${star.duration * 0.3}s ease-out forwards`,
+                                animationDelay: `${star.duration * 0.9}s`,
                             }}
                         />
                     )}
