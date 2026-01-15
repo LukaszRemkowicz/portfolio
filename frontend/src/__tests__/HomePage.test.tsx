@@ -9,6 +9,7 @@ import { fetchProfile } from "../api/services";
 // Mock the API services
 jest.mock("../api/services", () => ({
   fetchProfile: jest.fn(),
+  fetchBackground: jest.fn().mockResolvedValue("/test-bg.jpg"),
   fetchEnabledFeatures: jest.fn().mockResolvedValue({}),
 }));
 

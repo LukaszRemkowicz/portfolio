@@ -26,8 +26,8 @@ describe("Navbar Component", () => {
     renderWithRouter(<Navbar />);
 
     expect(screen.getByText("Celestial")).toBeInTheDocument();
-    expect(screen.getByText("Gallery")).toBeInTheDocument();
     expect(screen.getByText("Astrophotography")).toBeInTheDocument();
+    expect(screen.getByText("About")).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText("Programming")).toBeInTheDocument();
