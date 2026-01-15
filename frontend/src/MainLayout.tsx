@@ -12,8 +12,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <div
-      className={styles["app-container"]}
-      style={{ backgroundColor: isProgramming ? "#000" : "#181c2b" }}
+      className={`${styles["app-container"]} ${
+        isProgramming ? styles["programming-bg"] : styles["astro-bg"]
+      }`}
     >
       <Navbar
         transparent={isAstroGallery || isProgramming}

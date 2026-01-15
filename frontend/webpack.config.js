@@ -1,6 +1,7 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const fs = require("fs");
+const webpack = require("webpack");
 
 module.exports = (env, argv) => {
   // Check if SSL certificates exist for devServer (both dev and prod can use HTTPS)
@@ -14,6 +15,9 @@ module.exports = (env, argv) => {
     console.warn("SSL certificates not found, running without HTTPS");
     httpsConfig = false;
   }
+
+  const apiUrl =
+    env.API_URL || process.env.API_URL || "https://admin.portfolio.local";
 
   return {
     entry: "./src/index.tsx",
@@ -48,6 +52,12 @@ module.exports = (env, argv) => {
     plugins: [
       new HtmlWebpackPlugin({
         template: "./public/index.html",
+      }),
+      new webpack.DefinePlugin({
+        "process.env.API_URL": JSON.stringify(apiUrl),
+        "process.env": JSON.stringify({
+          API_URL: apiUrl,
+        }),
       }),
     ],
     devServer: {

@@ -5,7 +5,11 @@
 @baseUrl = http://localhost:8000/api/v1
 @contentType = application/json
 
-### Test 1: Submit Contact Form (Legacy endpoint)
+### ============================================================
+### CONTACT FORM API TESTS
+### ============================================================
+
+### Test 1: Submit Contact Form
 POST {{baseUrl}}/contact/
 Content-Type: {{contentType}}
 
@@ -16,48 +20,6 @@ Content-Type: {{contentType}}
   "message": "This is a test message to verify the contact form is working properly."
 }
 
-### Test 2: Create Contact Message (New ViewSet endpoint)
-POST {{baseUrl}}/contact-messages/
-Content-Type: {{contentType}}
-
-{
-  "name": "Jane Smith",
-  "email": "jane.smith@example.com",
-  "subject": "Another Test Message",
-  "message": "This is another test message using the new ViewSet endpoint."
-}
-
-### Test 3: List Contact Messages (Admin only - requires authentication)
-GET {{baseUrl}}/contact-messages/
-Content-Type: {{contentType}}
-
-### Test 4: Get Contact Message Details (Admin only - requires authentication)
-GET {{baseUrl}}/contact-messages/1/
-Content-Type: {{contentType}}
-
-### Test 5: Mark Message as Read (Admin only - requires authentication)
-POST {{baseUrl}}/contact-messages/1/mark_as_read/
-Content-Type: {{contentType}}
-
-### Test 6: Get Unread Count (Admin only - requires authentication)
-GET {{baseUrl}}/contact-messages/unread_count/
-Content-Type: {{contentType}}
-
-### Test 7: Update Contact Message (Admin only - requires authentication)
-PUT {{baseUrl}}/contact-messages/1/
-Content-Type: {{contentType}}
-
-{
-  "name": "John Doe Updated",
-  "email": "john.updated@example.com",
-  "subject": "Updated Subject",
-  "message": "This message has been updated by an admin.",
-  "is_read": true
-}
-
-### Test 8: Delete Contact Message (Admin only - requires authentication)
-DELETE {{baseUrl}}/contact-messages/1/
-Content-Type: {{contentType}}
 
 ### Test 9: Invalid Contact Form (Missing required fields)
 POST {{baseUrl}}/contact/
@@ -113,3 +75,114 @@ Content-Type: {{contentType}}
   "subject": "Technical Question",
   "message": "I'm a beginner in astrophotography and I'm wondering what camera settings you recommend for capturing the Milky Way. Any tips would be greatly appreciated!"
 }
+
+### ============================================================
+### MIDDLEWARE TESTS - Contact Form Kill Switch
+### ============================================================
+### These tests verify the ContactFormKillSwitchMiddleware behavior
+###
+### To test disabled state:
+### 1. Go to Django admin: https://admin.portfolio.local/admin/inbox/contactformsettings/
+### 2. Set "Enabled" to False and save
+### 3. Run Test 14 - should return 400 Bad Request
+### 4. Set "Enabled" to True and save
+### 5. Run Test 14 again - should return 201 Created
+###
+
+### Test 14: Middleware - POST to exact router path with trailing slash (should work if enabled)
+### Expected: 201 Created (if form enabled) OR 400 Bad Request (if form disabled)
+### This tests that middleware checks exact DRF router path: /api/v1/contact/
+POST {{baseUrl}}/contact/
+Content-Type: {{contentType}}
+
+{
+  "name": "Middleware Test User",
+  "email": "middleware.test@example.com",
+  "subject": "Middleware Test - Exact Path",
+  "message": "Testing middleware with exact router path /api/v1/contact/"
+}
+
+### Test 15: Middleware - POST to path without trailing slash (should be ignored by middleware)
+### Expected: 404 Not Found or redirect (not blocked by middleware - not the router path)
+### This tests that middleware only checks exact router path, ignores non-router paths
+POST {{baseUrl}}/contact
+Content-Type: {{contentType}}
+
+{
+  "name": "Middleware Test User",
+  "email": "middleware.test@example.com",
+  "subject": "Middleware Test - No Trailing Slash",
+  "message": "Testing middleware with path without trailing slash /api/v1/contact"
+}
+
+### Test 16: Middleware - GET to contact endpoint (should be ignored by middleware)
+### Expected: 405 Method Not Allowed (DRF) or 200 OK if list endpoint exists
+### This tests that middleware only checks POST method
+GET {{baseUrl}}/contact/
+Content-Type: {{contentType}}
+
+### Test 17: Middleware - PUT to contact endpoint (should be ignored by middleware)
+### Expected: 405 Method Not Allowed (DRF)
+### This tests that middleware only checks POST method
+PUT {{baseUrl}}/contact/
+Content-Type: {{contentType}}
+
+{
+  "name": "Middleware Test User",
+  "email": "middleware.test@example.com",
+  "subject": "Middleware Test - PUT Method",
+  "message": "Testing middleware with PUT method"
+}
+
+### Test 18: Middleware - DELETE to contact endpoint (should be ignored by middleware)
+### Expected: 405 Method Not Allowed (DRF)
+### This tests that middleware only checks POST method
+DELETE {{baseUrl}}/contact/
+Content-Type: {{contentType}}
+
+### Test 19: Middleware - POST to detail endpoint (should be ignored by middleware)
+### Expected: 405 Method Not Allowed or 404 Not Found (DRF)
+### This tests that middleware only checks base endpoint, not detail endpoints
+POST {{baseUrl}}/contact/123/
+Content-Type: {{contentType}}
+
+{
+  "name": "Middleware Test User",
+  "email": "middleware.test@example.com",
+  "subject": "Middleware Test - Detail Endpoint",
+  "message": "Testing middleware with detail endpoint /api/v1/contact/123/"
+}
+
+### Test 20: Middleware - POST to different path (should be ignored by middleware)
+### Expected: 404 Not Found (Django) - not blocked by middleware
+### This tests that middleware only checks contact endpoint
+POST {{baseUrl}}/profile/
+Content-Type: {{contentType}}
+
+{
+  "name": "Middleware Test User",
+  "email": "middleware.test@example.com",
+  "subject": "Middleware Test - Different Path",
+  "message": "Testing middleware with different path /api/v1/profile/"
+}
+
+### ============================================================
+### FEATURE FLAG TESTS
+### ============================================================
+
+### Test 21: Check Enabled Features
+GET {{baseUrl}}/whats-enabled/
+Content-Type: {{contentType}}
+
+### ============================================================
+### ASTROPHOTOGRAPHY API TESTS
+### ============================================================
+
+### Test 22: Fetch All Astro Images
+GET {{baseUrl}}/image/
+Content-Type: {{contentType}}
+
+### Test 23: Filter Images by Tag
+# Prerequisite: Ensure an image has the tag 'nebula' (or change to an existing tag)
+GET {{baseUrl}}/image/?tag=nebula
+Content-Type: {{contentType}}

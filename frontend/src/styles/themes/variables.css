@@ -12,43 +12,60 @@
   --secondary-dark: #495057;
   --secondary-light: #adb5bd;
 
-  /* Background Colors */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f9fa;
-  --bg-dark: #212529;
-  --bg-overlay: rgba(0, 0, 0, 0.5);
+  /* New Celestial Palette */
+  --celestial-bg: #02040a;
+  --celestial-bg-accent: #0c1120;
+  --celestial-blue: #38bdf8;
+  --celestial-white: #f8fafc;
+  --celestial-glass: rgba(15, 23, 42, 0.6);
+  --nebula-glow: rgba(56, 189, 248, 0.07);
 
-  /* Text Colors */
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
-  --text-light: #ffffff;
-  --text-muted: #adb5bd;
+  /* Semantic Colors */
+  --portfolio-bg-dark: var(--celestial-bg);
+  --text-light: var(--celestial-white);
+  --text-muted: #94a3b8;
+  --accent-primary: var(--celestial-blue);
 
   /* Accent Colors */
-  --accent-gold: #ffc107;
+  --accent-gold: #e2c275;
+  /* Polished metallic gold */
   --accent-blue: #17a2b8;
   --accent-green: #28a745;
   --accent-red: #dc3545;
+
+  /* Theme Specific (Portfolio) */
+  --portfolio-bg-dark: #181c2b;
+  --portfolio-bg-light: #232946;
+  --portfolio-text-muted: #c9c9c9;
 
   /* Border Colors */
   --border-light: #dee2e6;
   --border-dark: #343a40;
 
   /* Typography */
-  --font-family-primary: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  --font-family-heading: "Georgia", "Times New Roman", serif;
+  --font-family-primary: "Inter", sans-serif;
+  --font-family-heading: "Space Grotesk", sans-serif;
   --font-family-mono: "Courier New", monospace;
 
   /* Font Sizes */
-  --font-size-xs: 0.75rem; /* 12px */
-  --font-size-sm: 0.875rem; /* 14px */
-  --font-size-base: 1rem; /* 16px */
-  --font-size-lg: 1.125rem; /* 18px */
-  --font-size-xl: 1.25rem; /* 20px */
-  --font-size-2xl: 1.5rem; /* 24px */
-  --font-size-3xl: 1.875rem; /* 30px */
-  --font-size-4xl: 2.25rem; /* 36px */
-  --font-size-5xl: 3rem; /* 48px */
+  --font-size-xs: 0.75rem;
+  /* 12px */
+  --font-size-sm: 0.875rem;
+  /* 14px */
+  --font-size-base: 1rem;
+  /* 16px */
+  --font-size-lg: 1.125rem;
+  /* 18px */
+  --font-size-xl: 1.25rem;
+  /* 20px */
+  --font-size-2xl: 1.5rem;
+  /* 24px */
+  --font-size-3xl: 1.875rem;
+  /* 30px */
+  --font-size-4xl: 2.25rem;
+  /* 36px */
+  --font-size-5xl: 3rem;
+  /* 48px */
 
   /* Font Weights */
   --font-weight-light: 300;
@@ -63,26 +80,44 @@
   --line-height-relaxed: 1.75;
 
   /* Spacing Scale */
-  --space-1: 0.25rem; /* 4px */
-  --space-2: 0.5rem; /* 8px */
-  --space-3: 0.75rem; /* 12px */
-  --space-4: 1rem; /* 16px */
-  --space-5: 1.25rem; /* 20px */
-  --space-6: 1.5rem; /* 24px */
-  --space-8: 2rem; /* 32px */
-  --space-10: 2.5rem; /* 40px */
-  --space-12: 3rem; /* 48px */
-  --space-16: 4rem; /* 64px */
-  --space-20: 5rem; /* 80px */
-  --space-24: 6rem; /* 96px */
-  --space-32: 8rem; /* 128px */
+  --space-1: 0.25rem;
+  /* 4px */
+  --space-2: 0.5rem;
+  /* 8px */
+  --space-3: 0.75rem;
+  /* 12px */
+  --space-4: 1rem;
+  /* 16px */
+  --space-5: 1.25rem;
+  /* 20px */
+  --space-6: 1.5rem;
+  /* 24px */
+  --space-8: 2rem;
+  /* 32px */
+  --space-10: 2.5rem;
+  /* 40px */
+  --space-12: 3rem;
+  /* 48px */
+  --space-16: 4rem;
+  /* 64px */
+  --space-20: 5rem;
+  /* 80px */
+  --space-24: 6rem;
+  /* 96px */
+  --space-32: 8rem;
+  /* 128px */
 
   /* Border Radius */
-  --radius-sm: 0.125rem; /* 2px */
-  --radius-md: 0.375rem; /* 6px */
-  --radius-lg: 0.5rem; /* 8px */
-  --radius-xl: 0.75rem; /* 12px */
-  --radius-2xl: 1rem; /* 16px */
+  --radius-sm: 0.125rem;
+  /* 2px */
+  --radius-md: 0.375rem;
+  /* 6px */
+  --radius-lg: 0.5rem;
+  /* 8px */
+  --radius-xl: 0.75rem;
+  /* 12px */
+  --radius-2xl: 1rem;
+  /* 16px */
   --radius-full: 9999px;
 
   /* Shadows */
@@ -95,9 +130,15 @@
     0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 
   /* Transitions */
-  --transition-fast: 150ms ease-in-out;
-  --transition-normal: 250ms ease-in-out;
-  --transition-slow: 350ms ease-in-out;
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Effects */
+  --glass-bg: var(--celestial-glass);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-blur: blur(12px);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
 
   /* Z-Index Scale */
   --z-dropdown: 1000;

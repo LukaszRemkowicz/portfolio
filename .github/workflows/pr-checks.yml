@@ -123,9 +123,16 @@ jobs:
 
     - name: Run backend tests with coverage
       working-directory: ./backend
-      run: poetry run pytest --cov=. --cov-report=xml || echo "No tests found, skipping coverage"
+      run: poetry run pytest --cov=. --cov-report=xml
+
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        DB_HOST: localhost
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_PORT: 5432
+        DEFAULT_FROM_EMAIL: test@example.com
+        CONTACT_EMAIL: test@example.com
 
     - name: Generate backend coverage report
       working-directory: ./backend

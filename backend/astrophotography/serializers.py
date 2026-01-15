@@ -5,10 +5,23 @@ from .models import AstroImage, BackgroundMainPage
 
 class AstroImageSerializerList(serializers.ModelSerializer):
     url = serializers.ImageField(source="path")
+    thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
+    tags = serializers.StringRelatedField(many=True)
 
     class Meta:
         model = AstroImage
-        fields = ["pk", "url"]
+        fields = [
+            "pk",
+            "name",
+            "description",
+            "url",
+            "thumbnail_url",
+            "tags",
+            "capture_date",
+            "location",
+            "celestial_object",
+            "created_at",
+        ]
 
 
 class AstroImageSerializer(serializers.ModelSerializer):
@@ -25,7 +38,7 @@ class AstroImageSerializer(serializers.ModelSerializer):
 
 
 class BackgroundMainPageSerializer(serializers.ModelSerializer):
-    url = serializers.ImageField(source="image")
+    url = serializers.ImageField(source="path")
 
     class Meta:
         model = BackgroundMainPage

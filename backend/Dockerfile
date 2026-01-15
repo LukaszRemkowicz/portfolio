@@ -1,38 +1,11 @@
 # portfolio-be/Dockerfile
-FROM python:3.13-slim
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-WORKDIR /app
+FROM python:3.13-slim AS base
 
-# Install system dependencies for building Python packages and PostgreSQL support
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_HTTP_TIMEOUT=120
 
-# Install Poetry
-RUN pip install --upgrade pip && pip install poetry
-
-# Copy dependency files
-COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-root --no-interaction
-
-# Create media directory with proper permissions
-RUN mkdir -p /app/media/avatars && \
-    chown -R www-data:www-data /app/media && \
-    chmod -R 755 /app/media
-
-# Copy project files
-COPY . .
-
-# Ensure media directory permissions are maintained after copy
-RUN chown -R www-data:www-data /app/media && \
-    chmod -R 755 /app/media
-
-# Test target - inherit from main stage with all dependencies
-FROM python:3.13-slim AS test
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
 WORKDIR /app
 
 # Install system dependencies
@@ -44,21 +17,53 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Poetry
 RUN pip install --upgrade pip && pip install poetry
 
-# Copy dependency files and install
+# Copy dependency files
 COPY pyproject.toml poetry.lock ./
+
+# --- Development Stage ---
+FROM base AS development
+
+# Install all dependencies (including dev)
 RUN poetry install --no-root --no-interaction
 
 # Copy project files
 COPY . .
 
-# Create media directory
+# Create media directory and set permissions
 RUN mkdir -p /app/media/avatars && \
-    chown -R www-data:www-data /app/media && \
     chmod -R 755 /app/media
 
-CMD ["sh", "-c", "poetry run pytest --cov=. --cov-report=xml || echo 'No tests found'"]
+# Create and switch to non-root user
+RUN addgroup --system appuser && adduser --system --group appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8000
 
-# Run migrations and start server
-CMD poetry run python manage.py migrate && poetry run python manage.py runserver 0.0.0.0:8000
+# Dev command (Runserver)
+CMD python manage.py migrate && python manage.py runserver 0.0.0.0:8000
+
+# --- Production Stage ---
+FROM base AS production
+
+# Install only production dependencies
+RUN poetry install --no-root --no-interaction --only main
+
+# Copy project files
+COPY . .
+
+# Create media directory and set permissions
+RUN mkdir -p /app/media/avatars && \
+    chmod -R 755 /app/media
+
+# Create and switch to non-root user
+RUN addgroup --system appuser && adduser --system --group appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+EXPOSE 8000
+
+# Prod command (Gunicorn)
+CMD python manage.py migrate && gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 4

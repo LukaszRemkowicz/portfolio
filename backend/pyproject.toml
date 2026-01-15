@@ -1,19 +1,31 @@
-[tool.poetry]
+[project]
 name = "portfolio-backend"
 version = "0.1.0"
 description = "Portfolio backend with Django REST Framework"
-authors = ["l.remkowicz@gmail.com"]
+authors = [
+    { name = "l.remkowicz@gmail.com", email = "l.remkowicz@gmail.com" }
+]
 readme = "README.md"
-packages = [{include = "astrophotography"}, {include = "programming"}, {include = "users"}, {include = "inbox"}, {include = "core"}]
+requires-python = ">=3.13,<4.0"
+dependencies = [
+    "django>=6.0.1",
+    "djangorestframework>=3.14.0",
+    "pillow>=10.0.0",
+    "django-environ>=0.11.2",
+    "django-cors-headers>=4.0.0",
+    "psycopg2-binary>=2.9.0",
+    "django-axes>=8.1.0",
+    "gunicorn>=23.0.0",
+    "django-taggit>=6.1.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.13"
-django = "^4.2.0"
-djangorestframework = "^3.14.0"
-pillow = "^10.0.0"
-django-environ = "^0.11.2"
-django-cors-headers = "^4.0.0"
-psycopg2-binary = "^2.9.0"
+[tool.poetry.scripts]
+test = "core.scripts:test"
+test-cov = "core.scripts:test_cov"
+security = "core.scripts:security"
+
+[tool.poetry]
+packages = [{include = "astrophotography"}, {include = "programming"}, {include = "users"}, {include = "inbox"}, {include = "core"}]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
@@ -24,9 +36,13 @@ black = ">=24.0.0"
 isort = "^5.12.0"
 flake8 = "^6.0.0"
 mypy = "^1.5.0"
-django-stubs = "^4.2.0"
+django-stubs = "^5.2.0"
 djangorestframework-stubs = "^3.14.0"
 pre-commit = "^4.3.0"
+safety = "^3.7.0"
+flake8-pyproject = "^1.2.4"
+factory-boy = "^3.3.0"
+Faker = "^37.0.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -85,9 +101,45 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "core.test_settings"
+pythonpath = ["."]
 addopts = "--tb=short --strict-markers --reuse-db"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "django_db: marks tests that require database access",
 ]
+
+[tool.coverage.run]
+omit = [
+    "**/manage.py",
+    "**/conftest.py",
+    "**/core/scripts.py",
+    "**/__init__.py",
+    "**/wsgi.py",
+    "**/asgi.py",
+    "**/urls.py",
+    "**/migrations/*",
+    "**/tests/*",
+]
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "migrations",
+    "node_modules",
+    ".pytest_cache",
+    ".mypy_cache",
+    "build",
+    "dist"
+]
+per-file-ignores = [
+    "__init__.py:F401",
+    "migrations/*:E501",
+    "core/test_settings.py:E402"
+]
+max-complexity = 10

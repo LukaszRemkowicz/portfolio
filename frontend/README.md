@@ -351,6 +351,7 @@ src/
 - [ ] **PWA Features** - Service worker, offline support
 - [ ] **Advanced Testing** - E2E tests with Playwright
 - [ ] **Image Optimization** - Advanced lazy loading and compression
+- [ ] **Thumbnail Hover Effects** - Add hover state to thumbnails with descriptive text (Post-MVP)
 - [ ] **SEO Enhancement** - Meta tags, structured data, sitemap
 
 ---

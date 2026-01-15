@@ -1,9 +1,10 @@
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+# backend/astrophotography/views.py
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
-from rest_framework.viewsets import ViewSet
+from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
-from core.throttling import APIRateThrottle
+from core.throttling import GalleryRateThrottle
 
 from .models import AstroImage, BackgroundMainPage
 from .serializers import (
@@ -12,33 +13,40 @@ from .serializers import (
     BackgroundMainPageSerializer,
 )
 
-# Create your views here.
 
+class AstroImageViewSet(ReadOnlyModelViewSet):
+    """
+    ViewSet for listing and retrieving astrophotography images.
+    Supports filtering by celestial_object via 'filter' query parameter.
+    """
 
-class AstroImageListView(ListAPIView):
-    """View to list all astrophotography images, with optional filtering."""
-
-    serializer_class = AstroImageSerializerList
-    throttle_classes = [APIRateThrottle, UserRateThrottle]
+    throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
     def get_queryset(self):
-        queryset = AstroImage.objects.all().order_by("-capture_date")
-        filter_value = self.request.GET.get("filter")
+        queryset = AstroImage.objects.all().order_by("-created_at")
+
+        # Filter by Celestial Object
+        filter_value = self.request.query_params.get("filter")
         if filter_value:
             queryset = queryset.filter(celestial_object=filter_value)
+
+        # Filter by Tags
+        tag_slug = self.request.query_params.get("tag")
+        if tag_slug:
+            queryset = queryset.filter(tags__name__in=[tag_slug])
+
         return queryset
 
-
-class AstroImageDetailView(RetrieveAPIView):
-    queryset = AstroImage.objects.all()
-    serializer_class = AstroImageSerializer
-    throttle_classes = [APIRateThrottle, UserRateThrottle]
+    def get_serializer_class(self):
+        if self.action == "list":
+            return AstroImageSerializerList
+        return AstroImageSerializer
 
 
 class BackgroundMainPageView(ViewSet):
-    throttle_classes = [APIRateThrottle, UserRateThrottle]
+    throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
-    def list(self, request):
+    def list(self, request: Request) -> Response:
         instance = BackgroundMainPage.objects.order_by("-created_at").first()
         if instance:
             serializer = BackgroundMainPageSerializer(instance, context={"request": request})

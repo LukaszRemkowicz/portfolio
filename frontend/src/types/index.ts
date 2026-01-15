@@ -4,10 +4,12 @@ import { ReactNode } from "react";
 export interface UserProfile {
   first_name: string;
   last_name: string;
+  short_description: string;
   avatar?: string | null;
   bio?: string;
   about_me_image?: string | null;
   about_me_image2?: string | null;
+  prelections?: boolean;
 }
 
 export interface BackgroundImage {
@@ -17,8 +19,11 @@ export interface BackgroundImage {
 export interface AstroImage {
   pk: number;
   url: string;
+  thumbnail_url?: string;
+  tags?: string[];
   name: string;
   description: string;
+  created_at?: string;
   capture_date?: string;
   location?: string;
   equipment?: string;
@@ -33,6 +38,7 @@ export interface ContactFormData {
   email: string;
   subject: string;
   message: string;
+  website?: string; // Honeypot field - invisible to humans, bots will fill it
 }
 
 export interface ContactResponse {
@@ -47,13 +53,22 @@ export interface ValidationErrors {
   message?: string[];
 }
 
-export type SubmitStatus = "success" | "validation_error" | "error" | null;
+export type SubmitStatus =
+  | "success"
+  | "validation_error"
+  | "rate_limited"
+  | "error"
+  | null;
 
 // Component Props Types
 export interface HomeProps {
   portraitUrl: string;
-  firstName: string;
-  lastName: string;
+  shortDescription: string;
+  backgroundUrl?: string | null;
+}
+
+export interface AboutProps {
+  profile: UserProfile | null;
 }
 
 export interface NavbarProps {
@@ -99,6 +114,7 @@ export interface AstroGalleryState {
 
 export interface FilterParams {
   filter?: string;
+  limit?: number;
 }
 
 export type FilterType =
@@ -126,10 +142,16 @@ export interface ApiError {
   message: string;
 }
 
+export interface EnabledFeatures {
+  programming?: boolean;
+  contactForm?: boolean;
+}
+
 export interface ApiRoutes {
   profile: string;
   background: string;
   astroImages: string;
   astroImage: string;
   contact: string;
+  whatsEnabled: string;
 }

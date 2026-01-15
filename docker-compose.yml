@@ -5,6 +5,22 @@ networks:
       config:
         - subnet: 172.10.0.0/16
 
+x-backend-common: &backend-common
+  build:
+    context: ./backend
+    target: development
+  networks:
+    - portfolio_network
+  volumes:
+    - ./backend:/app
+  env_file:
+    - ./backend/.env
+  environment:
+    DOCKER_ENV: true
+    PYTHONPATH: "."
+  depends_on:
+    - db
+
 services:
   portfolio-fe:
     build:
@@ -22,21 +38,22 @@ services:
       - ./frontend/package.json:/app/package.json
       - ./frontend/webpack.config.js:/app/webpack.config.js
       - ./frontend/.babelrc:/app/.babelrc
+      - ./frontend/node_modules/@types:/app/node_modules/@types
       - ./nginx/ssl/certs:/etc/ssl/certs:ro
 
   portfolio-be:
-    build: ./backend
+    <<: *backend-common
     networks:
       portfolio_network:
         ipv4_address: 172.10.0.3
-    volumes:
-      - ./backend:/app
     ports:
       - "8000:8000"
-    environment:
-      DOCKER_ENV: true
-    depends_on:
-      - db
+
+  portfolio-test:
+    <<: *backend-common
+    profiles:
+      - test
+    command: pytest
 
   db:
     image: postgres:15
@@ -44,10 +61,12 @@ services:
     networks:
       portfolio_network:
         ipv4_address: 172.10.0.4
+    env_file:
+      - ./backend/.env
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-portfolio}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:

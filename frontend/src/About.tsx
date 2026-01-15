@@ -1,46 +1,48 @@
-import React, { useEffect, useState } from "react";
-import { fetchProfile } from "./api/services";
+import React from "react";
 import styles from "./styles/components/About.module.css";
-import { UserProfile } from "./types";
+import { Camera } from "lucide-react";
+import { AboutProps } from "./types";
 
-const About: React.FC = () => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-
-  useEffect(() => {
-    const loadProfile = async (): Promise<void> => {
-      try {
-        const profileData: UserProfile = await fetchProfile();
-        setProfile(profileData);
-      } catch (e: unknown) {
-        console.error("Failed to load profile for About section:", e);
-      }
-    };
-    loadProfile();
-  }, []);
-
-  if (!profile) {
-    return null; // Or a loading spinner
-  }
+const About: React.FC<AboutProps> = ({ profile }) => {
+  if (!profile) return null;
 
   return (
-    <section className={styles.aboutContainer}>
-      <div className={styles.aboutContent}>
-        <div className={styles.imageWrapper}>
-          {profile.about_me_image && (
-            <img
-              src={profile.about_me_image}
-              alt="About me"
-              className={styles.aboutImage}
-            />
-          )}
+    <section id="about" className={styles.section}>
+      <div className={styles.container}>
+        <div className={styles.info}>
+          <h2 className={styles.title}>
+            Beyond the <br />
+            <span className={styles.titleAccent}>Atmosphere.</span>
+          </h2>
+          <div className={styles.line}></div>
+          <p className={styles.description}>
+            {profile.bio ||
+              "Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye."}
+          </p>
+          <div className={styles.stats}>
+            <div className={styles.statItem}>
+              <p className={styles.statValue}>Bortle 1</p>
+              <p className={styles.statLabel}>Site Quality</p>
+            </div>
+            <div className={styles.statItem}>
+              <p className={styles.statValue}>130mm</p>
+              <p className={styles.statLabel}>Primary Optics</p>
+            </div>
+          </div>
         </div>
-        <div className={styles.textWrapper}>
-          <h2 className={styles.title}>About me</h2>
-          {profile.bio?.split("\n").map((paragraph: string, index: number) => (
-            <p key={index} className={index === 0 ? styles.subtitle : ""}>
-              {paragraph}
-            </p>
-          ))}
+        <div className={styles.visual}>
+          <div className={styles.glassCard}>
+            <div className={styles.cardGradient}></div>
+            {profile.about_me_image ? (
+              <img
+                src={profile.about_me_image}
+                alt="About me"
+                className={styles.aboutImage}
+              />
+            ) : (
+              <Camera size={100} className={styles.cardIcon} />
+            )}
+          </div>
         </div>
       </div>
     </section>

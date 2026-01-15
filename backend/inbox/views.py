@@ -1,52 +1,90 @@
-from rest_framework import status, viewsets
-from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
+# backend/inbox/views.py
+import logging
+from typing import Any, Optional
+
+from rest_framework import mixins, status, viewsets
+from rest_framework.exceptions import Throttled
+from rest_framework.permissions import AllowAny
+from rest_framework.request import Request
 from rest_framework.response import Response
 
-from django.conf import settings
-from django.core.mail import send_mail
-
-from core.throttling import ContactThrottle
+from core.throttling import ContactFormThrottle
 
 from .models import ContactMessage
 from .serializers import ContactMessageSerializer
+from .services import ContactSubmissionService, PayloadTooLarge
 
-# Throttling handled by custom ContactThrottle
+logger = logging.getLogger(__name__)
+
+# Throttling handled by custom ContactFormThrottle with IP + email tracking (via DRF library)
 
 
-class ContactMessageViewSet(viewsets.ModelViewSet):
+class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     """
-    ViewSet for handling contact messages
+    ViewSet for handling contact messages with enhanced bot/DDoS protection.
+    Throttling is applied by DRF library BEFORE validation (better for bot filtering).
+    Frontend validation prevents valid users from being throttled on invalid submissions.
     """
 
     queryset = ContactMessage.objects.all()
     serializer_class = ContactMessageSerializer
-    permission_classes = [AllowAny]
-    throttle_classes = [ContactThrottle]
+    permission_classes = [AllowAny]  # Publicly accessible for contact form submissions
+    throttle_classes = [ContactFormThrottle]  # DRF handles throttling before validation
 
-    def create(self, request, *args, **kwargs):
+    def throttled(self, request: Request, wait: int) -> None:
+        """Custom throttled response with user-friendly message"""
+        raise Throttled(
+            detail="You've submitted too many messages. Please wait 1 hour.",
+            wait=wait,
+        )
+
+    def get_client_ip(self, request: Request) -> str:
+        """Extract client IP address from request"""
+        x_forwarded_for: Optional[str] = request.META.get("HTTP_X_FORWARDED_FOR")
+        if x_forwarded_for:
+            return x_forwarded_for.split(",")[0].strip()
+        return str(request.META.get("REMOTE_ADDR", "unknown"))
+
+    def _check_payload_size(self, request: Request, client_ip: str) -> None:
+        """Check if request payload size exceeds limit"""
+        content_length: Optional[str] = request.META.get("CONTENT_LENGTH")
+        if content_length:
+            try:
+                content_length_int: int = int(content_length)
+                if content_length_int > 10000:
+                    safe_ip = client_ip.replace("\n", "").replace("\r", "")
+                    logger.warning(f"Request too large: {content_length_int} bytes from {safe_ip}")
+                    raise PayloadTooLarge()
+            except (ValueError, TypeError):
+                safe_ip = client_ip.replace("\n", "").replace("\r", "")
+                logger.debug(f"Invalid CONTENT_LENGTH from {safe_ip}")
+
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
-        Create a new contact message and send email notification
+        Create a new contact message with enhanced security checks.
+        Note: Kill switch check is handled by ContactFormKillSwitchMiddleware before this view.
+        Logic delegated to ContactSubmissionService.
         """
+        client_ip = self.get_client_ip(request)
+
+        # 1. Check request size limit (first, to reject large requests before processing)
+        self._check_payload_size(request, client_ip)
+
+        # 2. Validate data using serializer
         serializer = self.get_serializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(
-                {
-                    "message": "Please correct the errors below.",
-                    "errors": serializer.errors,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer.is_valid(raise_exception=True)
 
-        # Save the message to database (only reached if validation passes)
+        # 3. Log sanitized incoming data
+        ContactSubmissionService.log_incoming_data(serializer.validated_data, client_ip)
+
+        # 4. Check for duplicates
+        ContactSubmissionService.check_duplicate(serializer.validated_data, client_ip)
+
+        # 5. Save message
         contact_message = serializer.save()
 
-        # Send email notification
-        try:
-            self.send_contact_notification_email(contact_message)
-        except Exception as e:
-            # Log the error but don't fail the request
-            print(f"Failed to send email notification: {e}")
+        # 6. Finalize submission (email, etc.)
+        ContactSubmissionService.finalize_submission(contact_message, client_ip)
 
         return Response(
             {
@@ -54,50 +92,4 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
                 "id": contact_message.id,
             },
             status=status.HTTP_201_CREATED,
-        )
-
-    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
-    def mark_as_read(self, request, pk=None):
-        """
-        Mark a contact message as read
-        """
-        contact_message = self.get_object()
-        contact_message.is_read = True
-        contact_message.save()
-
-        return Response({"message": "Message marked as read", "id": contact_message.id})
-
-    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
-    def unread_count(self, request):
-        """
-        Get count of unread messages
-        """
-        count = ContactMessage.objects.filter(is_read=False).count()
-        return Response({"unread_count": count})
-
-    def send_contact_notification_email(self, contact_message):
-        """
-        Send email notification for new contact messages
-        """
-        subject = f"New Contact Message: {contact_message.subject}"
-        message = f"""
-        New contact message received:
-
-        From: {contact_message.name} ({contact_message.email})
-        Subject: {contact_message.subject}
-        Message: {contact_message.message}
-
-        Received at: {contact_message.created_at}
-        """
-
-        # Get email settings from Django settings
-        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com")
-        to_email = getattr(settings, "CONTACT_EMAIL", "admin@example.com")
-
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=from_email,
-            recipient_list=[to_email],
-            fail_silently=False,
         )

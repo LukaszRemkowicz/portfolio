@@ -1,75 +1,65 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
 import Gallery from "../Gallery";
+import { fetchEnabledFeatures } from "../api/services";
 
-/**
- * Test suite for the Gallery component
- *
- * The Gallery component displays a static gallery with predefined categories:
- * - ASTROPHOTOGRAPHY
- * - LANDSCAPE PHOTOGRAPHY
- * - PROGRAMMING
- *
- * Each gallery item uses CSS background images and contains:
- * - A title with category name
- * - Links to respective pages (/astrophotography, /programming)
- * - Hover effects and styling
- *
- * The component uses static data from galleryItems.ts and doesn't require:
- * - API calls
- * - State management
- * - Complex props
- *
- * Testing Strategy:
- * - Verify all gallery items are rendered from static data
- * - Check that correct number of items are displayed
- * - Ensure text content matches expected values
- * - Test that component renders without errors
- * - Verify React Router integration works correctly
- */
+// Mock the services
+jest.mock("../api/services", () => ({
+  fetchEnabledFeatures: jest.fn(),
+  fetchAstroImages: jest.fn().mockResolvedValue([
+    {
+      pk: 1,
+      name: "M31 Andromeda",
+      celestial_object: "Galaxy",
+      url: "test.jpg",
+    },
+    {
+      pk: 2,
+      name: "Milky Way Core",
+      celestial_object: "Nebula",
+      url: "test2.jpg",
+    },
+  ]),
+  fetchAstroImage: jest.fn(),
+}));
 
 describe("Gallery Component", () => {
-  /**
-   * Test: Renders gallery items from static data
-   *
-   * Verifies that:
-   * - All three gallery categories are displayed
-   * - Text content matches the static data exactly
-   * - Gallery items are rendered from static data source
-   * - No API calls are needed for this component
-   */
-  it("renders gallery items from static data", () => {
-    render(
-      <BrowserRouter>
-        <Gallery />
-      </BrowserRouter>,
-    );
-
-    expect(screen.getByText("ASTROPHOTOGRAPHY")).toBeInTheDocument();
-    expect(screen.getByText("LANDSCAPE PHOTOGRAPHY")).toBeInTheDocument();
-    expect(screen.getByText("PROGRAMMING")).toBeInTheDocument();
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  /**
-   * Test: Renders correct number of gallery items
-   *
-   * Verifies that:
-   * - Gallery items use background images (not img tags)
-   * - Text content can be found using regex patterns
-   * - Each category is properly represented in the gallery
-   * - Gallery structure is consistent and complete
-   */
-  it("renders correct number of gallery items", () => {
+  it("renders the gallery with the new portfolio title", async () => {
+    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
+      programming: true,
+    });
     render(
       <BrowserRouter>
         <Gallery />
       </BrowserRouter>,
     );
 
-    // Gallery items use background images, so we check for gallery item containers by text content
-    const galleryContainers = screen.getAllByText(/PHOTOGRAPHY|PROGRAMMING/);
-    expect(galleryContainers).toHaveLength(3);
+    expect(screen.getByText("Latest images")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("M31 Andromeda")).toBeInTheDocument();
+      expect(screen.getByText("Milky Way Core")).toBeInTheDocument();
+    });
+  });
+
+  it("renders filter buttons", async () => {
+    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
+      programming: true,
+    });
+    render(
+      <BrowserRouter>
+        <Gallery />
+      </BrowserRouter>,
+    );
+
+    expect(screen.getByText("All Works")).toBeInTheDocument();
+    expect(screen.getByText("Deep Sky")).toBeInTheDocument();
+    expect(screen.getByText("Astrolandscape")).toBeInTheDocument();
+    expect(screen.getByText("Timelapses")).toBeInTheDocument();
   });
 });
