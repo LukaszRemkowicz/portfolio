@@ -95,9 +95,9 @@
 
 .bolidDust {
     position: absolute;
-    /* Elongated "line" segment look */
+    /* Elongated "line" segment look - extremely thin */
     width: var(--p-size);
-    height: calc(var(--p-size) * 0.15);
+    height: calc(var(--p-size) * 0.05);
     /* Soft brush stroke gradient - slightly lighter grey for visibility */
     background: radial-gradient(ellipse at center, rgba(80, 80, 90, var(--p-opacity, 0.8)) 0%, rgba(40, 40, 50, calc(var(--p-opacity, 0.8) * 0.5)) 50%, transparent 100%);
     border-radius: 40%;

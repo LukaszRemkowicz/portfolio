@@ -86,29 +86,30 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const maxPath = Math.max(p1, p2);
             const distance = random ? Math.random() * (maxPath - minPath) + minPath : 600;
 
-            // Generate smoke segments for bolids (Zig-Zag "Burn")
+            // Generate smoke segments for bolids (Zig-Zag "Burn" - Line style)
             const dustParticles: DustParticle[] = [];
             if (isBolid) {
-                const segmentCount = 10 + Math.floor(Math.random() * 6); // 10-16 thin pieces
+                const segmentCount = 20 + Math.floor(Math.random() * 10); // 20-30 pieces for continuous look
                 for (let i = 0; i < segmentCount; i++) {
                     // Spread pieces along the flight path (roughly 30% to 90% of duration)
                     const progress = 0.3 + (i / segmentCount) * 0.6;
 
                     dustParticles.push({
                         id: Math.random(),
-                        // Zig-zag jitter offsets
-                        offsetX: (Math.random() - 0.5) * 40,
-                        offsetY: (Math.random() - 0.5) * 40,
-                        // Elongated segments - smaller for thinner look
-                        size: 20 + Math.random() * 30,
-                        blur: 2 + Math.random() * 4,
-                        rotate: `${Math.random() * 360}deg`,
-                        skew: `${(Math.random() - 0.5) * 40}deg`,
+                        // Tight jitter offsets for "line" feel
+                        offsetX: (Math.random() - 0.5) * 15,
+                        offsetY: (Math.random() - 0.5) * 15,
+                        // Thinner, longer segments
+                        size: 30 + Math.random() * 50,
+                        blur: 1 + Math.random() * 2, // Sharper for "line"
+                        // Align with meteor trajectory but add slight organic jitter
+                        rotate: `${angle + (Math.random() - 0.5) * 15}deg`,
+                        skew: `${(Math.random() - 0.5) * 20}deg`,
                         opacity: Math.random() * (CONFIG.smokeOpacityRange[1] - CONFIG.smokeOpacityRange[0]) + CONFIG.smokeOpacityRange[0],
-                        driftX: (Math.random() - 0.5) * 40,
-                        driftY: (Math.random() - 0.5) * 40,
+                        driftX: (Math.random() - 0.5) * 20,
+                        driftY: (Math.random() - 0.5) * 20,
                         duration: 2.0 + Math.random() * 1.5,
-                        delay: duration * progress + (Math.random() - 0.5) * 0.1,
+                        delay: duration * progress + (Math.random() - 0.5) * 0.05,
                     });
                 }
             }
