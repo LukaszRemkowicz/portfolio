@@ -7,6 +7,7 @@ interface DustParticle {
     offsetX: number;
     offsetY: number;
     size: number;
+    blur: number;
     driftX: number;
     driftY: number;
     duration: number;
@@ -82,19 +83,22 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const maxPath = Math.max(p1, p2);
             const distance = random ? Math.random() * (maxPath - minPath) + minPath : 600;
 
-            // Generate dust particles for bolids
+            // Generate smoke segments for bolids (the "Burn")
             const dustParticles: DustParticle[] = [];
             if (isBolid) {
-                const particleCount = 6 + Math.floor(Math.random() * 5); // 6-10 particles
+                const particleCount = 4 + Math.floor(Math.random() * 3); // 4-6 larger blobs
                 for (let i = 0; i < particleCount; i++) {
                     dustParticles.push({
                         id: Math.random(),
-                        offsetX: (Math.random() - 0.5) * 10,
-                        offsetY: (Math.random() - 0.5) * 10,
-                        size: 1 + Math.random() * 3,
-                        driftX: (Math.random() - 0.5) * 50,
-                        driftY: (Math.random() - 0.5) * 50,
-                        duration: 0.8 + Math.random() * 1.2,
+                        // Wider offsets for irregular cloud shape
+                        offsetX: (Math.random() - 0.5) * 30,
+                        offsetY: (Math.random() - 0.5) * 30,
+                        // Significantly larger blobs
+                        size: 30 + Math.random() * 40,
+                        blur: 8 + Math.random() * 8, // More blur for smoky look
+                        driftX: (Math.random() - 0.5) * 60,
+                        driftY: (Math.random() - 0.5) * 60,
+                        duration: 1.5 + Math.random() * 2.0, // Longer lingering smoke
                         delay: duration * 0.6 + (Math.random() - 0.5) * 0.1, // Near flash point
                     });
                 }
@@ -167,6 +171,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                                     className={styles.bolidDust}
                                     style={{
                                         "--p-size": `${particle.size}px`,
+                                        "--p-blur": `${particle.blur}px`,
                                         "--p-x": `${particle.offsetX}px`,
                                         "--p-y": `${particle.offsetY}px`,
                                         "--p-drift-x": `${particle.driftX}px`,

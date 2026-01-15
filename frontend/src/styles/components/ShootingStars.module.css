@@ -97,9 +97,10 @@
     position: absolute;
     width: var(--p-size);
     height: var(--p-size);
-    background: rgba(255, 255, 255, 0.8);
+    /* Dark smoky cloud look */
+    background: radial-gradient(circle, rgba(20, 20, 25, 1) 0%, rgba(10, 10, 15, 0.4) 60%, transparent 100%);
     border-radius: 50%;
-    filter: blur(1px);
+    filter: blur(var(--p-blur, 4px));
     opacity: 0;
     left: 0;
     top: 50%;
@@ -107,12 +108,17 @@
 
 @keyframes driftAndFade {
     0% {
-        transform: translate(var(--p-x), calc(-50% + var(--p-y))) scale(1);
-        opacity: 1;
+        transform: translate(var(--p-x), calc(-50% + var(--p-y))) scale(0.5);
+        opacity: 0;
+    }
+
+    15% {
+        opacity: 0.6;
     }
 
     100% {
-        transform: translate(calc(var(--p-x) + var(--p-drift-x)), calc(-50% + var(--p-y) + var(--p-drift-y))) scale(0.5);
+        /* Expand as it drifts and fades */
+        transform: translate(calc(var(--p-x) + var(--p-drift-x)), calc(-50% + var(--p-y) + var(--p-drift-y))) scale(2);
         opacity: 0;
     }
 }
