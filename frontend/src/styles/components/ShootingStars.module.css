@@ -16,6 +16,49 @@
     pointer-events: none;
     opacity: 0;
     transform: rotate(var(--angle));
+    z-index: 10;
+}
+
+.bolid {
+    width: 250px;
+    height: 2px;
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 1),
+            rgba(56, 189, 248, 0.5),
+            transparent);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+}
+
+.bolidFlash {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 40px 20px rgba(255, 255, 255, 0.8),
+        0 0 100px 40px rgba(56, 189, 248, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+@keyframes explode {
+    0% {
+        transform: translateY(-50%) scale(0);
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+        transform: translateY(-50%) scale(1.5);
+    }
+
+    100% {
+        transform: translateY(-50%) scale(3);
+        opacity: 0;
+    }
 }
 
 @keyframes fall {
@@ -25,6 +68,10 @@
     }
 
     10% {
+        opacity: 1;
+    }
+
+    80% {
         opacity: 1;
     }
 

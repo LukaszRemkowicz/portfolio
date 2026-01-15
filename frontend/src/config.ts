@@ -8,4 +8,13 @@ export const CONFIG = {
      * - false: Fixed -45 degree angle and 600px distance.
      */
     randomShootingStars: true,
+    /**
+     * Chance of a shooting star being a bolid (fireball).
+     * 0.05 = 5% chance.
+     */
+    bolidChance: 0.1,
+    /**
+     * Minimum interval between bolids in milliseconds (e.g., 1 minute).
+     */
+    bolidMinInterval: 60000,
 };

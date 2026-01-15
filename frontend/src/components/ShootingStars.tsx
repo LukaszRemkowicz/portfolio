@@ -9,6 +9,7 @@ interface ShootingStar {
     duration: number;
     angle: number;
     distance: number;
+    isBolid?: boolean;
 }
 
 interface ShootingStarsProps {
@@ -27,12 +28,14 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
     random = CONFIG.randomShootingStars,
 }) => {
     const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
+    const [lastBolidTime, setLastBolidTime] = useState<number>(0);
 
     useEffect(() => {
         let timeoutId: NodeJS.Timeout;
 
         const createShootingStar = () => {
-            const id = Date.now();
+            const now = Date.now();
+            const id = now;
             const left = `${Math.random() * (window.innerWidth + 300)}px`;
             const top = `${Math.random() * (window.innerHeight / 2)}px`;
             const duration = Math.random() * 1.5 + 1;
@@ -41,7 +44,16 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const angle = random ? Math.random() * 90 - 45 : -45;
             const distance = random ? Math.random() * 400 + 400 : 600;
 
-            const newStar = { id, left, top, duration, angle, distance };
+            // Bolid logic
+            const timeSinceLastBolid = now - lastBolidTime;
+            const canSpawnBolid = timeSinceLastBolid >= CONFIG.bolidMinInterval;
+            const isBolid = canSpawnBolid && Math.random() < CONFIG.bolidChance;
+
+            if (isBolid) {
+                setLastBolidTime(now);
+            }
+
+            const newStar = { id, left, top, duration, angle, distance, isBolid };
             setShootingStars((prev) => [...prev, newStar]);
 
             // Remove the star after its animation completes
@@ -57,14 +69,14 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
         timeoutId = setTimeout(createShootingStar, initialDelay);
 
         return () => clearTimeout(timeoutId);
-    }, [minDelay, maxDelay, initialDelay, random]);
+    }, [minDelay, maxDelay, initialDelay, random, lastBolidTime]);
 
     return (
         <div className={`${styles.starContainer} ${className}`}>
             {shootingStars.map((star) => (
                 <div
                     key={star.id}
-                    className={styles.shootingStar}
+                    className={`${styles.shootingStar} ${star.isBolid ? styles.bolid : ""}`}
                     style={
                         {
                             left: star.left,
@@ -74,7 +86,17 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                             "--distance": `${star.distance}px`,
                         } as React.CSSProperties
                     }
-                />
+                >
+                    {star.isBolid && (
+                        <div
+                            className={styles.bolidFlash}
+                            style={{
+                                animation: `${styles.explode} ${star.duration * 0.4}s ease-out forwards`,
+                                animationDelay: `${star.duration * 0.6}s`,
+                            }}
+                        />
+                    )}
+                </div>
             ))}
         </div>
     );
