@@ -3,6 +3,8 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const fs = require("fs");
 const webpack = require("webpack");
 
+const { InjectManifest } = require("workbox-webpack-plugin");
+
 module.exports = (env, argv) => {
   // Check if SSL certificates exist for devServer (both dev and prod can use HTTPS)
   let httpsConfig = false;
@@ -72,6 +74,10 @@ module.exports = (env, argv) => {
         "process.env": JSON.stringify({
           API_URL: apiUrl,
         }),
+      }),
+      new InjectManifest({
+        swSrc: "./src/service-worker.ts",
+        swDest: "service-worker.js",
       }),
     ],
     devServer: {
