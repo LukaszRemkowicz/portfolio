@@ -335,7 +335,7 @@ src/
 ### 🚀 Priority 1 - Critical
 
 - [ ] **Complete Programming Page** - Implement actual programming projects showcase
-- [ ] **Add Contact Page** - Create functional contact form with backend integration
+- [x] **Add Contact Page** - Create functional contact form with backend integration
 - [ ] **Add Equipment Section** - Document astronomical gear and setups
 - [ ] **Accessibility Improvements** - Add ARIA labels, keyboard navigation, screen reader support
 
@@ -344,7 +344,7 @@ src/
 - [ ] **Refactor Inline Styles** - Move inline styles from Programming.jsx to CSS modules
 - [ ] **Performance Optimizations** - Add React.memo(), useMemo(), useCallback() for better performance
 - [ ] **Better Error Handling** - Implement specific error types and better error messages
-- [ ] **Replace Static Gallery** - Make homepage gallery API-driven instead of static
+- [x] **Replace Static Gallery** - Make homepage gallery API-driven instead of static
 
 ### 🎯 Priority 3 - Nice to Have
 
