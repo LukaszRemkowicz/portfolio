@@ -42,7 +42,7 @@ const Home: React.FC<HomeProps> = ({
         )}
 
         <div className={styles.heroActions}>
-          <a href="#gallery" className={styles.primaryBtn}>
+          <a href="/astrophotography" className={styles.primaryBtn}>
             View Portfolio
           </a>
           <a href="#about" className={styles.secondaryBtn}>

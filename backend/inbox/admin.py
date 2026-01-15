@@ -33,6 +33,8 @@ class ContactMessageAdmin(admin.ModelAdmin):
                     contact_message.is_read = True
                     contact_message.save()
             except ContactMessage.DoesNotExist:
+                # If the message was deleted while opening it, we simply ignore it since
+                # we are only trying to mark it as read.
                 pass
 
         return super().changeform_view(request, object_id, form_url, extra_context)

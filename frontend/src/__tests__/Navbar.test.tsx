@@ -25,8 +25,8 @@ describe("Navbar Component", () => {
     });
     renderWithRouter(<Navbar />);
 
-    expect(screen.getByText("Celestial")).toBeInTheDocument();
-    expect(screen.getByText("Astrophotography")).toBeInTheDocument();
+    expect(screen.getByText("Łukasz Remkowicz")).toBeInTheDocument();
+    expect(screen.getAllByText("Astrophotography")[0]).toBeInTheDocument();
     expect(screen.getByText("About")).toBeInTheDocument();
 
     await waitFor(() => {
@@ -41,8 +41,8 @@ describe("Navbar Component", () => {
     });
     renderWithRouter(<Navbar />);
 
-    expect(screen.getByText("Celestial")).toBeInTheDocument();
-    expect(screen.getByText("Astrophotography")).toBeInTheDocument();
+    expect(screen.getByText("Łukasz Remkowicz")).toBeInTheDocument();
+    expect(screen.getAllByText("Astrophotography")[0]).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.queryByText("Programming")).not.toBeInTheDocument();
