@@ -18,14 +18,17 @@ export const CONFIG = {
      */
     bolidMinInterval: 1,
     /**
-     * Duration ranges (in seconds) for animations.
-     * Lower values = faster speed.
+     * Duration ranges (in seconds) on screen.
+     * Speed = PathDistance / Duration.
+     * - Smaller duration + Larger distance = High speed.
+     * - Larger duration + Smaller distance = Low speed.
      */
-    starDurationRange: [1.0, 3.0] as [number, number],
-    bolidDurationRange: [0.5, 1.5] as [number, number],
+    starDurationRange: [2.0, 3.0] as [number, number],
+    bolidDurationRange: [1.5, 1.5] as [number, number],
     /**
      * Path distance ranges (total travel) in pixels.
+     * Horizontal displacement across the background.
      */
-    starPathRange: [300, 800] as [number, number],
-    bolidPathRange: [600, 1400] as [number, number],
+    starPathRange: [300, 500] as [number, number],
+    bolidPathRange: [200, 500] as [number, number],
 };
