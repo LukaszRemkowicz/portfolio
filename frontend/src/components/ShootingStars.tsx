@@ -136,14 +136,22 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                         {
                             left: star.left,
                             top: star.top,
-                            animation: `${styles.fall} ${star.duration}s linear forwards`,
+                            animation: `${styles.move} ${star.duration}s linear forwards`,
                             "--angle": `${star.angle}deg`,
                             "--distance": `${star.distance}px`,
                             "--width": `${star.width}px`,
-                            "--opacity": star.opacity,
                         } as React.CSSProperties
                     }
                 >
+                    <div
+                        className={styles.streak}
+                        style={
+                            {
+                                animation: `${styles.streakFade} ${star.duration}s linear forwards`,
+                                "--opacity": star.opacity,
+                            } as React.CSSProperties
+                        }
+                    />
                     {star.isBolid && (
                         <>
                             <div
