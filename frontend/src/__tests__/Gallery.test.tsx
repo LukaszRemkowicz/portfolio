@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
 import Gallery from "../Gallery";
@@ -25,7 +25,7 @@ describe("Gallery Component", () => {
       </BrowserRouter>,
     );
 
-    expect(screen.getByText("Portfolio")).toBeInTheDocument();
+    expect(screen.getByText("Latest images")).toBeInTheDocument();
     expect(screen.getByText("M31 Andromeda")).toBeInTheDocument();
     expect(screen.getByText("Milky Way Core")).toBeInTheDocument();
   });

@@ -5,7 +5,7 @@ import { Sparkles, Menu, X } from "lucide-react";
 import { fetchEnabledFeatures } from "./api/services";
 import { NavbarProps } from "./types";
 
-const Navbar: React.FC<NavbarProps> = ({ transparent }) => {
+const Navbar: React.FC<NavbarProps> = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProgrammingEnabled, setIsProgrammingEnabled] =
     useState<boolean>(false);

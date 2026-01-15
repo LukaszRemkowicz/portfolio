@@ -119,7 +119,7 @@ const Contact: React.FC = () => {
         <div className={styles.header}>
           <h2 className={styles.title}>Direct Inquiry</h2>
           <p className={styles.subtitle}>
-            Interested in prints or technical collaboration? Let's connect.
+            Interested in prints or technical collaboration? Let&apos;s connect.
           </p>
         </div>
 

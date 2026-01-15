@@ -2,11 +2,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import styles from "./styles/components/Gallery.module.css";
 import { Camera, Calendar, MapPin } from "lucide-react";
-import {
-  fetchEnabledFeatures,
-  fetchAstroImages,
-  fetchAstroImage,
-} from "./api/services";
+import { fetchAstroImages, fetchAstroImage } from "./api/services";
 import { AstroImage } from "./types";
 
 const Gallery: React.FC = () => {
