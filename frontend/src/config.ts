@@ -24,11 +24,16 @@ export const CONFIG = {
      * - Larger duration + Smaller distance = Low speed.
      */
     starDurationRange: [2.0, 3.0] as [number, number],
-    bolidDurationRange: [1.5, 1.5] as [number, number],
+    bolidDurationRange: [0.4, 0.9] as [number, number],
     /**
      * Path distance ranges (total travel) in pixels.
      * Horizontal displacement across the background.
      */
     starPathRange: [300, 500] as [number, number],
     bolidPathRange: [200, 500] as [number, number],
+    /**
+     * Streak length (visual trail size) ranges in pixels.
+     */
+    starStreakRange: [100, 200] as [number, number],
+    bolidStreakRange: [200, 200] as [number, number],
 };

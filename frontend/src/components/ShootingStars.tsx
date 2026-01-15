@@ -9,6 +9,7 @@ interface ShootingStar {
     duration: number;
     angle: number;
     distance: number;
+    width: number;
     isBolid?: boolean;
 }
 
@@ -51,6 +52,10 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const [minDur, maxDur] = isBolid ? CONFIG.bolidDurationRange : CONFIG.starDurationRange;
             const duration = Math.random() * (maxDur - minDur) + minDur;
 
+            // Streak length (visual thickness) randomization
+            const [minStreak, maxStreak] = isBolid ? CONFIG.bolidStreakRange : CONFIG.starStreakRange;
+            const width = Math.random() * (maxStreak - minStreak) + minStreak;
+
             // Use fixed trajectory if random is false
             const angle = random ? Math.random() * 90 - 45 : -45;
 
@@ -60,7 +65,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const maxPath = Math.max(p1, p2);
             const distance = random ? Math.random() * (maxPath - minPath) + minPath : 600;
 
-            const newStar = { id, left, top, duration, angle, distance, isBolid };
+            const newStar = { id, left, top, duration, angle, distance, width, isBolid };
             setShootingStars((prev) => [...prev, newStar]);
 
             // Remove the star after its animation completes
@@ -91,6 +96,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                             animation: `${styles.fall} ${star.duration}s linear forwards`,
                             "--angle": `${star.angle}deg`,
                             "--distance": `${star.distance}px`,
+                            "--width": `${star.width}px`,
                         } as React.CSSProperties
                     }
                 >
