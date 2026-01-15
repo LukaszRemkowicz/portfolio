@@ -19,14 +19,9 @@
     z-index: 10;
 }
 
+/* Base class for bolid */
 .bolid {
-    width: 250px;
-    height: 2px;
-    background: linear-gradient(90deg,
-            rgba(255, 255, 255, 1),
-            rgba(56, 189, 248, 0.5),
-            transparent);
-    box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+    z-index: 11;
 }
 
 .bolidFlash {
@@ -77,6 +72,47 @@
 
     100% {
         transform: rotate(var(--angle)) translateX(calc(var(--distance) * -1));
+        opacity: 0;
+    }
+}
+
+@keyframes bolidFallV2 {
+    0% {
+        transform: rotate(var(--angle)) translateX(0);
+        opacity: 0;
+        width: 150px;
+        height: 1px;
+        filter: brightness(1);
+    }
+
+    5% {
+        opacity: 1;
+    }
+
+    /* Descent Phase - Standard star look until 30% */
+    29% {
+        transform: rotate(var(--angle)) translateX(calc(var(--distance) * -0.29));
+        width: 150px;
+        height: 1px;
+        filter: brightness(1);
+        opacity: 1;
+    }
+
+    /* Fireball Explosion at 30% of travel */
+    30% {
+        transform: rotate(var(--angle)) translateX(calc(var(--distance) * -0.3));
+        width: 180px;
+        height: 2px;
+        filter: brightness(2) drop-shadow(0 0 10px white);
+        opacity: 1;
+    }
+
+    /* Sudden stop and fade as a short trail in place */
+    100% {
+        transform: rotate(var(--angle)) translateX(calc(var(--distance) * -0.3));
+        width: 60px;
+        height: 1.5px;
+        filter: brightness(0.2);
         opacity: 0;
     }
 }
