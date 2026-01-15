@@ -22,13 +22,17 @@ api.interceptors.response.use(
     }
 
     const { status, data } = error.response;
+    const errorData = data as {
+      errors?: Record<string, string[]>;
+      message?: string;
+    };
 
     switch (status) {
       case 400:
         throw new ValidationError(
-          (data as any)?.errors || {},
-          (data as any)?.message || "Validation failed.",
-          error
+          errorData?.errors || {},
+          errorData?.message || "Validation failed.",
+          error,
         );
       case 401:
       case 403:
@@ -43,10 +47,10 @@ api.interceptors.response.use(
         throw new ServerError(undefined, status, error);
       default:
         throw new AppError(
-          (data as any)?.message || "An unexpected error occurred.",
+          errorData?.message || "An unexpected error occurred.",
           status,
-          error
+          error,
         );
     }
-  }
+  },
 );

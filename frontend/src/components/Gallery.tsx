@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import styles from "../styles/components/Gallery.module.css";
-import { Camera, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { AstroImage } from "../types";
 import { useAppStore } from "../store/useStore";
 import ImageModal from "./common/ImageModal";
@@ -33,9 +33,6 @@ const GalleryCard = memo(({ item, onClick, isNew }: GalleryCardProps) => {
           onLoad={() => setIsLoaded(true)}
           className={`${styles.cardImage} ${isLoaded ? styles.show : ""}`}
         />
-      </div>
-      <div className={styles.cardIcon} aria-hidden="true">
-        <Camera size={48} />
       </div>
       <div className={styles.cardContent}>
         <span className={styles.category}>{item.celestial_object}</span>

@@ -141,3 +141,10 @@ export interface ApiRoutes {
   contact: string;
   whatsEnabled: string;
 }
+
+// Legacy Gallery Item (for old gallery data structure)
+export interface GalleryItem {
+  id: number;
+  title: string;
+  imageUrl: string;
+}

@@ -1,14 +1,16 @@
 /// <reference lib="webworker" />
-/* eslint-disable no-restricted-globals */
 
-import { clientsClaim } from 'workbox-core';
-import { ExpirationPlugin } from 'workbox-expiration';
-import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
-import { StaleWhileRevalidate, CacheFirst, NetworkFirst } from 'workbox-strategies';
-import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+import { clientsClaim } from "workbox-core";
+import { ExpirationPlugin } from "workbox-expiration";
+import { precacheAndRoute, createHandlerBoundToURL } from "workbox-precaching";
+import { registerRoute } from "workbox-routing";
+import { CacheFirst, NetworkFirst } from "workbox-strategies";
+import { CacheableResponsePlugin } from "workbox-cacheable-response";
 
-declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: any };
+// eslint-disable-next-line no-undef
+declare const self: ServiceWorkerGlobalScope & {
+  __WB_MANIFEST: Array<{ url: string; revision: string | null }>;
+};
 
 clientsClaim();
 
@@ -18,70 +20,68 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 // Set up App Shell-style routing, so that all navigation requests
 // are fulfilled with your index.html shell.
-const fileExtensionRegexp = new RegExp('/[^/?]+\\.[^/]+$');
-registerRoute(
-    ({ request, url }: { request: Request; url: URL }) => {
-        if (request.mode !== 'navigate') {
-            return false;
-        }
-        if (url.pathname.startsWith('/_')) {
-            return false;
-        }
-        if (url.pathname.match(fileExtensionRegexp)) {
-            return false;
-        }
-        return true;
-    },
-    createHandlerBoundToURL('/index.html')
-);
+const fileExtensionRegexp = new RegExp("/[^/?]+\\.[^/]+$");
+registerRoute(({ request, url }: { request: Request; url: URL }) => {
+  if (request.mode !== "navigate") {
+    return false;
+  }
+  if (url.pathname.startsWith("/_")) {
+    return false;
+  }
+  if (url.pathname.match(fileExtensionRegexp)) {
+    return false;
+  }
+  return true;
+}, createHandlerBoundToURL("/index.html"));
 
 // Cache images with a Cache First strategy
 registerRoute(
-    ({ url }) =>
-        url.origin === self.location.origin &&
-        (url.pathname.endsWith('.png') || url.pathname.endsWith('.jpg') || url.pathname.endsWith('.jpeg') || url.pathname.endsWith('.svg')),
-    new CacheFirst({
-        cacheName: 'images',
-        plugins: [
-            new ExpirationPlugin({ maxEntries: 50 }),
-        ],
-    })
+  ({ url }) =>
+    url.origin === self.location.origin &&
+    (url.pathname.endsWith(".png") ||
+      url.pathname.endsWith(".jpg") ||
+      url.pathname.endsWith(".jpeg") ||
+      url.pathname.endsWith(".svg")),
+  new CacheFirst({
+    cacheName: "images",
+    plugins: [new ExpirationPlugin({ maxEntries: 50 })],
+  }),
 );
 
 // Cache remote astronomical images
 registerRoute(
-    ({ url }) => url.pathname.includes('/media/'),
-    new CacheFirst({
-        cacheName: 'remote-images',
-        plugins: [
-            new CacheableResponsePlugin({
-                statuses: [0, 200],
-            }),
-            new ExpirationPlugin({
-                maxEntries: 100,
-                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-            }),
-        ],
-    })
+  ({ url }) => url.pathname.includes("/media/"),
+  new CacheFirst({
+    cacheName: "remote-images",
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 100,
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+      }),
+    ],
+  }),
 );
 
 // Cache API responses with StaleWhileRevalidate
 registerRoute(
-    ({ url }) => url.pathname.includes('/api/v1/'),
-    new NetworkFirst({
-        cacheName: 'api-cache',
-        plugins: [
-            new CacheableResponsePlugin({
-                statuses: [0, 200],
-            }),
-        ],
-    })
+  ({ url }) => url.pathname.includes("/api/v1/"),
+  new NetworkFirst({
+    cacheName: "api-cache",
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+    ],
+  }),
 );
 
 // This allows the web app to trigger skipWaiting via
 // registration.waiting.postMessage({type: 'SKIP_WAITING'})
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
