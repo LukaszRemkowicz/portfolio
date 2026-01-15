@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import styles from "./styles/components/ShootingStars.module.css";
+import { CONFIG } from "./config";
 
 interface ShootingStar {
     id: number;
@@ -15,6 +16,7 @@ interface ShootingStarsProps {
     maxDelay?: number;
     initialDelay?: number;
     className?: string;
+    random?: boolean;
 }
 
 const ShootingStars: React.FC<ShootingStarsProps> = ({
@@ -22,6 +24,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
     maxDelay = 12000,
     initialDelay = 5000,
     className = "",
+    random = CONFIG.randomShootingStars,
 }) => {
     const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
 
@@ -33,8 +36,10 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const left = `${Math.random() * (window.innerWidth + 300)}px`;
             const top = `${Math.random() * (window.innerHeight / 2)}px`;
             const duration = Math.random() * 1.5 + 1;
-            const angle = Math.random() * 90 - 45; // -45 to 45 degrees
-            const distance = Math.random() * 400 + 400; // 400 to 800px
+
+            // Use fixed trajectory if random is false
+            const angle = random ? Math.random() * 90 - 45 : -45;
+            const distance = random ? Math.random() * 400 + 400 : 600;
 
             const newStar = { id, left, top, duration, angle, distance };
             setShootingStars((prev) => [...prev, newStar]);
@@ -52,7 +57,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
         timeoutId = setTimeout(createShootingStar, initialDelay);
 
         return () => clearTimeout(timeoutId);
-    }, [minDelay, maxDelay, initialDelay]);
+    }, [minDelay, maxDelay, initialDelay, random]);
 
     return (
         <div className={`${styles.starContainer} ${className}`}>
