@@ -2,65 +2,34 @@ import React, { useState, useEffect } from "react";
 import styles from "../styles/components/AstroGallery.module.css";
 import { Calendar, MapPin } from "lucide-react";
 import {
-  fetchAstroImages,
-  fetchBackground,
   fetchAstroImage,
 } from "../api/services";
 import { ASSETS } from "../api/routes";
-import { AstroImage, FilterParams, FilterType } from "../types";
-import { AppError, NetworkError, ServerError } from "../api/errors";
+import { AstroImage, FilterType } from "../types";
+import { useAppStore } from "../store/useStore";
 
 const AstroGallery: React.FC = () => {
-  const [images, setImages] = useState<AstroImage[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>("");
-  const [background, setBackground] = useState<string>(ASSETS.galleryFallback);
+  const {
+    images,
+    isImagesLoading: loading,
+    error,
+    backgroundUrl: background,
+    loadImages,
+    loadInitialData
+  } = useAppStore();
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
   const [modalDescription, setModalDescription] = useState<string>("");
   const [modalDescriptionLoading, setModalDescriptionLoading] =
     useState<boolean>(false);
 
-  const loadImages = async (filter: string | null = null): Promise<void> => {
-    try {
-      setError("");
-      setLoading(true);
-      let params: FilterParams = {};
-      if (filter) {
-        params.filter = filter;
-      }
-      const data: AstroImage[] = await fetchAstroImages(params);
-      setImages(Array.isArray(data) ? data : []);
-    } catch (err: unknown) {
-      if (err instanceof NetworkError) {
-        setError("Connection failure. The astronomical database is unreachable.");
-      } else if (err instanceof ServerError) {
-        setError("Deep space server error. Please retry your scan later.");
-      } else {
-        setError("An unexpected anomaly occurred while fetching images.");
-      }
-      setImages([]);
-      console.error("Gallery scan failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
 
   useEffect(() => {
-    loadImages(selectedFilter);
-  }, [selectedFilter]);
-
-  useEffect(() => {
-    const loadBackground = async (): Promise<void> => {
-      try {
-        const bg: string | null = await fetchBackground();
-        if (bg) setBackground(bg);
-      } catch {
-        setBackground(ASSETS.galleryFallback);
-      }
-    };
-    loadBackground();
-  }, []);
+    loadImages(selectedFilter ? { filter: selectedFilter } : {});
+  }, [selectedFilter, loadImages]);
 
   useEffect(() => {
     if (!modalImage) return;
@@ -125,7 +94,7 @@ const AstroGallery: React.FC = () => {
     <div className={styles.container}>
       <div
         className={styles.hero}
-        style={{ backgroundImage: `url(${background})` }}
+        style={{ backgroundImage: `url(${background || ASSETS.galleryFallback})` }}
       >
         <h1 className={styles.heroTitle}>Gallery</h1>
       </div>

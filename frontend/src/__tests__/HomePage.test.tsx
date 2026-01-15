@@ -4,43 +4,37 @@ import { BrowserRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
 import HomePage from "../HomePage";
 import { UserProfile } from "../types";
-import { fetchProfile } from "../api/services";
+import * as services from "../api/services";
+import { useAppStore } from "../store/useStore";
 
 // Mock the API services
-jest.mock("../api/services", () => ({
-  fetchProfile: jest.fn(),
-  fetchBackground: jest.fn().mockResolvedValue("/test-bg.jpg"),
-  fetchEnabledFeatures: jest.fn().mockResolvedValue({}),
-}));
+jest.mock("../api/services");
 
 describe("HomePage Component", () => {
-  const mockFetchProfile = fetchProfile as jest.MockedFunction<
-    typeof fetchProfile
-  >;
+  const mockFetchProfile = services.fetchProfile as jest.Mock;
+  const mockFetchBackground = services.fetchBackground as jest.Mock;
+  const mockFetchEnabledFeatures = services.fetchEnabledFeatures as jest.Mock;
+  const mockFetchAstroImages = services.fetchAstroImages as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFetchBackground.mockResolvedValue("/test-bg.jpg");
+    mockFetchEnabledFeatures.mockResolvedValue({ programming: true });
+    mockFetchAstroImages.mockResolvedValue([]);
+
+    // Reset Zustand store to initial state
+    useAppStore.setState({
+      profile: null,
+      backgroundUrl: null,
+      images: [],
+      isInitialLoading: false,
+      isImagesLoading: false,
+      error: null,
+    });
   });
 
   it("shows loading state initially", async () => {
-    mockFetchProfile.mockImplementation(
-      () =>
-        new Promise((resolve) =>
-          setTimeout(
-            () =>
-              resolve({
-                first_name: "John",
-                last_name: "Doe",
-                short_description: "Professional Photographer",
-                avatar: null,
-                bio: "Test bio",
-                about_me_image: null,
-                about_me_image2: null,
-              }),
-            100,
-          ),
-        ),
-    );
+    mockFetchProfile.mockReturnValue(new Promise(() => { })); // Never resolves
 
     render(
       <BrowserRouter>
@@ -71,9 +65,10 @@ describe("HomePage Component", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("The Beauty of")).toBeInTheDocument();
-    });
+      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+    }, { timeout: 3000 });
 
+    expect(screen.getByText(/The Beauty of/i)).toBeInTheDocument();
     expect(screen.getByText("This is a test bio")).toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
 import Gallery from "../components/Gallery";
 import { fetchEnabledFeatures } from "../api/services";
+import { useAppStore } from "../store/useStore";
 
 // Mock the services
 jest.mock("../api/services", () => ({
@@ -28,6 +29,14 @@ jest.mock("../api/services", () => ({
 describe("Gallery Component", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useAppStore.setState({
+      profile: null,
+      backgroundUrl: null,
+      images: [],
+      isInitialLoading: false,
+      isImagesLoading: false,
+      error: null,
+    });
   });
 
   it("renders the gallery with the new portfolio title", async () => {
