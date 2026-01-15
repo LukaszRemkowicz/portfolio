@@ -336,6 +336,7 @@ src/
 
 - [ ] **Complete Programming Page** - Implement actual programming projects showcase
 - [ ] **Add Contact Page** - Create functional contact form with backend integration
+- [ ] **Add Equipment Section** - Document astronomical gear and setups
 - [ ] **Accessibility Improvements** - Add ARIA labels, keyboard navigation, screen reader support
 
 ### ⚡ Priority 2 - Important
