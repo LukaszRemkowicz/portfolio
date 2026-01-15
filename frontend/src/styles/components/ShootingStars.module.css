@@ -97,7 +97,7 @@
     position: absolute;
     /* Elongated "line" segment look */
     width: var(--p-size);
-    height: calc(var(--p-size) * 0.3);
+    height: calc(var(--p-size) * 0.15);
     /* Soft brush stroke gradient */
     background: radial-gradient(ellipse at center, rgba(30, 30, 35, 0.9) 0%, rgba(15, 15, 20, 0.5) 50%, transparent 100%);
     border-radius: 40%;

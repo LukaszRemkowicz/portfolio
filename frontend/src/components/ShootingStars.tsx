@@ -98,9 +98,9 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                         // Zig-zag jitter offsets
                         offsetX: (Math.random() - 0.5) * 40,
                         offsetY: (Math.random() - 0.5) * 40,
-                        // Elongated segments
-                        size: 40 + Math.random() * 60,
-                        blur: 4 + Math.random() * 6,
+                        // Elongated segments - smaller for thinner look
+                        size: 20 + Math.random() * 30,
+                        blur: 2 + Math.random() * 4,
                         rotate: `${Math.random() * 360}deg`,
                         skew: `${(Math.random() - 0.5) * 40}deg`,
                         driftX: (Math.random() - 0.5) * 40,
