@@ -1,7 +1,7 @@
 import React from "react";
-import styles from "./styles/components/About.module.css";
+import styles from "../styles/components/About.module.css";
 import { Camera } from "lucide-react";
-import { AboutProps } from "./types";
+import { AboutProps } from "../types";
 
 const About: React.FC<AboutProps> = ({ profile }) => {
   if (!profile) return null;

@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
-import Gallery from "../Gallery";
+import Gallery from "../components/Gallery";
 import { fetchEnabledFeatures } from "../api/services";
 
 // Mock the services

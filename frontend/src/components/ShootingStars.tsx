@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import styles from "./styles/components/ShootingStars.module.css";
-import { CONFIG } from "./config";
+import styles from "../styles/components/ShootingStars.module.css";
+import { CONFIG } from "../config";
 
 interface ShootingStar {
     id: number;

@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "./styles/components/StarBackground.module.css";
+import styles from "../styles/components/StarBackground.module.css";
 import ShootingStars from "./ShootingStars";
 
 const StarBackground: React.FC = () => {

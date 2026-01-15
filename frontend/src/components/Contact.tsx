@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { fetchContact, fetchEnabledFeatures } from "./api/services";
-import styles from "./styles/components/Contact.module.css";
-import { ContactFormData, ValidationErrors, SubmitStatus } from "./types";
+import { fetchContact, fetchEnabledFeatures } from "../api/services";
+import styles from "../styles/components/Contact.module.css";
+import { ContactFormData, ValidationErrors, SubmitStatus } from "../types";
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState<ContactFormData>({

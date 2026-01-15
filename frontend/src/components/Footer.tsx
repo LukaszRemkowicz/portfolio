@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "./styles/components/Footer.module.css";
+import styles from "../styles/components/Footer.module.css";
 import { Sparkles } from "lucide-react";
 
 const Footer: React.FC = () => {

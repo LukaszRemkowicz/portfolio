@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import AstroGallery from "../AstroGallery";
+import AstroGallery from "../components/AstroGallery";
 import { AstroImage } from "../types";
 
 // Mock the API services

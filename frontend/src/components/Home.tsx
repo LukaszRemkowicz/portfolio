@@ -1,6 +1,6 @@
 import React from "react";
-import styles from "./styles/components/App.module.css";
-import { HomeProps } from "./types";
+import styles from "../styles/components/App.module.css";
+import { HomeProps } from "../types";
 import ShootingStars from "./ShootingStars";
 
 const Home: React.FC<HomeProps> = ({

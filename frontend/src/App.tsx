@@ -1,9 +1,9 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import HomePage from "./HomePage";
-import AstroGallery from "./AstroGallery";
-import Programming from "./Programming";
-import MainLayout from "./MainLayout";
+import AstroGallery from "./components/AstroGallery";
+import Programming from "./components/Programming";
+import MainLayout from "./components/MainLayout";
 import "./styles/components/App.module.css";
 
 const App: React.FC = () => {

@@ -1,7 +1,7 @@
 import React from "react";
 import { render } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import StarBackground from "../StarBackground";
+import StarBackground from "../components/StarBackground";
 
 describe("StarBackground Component", () => {
     it("renders without crashing", () => {

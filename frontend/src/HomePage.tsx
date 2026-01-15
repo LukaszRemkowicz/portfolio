@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import Home from "./Home";
-import About from "./About";
-import Contact from "./Contact";
-import Navbar from "./Navbar";
-import Footer from "./Footer";
-import Gallery from "./Gallery";
-import StarBackground from "./StarBackground";
+import Home from "./components/Home";
+import About from "./components/About";
+import Contact from "./components/Contact";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import Gallery from "./components/Gallery";
+import StarBackground from "./components/StarBackground";
 import styles from "./styles/components/App.module.css";
 import { fetchProfile, fetchBackground } from "./api/services";
 import { UserProfile } from "./types";

@@ -1,6 +1,6 @@
 import React from "react";
-import styles from "./styles/components/Programming.module.css";
-import { ASSETS } from "./api/routes";
+import styles from "../styles/components/Programming.module.css";
+import { ASSETS } from "../api/routes";
 
 const Programming: React.FC = () => (
   <div className={styles.wrapper}>

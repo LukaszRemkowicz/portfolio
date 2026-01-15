@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import styles from "./styles/components/Navbar.module.css";
+import styles from "../styles/components/Navbar.module.css";
 import { Sparkles, Menu, X } from "lucide-react";
-import { fetchEnabledFeatures } from "./api/services";
-import { NavbarProps } from "./types";
+import { fetchEnabledFeatures } from "../api/services";
+import { NavbarProps } from "../types";
 
 const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

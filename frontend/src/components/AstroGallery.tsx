@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import styles from "./styles/components/AstroGallery.module.css";
+import styles from "../styles/components/AstroGallery.module.css";
 import { Calendar, MapPin } from "lucide-react";
 import {
   fetchAstroImages,
   fetchBackground,
   fetchAstroImage,
-} from "./api/services";
-import { ASSETS } from "./api/routes";
-import { AstroImage, FilterParams, FilterType } from "./types";
+} from "../api/services";
+import { ASSETS } from "../api/routes";
+import { AstroImage, FilterParams, FilterType } from "../types";
 
 const AstroGallery: React.FC = () => {
   const [images, setImages] = useState<AstroImage[]>([]);
