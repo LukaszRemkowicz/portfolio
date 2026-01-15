@@ -57,10 +57,10 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
                 opacity="0.3"
                 strokeDasharray="1 3"
                 className={styles.logoCoordRing}
+                aria-hidden="true"
               />
 
-              {/* Stylized Celestial Elements */}
-              <g className={styles.celestialElements}>
+              <g className={styles.celestialElements} aria-hidden="true">
                 {/* Crescent Moon */}
                 <path
                   d="M35 25 A15 15 0 1 1 35 55 A12 12 0 1 0 35 25"
@@ -120,7 +120,12 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
           </a>
         </div>
 
-        <button className={styles.menuTrigger} onClick={toggleMenu}>
+        <button
+          className={styles.menuTrigger}
+          onClick={toggleMenu}
+          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMenuOpen}
+        >
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </nav>

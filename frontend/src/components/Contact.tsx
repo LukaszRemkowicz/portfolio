@@ -138,65 +138,85 @@ const Contact: React.FC = () => {
             />
             <div className={styles.formGrid}>
               <div className={styles.formField}>
-                <label className={styles.fieldLabel}>Identity</label>
+                <label className={styles.fieldLabel} htmlFor="name">Identity</label>
                 <input
+                  id="name"
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  placeholder="Name"
+                  placeholder="Your Name"
+                  required
+                  aria-required="true"
+                  aria-invalid={!!validationErrors.name}
+                  aria-describedby={validationErrors.name ? "name-error" : undefined}
                   className={`${styles.formInput} ${validationErrors.name ? styles.inputError : ""}`}
                 />
                 {validationErrors.name && (
-                  <span className={styles.errorText}>
+                  <span className={styles.errorText} id="name-error" role="alert">
                     {validationErrors.name[0]}
                   </span>
                 )}
               </div>
               <div className={styles.formField}>
-                <label className={styles.fieldLabel}>Communication</label>
+                <label className={styles.fieldLabel} htmlFor="email">Communication</label>
                 <input
+                  id="email"
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="Email Address"
+                  required
+                  aria-required="true"
+                  aria-invalid={!!validationErrors.email}
+                  aria-describedby={validationErrors.email ? "email-error" : undefined}
                   className={`${styles.formInput} ${validationErrors.email ? styles.inputError : ""}`}
                 />
                 {validationErrors.email && (
-                  <span className={styles.errorText}>
+                  <span className={styles.errorText} id="email-error" role="alert">
                     {validationErrors.email[0]}
                   </span>
                 )}
               </div>
               <div className={styles.formField}>
-                <label className={styles.fieldLabel}>Topic</label>
+                <label className={styles.fieldLabel} htmlFor="subject">Topic</label>
                 <input
+                  id="subject"
                   type="text"
                   name="subject"
                   value={formData.subject}
                   onChange={handleChange}
                   placeholder="Subject"
+                  required
+                  aria-required="true"
+                  aria-invalid={!!validationErrors.subject}
+                  aria-describedby={validationErrors.subject ? "subject-error" : undefined}
                   className={`${styles.formInput} ${validationErrors.subject ? styles.inputError : ""}`}
                 />
                 {validationErrors.subject && (
-                  <span className={styles.errorText}>
+                  <span className={styles.errorText} id="subject-error" role="alert">
                     {validationErrors.subject[0]}
                   </span>
                 )}
               </div>
               <div className={`${styles.formField} ${styles.fullWidth}`}>
-                <label className={styles.fieldLabel}>Transmission</label>
+                <label className={styles.fieldLabel} htmlFor="message">Transmission</label>
                 <textarea
+                  id="message"
                   name="message"
                   value={formData.message}
                   onChange={handleChange}
                   rows={5}
                   placeholder="How can I help you?"
+                  required
+                  aria-required="true"
+                  aria-invalid={!!validationErrors.message}
+                  aria-describedby={validationErrors.message ? "message-error" : undefined}
                   className={`${styles.formInput} ${validationErrors.message ? styles.inputError : ""}`}
                 ></textarea>
                 {validationErrors.message && (
-                  <span className={styles.errorText}>
+                  <span className={styles.errorText} id="message-error" role="alert">
                     {validationErrors.message[0]}
                   </span>
                 )}
@@ -213,12 +233,12 @@ const Contact: React.FC = () => {
             </div>
 
             {submitStatus === "success" && (
-              <p className={styles.successMessage}>
+              <p className={styles.successMessage} role="status" aria-live="polite">
                 Thank you! Your message has been sent successfully.
               </p>
             )}
             {submitStatus === "error" && (
-              <p className={styles.errorMessage}>
+              <p className={styles.errorMessage} role="alert">
                 Sorry, there was an error sending your message. Please try
                 again.
               </p>

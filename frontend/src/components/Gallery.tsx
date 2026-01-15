@@ -115,24 +115,28 @@ const Gallery: React.FC = () => {
         <h2 className={styles.title}>Latest images</h2>
         <div className={styles.filters}>
           <button
+            type="button"
             onClick={() => setFilter("all")}
             className={`${styles.filterBtn} ${filter === "all" ? styles.active : ""}`}
           >
             All Works
           </button>
           <button
+            type="button"
             onClick={() => setFilter("deepsky")}
             className={`${styles.filterBtn} ${filter === "deepsky" ? styles.active : ""}`}
           >
             Deep Sky
           </button>
           <button
+            type="button"
             onClick={() => setFilter("astrolandscape")}
             className={`${styles.filterBtn} ${filter === "astrolandscape" ? styles.active : ""}`}
           >
             Astrolandscape
           </button>
           <button
+            type="button"
             onClick={() => setFilter("timelapse")}
             className={`${styles.filterBtn} ${filter === "timelapse" ? styles.active : ""}`}
           >
@@ -146,10 +150,12 @@ const Gallery: React.FC = () => {
           <div className={styles.loading}>Loading Portfolio...</div>
         ) : filteredImages.length > 0 ? (
           filteredImages.map((item) => (
-            <div
+            <button
               key={item.pk}
               className={styles.card}
               onClick={() => handleImageClick(item)}
+              aria-label={`View details for ${item.name}`}
+              type="button"
             >
               {isNew(item.created_at) && (
                 <div className={styles.newBadge}>NEW</div>
@@ -162,16 +168,17 @@ const Gallery: React.FC = () => {
                   backgroundPosition: "center",
                   opacity: 0.6,
                 }}
+                aria-hidden="true"
               ></div>
-              <div className={styles.cardIcon}>
+              <div className={styles.cardIcon} aria-hidden="true">
                 <Camera size={48} />
               </div>
               <div className={styles.cardContent}>
                 <span className={styles.category}>{item.celestial_object}</span>
                 <h3 className={styles.cardTitle}>{item.name}</h3>
-                <div className={styles.divider}></div>
+                <div className={styles.divider} aria-hidden="true"></div>
               </div>
-            </div>
+            </button>
           ))
         ) : (
           <div className={styles.noResults}>

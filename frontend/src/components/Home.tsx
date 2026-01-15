@@ -48,7 +48,7 @@ const Home: React.FC<HomeProps> = ({
             View Portfolio
           </a>
           <a href="#about" className={styles.secondaryBtn}>
-            Learn Process
+            About Me
           </a>
         </div>
       </div>
