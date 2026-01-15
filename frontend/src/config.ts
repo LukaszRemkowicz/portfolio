@@ -23,4 +23,9 @@ export const CONFIG = {
      */
     starDurationRange: [1.0, 3.0] as [number, number],
     bolidDurationRange: [0.5, 1.5] as [number, number],
+    /**
+     * Width ranges (in pixels) for streaks.
+     */
+    starWidthRange: [100, 200] as [number, number],
+    bolidWidthRange: [200, 400] as [number, number],
 };
