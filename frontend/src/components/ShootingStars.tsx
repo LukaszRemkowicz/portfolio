@@ -8,6 +8,8 @@ interface DustParticle {
     offsetY: number;
     size: number;
     blur: number;
+    rotate: string;
+    skew: string;
     driftX: number;
     driftY: number;
     duration: number;
@@ -83,23 +85,28 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const maxPath = Math.max(p1, p2);
             const distance = random ? Math.random() * (maxPath - minPath) + minPath : 600;
 
-            // Generate smoke segments for bolids (the "Burn")
+            // Generate smoke segments for bolids (Zig-Zag "Burn")
             const dustParticles: DustParticle[] = [];
             if (isBolid) {
-                const particleCount = 4 + Math.floor(Math.random() * 3); // 4-6 larger blobs
-                for (let i = 0; i < particleCount; i++) {
+                const segmentCount = 10 + Math.floor(Math.random() * 6); // 10-16 thin pieces
+                for (let i = 0; i < segmentCount; i++) {
+                    // Spread pieces along the flight path (roughly 30% to 90% of duration)
+                    const progress = 0.3 + (i / segmentCount) * 0.6;
+
                     dustParticles.push({
                         id: Math.random(),
-                        // Wider offsets for irregular cloud shape
-                        offsetX: (Math.random() - 0.5) * 30,
-                        offsetY: (Math.random() - 0.5) * 30,
-                        // Significantly larger blobs
-                        size: 30 + Math.random() * 40,
-                        blur: 8 + Math.random() * 8, // More blur for smoky look
-                        driftX: (Math.random() - 0.5) * 60,
-                        driftY: (Math.random() - 0.5) * 60,
-                        duration: 1.5 + Math.random() * 2.0, // Longer lingering smoke
-                        delay: duration * 0.6 + (Math.random() - 0.5) * 0.1, // Near flash point
+                        // Zig-zag jitter offsets
+                        offsetX: (Math.random() - 0.5) * 40,
+                        offsetY: (Math.random() - 0.5) * 40,
+                        // Elongated segments
+                        size: 40 + Math.random() * 60,
+                        blur: 4 + Math.random() * 6,
+                        rotate: `${Math.random() * 360}deg`,
+                        skew: `${(Math.random() - 0.5) * 40}deg`,
+                        driftX: (Math.random() - 0.5) * 40,
+                        driftY: (Math.random() - 0.5) * 40,
+                        duration: 2.0 + Math.random() * 1.5,
+                        delay: duration * progress + (Math.random() - 0.5) * 0.1,
                     });
                 }
             }
@@ -172,6 +179,8 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                                     style={{
                                         "--p-size": `${particle.size}px`,
                                         "--p-blur": `${particle.blur}px`,
+                                        "--p-rotate": particle.rotate,
+                                        "--p-skew": particle.skew,
                                         "--p-x": `${particle.offsetX}px`,
                                         "--p-y": `${particle.offsetY}px`,
                                         "--p-drift-x": `${particle.driftX}px`,

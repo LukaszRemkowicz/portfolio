@@ -95,30 +95,32 @@
 
 .bolidDust {
     position: absolute;
+    /* Elongated "line" segment look */
     width: var(--p-size);
-    height: var(--p-size);
-    /* Dark smoky cloud look */
-    background: radial-gradient(circle, rgba(20, 20, 25, 1) 0%, rgba(10, 10, 15, 0.4) 60%, transparent 100%);
-    border-radius: 50%;
-    filter: blur(var(--p-blur, 4px));
+    height: calc(var(--p-size) * 0.3);
+    /* Soft brush stroke gradient */
+    background: radial-gradient(ellipse at center, rgba(30, 30, 35, 0.9) 0%, rgba(15, 15, 20, 0.5) 50%, transparent 100%);
+    border-radius: 40%;
+    filter: blur(var(--p-blur, 3px));
     opacity: 0;
     left: 0;
     top: 50%;
+    transform-origin: center;
 }
 
 @keyframes driftAndFade {
     0% {
-        transform: translate(var(--p-x), calc(-50% + var(--p-y))) scale(0.5);
+        transform: translate(var(--p-x), calc(-50% + var(--p-y))) rotate(var(--p-rotate)) skew(var(--p-skew)) scale(0.6);
         opacity: 0;
     }
 
     15% {
-        opacity: 0.6;
+        opacity: 0.7;
     }
 
+    /* Jittery drift */
     100% {
-        /* Expand as it drifts and fades */
-        transform: translate(calc(var(--p-x) + var(--p-drift-x)), calc(-50% + var(--p-y) + var(--p-drift-y))) scale(2);
+        transform: translate(calc(var(--p-x) + var(--p-drift-x)), calc(-50% + var(--p-y) + var(--p-drift-y))) rotate(calc(var(--p-rotate) + 20deg)) scale(1.8);
         opacity: 0;
     }
 }
