@@ -103,10 +103,18 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
             const newStar = { id, left, top, duration, angle, distance, width, opacity, isBolid, dustParticles };
             setShootingStars((prev) => [...prev, newStar]);
 
-            // Remove the star after its animation completes
+            // Calculate when to remove the star from state
+            // Bolids need to hang around longer for their dust to finish
+            let totalLifetime = duration * 1000;
+            if (isBolid && dustParticles.length > 0) {
+                const maxDustTime = Math.max(...dustParticles.map(p => p.delay + p.duration));
+                totalLifetime = Math.max(totalLifetime, maxDustTime * 1000);
+            }
+
+            // Remove the star after its animation (and dust) completes
             setTimeout(() => {
                 setShootingStars((prev) => prev.filter((star) => star.id !== id));
-            }, duration * 1000);
+            }, totalLifetime + 100); // Add small buffer
 
             // Schedule next star
             const nextDelay = Math.random() * (maxDelay - minDelay) + minDelay;
