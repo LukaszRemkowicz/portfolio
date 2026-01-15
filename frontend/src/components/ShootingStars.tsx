@@ -102,8 +102,8 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                         // Thinner initial segments
                         size: 40 + Math.random() * 40,
                         blur: 1, // Sharp start
-                        // Align perfectly with meteor trajectory
-                        rotate: `${angle}deg`,
+                        // Relative to rotated parent: 0deg is parallel to path
+                        rotate: `${(Math.random() - 0.5) * 10}deg`,
                         skew: `0deg`,
                         opacity: Math.random() * (CONFIG.smokeOpacityRange[1] - CONFIG.smokeOpacityRange[0]) + CONFIG.smokeOpacityRange[0],
                         driftX: (Math.random() - 0.5) * 20,
