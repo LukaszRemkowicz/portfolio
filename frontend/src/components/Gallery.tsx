@@ -11,34 +11,38 @@ interface GalleryCardProps {
   isNew: (dateString?: string) => boolean;
 }
 
-const GalleryCard = memo(({ item, onClick, isNew }: GalleryCardProps) => (
-  <button
-    className={styles.card}
-    onClick={() => onClick(item)}
-    aria-label={`View details for ${item.name}`}
-    type="button"
-  >
-    {isNew(item.created_at) && <div className={styles.newBadge}>NEW</div>}
-    <div
-      className={styles.cardBg}
-      style={{
-        backgroundImage: `url(${item.thumbnail_url || item.url})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        opacity: 0.6,
-      }}
-      aria-hidden="true"
-    ></div>
-    <div className={styles.cardIcon} aria-hidden="true">
-      <Camera size={48} />
-    </div>
-    <div className={styles.cardContent}>
-      <span className={styles.category}>{item.celestial_object}</span>
-      <h3 className={styles.cardTitle}>{item.name}</h3>
-      <div className={styles.divider} aria-hidden="true"></div>
-    </div>
-  </button>
-));
+const GalleryCard = memo(({ item, onClick, isNew }: GalleryCardProps) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  return (
+    <button
+      className={styles.card}
+      onClick={() => onClick(item)}
+      aria-label={`View details for ${item.name}`}
+      type="button"
+    >
+      {isNew(item.created_at) && <div className={styles.newBadge}>NEW</div>}
+      <div className={styles.imageWrapper} aria-hidden="true">
+        <div className={`${styles.placeholder} ${isLoaded ? styles.hide : ""}`} />
+        <img
+          src={item.thumbnail_url || item.url}
+          alt=""
+          loading="lazy"
+          onLoad={() => setIsLoaded(true)}
+          className={`${styles.cardImage} ${isLoaded ? styles.show : ""}`}
+        />
+      </div>
+      <div className={styles.cardIcon} aria-hidden="true">
+        <Camera size={48} />
+      </div>
+      <div className={styles.cardContent}>
+        <span className={styles.category}>{item.celestial_object}</span>
+        <h3 className={styles.cardTitle}>{item.name}</h3>
+        <div className={styles.divider} aria-hidden="true"></div>
+      </div>
+    </button>
+  );
+});
 
 GalleryCard.displayName = "GalleryCard";
 

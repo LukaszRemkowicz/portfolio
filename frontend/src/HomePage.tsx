@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense, lazy } from "react";
 import Home from "./components/Home";
-import About from "./components/About";
-import Contact from "./components/Contact";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import Gallery from "./components/Gallery";
 import StarBackground from "./components/StarBackground";
+
+// Lazy load non-critical sections
+const Gallery = lazy(() => import("./components/Gallery"));
+const About = lazy(() => import("./components/About"));
+const Contact = lazy(() => import("./components/Contact"));
+
 import styles from "./styles/components/App.module.css";
 import { fetchProfile, fetchBackground } from "./api/services";
 import { UserProfile } from "./types";
@@ -52,9 +55,11 @@ const HomePage: React.FC = () => {
           backgroundUrl={backgroundUrl}
         />
       </main>
-      <Gallery />
-      <About profile={profile} />
-      <Contact />
+      <Suspense fallback={<div className={styles.loading}>Loading section...</div>}>
+        <Gallery />
+        <About profile={profile} />
+        <Contact />
+      </Suspense>
       <Footer />
     </div>
   );

@@ -88,14 +88,40 @@
   transition: all 0.7s var(--transition-normal);
 }
 
-.cardBg {
+.imageWrapper {
   position: absolute;
   inset: 0;
-  opacity: 0.4;
-  transition: opacity 0.7s var(--transition-normal);
+  background: var(--color-bg);
+  overflow: hidden;
 }
 
-.card:hover .cardBg {
+.placeholder {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: opacity 1s ease-out;
+  z-index: 1;
+}
+
+.placeholder.hide {
+  opacity: 0;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 1s ease-out;
+}
+
+.cardImage.show {
+  opacity: 0.6;
+}
+
+.card:hover .cardImage.show {
   opacity: 0.8;
 }
 
@@ -187,6 +213,7 @@
   font-family: var(--font-family-heading);
   font-size: 1.125rem;
 }
+
 /* Modal Styles */
 .modalOverlay {
   position: fixed;

@@ -39,6 +39,8 @@ const Home: React.FC<HomeProps> = ({
               src={portraitUrl}
               alt="Portrait"
               className={styles.heroPortrait}
+              loading="eager"
+              {...({ fetchpriority: "high" } as any)}
             />
           </div>
         )}
