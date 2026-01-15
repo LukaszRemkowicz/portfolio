@@ -23,6 +23,7 @@ export interface AstroImage {
   tags?: string[];
   name: string;
   description: string;
+  created_at?: string;
   capture_date?: string;
   location?: string;
   equipment?: string;

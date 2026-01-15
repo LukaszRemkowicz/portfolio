@@ -20,6 +20,7 @@ class AstroImageSerializerList(serializers.ModelSerializer):
             "capture_date",
             "location",
             "celestial_object",
+            "created_at",
         ]
 
 

@@ -23,7 +23,7 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
     def get_queryset(self):
-        queryset = AstroImage.objects.all().order_by("-capture_date")
+        queryset = AstroImage.objects.all().order_by("-created_at")
 
         # Filter by Celestial Object
         filter_value = self.request.query_params.get("filter")
