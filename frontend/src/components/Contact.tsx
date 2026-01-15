@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { fetchContact, fetchEnabledFeatures } from "../api/services";
 import styles from "../styles/components/Contact.module.css";
 import { ContactFormData, ValidationErrors, SubmitStatus } from "../types";
@@ -34,23 +34,27 @@ const Contact: React.FC = () => {
     checkEnablement();
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ): void => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    if (validationErrors[name as keyof ValidationErrors]) {
-      setValidationErrors((prev) => ({
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({
         ...prev,
-        [name]: undefined,
+        [name]: value,
       }));
-    }
-  };
+      setValidationErrors((prev) => {
+        if (prev[name as keyof ValidationErrors]) {
+          return {
+            ...prev,
+            [name]: undefined,
+          };
+        }
+        return prev;
+      });
+    },
+    []
+  );
 
-  const validateForm = (): boolean => {
+  const validateForm = useCallback((): boolean => {
     const errors: ValidationErrors = {};
     if (!formData.name || formData.name.trim().length < 2) {
       errors.name = ["Name must be at least 2 characters long."];
@@ -75,39 +79,39 @@ const Contact: React.FC = () => {
       return false;
     }
     return true;
-  };
+  }, [formData]);
 
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>,
-  ): Promise<void> => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitStatus(null);
-    setValidationErrors({});
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+      e.preventDefault();
+      setIsSubmitting(true);
+      setSubmitStatus(null);
+      setValidationErrors({});
 
-    if (!validateForm()) {
-      setIsSubmitting(false);
-      return;
-    }
+      if (!validateForm()) {
+        setIsSubmitting(false);
+        return;
+      }
 
-    try {
-      await fetchContact(formData);
-      setSubmitStatus("success");
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        message: "",
-        website: "",
-      });
-    } catch (error: unknown) {
-      console.error("Failed to send message:", error);
-      // Simplified error handling for brevity, retaining essential logic
-      setSubmitStatus("error");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      try {
+        await fetchContact(formData);
+        setSubmitStatus("success");
+        setFormData({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+          website: "",
+        });
+      } catch (error: unknown) {
+        console.error("Failed to send message:", error);
+        setSubmitStatus("error");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [formData, validateForm]
+  );
 
   if (isLoading || isEnabled === false) {
     return null;

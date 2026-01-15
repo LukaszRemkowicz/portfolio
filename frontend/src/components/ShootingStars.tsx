@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import styles from "../styles/components/ShootingStars.module.css";
 import { CONFIG } from "../config";
 
@@ -37,6 +37,64 @@ interface ShootingStarsProps {
     className?: string;
     random?: boolean;
 }
+
+const MemoizedStar = memo(({ star }: { star: ShootingStar }) => (
+    <div
+        className={`${styles.shootingStar} ${star.isBolid ? styles.bolid : ""}`}
+        style={
+            {
+                left: star.left,
+                top: star.top,
+                animation: `${styles.move} ${star.duration}s linear forwards`,
+                "--angle": `${star.angle}deg`,
+                "--distance": `${star.distance}px`,
+                "--width": `${star.width}px`,
+            } as React.CSSProperties
+        }
+    >
+        <div
+            className={styles.streak}
+            style={
+                {
+                    animation: `${styles.streakFade} ${star.duration}s linear forwards`,
+                    "--opacity": star.opacity,
+                } as React.CSSProperties
+            }
+        />
+        {star.isBolid && (
+            <>
+                <div
+                    className={styles.bolidFlash}
+                    style={{
+                        animation: `${styles.explode} ${star.duration * 0.4}s ease-out forwards`,
+                        animationDelay: `${star.duration * 0.6}s`,
+                    }}
+                />
+                {star.dustParticles?.map((particle) => (
+                    <div
+                        key={particle.id}
+                        className={styles.bolidDust}
+                        style={{
+                            "--p-size": `${particle.size}px`,
+                            "--p-blur": `${particle.blur}px`,
+                            "--p-opacity": particle.opacity,
+                            "--p-rotate": particle.rotate,
+                            "--p-skew": particle.skew,
+                            "--p-x": `${particle.offsetX}px`,
+                            "--p-y": `${particle.offsetY}px`,
+                            "--p-drift-x": `${particle.driftX}px`,
+                            "--p-drift-y": `${particle.driftY}px`,
+                            animation: `${styles.driftAndFade} ${particle.duration}s ease-out forwards`,
+                            animationDelay: `${particle.delay}s`,
+                        } as React.CSSProperties}
+                    />
+                ))}
+            </>
+        )}
+    </div>
+));
+
+MemoizedStar.displayName = "MemoizedStar";
 
 const ShootingStars: React.FC<ShootingStarsProps> = ({
     minDelay = 4000,
@@ -144,60 +202,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
     return (
         <div className={`${styles.starContainer} ${className}`}>
             {shootingStars.map((star) => (
-                <div
-                    key={star.id}
-                    className={`${styles.shootingStar} ${star.isBolid ? styles.bolid : ""}`}
-                    style={
-                        {
-                            left: star.left,
-                            top: star.top,
-                            animation: `${styles.move} ${star.duration}s linear forwards`,
-                            "--angle": `${star.angle}deg`,
-                            "--distance": `${star.distance}px`,
-                            "--width": `${star.width}px`,
-                        } as React.CSSProperties
-                    }
-                >
-                    <div
-                        className={styles.streak}
-                        style={
-                            {
-                                animation: `${styles.streakFade} ${star.duration}s linear forwards`,
-                                "--opacity": star.opacity,
-                            } as React.CSSProperties
-                        }
-                    />
-                    {star.isBolid && (
-                        <>
-                            <div
-                                className={styles.bolidFlash}
-                                style={{
-                                    animation: `${styles.explode} ${star.duration * 0.4}s ease-out forwards`,
-                                    animationDelay: `${star.duration * 0.6}s`,
-                                }}
-                            />
-                            {star.dustParticles?.map((particle) => (
-                                <div
-                                    key={particle.id}
-                                    className={styles.bolidDust}
-                                    style={{
-                                        "--p-size": `${particle.size}px`,
-                                        "--p-blur": `${particle.blur}px`,
-                                        "--p-opacity": particle.opacity,
-                                        "--p-rotate": particle.rotate,
-                                        "--p-skew": particle.skew,
-                                        "--p-x": `${particle.offsetX}px`,
-                                        "--p-y": `${particle.offsetY}px`,
-                                        "--p-drift-x": `${particle.driftX}px`,
-                                        "--p-drift-y": `${particle.driftY}px`,
-                                        animation: `${styles.driftAndFade} ${particle.duration}s ease-out forwards`,
-                                        animationDelay: `${particle.delay}s`,
-                                    } as React.CSSProperties}
-                                />
-                            ))}
-                        </>
-                    )}
-                </div>
+                <MemoizedStar key={star.id} star={star} />
             ))}
         </div>
     );

@@ -1,9 +1,46 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { createPortal } from "react-dom";
 import styles from "../styles/components/Gallery.module.css";
 import { Camera, Calendar, MapPin } from "lucide-react";
 import { fetchAstroImages, fetchAstroImage } from "../api/services";
 import { AstroImage } from "../types";
+
+interface GalleryCardProps {
+  item: AstroImage;
+  onClick: (image: AstroImage) => void;
+  isNew: (dateString?: string) => boolean;
+}
+
+const GalleryCard = memo(({ item, onClick, isNew }: GalleryCardProps) => (
+  <button
+    className={styles.card}
+    onClick={() => onClick(item)}
+    aria-label={`View details for ${item.name}`}
+    type="button"
+  >
+    {isNew(item.created_at) && <div className={styles.newBadge}>NEW</div>}
+    <div
+      className={styles.cardBg}
+      style={{
+        backgroundImage: `url(${item.thumbnail_url || item.url})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        opacity: 0.6,
+      }}
+      aria-hidden="true"
+    ></div>
+    <div className={styles.cardIcon} aria-hidden="true">
+      <Camera size={48} />
+    </div>
+    <div className={styles.cardContent}>
+      <span className={styles.category}>{item.celestial_object}</span>
+      <h3 className={styles.cardTitle}>{item.name}</h3>
+      <div className={styles.divider} aria-hidden="true"></div>
+    </div>
+  </button>
+));
+
+GalleryCard.displayName = "GalleryCard";
 
 const Gallery: React.FC = () => {
   const [filter, setFilter] = useState("all");
@@ -57,7 +94,7 @@ const Gallery: React.FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [modalImage]);
 
-  const getFilteredImages = () => {
+  const filteredImages = useMemo(() => {
     if (filter === "all") return images.slice(0, 9);
 
     const categoryMap: Record<string, string> = {
@@ -76,35 +113,34 @@ const Gallery: React.FC = () => {
         return dateB - dateA;
       })
       .slice(0, 9);
-  };
+  }, [images, filter]);
 
-  const filteredImages = getFilteredImages();
-
-  const isNew = (dateString?: string) => {
+  const isNew = useCallback((dateString?: string) => {
     if (!dateString) return false;
     const date = new Date(dateString);
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
     return diffDays < 7;
-  };
+  }, []);
 
-  const closeModal = (): void => setModalImage(null);
+  const closeModal = useCallback((): void => setModalImage(null), []);
 
-  const handleImageClick = (image: AstroImage): void => {
+  const handleImageClick = useCallback((image: AstroImage): void => {
     console.log("Card clicked!", image.name);
     setModalImage(image);
-  };
+  }, []);
 
-  const handleModalOverlayClick = (): void => {
+  const handleModalOverlayClick = useCallback((): void => {
     closeModal();
-  };
+  }, [closeModal]);
 
-  const handleModalContentClick = (
-    e: React.MouseEvent<HTMLDivElement>,
-  ): void => {
-    e.stopPropagation();
-  };
+  const handleModalContentClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>): void => {
+      e.stopPropagation();
+    },
+    []
+  );
 
   // Only hide the entire section if we have finished loading and there are NO images at all in the backend
   if (!loading && images.length === 0) return null;
@@ -150,35 +186,12 @@ const Gallery: React.FC = () => {
           <div className={styles.loading}>Loading Portfolio...</div>
         ) : filteredImages.length > 0 ? (
           filteredImages.map((item) => (
-            <button
+            <GalleryCard
               key={item.pk}
-              className={styles.card}
-              onClick={() => handleImageClick(item)}
-              aria-label={`View details for ${item.name}`}
-              type="button"
-            >
-              {isNew(item.created_at) && (
-                <div className={styles.newBadge}>NEW</div>
-              )}
-              <div
-                className={styles.cardBg}
-                style={{
-                  backgroundImage: `url(${item.thumbnail_url || item.url})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  opacity: 0.6,
-                }}
-                aria-hidden="true"
-              ></div>
-              <div className={styles.cardIcon} aria-hidden="true">
-                <Camera size={48} />
-              </div>
-              <div className={styles.cardContent}>
-                <span className={styles.category}>{item.celestial_object}</span>
-                <h3 className={styles.cardTitle}>{item.name}</h3>
-                <div className={styles.divider} aria-hidden="true"></div>
-              </div>
-            </button>
+              item={item}
+              onClick={handleImageClick}
+              isNew={isNew}
+            />
           ))
         ) : (
           <div className={styles.noResults}>
