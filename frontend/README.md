@@ -128,7 +128,11 @@ npm run build
 
 - Creates optimized build in `dist/` directory
 - Minified CSS and JavaScript
+- Creates optimized build in `dist/` directory
+- Minified CSS and JavaScript
 - Asset optimization
+
+> **Deployment**: For full production deployment with Docker (including backend and Nginx), refer to the **Root README** "Production Deployment" section.
 
 ### Testing
 
@@ -258,7 +262,10 @@ All component styles are organized in `styles/components/` directory:
 
 ### Environment Variables
 
+### Environment Variables
+
 - `API_BASE_URL` - Backend API endpoint (default: `https://admin.portfolio.local`)
+- `ENABLE_SHOOTING_STARS` - Toggle shooting stars animation ("true"/"false", default: "true")
 - Custom domains configured in nginx
 
 ### Build Configuration
@@ -330,29 +337,35 @@ src/
 - ✅ **Professional Grade** - Enterprise-level TypeScript codebase
 - ✅ **All Tests Passing** - 21/21 tests with full TypeScript support
 
+## 🌐 Deployment Checklist (Production)
+
+> [!IMPORTANT]
+> The current SEO and discovery files use `portfolio.local` for development. Before deploying to production, ensure the following manual updates are made:
+
+- **`public/index.html`**:
+  - Update `<meta property="og:url" content="..." />`
+  - Update `<meta property="og:image" content="..." />`
+  - Update `<meta property="twitter:url" content="..." />`
+  - Update `<meta property="twitter:image" content="..." />`
+  - Update `<script type="application/ld+json">` (Update `@id`, `url`, and `sameAs` links)
+- **`public/sitemap.xml`**:
+  - Replace all instances of `https://portfolio.local/` with your actual production domain.
+- **`public/robots.txt`**:
+  - Update the `Sitemap:` directive link.
+- **Environment Variables**:
+  - Set `API_URL` to your production backend URL (e.g., `https://api.yourdomain.com`).
+
+---
+
 ## 📋 TODO / Future Improvements
 
-### 🚀 Priority 1 - Critical
+### ⚡ Priority 1 - Important
+
+- [ ] **Add Equipment Section** - Document astronomical gear and setups
+
+### 🎯 Priority 2 - Nice to Have
 
 - [ ] **Complete Programming Page** - Implement actual programming projects showcase
-- [ ] **Add Contact Page** - Create functional contact form with backend integration
-- [ ] **Accessibility Improvements** - Add ARIA labels, keyboard navigation, screen reader support
-
-### ⚡ Priority 2 - Important
-
-- [ ] **Refactor Inline Styles** - Move inline styles from Programming.jsx to CSS modules
-- [ ] **Performance Optimizations** - Add React.memo(), useMemo(), useCallback() for better performance
-- [ ] **Better Error Handling** - Implement specific error types and better error messages
-- [ ] **Replace Static Gallery** - Make homepage gallery API-driven instead of static
-
-### 🎯 Priority 3 - Nice to Have
-
-- [ ] **State Management** - Redux/Zustand for complex state management
-- [ ] **PWA Features** - Service worker, offline support
-- [ ] **Advanced Testing** - E2E tests with Playwright
-- [ ] **Image Optimization** - Advanced lazy loading and compression
-- [ ] **Thumbnail Hover Effects** - Add hover state to thumbnails with descriptive text (Post-MVP)
-- [ ] **SEO Enhancement** - Meta tags, structured data, sitemap
 
 ---
 

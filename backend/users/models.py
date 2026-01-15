@@ -46,6 +46,9 @@ class User(AbstractUser):
         ),
     )
     bio = models.TextField(max_length=10000, blank=True, help_text="General/Global bio about you")
+    contact_email = models.EmailField(
+        blank=True, help_text="Public contact email displayed in footer"
+    )
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     about_me_image = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
     about_me_image2 = models.ImageField(upload_to="about_me_images/", null=True, blank=True)

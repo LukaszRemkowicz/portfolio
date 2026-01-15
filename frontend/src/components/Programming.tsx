@@ -1,16 +1,16 @@
 import React from "react";
-import styles from "./styles/components/Programming.module.css";
-import { ASSETS } from "./api/routes";
+import styles from "../styles/components/Programming.module.css";
+import { ASSETS } from "../api/routes";
 
 const Programming: React.FC = () => (
   <div className={styles.wrapper}>
     <div
       className={styles.container}
-      style={{
-        backgroundImage: `url(${ASSETS.underConstruction})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
+      style={
+        {
+          "--bg-image": `url(${ASSETS.underConstruction})`,
+        } as React.CSSProperties
+      }
     >
       <div className={styles.overlay}></div>
       <div className={styles.text}>

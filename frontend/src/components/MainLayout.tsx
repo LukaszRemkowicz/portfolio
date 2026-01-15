@@ -1,9 +1,9 @@
 import React from "react";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import styles from "./styles/components/App.module.css";
+import styles from "../styles/components/App.module.css";
 import { useLocation } from "react-router-dom";
-import { MainLayoutProps } from "./types";
+import { MainLayoutProps } from "../types";
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();

@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  portfolio-fe:
+    build:
+      context: ./frontend
+      target: prod
+    restart: always
+    # Remove development volumes to use the optimized built artifacts
+    volumes:
+      - ./nginx/ssl/certs:/etc/ssl/certs:ro
+
+  portfolio-be:
+    build:
+      target: production
+    restart: always
+    environment:
+      DEBUG: "False"
+      # Ensure these are set in your .env file for production
+      # DJANGO_ALLOWED_HOSTS: "portfolio.com"
+
+  portfolio-nginx:
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"

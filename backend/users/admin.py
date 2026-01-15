@@ -26,6 +26,7 @@ class UserAdmin(DjangoUserAdmin):
                     "last_name",
                     "short_description",
                     "bio",
+                    "contact_email",
                     "avatar",
                     "about_me_image",
                     "about_me_image2",

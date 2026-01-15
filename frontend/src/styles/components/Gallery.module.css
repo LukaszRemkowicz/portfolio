@@ -88,14 +88,40 @@
   transition: all 0.7s var(--transition-normal);
 }
 
-.cardBg {
+.imageWrapper {
   position: absolute;
   inset: 0;
-  opacity: 0.4;
-  transition: opacity 0.7s var(--transition-normal);
+  background: var(--color-bg);
+  overflow: hidden;
 }
 
-.card:hover .cardBg {
+.placeholder {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: opacity 1s ease-out;
+  z-index: 1;
+}
+
+.placeholder.hide {
+  opacity: 0;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 1s ease-out;
+}
+
+.cardImage.show {
+  opacity: 0.6;
+}
+
+.card:hover .cardImage.show {
   opacity: 0.8;
 }
 
@@ -137,8 +163,9 @@
   left: 0;
   width: 100%;
   padding: 2.5rem;
-  transform: translateY(1rem);
-  transition: transform 0.5s var(--transition-normal);
+  transform: translateY(2rem);
+  transition: transform 0.6s var(--transition-normal);
+  z-index: 5;
 }
 
 .card:hover .cardContent {
@@ -163,6 +190,35 @@
   color: var(--celestial-white);
   line-height: 1.2;
   font-family: var(--font-family-heading);
+  margin-bottom: 0.5rem;
+}
+
+.cardLocation {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--celestial-white);
+  opacity: 0.8;
+  font-family: var(--font-family-mono);
+  margin-bottom: 0.75rem;
+}
+
+.cardDescription {
+  font-size: 0.875rem;
+  color: var(--celestial-white);
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  line-height: 1.5;
+  transition: all 0.5s var(--transition-normal);
+  font-family: var(--font-family-primary);
+}
+
+.card:hover .cardDescription {
+  opacity: 0.7;
+  max-height: 60px;
+  margin-top: 0.5rem;
 }
 
 .divider {
@@ -186,144 +242,4 @@
   opacity: 0.6;
   font-family: var(--font-family-heading);
   font-size: 1.125rem;
-}
-/* Modal Styles */
-.modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 99999;
-  overflow-y: auto;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.modalContent {
-  position: relative;
-  width: 90%;
-  max-width: 1200px;
-  max-height: 90vh;
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.5rem;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  overflow-y: auto;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-}
-
-.modalClose {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  color: var(--celestial-white);
-  font-size: 1.5rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  z-index: 1010;
-}
-
-.modalClose:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: rotate(90deg);
-}
-
-.modalImage {
-  width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  border-radius: 0.75rem;
-}
-
-.modalMetadata {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  align-items: center;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.metaItem {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--celestial-blue);
-  font-family: var(--font-family-mono);
-  font-size: 0.875rem;
-}
-
-.metaIcon {
-  opacity: 0.8;
-}
-
-.tagsContainer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-
-.tagBadge {
-  background: rgba(56, 189, 248, 0.1);
-  color: var(--celestial-blue);
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-family: var(--font-family-mono);
-  border: 1px solid rgba(56, 189, 248, 0.2);
-}
-
-.modalDescription {
-  color: var(--celestial-white);
-  line-height: 1.8;
-  font-size: 1.125rem;
-  opacity: 0.9;
-  max-width: 65ch;
-}
-
-@media (min-width: 1024px) {
-  .modalContent {
-    flex-direction: row;
-    align-items: flex-start;
-  }
-
-  .modalImage {
-    width: 60%;
-    max-height: 80vh;
-  }
-
-  .modalMetadata {
-    flex-direction: column;
-    align-items: flex-start;
-    border-bottom: none;
-    width: 40%;
-    padding-left: 2rem;
-    padding-bottom: 0;
-  }
-
-  .tagsContainer {
-    margin-left: 0;
-    margin-top: 1rem;
-  }
-
-  .modalDescription {
-    margin-top: 2rem;
-  }
 }

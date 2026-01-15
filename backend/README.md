@@ -152,6 +152,7 @@ docker compose exec portfolio-be pytest
 - [ ] Printify email messages (add html template)
 - [ ] Think about changing (uuid) and saving in db
 - [ ] contact message
+- [ ] Add language translation
 
 ### 🚀 API & Documentation
 - [ ] **API Documentation** - Add OpenAPI/Swagger documentation with interactive docs

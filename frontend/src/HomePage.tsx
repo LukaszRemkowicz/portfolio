@@ -1,44 +1,34 @@
-import React, { useEffect, useState } from "react";
-import Home from "./Home";
-import About from "./About";
-import Contact from "./Contact";
-import Navbar from "./Navbar";
-import Footer from "./Footer";
-import Gallery from "./Gallery";
-import StarBackground from "./StarBackground";
+import React, { useEffect, Suspense, lazy } from "react";
+import Home from "./components/Home";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import StarBackground from "./components/StarBackground";
+
+// Lazy load non-critical sections
+const Gallery = lazy(() => import("./components/Gallery"));
+const About = lazy(() => import("./components/About"));
+const Contact = lazy(() => import("./components/Contact"));
+
 import styles from "./styles/components/App.module.css";
-import { fetchProfile, fetchBackground } from "./api/services";
-import { UserProfile } from "./types";
+import { useAppStore } from "./store/useStore";
+import LoadingScreen from "./components/common/LoadingScreen";
 
 const DEFAULT_PORTRAIT = "/portrait_default.png";
 
 const HomePage: React.FC = () => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    profile,
+    backgroundUrl,
+    isInitialLoading: loading,
+    error,
+    loadInitialData,
+  } = useAppStore();
 
   useEffect(() => {
-    const loadData = async (): Promise<void> => {
-      setLoading(true);
-      try {
-        const [profileData, bgUrl] = await Promise.all([
-          fetchProfile(),
-          fetchBackground(),
-        ]);
-        setProfile(profileData);
-        setBackgroundUrl(bgUrl);
-      } catch (e: unknown) {
-        console.error("Failed to load initial data:", e);
-        setError("Failed to load page content.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, []);
+    loadInitialData();
+  }, [loadInitialData]);
 
-  if (loading) return <div className={styles.loading}>Loading...</div>;
+  if (loading) return <LoadingScreen />;
   if (error) return <div className={styles.error}>{error}</div>;
 
   return (
@@ -52,9 +42,15 @@ const HomePage: React.FC = () => {
           backgroundUrl={backgroundUrl}
         />
       </main>
-      <Gallery />
-      <About profile={profile} />
-      <Contact />
+      <Suspense
+        fallback={
+          <LoadingScreen fullScreen={false} message="Aligning sectors..." />
+        }
+      >
+        <Gallery />
+        <About profile={profile} />
+        <Contact />
+      </Suspense>
       <Footer />
     </div>
   );

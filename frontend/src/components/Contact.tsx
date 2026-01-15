@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { fetchContact, fetchEnabledFeatures } from "./api/services";
-import styles from "./styles/components/Contact.module.css";
-import { ContactFormData, ValidationErrors, SubmitStatus } from "./types";
+import React, { useState, useCallback } from "react";
+import { fetchContact } from "../api/services";
+import { useAppStore } from "../store/useStore";
+import styles from "../styles/components/Contact.module.css";
+import { ContactFormData, ValidationErrors, SubmitStatus } from "../types";
+import { AppError, ValidationError } from "../api/errors";
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState<ContactFormData>({
@@ -16,41 +18,30 @@ const Contact: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
     {},
   );
-  const [isEnabled, setIsEnabled] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { features, isInitialLoading: isLoading } = useAppStore();
+  const isEnabled = features?.contactForm === true;
 
-  useEffect(() => {
-    const checkEnablement = async () => {
-      try {
-        const features = await fetchEnabledFeatures();
-        setIsEnabled(features.contactForm === true);
-      } catch (error) {
-        console.error("Failed to check feature enablement:", error);
-        setIsEnabled(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    checkEnablement();
-  }, []);
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ): void => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    if (validationErrors[name as keyof ValidationErrors]) {
-      setValidationErrors((prev) => ({
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({
         ...prev,
-        [name]: undefined,
+        [name]: value,
       }));
-    }
-  };
+      setValidationErrors((prev) => {
+        if (prev[name as keyof ValidationErrors]) {
+          return {
+            ...prev,
+            [name]: undefined,
+          };
+        }
+        return prev;
+      });
+    },
+    [],
+  );
 
-  const validateForm = (): boolean => {
+  const validateForm = useCallback((): boolean => {
     const errors: ValidationErrors = {};
     if (!formData.name || formData.name.trim().length < 2) {
       errors.name = ["Name must be at least 2 characters long."];
@@ -75,39 +66,48 @@ const Contact: React.FC = () => {
       return false;
     }
     return true;
-  };
+  }, [formData]);
 
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>,
-  ): Promise<void> => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitStatus(null);
-    setValidationErrors({});
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+      e.preventDefault();
+      setIsSubmitting(true);
+      setSubmitStatus(null);
+      setValidationErrors({});
 
-    if (!validateForm()) {
-      setIsSubmitting(false);
-      return;
-    }
+      if (!validateForm()) {
+        setIsSubmitting(false);
+        return;
+      }
 
-    try {
-      await fetchContact(formData);
-      setSubmitStatus("success");
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        message: "",
-        website: "",
-      });
-    } catch (error: unknown) {
-      console.error("Failed to send message:", error);
-      // Simplified error handling for brevity, retaining essential logic
-      setSubmitStatus("error");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      try {
+        await fetchContact(formData);
+        setSubmitStatus("success");
+        setFormData({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+          website: "",
+        });
+      } catch (error: unknown) {
+        if (error instanceof ValidationError) {
+          setValidationErrors(error.errors);
+          setSubmitStatus("validation_error");
+        } else if (error instanceof AppError) {
+          setSubmitStatus("error");
+          // Optionally store the specific error message to display to the user
+          console.error(`Status code ${error.statusCode}: ${error.message}`);
+        } else {
+          console.error("Unknown error:", error);
+          setSubmitStatus("error");
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [formData, validateForm],
+  );
 
   if (isLoading || isEnabled === false) {
     return null;
@@ -138,65 +138,117 @@ const Contact: React.FC = () => {
             />
             <div className={styles.formGrid}>
               <div className={styles.formField}>
-                <label className={styles.fieldLabel}>Identity</label>
+                <label className={styles.fieldLabel} htmlFor="name">
+                  Identity
+                </label>
                 <input
+                  id="name"
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  placeholder="Name"
+                  placeholder="Your Name"
+                  required
+                  aria-required="true"
+                  aria-invalid={!!validationErrors.name}
+                  aria-describedby={
+                    validationErrors.name ? "name-error" : undefined
+                  }
                   className={`${styles.formInput} ${validationErrors.name ? styles.inputError : ""}`}
                 />
                 {validationErrors.name && (
-                  <span className={styles.errorText}>
+                  <span
+                    className={styles.errorText}
+                    id="name-error"
+                    role="alert"
+                  >
                     {validationErrors.name[0]}
                   </span>
                 )}
               </div>
               <div className={styles.formField}>
-                <label className={styles.fieldLabel}>Communication</label>
+                <label className={styles.fieldLabel} htmlFor="email">
+                  Communication
+                </label>
                 <input
+                  id="email"
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="Email Address"
+                  required
+                  aria-required="true"
+                  aria-invalid={!!validationErrors.email}
+                  aria-describedby={
+                    validationErrors.email ? "email-error" : undefined
+                  }
                   className={`${styles.formInput} ${validationErrors.email ? styles.inputError : ""}`}
                 />
                 {validationErrors.email && (
-                  <span className={styles.errorText}>
+                  <span
+                    className={styles.errorText}
+                    id="email-error"
+                    role="alert"
+                  >
                     {validationErrors.email[0]}
                   </span>
                 )}
               </div>
               <div className={styles.formField}>
-                <label className={styles.fieldLabel}>Topic</label>
+                <label className={styles.fieldLabel} htmlFor="subject">
+                  Topic
+                </label>
                 <input
+                  id="subject"
                   type="text"
                   name="subject"
                   value={formData.subject}
                   onChange={handleChange}
                   placeholder="Subject"
+                  required
+                  aria-required="true"
+                  aria-invalid={!!validationErrors.subject}
+                  aria-describedby={
+                    validationErrors.subject ? "subject-error" : undefined
+                  }
                   className={`${styles.formInput} ${validationErrors.subject ? styles.inputError : ""}`}
                 />
                 {validationErrors.subject && (
-                  <span className={styles.errorText}>
+                  <span
+                    className={styles.errorText}
+                    id="subject-error"
+                    role="alert"
+                  >
                     {validationErrors.subject[0]}
                   </span>
                 )}
               </div>
               <div className={`${styles.formField} ${styles.fullWidth}`}>
-                <label className={styles.fieldLabel}>Transmission</label>
+                <label className={styles.fieldLabel} htmlFor="message">
+                  Transmission
+                </label>
                 <textarea
+                  id="message"
                   name="message"
                   value={formData.message}
                   onChange={handleChange}
                   rows={5}
                   placeholder="How can I help you?"
+                  required
+                  aria-required="true"
+                  aria-invalid={!!validationErrors.message}
+                  aria-describedby={
+                    validationErrors.message ? "message-error" : undefined
+                  }
                   className={`${styles.formInput} ${validationErrors.message ? styles.inputError : ""}`}
                 ></textarea>
                 {validationErrors.message && (
-                  <span className={styles.errorText}>
+                  <span
+                    className={styles.errorText}
+                    id="message-error"
+                    role="alert"
+                  >
                     {validationErrors.message[0]}
                   </span>
                 )}
@@ -213,14 +265,23 @@ const Contact: React.FC = () => {
             </div>
 
             {submitStatus === "success" && (
-              <p className={styles.successMessage}>
+              <p
+                className={styles.successMessage}
+                role="status"
+                aria-live="polite"
+              >
                 Thank you! Your message has been sent successfully.
               </p>
             )}
             {submitStatus === "error" && (
-              <p className={styles.errorMessage}>
-                Sorry, there was an error sending your message. Please try
-                again.
+              <p className={styles.errorMessage} role="alert">
+                Transmission failure. Please check your signal or try again
+                later.
+              </p>
+            )}
+            {submitStatus === "validation_error" && (
+              <p className={styles.errorMessage} role="alert">
+                One or more details in your inquiry require adjustment.
               </p>
             )}
           </form>

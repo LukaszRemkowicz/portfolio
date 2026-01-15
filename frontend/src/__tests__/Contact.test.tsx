@@ -1,8 +1,8 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import Contact from "../Contact";
-import { fetchEnabledFeatures } from "../api/services";
+import Contact from "../components/Contact";
+import { useAppStore } from "../store/useStore";
 
 // Mock the services
 jest.mock("../api/services", () => ({
@@ -13,12 +13,14 @@ jest.mock("../api/services", () => ({
 describe("Contact Component", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useAppStore.setState({
+      features: null,
+      isInitialLoading: false,
+    });
   });
 
   it("renders the form when contactForm is enabled", async () => {
-    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
-      contactForm: true,
-    });
+    useAppStore.setState({ features: { contactForm: true } });
     render(<Contact />);
 
     await waitFor(() => {
@@ -33,9 +35,7 @@ describe("Contact Component", () => {
   });
 
   it("renders nothing when contactForm is disabled", async () => {
-    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
-      contactForm: false,
-    });
+    useAppStore.setState({ features: { contactForm: false } });
     const { container } = render(<Contact />);
 
     await waitFor(() => {

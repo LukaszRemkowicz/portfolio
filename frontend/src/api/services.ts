@@ -9,6 +9,7 @@ import {
   FilterParams,
   EnabledFeatures,
 } from "../types";
+import { NotFoundError } from "./errors";
 
 const handleResponse = <T>(response: AxiosResponse<T>): T => {
   if (response && response.data !== undefined) {
@@ -42,9 +43,8 @@ export const fetchProfile = async (): Promise<UserProfile> => {
       };
     }
     return data;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    if (error?.response?.status === 404) {
+  } catch (error) {
+    if (error instanceof NotFoundError) {
       console.warn("Profile not found, using fallbacks");
       return {
         first_name: "Portfolio",
@@ -56,7 +56,6 @@ export const fetchProfile = async (): Promise<UserProfile> => {
         about_me_image2: null,
       };
     }
-    console.error("Error fetching profile:", error);
     throw error;
   }
 };
@@ -71,13 +70,11 @@ export const fetchBackground = async (): Promise<string | null> => {
       return data.url;
     }
     return null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    if (error?.response?.status === 404) {
+  } catch (error) {
+    if (error instanceof NotFoundError) {
       console.warn("Background image not found");
       return null;
     }
-    console.error("Error fetching background:", error);
     throw error;
   }
 };
@@ -85,24 +82,19 @@ export const fetchBackground = async (): Promise<string | null> => {
 export const fetchAstroImages = async (
   params: FilterParams = {},
 ): Promise<AstroImage[]> => {
-  try {
-    const response: AxiosResponse<AstroImage[]> = await api.get(
-      API_ROUTES.astroImages,
-      { params },
-    );
-    const data = handleResponse<AstroImage[]>(response);
-    if (Array.isArray(data)) {
-      return data.map((image) => ({
-        ...image,
-        url: getMediaUrl(image.url) || "",
-        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-      }));
-    }
-    return data;
-  } catch (error: unknown) {
-    console.error("Error fetching astro images:", error);
-    throw error;
+  const response: AxiosResponse<AstroImage[]> = await api.get(
+    API_ROUTES.astroImages,
+    { params },
+  );
+  const data = handleResponse<AstroImage[]>(response);
+  if (Array.isArray(data)) {
+    return data.map((image) => ({
+      ...image,
+      url: getMediaUrl(image.url) || "",
+      thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+    }));
   }
+  return data;
 };
 
 export const fetchAstroImage = async (
@@ -110,22 +102,17 @@ export const fetchAstroImage = async (
 ): Promise<AstroImage> => {
   if (!id) throw new Error("id is required");
 
-  try {
-    const url = API_ROUTES.astroImage.replace(":id", String(id));
-    const response: AxiosResponse<AstroImage> = await api.get(url);
-    const image = handleResponse<AstroImage>(response);
-    if (image) {
-      return {
-        ...image,
-        url: getMediaUrl(image.url) || "",
-        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-      };
-    }
-    return image;
-  } catch (error: unknown) {
-    console.error("Error fetching astro image:", error);
-    throw error;
+  const url = API_ROUTES.astroImage.replace(":id", String(id));
+  const response: AxiosResponse<AstroImage> = await api.get(url);
+  const image = handleResponse<AstroImage>(response);
+  if (image) {
+    return {
+      ...image,
+      url: getMediaUrl(image.url) || "",
+      thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+    };
   }
+  return image;
 };
 
 export const fetchContact = async (
@@ -133,16 +120,11 @@ export const fetchContact = async (
 ): Promise<void> => {
   if (!contactData) throw new Error("contactData is required");
 
-  try {
-    const response: AxiosResponse<void> = await api.post(
-      API_ROUTES.contact,
-      contactData,
-    );
-    return handleResponse<void>(response);
-  } catch (error: unknown) {
-    console.error("Error sending contact form:", error);
-    throw error;
-  }
+  const response: AxiosResponse<void> = await api.post(
+    API_ROUTES.contact,
+    contactData,
+  );
+  return handleResponse<void>(response);
 };
 
 export const fetchEnabledFeatures = async (): Promise<EnabledFeatures> => {

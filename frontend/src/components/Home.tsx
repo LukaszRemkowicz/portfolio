@@ -1,6 +1,8 @@
 import React from "react";
-import styles from "./styles/components/App.module.css";
-import { HomeProps } from "./types";
+import { Link } from "react-router-dom";
+import styles from "../styles/components/App.module.css";
+import { HomeProps } from "../types";
+import ShootingStars from "./ShootingStars";
 
 const Home: React.FC<HomeProps> = ({
   portraitUrl,
@@ -20,6 +22,7 @@ const Home: React.FC<HomeProps> = ({
           : undefined
       }
     >
+      <ShootingStars />
       <div className={styles.heroContent}>
         <span className={styles.heroSubtitle}>Documenting the Cosmos</span>
         <h1 className={styles.heroTitle}>
@@ -37,16 +40,19 @@ const Home: React.FC<HomeProps> = ({
               src={portraitUrl}
               alt="Portrait"
               className={styles.heroPortrait}
+              loading="eager"
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              {...({ fetchpriority: "high" } as any)}
             />
           </div>
         )}
 
         <div className={styles.heroActions}>
-          <a href="#gallery" className={styles.primaryBtn}>
+          <Link to="/astrophotography" className={styles.primaryBtn}>
             View Portfolio
-          </a>
+          </Link>
           <a href="#about" className={styles.secondaryBtn}>
-            Learn Process
+            About Me
           </a>
         </div>
       </div>

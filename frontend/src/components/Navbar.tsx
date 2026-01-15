@@ -1,39 +1,27 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import styles from "./styles/components/Navbar.module.css";
-import { Sparkles, Menu, X } from "lucide-react";
-import { fetchEnabledFeatures } from "./api/services";
-import { NavbarProps } from "./types";
+import Logo from "./common/Logo";
+import styles from "../styles/components/Navbar.module.css";
+import { Menu, X } from "lucide-react";
+import { NavbarProps } from "../types";
+import { useAppStore } from "../store/useStore";
 
 const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isProgrammingEnabled, setIsProgrammingEnabled] =
-    useState<boolean>(false);
-
-  useEffect(() => {
-    const checkEnablement = async () => {
-      try {
-        const features = await fetchEnabledFeatures();
-        setIsProgrammingEnabled(features.programming === true);
-      } catch (error) {
-        console.error("Failed to check programming enablement:", error);
-        setIsProgrammingEnabled(false);
-      }
-    };
-    checkEnablement();
-  }, []);
+  const { features } = useAppStore();
+  const isProgrammingEnabled = features?.programming === true;
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   return (
     <>
       <nav className={styles.navbar}>
-        <Link to="/" className={styles.logo}>
-          <Sparkles size={20} className={styles.logoIcon} />
-          <span className={styles.logoText}>Celestial</span>
-        </Link>
+        <Logo />
 
         <div className={styles.links}>
+          <Link to="/" className={styles.link}>
+            Home
+          </Link>
           <Link to="/astrophotography" className={styles.link}>
             Astrophotography
           </Link>
@@ -42,15 +30,20 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
               Programming
             </Link>
           )}
-          <a href="#about" className={styles.link}>
+          <Link to="/#about" className={styles.link}>
             About
-          </a>
-          <a href="#contact" className={styles.link}>
+          </Link>
+          <Link to="/#contact" className={styles.link}>
             Contact
-          </a>
+          </Link>
         </div>
 
-        <button className={styles.menuTrigger} onClick={toggleMenu}>
+        <button
+          className={styles.menuTrigger}
+          onClick={toggleMenu}
+          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMenuOpen}
+        >
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </nav>
@@ -62,6 +55,9 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
               <X size={24} />
             </button>
             <div className={styles.drawerLinks}>
+              <Link to="/" onClick={toggleMenu}>
+                Home
+              </Link>
               <Link to="/astrophotography" onClick={toggleMenu}>
                 Astrophotography
               </Link>
@@ -70,12 +66,12 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
                   Programming
                 </Link>
               )}
-              <a href="#about" onClick={toggleMenu}>
+              <Link to="/#about" onClick={toggleMenu}>
                 About
-              </a>
-              <a href="#contact" onClick={toggleMenu}>
+              </Link>
+              <Link to="/#contact" onClick={toggleMenu}>
                 Contact
-              </a>
+              </Link>
             </div>
           </div>
         </div>

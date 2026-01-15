@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import Programming from "../Programming";
+import Programming from "../components/Programming";
 import { ASSETS } from "../api/routes";
 
 describe("Programming Component", () => {
@@ -16,8 +16,8 @@ describe("Programming Component", () => {
     const { container } = render(<Programming />);
     // The container with background is the second div (index 1) or we can look for the class
     const backgroundDiv = container.querySelector('[class*="container"]');
-    expect(backgroundDiv).toHaveStyle(
-      `background-image: url(${ASSETS.underConstruction})`,
-    );
+    expect(backgroundDiv).toHaveStyle({
+      "--bg-image": `url(${ASSETS.underConstruction})`,
+    });
   });
 });

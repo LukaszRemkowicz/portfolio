@@ -7,28 +7,10 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 1.25rem 2rem;
+  padding: 0.75rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.logoIcon {
-  color: var(--celestial-blue);
-}
-
-.logoText {
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-family: var(--font-family-heading);
 }
 
 .links {
@@ -63,8 +45,8 @@
 .mobileDrawer {
   position: fixed;
   inset: 0;
-  top: 64px;
-  /* Adjust based on navbar height */
+  top: 72px;
+  /* Adjust based on new navbar height (approx 48px + 1.5rem padding) */
   background: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(20px);
   z-index: 1999;

@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "./styles/components/CelestialWidget.module.css";
+import styles from "../styles/components/CelestialWidget.module.css";
 
 /**
  * TODO: Connect to backend API to fetch real moon phase and weather conditions.

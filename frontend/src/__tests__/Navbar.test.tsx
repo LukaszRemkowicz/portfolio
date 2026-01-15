@@ -2,8 +2,8 @@ import React, { ReactElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
-import Navbar from "../Navbar";
-import { fetchEnabledFeatures } from "../api/services";
+import Navbar from "../components/Navbar";
+import { useAppStore } from "../store/useStore";
 
 // Mock the services
 jest.mock("../api/services", () => ({
@@ -17,16 +17,19 @@ const renderWithRouter = (component: ReactElement) => {
 describe("Navbar Component", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useAppStore.setState({
+      features: null,
+      isInitialLoading: false,
+    });
   });
 
   it("renders brand and navigation links", async () => {
-    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
-      programming: true,
-    });
+    useAppStore.setState({ features: { programming: true } });
     renderWithRouter(<Navbar />);
 
-    expect(screen.getByText("Celestial")).toBeInTheDocument();
-    expect(screen.getByText("Astrophotography")).toBeInTheDocument();
+    expect(screen.getByText("Łukasz Remkowicz")).toBeInTheDocument();
+    expect(screen.getAllByText("Home")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Astrophotography")[0]).toBeInTheDocument();
     expect(screen.getByText("About")).toBeInTheDocument();
 
     await waitFor(() => {
@@ -36,13 +39,11 @@ describe("Navbar Component", () => {
   });
 
   it("hides Programming link when disabled", async () => {
-    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
-      programming: false,
-    });
+    useAppStore.setState({ features: { programming: false } });
     renderWithRouter(<Navbar />);
 
-    expect(screen.getByText("Celestial")).toBeInTheDocument();
-    expect(screen.getByText("Astrophotography")).toBeInTheDocument();
+    expect(screen.getByText("Łukasz Remkowicz")).toBeInTheDocument();
+    expect(screen.getAllByText("Astrophotography")[0]).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.queryByText("Programming")).not.toBeInTheDocument();

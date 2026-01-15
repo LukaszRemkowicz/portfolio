@@ -7,6 +7,7 @@ import {
   fetchEnabledFeatures,
 } from "../services";
 import { API_ROUTES } from "../routes";
+import { NotFoundError } from "../errors";
 
 // Mock the axios instance from api.ts
 jest.mock("../api", () => ({
@@ -43,10 +44,7 @@ describe("API Services", () => {
     });
 
     it("should return fallback data on 404 for profile", async () => {
-      const error = new Error("Not Found");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (error as any).response = { status: 404 };
-      (api.get as jest.Mock).mockRejectedValueOnce(error);
+      (api.get as jest.Mock).mockRejectedValueOnce(new NotFoundError());
 
       const result = await fetchProfile();
       expect(result.first_name).toBe("Portfolio");
@@ -64,10 +62,7 @@ describe("API Services", () => {
 
   describe("fetchBackground", () => {
     it("should return null on 404 for background", async () => {
-      const error = new Error("Not Found");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (error as any).response = { status: 404 };
-      (api.get as jest.Mock).mockRejectedValueOnce(error);
+      (api.get as jest.Mock).mockRejectedValueOnce(new NotFoundError());
 
       const result = await fetchBackground();
       expect(result).toBeNull();
@@ -149,10 +144,14 @@ describe("API Services", () => {
     });
 
     it("should return empty object on error", async () => {
+      const consoleSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       (api.get as jest.Mock).mockRejectedValueOnce(new Error("API error"));
 
       const result = await fetchEnabledFeatures();
       expect(result).toEqual({});
+      consoleSpy.mockRestore();
     });
   });
 });

@@ -9,7 +9,21 @@ export interface UserProfile {
   bio?: string;
   about_me_image?: string | null;
   about_me_image2?: string | null;
+  contact_email?: string;
   prelections?: boolean;
+  profiles?: Profile[];
+}
+
+export interface Profile {
+  type: "PROGRAMMING" | "ASTRO";
+  is_active: boolean;
+  title: string;
+  specific_bio: string;
+  github_url?: string;
+  linkedin_url?: string;
+  astrobin_url?: string;
+  fb_url?: string;
+  ig_url?: string;
 }
 
 export interface BackgroundImage {
@@ -84,34 +98,6 @@ export interface MainLayoutProps {
   children: ReactNode;
 }
 
-// HomePage state types
-export interface HomePageState {
-  portraitUrl: string;
-  firstName: string;
-  lastName: string;
-  backgroundUrl: string | null;
-  loading: boolean;
-  error: string | null;
-}
-
-export interface GalleryItem {
-  id: number;
-  title: string;
-  imageUrl: string;
-}
-
-// AstroGallery types
-export interface AstroGalleryState {
-  images: AstroImage[];
-  loading: boolean;
-  error: string;
-  background: string;
-  selectedFilter: string | null;
-  modalImage: AstroImage | null;
-  modalDescription: string;
-  modalDescriptionLoading: boolean;
-}
-
 export interface FilterParams {
   filter?: string;
   limit?: number;
@@ -154,4 +140,11 @@ export interface ApiRoutes {
   astroImage: string;
   contact: string;
   whatsEnabled: string;
+}
+
+// Legacy Gallery Item (for old gallery data structure)
+export interface GalleryItem {
+  id: number;
+  title: string;
+  imageUrl: string;
 }
