@@ -81,7 +81,18 @@ registerRoute(
 // This allows the web app to trigger skipWaiting via
 // registration.waiting.postMessage({type: 'SKIP_WAITING'})
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
+  // Only accept messages from trusted origins and with the expected shape
+  const trustedOrigins = [self.location.origin];
+  const messageOrigin =
+    // eslint-disable-next-line no-undef
+    (event as ExtendableMessageEvent).origin || self.location.origin;
+
+  if (
+    trustedOrigins.includes(messageOrigin) &&
+    event.data &&
+    typeof event.data === "object" &&
+    event.data.type === "SKIP_WAITING"
+  ) {
     self.skipWaiting();
   }
 });

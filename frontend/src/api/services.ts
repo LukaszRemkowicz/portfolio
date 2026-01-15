@@ -24,7 +24,9 @@ const handleResponse = <T>(response: AxiosResponse<T>): T => {
 
 export const fetchProfile = async (): Promise<UserProfile> => {
   try {
-    const response: AxiosResponse<UserProfile> = await api.get(API_ROUTES.profile);
+    const response: AxiosResponse<UserProfile> = await api.get(
+      API_ROUTES.profile,
+    );
     const data = handleResponse<UserProfile>(response);
 
     // Transform relative media paths to full URLs

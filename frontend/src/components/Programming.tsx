@@ -6,9 +6,11 @@ const Programming: React.FC = () => (
   <div className={styles.wrapper}>
     <div
       className={styles.container}
-      style={{
-        "--bg-image": `url(${ASSETS.underConstruction})`,
-      } as React.CSSProperties}
+      style={
+        {
+          "--bg-image": `url(${ASSETS.underConstruction})`,
+        } as React.CSSProperties
+      }
     >
       <div className={styles.overlay}></div>
       <div className={styles.text}>
