@@ -12,7 +12,7 @@ export const CONFIG = {
      * Chance of a shooting star being a bolid (fireball).
      * 0.05 = 5% chance.
      */
-    bolidChance: 1,
+    bolidChance: 0.20,
     /**
      * Minimum interval between bolids in seconds (e.g., 60 = 1 minute).
      */
@@ -23,17 +23,23 @@ export const CONFIG = {
      * - Smaller duration + Larger distance = High speed.
      * - Larger duration + Smaller distance = Low speed.
      */
-    starDurationRange: [2.0, 3.0] as [number, number],
+    starDurationRange: [0.4, 1.2] as [number, number],
     bolidDurationRange: [0.4, 0.9] as [number, number],
     /**
      * Path distance ranges (total travel) in pixels.
      * Horizontal displacement across the background.
      */
-    starPathRange: [300, 500] as [number, number],
+    starPathRange: [50, 500] as [number, number],
     bolidPathRange: [50, 500] as [number, number],
     /**
      * Streak length (visual trail size) ranges in pixels.
      */
     starStreakRange: [100, 200] as [number, number],
     bolidStreakRange: [20, 100] as [number, number],
+    /**
+     * Opacity (brightness) ranges.
+     * 0.0 = transparent, 1.0 = fully opaque.
+     */
+    starOpacityRange: [0.4, 0.8] as [number, number],
+    bolidOpacityRange: [0.7, 1.0] as [number, number],
 };

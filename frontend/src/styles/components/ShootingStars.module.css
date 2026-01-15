@@ -68,11 +68,11 @@
     }
 
     10% {
-        opacity: 1;
+        opacity: var(--opacity, 1);
     }
 
     80% {
-        opacity: 1;
+        opacity: var(--opacity, 1);
     }
 
     100% {
