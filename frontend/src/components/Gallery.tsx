@@ -38,6 +38,15 @@ const GalleryCard = memo(({ item, onClick, isNew }: GalleryCardProps) => {
       <div className={styles.cardContent}>
         <span className={styles.category}>{item.celestial_object}</span>
         <h3 className={styles.cardTitle}>{item.name}</h3>
+        <p className={styles.cardLocation}>
+          <MapPin size={12} className={styles.metaIcon} />
+          {item.location}
+        </p>
+        <p className={styles.cardDescription}>
+          {item.description && item.description.length > 80
+            ? `${item.description.substring(0, 80)}...`
+            : item.description}
+        </p>
         <div className={styles.divider} aria-hidden="true"></div>
       </div>
     </button>
