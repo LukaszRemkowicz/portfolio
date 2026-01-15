@@ -30,10 +30,10 @@ export const CONFIG = {
      * Horizontal displacement across the background.
      */
     starPathRange: [300, 500] as [number, number],
-    bolidPathRange: [200, 500] as [number, number],
+    bolidPathRange: [50, 500] as [number, number],
     /**
      * Streak length (visual trail size) ranges in pixels.
      */
     starStreakRange: [100, 200] as [number, number],
-    bolidStreakRange: [200, 200] as [number, number],
+    bolidStreakRange: [20, 100] as [number, number],
 };
