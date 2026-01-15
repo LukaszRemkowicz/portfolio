@@ -46,7 +46,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
 
             // Bolid logic
             const timeSinceLastBolid = now - lastBolidTime;
-            const canSpawnBolid = timeSinceLastBolid >= CONFIG.bolidMinInterval;
+            const canSpawnBolid = timeSinceLastBolid >= CONFIG.bolidMinInterval * 1000;
             const isBolid = canSpawnBolid && Math.random() < CONFIG.bolidChance;
 
             if (isBolid) {
