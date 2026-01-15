@@ -81,7 +81,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
                         {
                             left: star.left,
                             top: star.top,
-                            animation: `${styles.fall} ${star.duration}s linear forwards`,
+                            animation: `${star.isBolid ? styles.bolidFall : styles.fall} ${star.duration}s linear forwards`,
                             "--angle": `${star.angle}deg`,
                             "--distance": `${star.distance}px`,
                         } as React.CSSProperties

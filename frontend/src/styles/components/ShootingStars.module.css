@@ -80,3 +80,39 @@
         opacity: 0;
     }
 }
+
+@keyframes bolidFall {
+    0% {
+        transform: rotate(var(--angle)) translateX(0);
+        opacity: 0;
+        width: 250px;
+        filter: brightness(1);
+    }
+
+    10% {
+        opacity: 1;
+        filter: brightness(1.2);
+    }
+
+    /* Peak phase - synchronized with flash */
+    60% {
+        transform: rotate(var(--angle)) translateX(calc(var(--distance) * -0.6));
+        opacity: 1;
+        width: 250px;
+        filter: brightness(2) drop-shadow(0 0 10px white);
+    }
+
+    /* Sudden darkening and shortening phase */
+    65% {
+        opacity: 0.8;
+        width: 80px;
+        filter: brightness(0.4);
+    }
+
+    100% {
+        transform: rotate(var(--angle)) translateX(calc(var(--distance) * -1));
+        opacity: 0;
+        width: 40px;
+        filter: brightness(0.2);
+    }
+}
