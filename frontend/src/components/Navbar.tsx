@@ -19,6 +19,9 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
         <Logo />
 
         <div className={styles.links}>
+          <Link to="/" className={styles.link}>
+            Home
+          </Link>
           <Link to="/astrophotography" className={styles.link}>
             Astrophotography
           </Link>
@@ -27,12 +30,12 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
               Programming
             </Link>
           )}
-          <a href="#about" className={styles.link}>
+          <Link to="/#about" className={styles.link}>
             About
-          </a>
-          <a href="#contact" className={styles.link}>
+          </Link>
+          <Link to="/#contact" className={styles.link}>
             Contact
-          </a>
+          </Link>
         </div>
 
         <button
@@ -52,6 +55,9 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
               <X size={24} />
             </button>
             <div className={styles.drawerLinks}>
+              <Link to="/" onClick={toggleMenu}>
+                Home
+              </Link>
               <Link to="/astrophotography" onClick={toggleMenu}>
                 Astrophotography
               </Link>
@@ -60,12 +66,12 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
                   Programming
                 </Link>
               )}
-              <a href="#about" onClick={toggleMenu}>
+              <Link to="/#about" onClick={toggleMenu}>
                 About
-              </a>
-              <a href="#contact" onClick={toggleMenu}>
+              </Link>
+              <Link to="/#contact" onClick={toggleMenu}>
                 Contact
-              </a>
+              </Link>
             </div>
           </div>
         </div>

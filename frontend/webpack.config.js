@@ -21,6 +21,9 @@ module.exports = (env, argv) => {
   const apiUrl =
     env.API_URL || process.env.API_URL || "https://admin.portfolio.local";
 
+  const enableShootingStars =
+    env.ENABLE_SHOOTING_STARS || process.env.ENABLE_SHOOTING_STARS || "true";
+
   return {
     entry: "./src/index.tsx",
     output: {
@@ -71,6 +74,8 @@ module.exports = (env, argv) => {
       }),
       new webpack.DefinePlugin({
         "process.env.API_URL": JSON.stringify(apiUrl),
+        "process.env.ENABLE_SHOOTING_STARS":
+          JSON.stringify(enableShootingStars),
       }),
       // Only include the service worker plugin in production to avoid HMR issues
       ...(argv.mode !== "development"

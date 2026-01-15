@@ -262,7 +262,10 @@ All component styles are organized in `styles/components/` directory:
 
 ### Environment Variables
 
+### Environment Variables
+
 - `API_BASE_URL` - Backend API endpoint (default: `https://admin.portfolio.local`)
+- `ENABLE_SHOOTING_STARS` - Toggle shooting stars animation ("true"/"false", default: "true")
 - Custom domains configured in nginx
 
 ### Build Configuration

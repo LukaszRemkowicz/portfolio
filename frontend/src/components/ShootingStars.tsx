@@ -109,6 +109,8 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
   const lastBolidTimeRef = useRef<number>(0);
 
   useEffect(() => {
+    if (!CONFIG.enableShootingStars) return;
+
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const createShootingStar = () => {
@@ -225,6 +227,8 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
 
     return () => clearTimeout(timeoutId);
   }, [minDelay, maxDelay, initialDelay, random]);
+
+  if (!CONFIG.enableShootingStars) return null;
 
   return (
     <div className={`${styles.starContainer} ${className}`}>

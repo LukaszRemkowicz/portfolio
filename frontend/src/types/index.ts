@@ -9,7 +9,21 @@ export interface UserProfile {
   bio?: string;
   about_me_image?: string | null;
   about_me_image2?: string | null;
+  contact_email?: string;
   prelections?: boolean;
+  profiles?: Profile[];
+}
+
+export interface Profile {
+  type: "PROGRAMMING" | "ASTRO";
+  is_active: boolean;
+  title: string;
+  specific_bio: string;
+  github_url?: string;
+  linkedin_url?: string;
+  astrobin_url?: string;
+  fb_url?: string;
+  ig_url?: string;
 }
 
 export interface BackgroundImage {

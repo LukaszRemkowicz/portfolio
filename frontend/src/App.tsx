@@ -8,11 +8,13 @@ const Programming = lazy(() => import("./components/Programming"));
 import MainLayout from "./components/MainLayout";
 
 import LoadingScreen from "./components/common/LoadingScreen";
+import ScrollToHash from "./components/common/ScrollToHash";
 import "./styles/components/App.module.css";
 
 const App: React.FC = () => {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ScrollToHash />
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/" element={<HomePage />} />

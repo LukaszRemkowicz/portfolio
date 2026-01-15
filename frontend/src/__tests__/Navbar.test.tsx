@@ -28,6 +28,7 @@ describe("Navbar Component", () => {
     renderWithRouter(<Navbar />);
 
     expect(screen.getByText("Łukasz Remkowicz")).toBeInTheDocument();
+    expect(screen.getAllByText("Home")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Astrophotography")[0]).toBeInTheDocument();
     expect(screen.getByText("About")).toBeInTheDocument();
 
