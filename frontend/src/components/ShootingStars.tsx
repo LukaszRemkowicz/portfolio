@@ -96,20 +96,20 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
 
                     dustParticles.push({
                         id: Math.random(),
-                        // Tight jitter offsets for "line" feel
-                        offsetX: (Math.random() - 0.5) * 15,
-                        offsetY: (Math.random() - 0.5) * 15,
-                        // Thinner, longer segments
-                        size: 30 + Math.random() * 50,
-                        blur: 1 + Math.random() * 2, // Sharper for "line"
-                        // Align with meteor trajectory but add slight organic jitter
-                        rotate: `${angle + (Math.random() - 0.5) * 15}deg`,
-                        skew: `${(Math.random() - 0.5) * 20}deg`,
+                        // Zero initial jitter for perfect line alignment at spawn
+                        offsetX: (Math.random() - 0.5) * 2,
+                        offsetY: (Math.random() - 0.5) * 2,
+                        // Thinner initial segments
+                        size: 40 + Math.random() * 40,
+                        blur: 1, // Sharp start
+                        // Align perfectly with meteor trajectory
+                        rotate: `${angle}deg`,
+                        skew: `0deg`,
                         opacity: Math.random() * (CONFIG.smokeOpacityRange[1] - CONFIG.smokeOpacityRange[0]) + CONFIG.smokeOpacityRange[0],
                         driftX: (Math.random() - 0.5) * 20,
                         driftY: (Math.random() - 0.5) * 20,
                         duration: 2.0 + Math.random() * 1.5,
-                        delay: duration * progress + (Math.random() - 0.5) * 0.05,
+                        delay: duration * progress, // Precise timing
                     });
                 }
             }
