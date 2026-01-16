@@ -6,6 +6,7 @@ import StarBackground from "./components/StarBackground";
 
 // Lazy load non-critical sections
 const Gallery = lazy(() => import("./components/Gallery"));
+const TravelHighlights = lazy(() => import("./components/TravelHighlights"));
 const About = lazy(() => import("./components/About"));
 const Contact = lazy(() => import("./components/Contact"));
 
@@ -41,16 +42,17 @@ const HomePage: React.FC = () => {
           shortDescription={profile?.short_description || ""}
           backgroundUrl={backgroundUrl}
         />
+        <Suspense
+          fallback={
+            <LoadingScreen fullScreen={false} message="Aligning sectors..." />
+          }
+        >
+          <TravelHighlights />
+          <Gallery />
+          <About profile={profile} />
+          <Contact />
+        </Suspense>
       </main>
-      <Suspense
-        fallback={
-          <LoadingScreen fullScreen={false} message="Aligning sectors..." />
-        }
-      >
-        <Gallery />
-        <About profile={profile} />
-        <Contact />
-      </Suspense>
       <Footer />
     </div>
   );

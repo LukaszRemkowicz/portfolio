@@ -8,6 +8,8 @@ import {
   ContactFormData,
   FilterParams,
   EnabledFeatures,
+  Project,
+  MainPageLocationSlider,
 } from "../types";
 import { NotFoundError } from "./errors";
 
@@ -139,4 +141,40 @@ export const fetchEnabledFeatures = async (): Promise<EnabledFeatures> => {
     // Return empty object on error - safer than crashing
     return {};
   }
+};
+export const fetchProjects = async (): Promise<Project[]> => {
+  const response: AxiosResponse<Project[]> = await api.get(API_ROUTES.projects);
+  const data = handleResponse<Project[]>(response);
+  if (Array.isArray(data)) {
+    return data.map((project) => ({
+      ...project,
+      images: project.images.map((image) => ({
+        ...image,
+        url: getMediaUrl(image.url) || "",
+        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+      })),
+    }));
+  }
+  return data;
+};
+
+export const fetchTravelHighlights = async (): Promise<
+  MainPageLocationSlider[]
+> => {
+  const response: AxiosResponse<MainPageLocationSlider[]> = await api.get(
+    API_ROUTES.travelHighlights,
+  );
+  const data = handleResponse<MainPageLocationSlider[]>(response);
+
+  if (Array.isArray(data)) {
+    return data.map((slider) => ({
+      ...slider,
+      images: slider.images.map((image) => ({
+        ...image,
+        url: getMediaUrl(image.url) || "",
+        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+      })),
+    }));
+  }
+  return [];
 };

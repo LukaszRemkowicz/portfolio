@@ -47,6 +47,16 @@ export interface AstroImage {
   astrobin_url?: string;
 }
 
+export interface MainPageLocationSlider {
+  pk: number;
+  country: string;
+  country_name: string;
+  place_name: string | null;
+  images: AstroImage[];
+}
+
+export type LocationSliderResponse = MainPageLocationSlider[];
+
 export interface ContactFormData {
   name: string;
   email: string;
@@ -66,13 +76,33 @@ export interface ValidationErrors {
   subject?: string[];
   message?: string[];
 }
-
 export type SubmitStatus =
   | "success"
   | "validation_error"
   | "rate_limited"
   | "error"
   | null;
+
+export interface ProjectImage {
+  pk: number;
+  url: string;
+  thumbnail_url?: string;
+  is_cover: boolean;
+  name: string;
+}
+
+export interface Project {
+  pk: number;
+  name: string;
+  description: string;
+  technologies: string;
+  technologies_list: string[];
+  github_url?: string;
+  live_url?: string;
+  images: ProjectImage[];
+  created_at: string;
+  updated_at: string;
+}
 
 // Component Props Types
 export interface HomeProps {
@@ -100,6 +130,7 @@ export interface MainLayoutProps {
 
 export interface FilterParams {
   filter?: string;
+  travel?: string;
   limit?: number;
 }
 
@@ -140,6 +171,8 @@ export interface ApiRoutes {
   astroImage: string;
   contact: string;
   whatsEnabled: string;
+  projects: string;
+  travelHighlights: string;
 }
 
 // Legacy Gallery Item (for old gallery data structure)

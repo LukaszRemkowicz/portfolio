@@ -37,6 +37,7 @@ urlpatterns = [
     path("api/v1/", include("inbox.urls")),
     path("api/v1/whats-enabled/", FeaturesEnabledView.as_view(), name="whats-enabled"),
     path("api/v1/<path:path>", api_404_view),
+    path("select2/", include("django_select2.urls")),
 ]
 
 # Add admin URLs and media serving if we're on admin subdomain

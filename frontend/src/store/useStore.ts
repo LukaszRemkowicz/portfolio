@@ -4,12 +4,14 @@ import {
   AstroImage,
   FilterParams,
   EnabledFeatures,
+  Project,
 } from "../types";
 import {
   fetchProfile,
   fetchBackground,
   fetchAstroImages,
   fetchEnabledFeatures,
+  fetchProjects,
 } from "../api/services";
 import { NetworkError, ServerError } from "../api/errors";
 
@@ -17,14 +19,17 @@ interface AppState {
   profile: UserProfile | null;
   backgroundUrl: string | null;
   images: AstroImage[];
+  projects: Project[];
   features: EnabledFeatures | null;
   isInitialLoading: boolean;
   isImagesLoading: boolean;
+  isProjectsLoading: boolean;
   error: string | null;
 
   // Actions
   loadInitialData: () => Promise<void>;
   loadImages: (params?: FilterParams) => Promise<void>;
+  loadProjects: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -32,9 +37,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   profile: null,
   backgroundUrl: null,
   images: [],
+  projects: [],
   features: null,
   isInitialLoading: false,
   isImagesLoading: false,
+  isProjectsLoading: false,
   error: null,
 
   clearError: () => set({ error: null }),
@@ -85,6 +92,25 @@ export const useAppStore = create<AppState>((set, get) => ({
       console.error("Store image load failure:", e);
     } finally {
       set({ isImagesLoading: false });
+    }
+  },
+
+  loadProjects: async () => {
+    set({ isProjectsLoading: true, error: null });
+    try {
+      const data = await fetchProjects();
+      set({ projects: data });
+    } catch (e: unknown) {
+      let message = "Failed to fetch programming projects.";
+      if (e instanceof NetworkError) {
+        message = "Connection failure while accessing project archives.";
+      } else if (e instanceof ServerError) {
+        message = "Project database is temporarily unavailable.";
+      }
+      set({ error: message });
+      console.error("Store projects load failure:", e);
+    } finally {
+      set({ isProjectsLoading: false });
     }
   },
 }));

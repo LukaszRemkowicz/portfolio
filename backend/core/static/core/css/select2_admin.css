@@ -1,0 +1,215 @@
+/* Modern & Premium Select2 Theme for Django Admin */
+
+/* 1. The Main Selection Box */
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple,
+.themed-select2+.select2-container .select2-selection--single,
+.themed-select2+.select2-container .select2-selection--multiple {
+    background-color: #1a1a1a !important;
+    border: 1px solid #333 !important;
+    border-radius: 8px !important;
+    min-height: 44px !important;
+    height: auto !important;
+    padding: 0 !important;
+    color: #e0e0e0 !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    overflow: hidden !important;
+    /* Prevent leaks like 'Hawaii' being outside */
+    min-width: 400px !important;
+    max-width: 100% !important;
+}
+
+/* 2. Multi-select Content Wrapper */
+.select2-container--default .select2-selection--multiple .select2-selection__rendered {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 10px !important;
+    margin: 0 !important;
+    list-style: none !important;
+    width: 100% !important;
+}
+
+/* 3. SEARCH BAR ON TOP */
+.select2-container--default .select2-selection--multiple .select2-search--inline {
+    order: -1 !important;
+    width: 100% !important;
+    margin: 0 0 8px 0 !important;
+    display: block !important;
+    padding: 0 !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-search__field {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #fff !important;
+    margin: 0 !important;
+    height: 32px !important;
+    width: 100% !important;
+    padding: 0 12px !important;
+    font-size: 14px !important;
+    border-radius: 6px !important;
+    border: 1px solid #333 !important;
+    border-bottom: 2px solid #444 !important;
+}
+
+/* 4. MODERN HORIZONTAL TAGS (BELOW SEARCH) */
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #2a2a2a !important;
+    border: 1px solid #484848 !important;
+    /* Slightly lighter border */
+    color: #79aec8 !important;
+    border-radius: 6px !important;
+    padding: 4px 12px !important;
+    margin: 0 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    display: inline-flex !important;
+    /* Inline flex for better content fit */
+    flex-direction: row !important;
+    align-items: center !important;
+    height: auto !important;
+    /* Let height fit content */
+    min-height: 28px !important;
+    gap: 10px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+    white-space: normal !important;
+    /* Allow text to wrap if very long */
+    max-width: none !important;
+    /* Don't clip! */
+}
+
+/* "X" ON THE RIGHT SITE */
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    order: 2 !important;
+    color: #888 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 18px !important;
+    border: none !important;
+    font-weight: 300 !important;
+    cursor: pointer !important;
+    line-height: normal !important;
+    background: none !important;
+    transition: color 0.2s !important;
+    flex-shrink: 0 !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #ff5c5c !important;
+}
+
+/* 5. SINGLE SELECT (Consistent look) */
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding: 0 15px !important;
+    line-height: 42px !important;
+    color: #e0e0e0 !important;
+}
+
+/* 6. Professional Arrow & Clear indicator */
+.select2-container--default .select2-selection--single .select2-selection__arrow b,
+.select2-container--default .select2-selection--multiple::after {
+    border: none !important;
+    content: "\25BE" !important;
+    font-family: Arial !important;
+    color: #555 !important;
+    position: absolute !important;
+    right: 15px !important;
+    top: 22px !important;
+    transform: translateY(-50%) !important;
+    font-size: 20px !important;
+    pointer-events: none !important;
+}
+
+.select2-container--default .select2-selection__clear {
+    color: #ff5c5c !important;
+    font-size: 20px !important;
+    margin-right: 25px !important;
+    cursor: pointer !important;
+    float: right !important;
+    transition: color 0.2s !important;
+    font-family: sans-serif !important;
+}
+
+.select2-container--default .select2-selection__clear:hover {
+    color: #ff2a2a !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    display: none !important;
+}
+
+/* 7. Dropdown Menu */
+.select2-dropdown {
+    background-color: #222 !important;
+    border: 1px solid #333 !important;
+    border-radius: 0 0 10px 10px !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7) !important;
+    margin-top: -2px !important;
+    z-index: 9999 !important;
+}
+
+.select2-results__option {
+    padding: 12px 18px !important;
+    color: #ccc !important;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #333 !important;
+    color: #79aec8 !important;
+}
+
+/* 8. Active/Focus Highlight */
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: #79aec8 !important;
+    box-shadow: 0 0 0 4px rgba(121, 174, 200, 0.15) !important;
+}
+
+/* 9. Django Admin Action Icons (RelatedFieldWidgetWrapper) */
+.related-widget-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    max-width: fit-content !important;
+}
+
+.related-widget-wrapper .select2-container {
+    flex-grow: 1 !important;
+    min-width: 400px !important;
+}
+
+/* Hide the default vertical positioning help text if needed, but here we want to style the links */
+.related-widget-wrapper>a {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 24px !important;
+    height: 24px !important;
+    text-decoration: none !important;
+    background: #333 !important;
+    border-radius: 4px !important;
+    transition: background 0.2s !important;
+    vertical-align: middle !important;
+}
+
+.related-widget-wrapper>a:hover {
+    background: #444 !important;
+}
+
+.related-widget-wrapper .add-related img,
+.related-widget-wrapper .change-related img,
+.related-widget-wrapper .delete-related img,
+.related-widget-wrapper .view-related img {
+    filter: invert(1) brightness(0.8) !important;
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.related-widget-wrapper .add-related img {
+    filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%) !important;
+    /* Match green-ish plus */
+}

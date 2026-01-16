@@ -1,5 +1,6 @@
 from io import BytesIO
 
+from django_countries.fields import CountryField
 from PIL import Image
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TaggedItemBase
@@ -11,12 +12,12 @@ from django.utils.translation import gettext_lazy as _
 from core.models import BaseImage
 
 CelestialObjectChoices = [
-    ("Landscape", "Landscape"),
-    ("Deep Sky", "Deep Sky"),
-    ("Startrails", "Startrails"),
-    ("Solar System", "Solar System"),
-    ("Milky Way", "Milky Way"),
-    ("Northern Lights", "Northern Lights"),
+    ("Landscape", _("Landscape")),
+    ("Deep Sky", _("Deep Sky")),
+    ("Startrails", _("Startrails")),
+    ("Solar System", _("Solar System")),
+    ("Milky Way", _("Milky Way")),
+    ("Northern Lights", _("Northern Lights")),
 ]
 
 
@@ -26,22 +27,74 @@ class UUIDTaggedItem(GenericUUIDTaggedItemBase, TaggedItemBase):
         verbose_name_plural = _("Tags")
 
 
+class Place(models.Model):
+    name = models.CharField(
+        max_length=255,
+        verbose_name=_("Name"),
+        help_text=_("The name of the specific place or city."),
+    )
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _("Place")
+        verbose_name_plural = _("Places")
+        ordering = ["name"]
+
+
 class AstroImage(BaseImage):
     """Model for astrophotography images"""
 
-    capture_date = models.DateField()
-    location = models.CharField(max_length=255)
-    equipment = models.TextField(blank=True)
-    exposure_details = models.TextField(blank=True)
-    processing_details = models.TextField(blank=True)
-    celestial_object = models.CharField(choices=CelestialObjectChoices)
+    capture_date = models.DateField(
+        verbose_name=_("Capture Date"), help_text=_("The date when the photo was taken.")
+    )
+    location = CountryField(
+        blank=True,
+        null=True,
+        verbose_name=_("Country"),
+        help_text=_("The country where the photo was taken."),
+    )
+    place = models.ForeignKey(
+        Place,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Place/City"),
+        help_text=_("Specific city or region (e.g. Hawaii, Tenerife)."),
+    )
+    equipment = models.TextField(
+        blank=True,
+        verbose_name=_("Equipment"),
+        help_text=_("Equipment used (telescope, camera, mount, filters, etc.)."),
+    )
+    exposure_details = models.TextField(
+        blank=True,
+        verbose_name=_("Exposure Details"),
+        help_text=_("Technical details of the exposure (gain, sub-exposures, total time)."),
+    )
+    processing_details = models.TextField(
+        blank=True,
+        verbose_name=_("Processing Details"),
+        help_text=_("Software and techniques used for post-processing."),
+    )
+    celestial_object = models.CharField(
+        choices=CelestialObjectChoices,
+        verbose_name=_("Celestial Object"),
+        help_text=_("The type of celestial object captured."),
+    )
     astrobin_url = models.URLField(
         max_length=200,
         blank=True,
-        help_text=("Link to this image on Astrobin " "(e.g., https://www.astrobin.com/XXXXX/)"),
+        verbose_name=_("Astrobin URL"),
+        help_text=_("Link to this image on Astrobin (e.g., https://www.astrobin.com/XXXXX/)"),
     )
-    thumbnail = models.ImageField(upload_to="thumbnails/", blank=True, null=True, editable=False)
-    tags = TaggableManager(through=UUIDTaggedItem)
+    thumbnail = models.ImageField(
+        upload_to="thumbnails/", blank=True, null=True, editable=False, verbose_name=_("Thumbnail")
+    )
+    tags = TaggableManager(
+        through=UUIDTaggedItem, verbose_name=_("Tags"), help_text=_("Relevant tags for the image.")
+    )
 
     def save(self, *args, **kwargs):
         if self.path and not self.thumbnail:
@@ -68,20 +121,95 @@ class AstroImage(BaseImage):
         thumbnail_name = f"thumb_{image.name.split('/')[-1]}"
         return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
 
+    def __str__(self):
+        return f"{self.name} ({self.capture_date})" if self.capture_date else self.name
+
     class Meta:
-        verbose_name = "Astrophotography Image"
-        verbose_name_plural = "Astrophotography Images"
+        verbose_name = _("Astrophotography Image")
+        verbose_name_plural = _("Astrophotography Images")
         ordering = ["-created_at"]
 
 
-class BackgroundMainPage(BaseImage):
+class MainPageLocationSlider(models.Model):
+    """Model to manage which images appear in the travel section for a specific location"""
+
+    country = CountryField(
+        verbose_name=_("Country"), help_text=_("The country for this travel highlights slider.")
+    )
+    place = models.ForeignKey(
+        Place,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Place/City"),
+        help_text=_("Specific city or region (e.g. Hawaii, Tenerife)"),
+    )
+    images = models.ManyToManyField(
+        AstroImage,
+        blank=True,
+        related_name="location_sliders",
+        verbose_name=_("Images"),
+        help_text=_(
+            "Select images to display in the slideshow for this location (filtered by country)."
+        ),
+    )
+    is_active = models.BooleanField(
+        default=True, verbose_name=_("Is Active"), help_text=_("Toggle visibility on the homepage.")
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        # Ensure that if we have images, they match the country
+        # Note: checking m2m in clean() is tricky because they might not be saved yet
+        # for new instances, but works for updates or if instance is saved.
+        # However, for new instances, self.pk might be None, and we can't check m2m.
+        if self.pk:
+            for image in self.images.all():
+                if image.location != self.country:
+                    raise ValidationError(
+                        _(
+                            "Image '%(image)s' (%(location)s) does not match "
+                            "the slider's country (%(country)s)."
+                        )
+                        % {
+                            "image": image.name,
+                            "location": image.location.name if image.location else "Unknown",
+                            "country": self.country.name,
+                        }
+                    )
+
+    def __str__(self):
+        location = f"{self.country.name}"
+        if self.place:
+            location += f" ({self.place})"
+        return f"Slider for {location} ({'Active' if self.is_active else 'Inactive'})"
+
+    class Meta:
+        verbose_name = _("Main Page Location Slider")
+        verbose_name_plural = _("Main Page Location Sliders")
+        ordering = ["country"]
+
+
+class MainPageBackgroundImage(BaseImage):
     """Model for the main page background image"""
 
     # Override fields with appropriate defaults
-    name = models.CharField(max_length=255, default="Background Image")
-    path = models.ImageField(upload_to="backgrounds/")
+    name = models.CharField(
+        max_length=255,
+        default="Background Image",
+        verbose_name=_("Name"),
+        help_text=_("Identifier for the background image."),
+    )
+    path = models.ImageField(
+        upload_to="backgrounds/",
+        verbose_name=_("Image File"),
+        help_text=_("The large background image file."),
+    )
 
     class Meta:
-        verbose_name = "Background Main Page"
-        verbose_name_plural = "Background Main Pages"
+        verbose_name = _("Main Page Background Image")
+        verbose_name_plural = _("Main Page Background Images")
         ordering = ["-created_at"]

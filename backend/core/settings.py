@@ -95,6 +95,9 @@ INSTALLED_APPS = [
     "programming.apps.ProgrammingConfig",
     "inbox.apps.InboxConfig",
     "taggit",
+    "django_countries",
+    "django_select2",
+    "core",
 ]
 
 # Security Settings (for Nginx SSL termination)
@@ -197,8 +200,16 @@ CACHES = {
         "LOCATION": "unique-snowflake",
         "TIMEOUT": 3600,  # 1 hour default timeout
         "OPTIONS": {"MAX_ENTRIES": 10000},
-    }
+    },
+    "select2": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "TIMEOUT": 3600,
+        "OPTIONS": {"MAX_ENTRIES": 10000},
+    },
 }
+
+# Django Select2 Configuration
+SELECT2_CACHE_BACKEND = "select2"
 
 # File Upload Settings
 FILE_UPLOAD_PERMISSIONS = 0o644
