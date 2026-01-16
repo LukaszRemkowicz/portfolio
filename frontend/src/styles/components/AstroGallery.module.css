@@ -1,8 +1,9 @@
 .container {
   text-align: center;
   background-color: var(--portfolio-bg-dark);
-  min-height: 100vh;
   color: var(--text-light);
+  padding-bottom: 2rem;
+  min-height: auto;
 }
 
 .title {
@@ -226,4 +227,23 @@
 
 .modalClose:hover {
   color: var(--accent-gold);
+}
+
+.noResults {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-light);
+}
+
+.noResults p {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #cbd5e1;
+}
+
+.noResultsHint {
+  font-size: 1rem;
+  color: #94a3b8;
+  font-weight: 300;
 }

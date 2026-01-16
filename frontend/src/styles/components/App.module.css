@@ -133,3 +133,17 @@
     padding-top: 8rem;
   }
 }
+
+/* MainLayout backgrounds */
+.app-container {
+  min-height: 100vh;
+  background-color: var(--portfolio-bg-dark);
+}
+
+.astro-bg {
+  background-color: var(--portfolio-bg-dark);
+}
+
+.programming-bg {
+  background-color: var(--portfolio-bg-dark);
+}

@@ -72,16 +72,26 @@ const AstroGallery: React.FC = () => {
         ))}
       </div>
       <div className={styles.grid}>
-        {images.map((image: AstroImage) => (
-          <div key={image.pk} className={styles.gridItem}>
-            <img
-              src={image.thumbnail_url || image.url}
-              alt={image.name || `Astro Image ${image.pk}`}
-              onClick={() => handleImageClick(image)}
-              style={{ cursor: "pointer" }}
-            />
+        {images.length > 0 ? (
+          images.map((image: AstroImage) => (
+            <div key={image.pk} className={styles.gridItem}>
+              <img
+                src={image.thumbnail_url || image.url}
+                alt={image.name || `Astro Image ${image.pk}`}
+                onClick={() => handleImageClick(image)}
+                style={{ cursor: "pointer" }}
+              />
+            </div>
+          ))
+        ) : (
+          <div className={styles.noResults}>
+            <p>No images found for this filter.</p>
+            <p className={styles.noResultsHint}>
+              Try selecting a different category or clear the filter to see all
+              images.
+            </p>
           </div>
-        ))}
+        )}
       </div>
       <ImageModal image={modalImage} onClose={() => setModalImage(null)} />
     </div>

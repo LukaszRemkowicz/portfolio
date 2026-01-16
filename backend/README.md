@@ -149,9 +149,9 @@ docker compose exec portfolio-be pytest
 
 - [ ] Implement image optimization pipeline
 - [ ] Implement caching for frequently accessed data
-- [ ] Printify email messages (add html template)
-- [ ] Think about changing (uuid) and saving in db
-- [ ] contact message
+- [ ] Prettify email messages (add HTML template)
+- [x] Think about changing (uuid) and saving in db - UUID migration completed for BaseImage models
+- [x] Contact message - Contact form with email field implemented
 - [ ] Add language translation
 
 ### 🚀 API & Documentation

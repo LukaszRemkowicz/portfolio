@@ -366,6 +366,7 @@ src/
 ### 🎯 Priority 2 - Nice to Have
 
 - [ ] **Complete Programming Page** - Implement actual programming projects showcase
+- [ ] **Filtering by Tags** - Add tag-based filtering to astrophotography gallery for more granular search
 
 ---
 
