@@ -52,6 +52,7 @@ export interface MainPageLocationSlider {
   country: string;
   country_name: string;
   place_name: string | null;
+  highlight_name?: string;
   images: AstroImage[];
 }
 

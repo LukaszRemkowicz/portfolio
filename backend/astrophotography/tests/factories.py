@@ -44,6 +44,7 @@ class MainPageLocationSliderFactory(DjangoModelFactory):
 
     country = factory.Iterator(["PL", "US", "NO", "CL"])
     place = factory.SubFactory(PlaceFactory)
+    highlight_name = None
     is_active = True
 
     @factory.post_generation

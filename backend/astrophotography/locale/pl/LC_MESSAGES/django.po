@@ -1,0 +1,244 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-16 22:54+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && "
+"(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
+"n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
+#: admin.py:79 models.py:151
+msgid "Images"
+msgstr "Zdjęcia"
+
+#: admin.py:81
+msgid ""
+"Select images to display in the slideshow for this location (filtered by "
+"country and place)."
+msgstr ""
+"Wybierz zdjęcia do wyświetlenia w pokazie slajdów dla tej lokalizacji "
+"(filtrowane po kraju i miejscu)."
+
+#: admin.py:112
+msgid "No matching items found for this country and place."
+msgstr "Nie znaleziono pasujących elementów dla tego kraju i miejsca."
+
+#: admin.py:115
+msgid ""
+"Please add images with these location details in the 'Astrophotography "
+"Images' section first."
+msgstr ""
+"Proszę najpierw dodać zdjęcia z tymi szczegółami lokalizacji w sekcji 'Zdjęcia Astrofotograficzne'."
+
+#: admin.py:122
+msgid "Save the slider first to select images for this country."
+msgstr "Najpierw zapisz slider, aby wybrać zdjęcia dla tego kraju."
+
+#: admin.py:133 forms.py:29
+msgid "Select or type place..."
+msgstr "Wybierz lub wpisz miejsce..."
+
+#: models.py:15
+msgid "Landscape"
+msgstr "Krajobraz"
+
+#: models.py:16
+msgid "Deep Sky"
+msgstr "Głębokie Niebo"
+
+#: models.py:17
+msgid "Startrails"
+msgstr "Startrails"
+
+#: models.py:18
+msgid "Solar System"
+msgstr "Układ Słoneczny"
+
+#: models.py:19
+msgid "Milky Way"
+msgstr "Droga Mleczna"
+
+#: models.py:20
+msgid "Northern Lights"
+msgstr "Zorza Polarna"
+
+#: models.py:26
+msgid "Tag"
+msgstr "Tag"
+
+#: models.py:27 models.py:96
+msgid "Tags"
+msgstr "Tagi"
+
+#: models.py:33 models.py:203
+msgid "Name"
+msgstr "Nazwa"
+
+#: models.py:34
+msgid "The name of the specific place or city."
+msgstr "Nazwa konkretnego miejsca lub miasta."
+
+#: models.py:41
+msgid "Place"
+msgstr "Miejsce"
+
+#: models.py:42
+msgid "Places"
+msgstr "Miejsca"
+
+#: models.py:50
+msgid "Capture Date"
+msgstr "Data wykonania"
+
+#: models.py:50
+msgid "The date when the photo was taken."
+msgstr "Data wykonania zdjęcia."
+
+#: models.py:55 models.py:137
+msgid "Country"
+msgstr "Kraj"
+
+#: models.py:56
+msgid "The country where the photo was taken."
+msgstr "Kraj, w którym wykonano zdjęcie."
+
+#: models.py:63 models.py:144
+msgid "Place/City"
+msgstr "Miejsce/Miasto"
+
+#: models.py:64
+msgid "Specific city or region (e.g. Hawaii, Tenerife)."
+msgstr "Konkretne miasto lub region (np. Hawaje, Teneryfa)."
+
+#: models.py:68
+msgid "Equipment"
+msgstr "Sprzęt"
+
+#: models.py:69
+msgid "Equipment used (telescope, camera, mount, filters, etc.)."
+msgstr "Użyty sprzęt (teleskop, kamera, montaż, filtry itp.)."
+
+#: models.py:73
+msgid "Exposure Details"
+msgstr "Szczegóły ekspozycji"
+
+#: models.py:74
+msgid "Technical details of the exposure (gain, sub-exposures, total time)."
+msgstr "Dane techniczne ekspozycji (gain, sub-ekspozycje, łączny czas)."
+
+#: models.py:78
+msgid "Processing Details"
+msgstr "Szczegóły obróbki"
+
+#: models.py:79
+msgid "Software and techniques used for post-processing."
+msgstr "Oprogramowanie i techniki użyte do obróbki."
+
+#: models.py:83
+msgid "Celestial Object"
+msgstr "Obiekt niebieski"
+
+#: models.py:84
+msgid "The type of celestial object captured."
+msgstr "Typ uchwyconego obiektu."
+
+#: models.py:89
+msgid "Astrobin URL"
+msgstr "Link Astrobin"
+
+#: models.py:90
+msgid "Link to this image on Astrobin (e.g., https://www.astrobin.com/XXXXX/)"
+msgstr "Link do zdjęcia na Astrobin (np. https://www.astrobin.com/XXXXX/)"
+
+#: models.py:93
+msgid "Thumbnail"
+msgstr "Miniatura"
+
+#: models.py:96
+msgid "Relevant tags for the image."
+msgstr "Tagi powiązane ze zdjęciem."
+
+#: models.py:128
+msgid "Astrophotography Image"
+msgstr "Zdjęcie Astrofotograficzne"
+
+#: models.py:129
+msgid "Astrophotography Images"
+msgstr "Zdjęcia Astrofotograficzne"
+
+#: models.py:137
+msgid "The country for this travel highlights slider."
+msgstr "Kraj dla tego slidera podróżniczego."
+
+#: models.py:145
+msgid "Specific city or region (e.g. Hawaii, Tenerife)"
+msgstr "Konkretne miasto lub region (np. Hawaje, Teneryfa)"
+
+#: models.py:153
+msgid ""
+"Select images to display in the slideshow for this location (filtered by "
+"country)."
+msgstr "Wybierz zdjęcia do wyświetlenia w sliderze dla tej lokalizacji (filtrowane po kraju)."
+
+#: models.py:157
+msgid "Is Active"
+msgstr "Aktywny"
+
+#: models.py:157
+msgid "Toggle visibility on the homepage."
+msgstr "Włącz widoczność na stronie głównej."
+
+#: models.py:159
+msgid "Created At"
+msgstr "Utworzono"
+
+#: models.py:160
+msgid "Updated At"
+msgstr "Zaktualizowano"
+
+#: models.py:174
+#, python-format
+msgid ""
+"Image '%(image)s' (%(location)s) does not match the slider's country "
+"(%(country)s)."
+msgstr "Zdjęcie '%(image)s' (%(location)s) nie pasuje do kraju slidera (%(country)s)."
+
+#: models.py:191
+msgid "Main Page Location Slider"
+msgstr "Slider Lokalizacji na Stronie Głównej"
+
+#: models.py:192
+msgid "Main Page Location Sliders"
+msgstr "Slidery Lokalizacji na Stronie Głównej"
+
+#: models.py:204
+msgid "Identifier for the background image."
+msgstr "Identyfikator zdjęcia tła."
+
+#: models.py:208
+msgid "Image File"
+msgstr "Plik zdjęcia"
+
+#: models.py:209
+msgid "The large background image file."
+msgstr "Duży plik zdjęcia tła."
+
+#: models.py:213
+msgid "Main Page Background Image"
+msgstr "Zdjęcie Tła Strony Głównej"
+
+#: models.py:214
+msgid "Main Page Background Images"
+msgstr "Zdjęcia Tła Strony Głównej"

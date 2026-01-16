@@ -6,9 +6,9 @@ from django.contrib.admin.sites import AdminSite
 from django.test import RequestFactory
 from django.urls import reverse
 
-from inbox.admin import ContactFormSettingsAdmin, ContactMessageAdmin
-from inbox.models import ContactFormSettings, ContactMessage
-from inbox.tests.factories import ContactFormSettingsFactory, ContactMessageFactory
+from inbox.admin import ContactMessageAdmin
+from inbox.models import ContactMessage
+from inbox.tests.factories import ContactMessageFactory
 
 
 @pytest.mark.django_db
@@ -44,34 +44,3 @@ class TestContactMessageAdmin:
         request._messages = MagicMock()
         # Should not raise exception
         self.admin.changeform_view(request, object_id="999")
-
-
-@pytest.mark.django_db
-class TestContactFormSettingsAdmin:
-    def setup_method(self) -> None:
-        self.site = AdminSite()
-        self.admin = ContactFormSettingsAdmin(ContactFormSettings, self.site)
-        ContactFormSettings.objects.all().delete()
-
-    def test_has_add_permission(self) -> None:
-        """Verify only one instance can be added"""
-        request = MagicMock()
-        assert self.admin.has_add_permission(request) is True
-
-        ContactFormSettingsFactory(pk=1)
-        assert self.admin.has_add_permission(request) is False
-
-    def test_has_delete_permission(self) -> None:
-        """Verify deletion is always disabled"""
-        assert self.admin.has_delete_permission(MagicMock()) is False
-
-    def test_changelist_view_redirects_to_singleton(self, rf: RequestFactory) -> None:
-        """Verify redirect to the singleton instance if it exists"""
-        settings = ContactFormSettingsFactory()
-        request = rf.get(reverse("admin:inbox_contactformsettings_changelist"))
-        request.user = MagicMock()
-
-        response = self.admin.changelist_view(request)
-
-        assert response.status_code == 302
-        assert response.url == reverse("admin:inbox_contactformsettings_change", args=[settings.pk])

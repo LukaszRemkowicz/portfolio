@@ -3,19 +3,22 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from core.models import LandingPageSettings
 from inbox.middleware import ContactFormKillSwitchMiddleware
-from inbox.models import ContactFormSettings, ContactMessage
+from inbox.models import ContactMessage
 from inbox.serializers import ContactMessageSerializer
 
 
 @pytest.fixture
-def contact_form_settings() -> ContactFormSettings:
+def landing_page_settings() -> LandingPageSettings:
     """
-    Get contact form settings fixture.
+    Get landing page settings fixture.
     """
-    from inbox.tests.factories import ContactFormSettingsFactory
+    from core.tests.factories import LandingPageSettingsFactory
 
-    return ContactFormSettingsFactory()
+    # Ensure single instance
+    LandingPageSettings.objects.all().delete()
+    return LandingPageSettingsFactory()
 
 
 @pytest.fixture

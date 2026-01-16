@@ -32,3 +32,33 @@ class BaseImage(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class LandingPageSettings(models.Model):
+    """Singleton-like model to store global landing page settings."""
+
+    contact_form_enabled = models.BooleanField(default=True, verbose_name=_("Contact Form Enabled"))
+    location_slider_enabled = models.BooleanField(
+        default=True, verbose_name=_("Location Slider Enabled")
+    )
+    programming_enabled = models.BooleanField(
+        default=True, verbose_name=_("Programming Section Enabled")
+    )
+
+    class Meta:
+        verbose_name = _("Landing Page Settings")
+        verbose_name_plural = _("Landing Page Settings")
+
+    def __str__(self):
+        return str(_("Landing Page Settings"))
+
+    def save(self, *args, **kwargs):
+        """Ensure only one instance exists."""
+        if not self.pk and LandingPageSettings.objects.exists():
+            # If you try to create a new one, but one exists, update the existing one instead
+            existing = LandingPageSettings.objects.first()
+            existing.contact_form_enabled = self.contact_form_enabled
+            existing.location_slider_enabled = self.location_slider_enabled
+            existing.programming_enabled = self.programming_enabled
+            return existing.save(*args, **kwargs)
+        return super().save(*args, **kwargs)

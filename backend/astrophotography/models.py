@@ -159,6 +159,14 @@ class MainPageLocationSlider(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
+    highlight_name = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Highlight Name"),
+        help_text=_("Optional custom name for the travel highlight (overrides Country/Place)."),
+    )
+
     def clean(self):
         from django.core.exceptions import ValidationError
 
@@ -182,6 +190,9 @@ class MainPageLocationSlider(models.Model):
                     )
 
     def __str__(self):
+        if self.highlight_name:
+            return f"{self.highlight_name} ({'Active' if self.is_active else 'Inactive'})"
+
         location = f"{self.country.name}"
         if self.place:
             location += f" ({self.place})"

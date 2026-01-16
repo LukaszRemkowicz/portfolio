@@ -6,7 +6,7 @@ from django.db import DatabaseError
 from django.http import HttpRequest, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
-from .models import ContactFormSettings
+from core.models import LandingPageSettings
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,11 @@ class ContactFormKillSwitchMiddleware(MiddlewareMixin):
 
         # Check if contact form is enabled
         try:
-            settings: ContactFormSettings = ContactFormSettings.get_settings()
-            if not settings.enabled:
+            settings = LandingPageSettings.objects.first()
+            # If no settings exist yet, default to True (enabled)
+            is_enabled = settings.contact_form_enabled if settings else True
+
+            if not is_enabled:
                 logger.warning(
                     f"Contact form request blocked - form disabled. Path: {request.path}"
                 )

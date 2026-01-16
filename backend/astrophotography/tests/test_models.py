@@ -53,6 +53,12 @@ class TestMainPageLocationSliderModel:
         slider = MainPageLocationSliderFactory(country="PL", place__name="Bieszczady")
         assert str(slider) == "Slider for Poland (Bieszczady) (Active)"
 
+    def test_string_representation_with_highlight_name(self):
+        from astrophotography.tests.factories import MainPageLocationSliderFactory
+
+        slider = MainPageLocationSliderFactory(highlight_name="Magical Poland")
+        assert str(slider) == "Magical Poland (Active)"
+
     def test_clean_method_validation_success(self):
         from astrophotography.tests.factories import (
             AstroImageFactory,

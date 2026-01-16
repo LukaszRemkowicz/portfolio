@@ -150,11 +150,20 @@ class MainPageLocationSliderForm(forms.ModelForm):
 @admin.register(MainPageLocationSlider)
 class MainPageLocationSliderAdmin(admin.ModelAdmin):
     form = MainPageLocationSliderForm
-    list_display = ("pk", "country", "place", "is_active")
+    list_display = ("pk", "country", "place", "highlight_name", "is_active")
     list_display_links = ("pk", "country")
     list_filter = ("is_active", "country", "place")
-    search_fields = ("country", "place__name")
+    search_fields = ("country", "place__name", "highlight_name")
     readonly_fields = ("created_at", "updated_at")
+    fields = (
+        "highlight_name",
+        "country",
+        "place",
+        "is_active",
+        "images",
+        "created_at",
+        "updated_at",
+    )
 
     def get_form(self, request, obj=None, **kwargs):
         return super().get_form(request, obj, **kwargs)

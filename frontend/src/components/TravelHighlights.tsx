@@ -54,7 +54,7 @@ const TravelCard: React.FC<{ slider: MainPageLocationSlider }> = ({
       <div className={styles.cardContent}>
         <span className={styles.category}>Adventure</span>
         <h3 className={styles.cardTitle}>
-          {slider.place_name || slider.country_name}
+          {slider.highlight_name || slider.place_name || slider.country_name}
         </h3>
         <p className={styles.cardLocation}>
           <MapPin size={12} className={styles.metaIcon} />
