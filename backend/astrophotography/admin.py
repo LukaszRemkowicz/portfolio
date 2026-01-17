@@ -18,13 +18,12 @@ class PlaceAdmin(admin.ModelAdmin):
 class AstroImageAdmin(admin.ModelAdmin):
     form = AstroImageForm
     list_display = ("name", "capture_date", "location", "place", "has_thumbnail", "tag_list")
-    list_filter = ("location", "celestial_object", "capture_date", "tags")
+    list_filter = ("celestial_object", "tags")
     search_fields = ("name", "description", "location", "place__name", "equipment")
 
     def tag_list(self, obj):
         return ", ".join(o.name for o in obj.tags.all())
 
-    date_hierarchy = "capture_date"
     ordering = ("-capture_date", "-created_at")
 
     @admin.display(boolean=True, description="Has Thumbnail")
@@ -56,6 +55,13 @@ class AstroImageAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = ("created_at", "updated_at", "thumbnail")
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        extra_context = extra_context or {}
+        # Hide "Save and add another" button when editing (only show when adding)
+        if object_id:
+            extra_context["show_save_and_add_another"] = False
+        return super().changeform_view(request, object_id, form_url, extra_context)
 
 
 @admin.register(MainPageBackgroundImage)
