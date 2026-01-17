@@ -5,6 +5,9 @@ import HomePage from "./HomePage";
 // Lazy load larger components
 const AstroGallery = lazy(() => import("./components/AstroGallery"));
 const Programming = lazy(() => import("./components/Programming"));
+const TravelHighlightsPage = lazy(
+  () => import("./components/TravelHighlightsPage"),
+);
 import MainLayout from "./components/MainLayout";
 
 import LoadingScreen from "./components/common/LoadingScreen";
@@ -31,6 +34,14 @@ const App: React.FC = () => {
             element={
               <MainLayout>
                 <Programming />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/travel-highlights"
+            element={
+              <MainLayout>
+                <TravelHighlightsPage />
               </MainLayout>
             }
           />

@@ -61,6 +61,22 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
 
             queryset = queryset.filter(filter_q)
 
+        # Filter by Country and Place (explicit parameters)
+        country_param = self.request.query_params.get("country")
+        place_param = self.request.query_params.get("place")
+
+        if country_param:
+            from django.db.models import Q
+
+            # Filter by country code
+            queryset = queryset.filter(location=country_param)
+
+            # If place is specified, also filter by place
+            if place_param:
+                queryset = queryset.filter(
+                    Q(place__name__iexact=place_param) | Q(place__isnull=True)
+                )
+
         return queryset
 
     def get_serializer_class(self):

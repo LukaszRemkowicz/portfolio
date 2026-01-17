@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "../styles/components/TravelHighlights.module.css";
 import { MapPin } from "lucide-react";
 import { fetchTravelHighlights } from "../api/services";
@@ -7,6 +8,7 @@ import { MainPageLocationSlider } from "../types";
 const TravelCard: React.FC<{ slider: MainPageLocationSlider }> = ({
   slider,
 }) => {
+  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const images = slider.images.map((img) => img.thumbnail_url || img.url);
 
@@ -38,8 +40,20 @@ const TravelCard: React.FC<{ slider: MainPageLocationSlider }> = ({
       ? slider.images[0].description
       : `Explore the cosmic wonders of ${slider.country_name}.`;
 
+  const handleCardClick = () => {
+    const params = new URLSearchParams({ country: slider.country });
+    if (slider.place_name) {
+      params.append("place", slider.place_name);
+    }
+    navigate(`/travel-highlights?${params.toString()}`);
+  };
+
   return (
-    <article className={styles.card}>
+    <article
+      className={styles.card}
+      onClick={handleCardClick}
+      style={{ cursor: "pointer" }}
+    >
       <div className={styles.imageWrapper}>
         {displayImages.map((img, index) => (
           <img
