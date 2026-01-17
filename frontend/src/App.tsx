@@ -38,7 +38,7 @@ const App: React.FC = () => {
             }
           />
           <Route
-            path="/travel-highlights"
+            path="/travel-highlights/:countrySlug/:placeSlug?"
             element={
               <MainLayout>
                 <TravelHighlightsPage />

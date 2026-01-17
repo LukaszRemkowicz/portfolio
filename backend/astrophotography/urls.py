@@ -6,6 +6,7 @@ from .views import (
     AstroImageViewSet,
     MainPageBackgroundImageView,
     MainPageLocationSliderViewSet,
+    TravelHighlightsBySlugView,
 )
 
 app_name = "astroimages"
@@ -17,5 +18,17 @@ router.register("travel-highlights", MainPageLocationSliderViewSet, basename="tr
 
 
 urlpatterns = [
+    # Slug-based travel highlights endpoints (more specific routes first)
+    path(
+        "travel/<slug:country_slug>/<slug:place_slug>/",
+        TravelHighlightsBySlugView.as_view(),
+        name="travel-by-country-place",
+    ),
+    path(
+        "travel/<slug:country_slug>/",
+        TravelHighlightsBySlugView.as_view(),
+        name="travel-by-country",
+    ),
+    # ViewSet routes (general)
     path("", include(router.urls)),
 ]

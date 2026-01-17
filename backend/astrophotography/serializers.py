@@ -68,4 +68,13 @@ class MainPageLocationSliderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MainPageLocationSlider
-        fields = ["pk", "country", "country_name", "place_name", "highlight_name", "images"]
+        fields = [
+            "pk",
+            "country",
+            "country_name",
+            "country_slug",
+            "place_name",
+            "place_slug",
+            "highlight_name",
+            "images",
+        ]

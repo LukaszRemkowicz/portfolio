@@ -18,6 +18,7 @@ export const API_ROUTES: ApiRoutes = {
   whatsEnabled: `${API_V1}/whats-enabled/`,
   projects: "/api/v1/projects/",
   travelHighlights: "/api/v1/travel-highlights/",
+  travelBySlug: `${API_V1}/travel/`,
 };
 
 // Centralized asset fallbacks

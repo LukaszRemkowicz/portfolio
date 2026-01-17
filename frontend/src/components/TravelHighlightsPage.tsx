@@ -1,55 +1,29 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import styles from "../styles/components/TravelHighlightsPage.module.css";
-import { ASSETS } from "../api/routes";
+import { API_ROUTES, getMediaUrl, ASSETS } from "../api/routes";
 import { AstroImage } from "../types";
-import { fetchAstroImages, fetchTravelHighlights } from "../api/services";
+import { api } from "../api/api";
 import ImageModal from "./common/ImageModal";
 import LoadingScreen from "./common/LoadingScreen";
 
 const TravelHighlightsPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const countryParam = searchParams.get("country");
-  const placeParam = searchParams.get("place");
+  const { countrySlug, placeSlug } = useParams<{
+    countrySlug: string;
+    placeSlug?: string;
+  }>();
 
   const [images, setImages] = useState<AstroImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
-  const [locationInfo, setLocationInfo] = useState<{
-    country: string;
-    place: string;
-  }>({ country: "", place: "" });
+  const [country, setCountry] = useState<string>("");
+  const [place, setPlace] = useState<string | null>(null);
 
-  // Load location info from sliders
   useEffect(() => {
-    const loadLocationInfo = async () => {
-      if (!countryParam) return;
-      try {
-        const sliders = await fetchTravelHighlights();
-        const slider = sliders.find(
-          (s) =>
-            s.country === countryParam &&
-            (!placeParam || s.place_name === placeParam),
-        );
-        if (slider) {
-          setLocationInfo({
-            country: slider.country_name,
-            place: slider.place_name || "",
-          });
-        }
-      } catch (err) {
-        console.error("Failed to load location info:", err);
-      }
-    };
-    loadLocationInfo();
-  }, [countryParam, placeParam]);
-
-  // Load images for the location
-  useEffect(() => {
-    const loadImages = async () => {
-      if (!countryParam) {
-        setError("No country specified");
+    const loadData = async () => {
+      if (!countrySlug) {
+        setError("No location specified");
         setLoading(false);
         return;
       }
@@ -57,50 +31,58 @@ const TravelHighlightsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // Pass country and place as separate parameters
-        const params: Record<string, string> = { country: countryParam };
-        if (placeParam) {
-          params.place = placeParam;
-        }
-        const data = await fetchAstroImages(params);
+        // Build slug-based URL
+        const slugPath = placeSlug
+          ? `${countrySlug}/${placeSlug}`
+          : `${countrySlug}`;
 
-        // Filter images to only show those with a location (travel images)
-        const travelImages = data.filter((img) => img.location);
-        setImages(travelImages);
+        // Fetch from new slug-based endpoint
+        const response = await api.get(
+          `${API_ROUTES.travelBySlug}${slugPath}/`,
+        );
+
+        const data = response.data;
+
+        // Validate response structure
+        if (!data || typeof data !== "object") {
+          throw new Error("Invalid API response structure");
+        }
+
+        // Set metadata with fallbacks
+        setCountry(data.country || "");
+        setPlace(data.place || null);
+
+        // Process images with defensive checks
+        const imagesArray = Array.isArray(data.images) ? data.images : [];
+        const processedImages = imagesArray.map((image: AstroImage) => ({
+          ...image,
+          url: getMediaUrl(image.url) || "",
+          thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+        }));
+
+        setImages(processedImages);
       } catch (err) {
-        console.error("Failed to load images:", err);
-        setError("Failed to load images");
+        console.error("Failed to load travel highlights:", err);
+        setError(
+          "Failed to load travel highlights. Please check the URL and try again.",
+        );
       } finally {
         setLoading(false);
       }
     };
-    loadImages();
-  }, [countryParam, placeParam]);
+    loadData();
+  }, [countrySlug, placeSlug]);
 
   const handleImageClick = (image: AstroImage): void => {
     setModalImage(image);
   };
 
-  // Shorten certain country names for display
-  const shortenCountryName = (countryName: string): string => {
-    const shortNames: Record<string, string> = {
-      "United States of America": "USA",
-      "United Kingdom": "UK",
-      "United Arab Emirates": "UAE",
-    };
-    return shortNames[countryName] || countryName;
-  };
-
   if (loading) return <LoadingScreen />;
   if (error) return <div className={styles.error}>{error}</div>;
 
-  const shortCountryName = shortenCountryName(locationInfo.country);
-
   // Display title: "Place, Country" or just "Country"
   const displayTitle =
-    locationInfo.place && shortCountryName
-      ? `${locationInfo.place}, ${shortCountryName}`
-      : shortCountryName || "Travel Highlights";
+    place && country ? `${place}, ${country}` : country || "Travel Highlights";
 
   return (
     <div className={styles.container}>

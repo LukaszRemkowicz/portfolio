@@ -143,8 +143,12 @@
 .error {
   color: #ef4444;
   text-align: center;
-  padding: 2rem;
   font-size: 1.25rem;
+  height: calc(100vh - 80px);
+  /* Full viewport minus navbar height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .noResults {

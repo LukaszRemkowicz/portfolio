@@ -41,11 +41,11 @@ const TravelCard: React.FC<{ slider: MainPageLocationSlider }> = ({
       : `Explore the cosmic wonders of ${slider.country_name}.`;
 
   const handleCardClick = () => {
-    const params = new URLSearchParams({ country: slider.country });
-    if (slider.place_name) {
-      params.append("place", slider.place_name);
-    }
-    navigate(`/travel-highlights?${params.toString()}`);
+    const url = slider.place_slug
+      ? `/travel-highlights/${slider.country_slug}/${slider.place_slug}`
+      : `/travel-highlights/${slider.country_slug}`;
+
+    navigate(url);
   };
 
   return (

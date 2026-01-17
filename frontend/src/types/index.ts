@@ -51,7 +51,9 @@ export interface MainPageLocationSlider {
   pk: number;
   country: string;
   country_name: string;
+  country_slug: string;
   place_name: string | null;
+  place_slug: string | null;
   highlight_name?: string;
   images: AstroImage[];
 }
@@ -174,6 +176,7 @@ export interface ApiRoutes {
   whatsEnabled: string;
   projects: string;
   travelHighlights: string;
+  travelBySlug: string;
 }
 
 // Legacy Gallery Item (for old gallery data structure)

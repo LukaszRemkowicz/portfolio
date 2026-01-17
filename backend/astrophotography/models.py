@@ -166,6 +166,32 @@ class MainPageLocationSlider(models.Model):
         verbose_name=_("Highlight Name"),
         help_text=_("Optional custom name for the travel highlight (overrides Country/Place)."),
     )
+    country_slug = models.SlugField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("Country Slug"),
+        help_text=_("Auto-generated slug for the country."),
+    )
+    place_slug = models.SlugField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Place Slug"),
+        help_text=_("Auto-generated slug for the place."),
+    )
+
+    def save(self, *args, **kwargs):
+        from django.utils.text import slugify
+
+        if self.country:
+            self.country_slug = slugify(self.country.name)
+
+        if self.place:
+            self.place_slug = slugify(self.place.name)
+        else:
+            self.place_slug = None
+
+        super().save(*args, **kwargs)
 
     def clean(self):
         from django.core.exceptions import ValidationError
