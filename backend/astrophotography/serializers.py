@@ -76,5 +76,7 @@ class MainPageLocationSliderSerializer(serializers.ModelSerializer):
             "place_name",
             "place_slug",
             "highlight_name",
+            "story",
             "images",
+            "created_at",
         ]

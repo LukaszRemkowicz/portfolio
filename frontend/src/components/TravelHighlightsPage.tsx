@@ -19,6 +19,9 @@ const TravelHighlightsPage: React.FC = () => {
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
   const [country, setCountry] = useState<string>("");
   const [place, setPlace] = useState<string | null>(null);
+  const [story, setStory] = useState<string | null>(null);
+  const [createdAt, setCreatedAt] = useState<string | null>(null);
+  const [highlightName, setHighlightName] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -51,6 +54,9 @@ const TravelHighlightsPage: React.FC = () => {
         // Set metadata with fallbacks
         setCountry(data.country || "");
         setPlace(data.place || null);
+        setStory(data.story || null);
+        setCreatedAt(data.created_at || null);
+        setHighlightName(data.highlight_name || null);
 
         // Process images with defensive checks
         const imagesArray = Array.isArray(data.images) ? data.images : [];
@@ -98,18 +104,78 @@ const TravelHighlightsPage: React.FC = () => {
         </p>
       </div>
 
-      <div className={styles.grid}>
-        {images.length > 0 ? (
-          images.map((image: AstroImage) => (
-            <div key={image.pk} className={styles.gridItem}>
-              <img
-                src={image.thumbnail_url || image.url}
-                alt={image.name || `Travel Image ${image.pk}`}
-                onClick={() => handleImageClick(image)}
-                style={{ cursor: "pointer" }}
-              />
+      {/* Dynamic Story Section */}
+      {story && (
+        <section className={styles.expeditionContainer}>
+          <div className={styles.glassCard}>
+            <header className={styles.metaInfo}>
+              <span className={styles.badge}>
+                {createdAt
+                  ? new Date(createdAt)
+                      .toLocaleDateString("en-US", {
+                        month: "long",
+                        year: "numeric",
+                      })
+                      .toUpperCase()
+                  : "DATE UNKNOWN"}
+              </span>
+              <span className={styles.separator}>|</span>
+              <span className={styles.badge}>
+                {place
+                  ? `${place.toUpperCase()}, ${country.toUpperCase()}`
+                  : country.toUpperCase()}
+              </span>
+            </header>
+
+            <h2 className={styles.storyTitle}>
+              {highlightName || "About this place"}
+            </h2>
+
+            <div className={styles.storyContent}>
+              {story.split("\n").map((paragraph, idx) => (
+                <p key={idx}>{paragraph}</p>
+              ))}
             </div>
-          ))
+          </div>
+        </section>
+      )}
+
+      {/* Gallery Section */}
+      <div className={styles.gallerySection}>
+        <h3 className={styles.galleryTitle}>CAPTURED HIGHLIGHTS</h3>
+
+        {images.length > 0 ? (
+          <div className={styles.stackedCards}>
+            {images.map((image) => (
+              <div key={image.pk} className={styles.viewerContainer}>
+                <div className={styles.viewerFrame}>
+                  <div className={styles.imageWrapper}>
+                    <img
+                      src={image.url}
+                      alt={image.name}
+                      className={styles.viewerImage}
+                      onClick={() => handleImageClick(image)}
+                    />
+                  </div>
+
+                  <div className={styles.viewerDetails}>
+                    <h4 className={styles.imageTitle}>{image.name}</h4>
+                    <p className={styles.imageDescription}>
+                      {image.description || "No description available."}
+                    </p>
+
+                    <div className={styles.imageMeta}>
+                      {image.equipment && (
+                        <div className={styles.metaItem}>
+                          <strong>Equipment:</strong> {image.equipment}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className={styles.noResults}>
             <p>No images found for this destination.</p>

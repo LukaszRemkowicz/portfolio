@@ -160,12 +160,15 @@ class MainPageLocationSliderAdmin(admin.ModelAdmin):
     list_display_links = ("pk", "country")
     list_filter = ("is_active", "country", "place")
     search_fields = ("country", "place__name", "highlight_name")
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created_at", "updated_at", "country_slug", "place_slug")
     fields = (
         "highlight_name",
         "country",
         "place",
+        "country_slug",
+        "place_slug",
         "is_active",
+        "story",
         "images",
         "created_at",
         "updated_at",
@@ -173,3 +176,10 @@ class MainPageLocationSliderAdmin(admin.ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         return super().get_form(request, obj, **kwargs)
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        extra_context = extra_context or {}
+        # Hide "Save and add another" button when editing (only show when adding)
+        if object_id:
+            extra_context["show_save_and_add_another"] = False
+        return super().changeform_view(request, object_id, form_url, extra_context)

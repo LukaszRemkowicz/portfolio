@@ -179,6 +179,12 @@ class MainPageLocationSlider(models.Model):
         verbose_name=_("Place Slug"),
         help_text=_("Auto-generated slug for the place."),
     )
+    story = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_("Story/Blog Text"),
+        help_text=_("Optional story or blog text to display above the images."),
+    )
 
     def save(self, *args, **kwargs):
         from django.utils.text import slugify

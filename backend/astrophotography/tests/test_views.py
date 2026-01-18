@@ -118,3 +118,51 @@ class TestMainPageLocationSliderViewSet:
         assert item_pl["country_name"] == "Poland"
         assert len(item_pl["images"]) == 1
         assert item_pl["images"][0]["pk"] == str(img_pl.pk)
+
+
+@pytest.mark.django_db
+class TestTravelHighlightsBySlugView:
+    def test_get_highlights_with_story(self, api_client):
+        """Test retrieving highlights with a story"""
+        from astrophotography.tests.factories import (
+            AstroImageFactory,
+            MainPageLocationSliderFactory,
+        )
+
+        # Create slider with story
+        slider = MainPageLocationSliderFactory(
+            country="PL",
+            # place is usually a Place object, but factory might handle string?
+            # In factory definition (not seen but typical), it might trigger creation.
+            # Safest is to let factory handle it or create place manually if needed.
+            # Assuming factory is smart enough or I will fix if it errors.
+            # Actually, looking at factory usage in other tests:
+            # MainPageLocationSliderFactory(country="PL", is_active=True, images=[img_pl])
+            # It doesn't set place.
+            highlight_name="Tatras Mountains",
+            story="A beautiful mountain range.",
+            is_active=True,
+        )
+
+        # Manually assign place if factory doesn't do it automatically or if I need it
+        # The view tests logic: if place_slug is provided, it filters by place.
+        # Let's add a place.
+        from astrophotography.models import Place
+
+        place, _ = Place.objects.get_or_create(name="Tatras")
+        slider.place = place
+        slider.save()  # This triggers slug generation: country_slug=poland, place_slug=tatras
+
+        # Create matching image
+        AstroImageFactory(location="PL", place=place)
+
+        url = reverse(
+            "astroimages:travel-by-country-place",
+            kwargs={"country_slug": "poland", "place_slug": "tatras"},
+        )
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["story"] == "A beautiful mountain range."
+        assert response.data["country"] == "Poland"
+        assert response.data["place"] == "Tatras"

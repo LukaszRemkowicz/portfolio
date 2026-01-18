@@ -157,5 +157,6 @@ class TravelHighlightsBySlugView(APIView):
                 # include slugs in response if helpful, though frontend likely has them from URL
                 "country_slug": slider.country_slug,
                 "place_slug": slider.place_slug,
+                "story": slider.story,
             }
         )

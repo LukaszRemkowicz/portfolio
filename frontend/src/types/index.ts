@@ -55,6 +55,8 @@ export interface MainPageLocationSlider {
   place_name: string | null;
   place_slug: string | null;
   highlight_name?: string;
+  story?: string;
+  created_at: string;
   images: AstroImage[];
 }
 
