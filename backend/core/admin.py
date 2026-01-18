@@ -20,12 +20,20 @@ class LandingPageSettingsAdmin(admin.ModelAdmin):
     fieldsets = (
         (
             None,
-            {"fields": ("contact_form_enabled", "location_slider_enabled", "programming_enabled")},
+            {
+                "fields": (
+                    "contact_form_enabled",
+                    "travel_highlights_enabled",
+                    "programming_enabled",
+                    "lastimages_enabled",
+                )
+            },
         ),
     )
     list_display = (
         "__str__",
         "contact_form_enabled",
-        "location_slider_enabled",
+        "travel_highlights_enabled",
         "programming_enabled",
+        "lastimages_enabled",
     )

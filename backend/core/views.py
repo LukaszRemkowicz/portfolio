@@ -25,17 +25,16 @@ class FeaturesEnabledView(APIView):
 
         # If settings exist, use them. Otherwise default purely to True (safe fallback)
         if settings:
-            if settings.programming_enabled:
-                data["programming"] = True
-            if settings.contact_form_enabled:
-                data["contactForm"] = True
-            if settings.location_slider_enabled:
-                data["locationSlider"] = True
+            data["programming"] = settings.programming_enabled
+            data["contactForm"] = settings.contact_form_enabled
+            data["travelHighlights"] = settings.travel_highlights_enabled
+            data["lastimages"] = settings.lastimages_enabled
         else:
             # Default state if no settings object exists yet
             data["programming"] = True
             data["contactForm"] = True
-            data["locationSlider"] = True
+            data["travelHighlights"] = True
+            data["lastimages"] = True
 
         return Response(data)
 

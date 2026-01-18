@@ -38,11 +38,14 @@ class LandingPageSettings(models.Model):
     """Singleton-like model to store global landing page settings."""
 
     contact_form_enabled = models.BooleanField(default=True, verbose_name=_("Contact Form Enabled"))
-    location_slider_enabled = models.BooleanField(
-        default=True, verbose_name=_("Location Slider Enabled")
+    travel_highlights_enabled = models.BooleanField(
+        default=True, verbose_name=_("Travel Highlights Enabled")
     )
     programming_enabled = models.BooleanField(
         default=True, verbose_name=_("Programming Section Enabled")
+    )
+    lastimages_enabled = models.BooleanField(
+        default=True, verbose_name=_("Last Images Section Enabled")
     )
 
     class Meta:
@@ -58,7 +61,8 @@ class LandingPageSettings(models.Model):
             # If you try to create a new one, but one exists, update the existing one instead
             existing = LandingPageSettings.objects.first()
             existing.contact_form_enabled = self.contact_form_enabled
-            existing.location_slider_enabled = self.location_slider_enabled
+            existing.travel_highlights_enabled = self.travel_highlights_enabled
             existing.programming_enabled = self.programming_enabled
+            existing.lastimages_enabled = self.lastimages_enabled
             return existing.save(*args, **kwargs)
         return super().save(*args, **kwargs)

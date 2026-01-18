@@ -56,12 +56,20 @@ GalleryCard.displayName = "GalleryCard";
 
 const Gallery: React.FC = () => {
   const [filter, setFilter] = useState("all");
-  const { images, isImagesLoading: loading, error, loadImages } = useAppStore();
+  const {
+    images,
+    isImagesLoading: loading,
+    error,
+    loadImages,
+    features,
+  } = useAppStore();
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
 
   useEffect(() => {
-    loadImages({ limit: 50 });
-  }, [loadImages]);
+    if (features?.lastimages !== false) {
+      loadImages({ limit: 50 });
+    }
+  }, [loadImages, features]);
 
   const filteredImages = useMemo(() => {
     if (filter === "all") return images.slice(0, 9);
@@ -98,8 +106,10 @@ const Gallery: React.FC = () => {
     setModalImage(image);
   }, []);
 
-  // Only hide the entire section if we have finished loading and there are NO images at all in the backend
-  if (!loading && images.length === 0) return null;
+  // Hide the entire section if disabled via admin toggle or if no images
+  if (features?.lastimages === false || (!loading && images.length === 0)) {
+    return null;
+  }
 
   return (
     <section id="gallery" className={styles.section}>

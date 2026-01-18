@@ -1,14 +1,18 @@
 .heroSection {
   position: relative;
   /* Subtract navbar height (approx 72px) from centering calculation */
-  padding: 72px 1.5rem 0;
+  padding: 100px 1.5rem 100px;
+  /* More balanced padding */
   text-align: center;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
+  /* Allow growth */
+  width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .heroContent {
@@ -53,13 +57,13 @@
   /* text-slate-300 */
   max-width: 42rem;
   /* max-w-2xl */
-  margin: 0 auto 3rem;
+  margin: 0 auto 2rem;
   line-height: 1.625;
   font-weight: 300;
 }
 
 .portraitWrapper {
-  margin-bottom: 3.5rem;
+  margin-bottom: 2.5rem;
   display: flex;
   justify-content: center;
 }
@@ -82,7 +86,8 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 1rem;
+  gap: 1.5rem;
+  margin-top: 1rem;
 }
 
 .primaryBtn {

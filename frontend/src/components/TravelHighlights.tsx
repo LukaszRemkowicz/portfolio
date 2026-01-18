@@ -4,6 +4,7 @@ import styles from "../styles/components/TravelHighlights.module.css";
 import { MapPin } from "lucide-react";
 import { fetchTravelHighlights } from "../api/services";
 import { MainPageLocationSlider } from "../types";
+import { useAppStore } from "../store/useStore";
 
 const TravelCard: React.FC<{ slider: MainPageLocationSlider }> = ({
   slider,
@@ -84,9 +85,14 @@ const TravelCard: React.FC<{ slider: MainPageLocationSlider }> = ({
 const TravelHighlights: React.FC = () => {
   const [sliders, setSliders] = React.useState<MainPageLocationSlider[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const { features } = useAppStore();
 
   React.useEffect(() => {
     const loadSliders = async () => {
+      if (features?.travelHighlights === false) {
+        setLoading(false);
+        return;
+      }
       try {
         const data = await fetchTravelHighlights();
         setSliders(data);
@@ -97,10 +103,14 @@ const TravelHighlights: React.FC = () => {
       }
     };
     loadSliders();
-  }, []);
+  }, [features?.travelHighlights]);
 
   if (loading) {
     return null; // Or a loading spinner
+  }
+
+  if (features?.travelHighlights === false) {
+    return null;
   }
 
   if (sliders.length === 0) {

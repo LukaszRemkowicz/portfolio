@@ -167,6 +167,8 @@ export interface ApiError {
 export interface EnabledFeatures {
   programming?: boolean;
   contactForm?: boolean;
+  lastimages?: boolean;
+  travelHighlights?: boolean;
 }
 
 export interface ApiRoutes {
