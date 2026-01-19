@@ -1,6 +1,7 @@
 import React, { useState, useEffect, memo, useRef } from "react";
 import styles from "../styles/components/ShootingStars.module.css";
 import { CONFIG } from "../config";
+import { useAppStore } from "../store/useStore";
 
 interface DustParticle {
   id: number;
@@ -105,11 +106,12 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
   className = "",
   random = CONFIG.randomShootingStars,
 }) => {
+  const { features } = useAppStore();
   const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
   const lastBolidTimeRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!CONFIG.enableShootingStars) return;
+    if (!CONFIG.enableShootingStars || features?.meteors === false) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
 
@@ -226,9 +228,9 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
     timeoutId = setTimeout(createShootingStar, initialDelay);
 
     return () => clearTimeout(timeoutId);
-  }, [minDelay, maxDelay, initialDelay, random]);
+  }, [minDelay, maxDelay, initialDelay, random, features?.meteors]);
 
-  if (!CONFIG.enableShootingStars) return null;
+  if (!CONFIG.enableShootingStars || features?.meteors === false) return null;
 
   return (
     <div className={`${styles.starContainer} ${className}`}>

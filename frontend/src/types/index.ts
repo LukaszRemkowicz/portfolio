@@ -169,6 +169,7 @@ export interface EnabledFeatures {
   contactForm?: boolean;
   lastimages?: boolean;
   travelHighlights?: boolean;
+  meteors?: boolean;
 }
 
 export interface ApiRoutes {

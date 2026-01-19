@@ -47,6 +47,7 @@ class LandingPageSettings(models.Model):
     lastimages_enabled = models.BooleanField(
         default=True, verbose_name=_("Last Images Section Enabled")
     )
+    meteors_enabled = models.BooleanField(default=True, verbose_name=_("Meteors Enabled"))
 
     class Meta:
         verbose_name = _("Landing Page Settings")
@@ -64,5 +65,6 @@ class LandingPageSettings(models.Model):
             existing.travel_highlights_enabled = self.travel_highlights_enabled
             existing.programming_enabled = self.programming_enabled
             existing.lastimages_enabled = self.lastimages_enabled
+            existing.meteors_enabled = self.meteors_enabled
             return existing.save(*args, **kwargs)
         return super().save(*args, **kwargs)

@@ -29,12 +29,14 @@ class FeaturesEnabledView(APIView):
             data["contactForm"] = settings.contact_form_enabled
             data["travelHighlights"] = settings.travel_highlights_enabled
             data["lastimages"] = settings.lastimages_enabled
+            data["meteors"] = settings.meteors_enabled
         else:
             # Default state if no settings object exists yet
             data["programming"] = True
             data["contactForm"] = True
             data["travelHighlights"] = True
             data["lastimages"] = True
+            data["meteors"] = True
 
         return Response(data)
 
