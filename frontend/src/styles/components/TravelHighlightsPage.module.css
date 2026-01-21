@@ -301,7 +301,7 @@
 .expeditionContainer {
   display: flex;
   justify-content: center;
-  padding: 6rem 1rem;
+  padding: 0rem 1rem;
   background: transparent;
   width: 100%;
   position: relative;
@@ -309,7 +309,7 @@
 }
 
 .glassCard {
-  max-width: 900px;
+  max-width: 1000px;
   width: 100%;
   padding: 3rem;
   background: rgba(15, 23, 42, 0.4);
@@ -362,8 +362,8 @@
 }
 
 .storyContent {
-  font-size: 1.125rem;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
   text-align: left;
   font-weight: 300;
   line-height: 1.625;
@@ -371,7 +371,7 @@
 }
 
 .storyContent p {
-  margin-bottom: 2rem;
+  margin: 0;
 }
 
 .storyContent p:last-child {
