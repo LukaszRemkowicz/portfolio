@@ -32,7 +32,7 @@
   background: rgba(15, 23, 42, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 1.25rem;
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -75,7 +75,7 @@
 
 .modalImage {
   width: 100%;
-  max-height: 70vh;
+  max-height: 78vh;
   object-fit: contain;
   border-radius: 0.75rem;
 }
@@ -128,7 +128,15 @@
   box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
 }
 
-.modalDescription {
+.descriptionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  /* Increased gap for better "padding-like" effect */
+}
+
+.modalDescription,
+.descriptionParagraph {
   color: var(--celestial-white);
   line-height: 1.8;
   font-size: 0.9375rem;
@@ -138,6 +146,12 @@
   text-align: justify;
   hyphens: auto;
   white-space: pre-line;
+  /* Pre-line for internal breaks within blocks */
+}
+
+.modalDescription p,
+.descriptionParagraph p {
+  margin: 0;
 }
 
 .modalDescription::first-letter {
@@ -157,7 +171,6 @@
 }
 
 .descriptionWrapper {
-  margin-top: 1.5rem;
   position: relative;
 }
 
@@ -196,11 +209,11 @@
 @media (min-width: 1024px) {
   .modalContent {
     max-width: 900px;
-    padding: 2rem;
+    padding: 1.5rem 2rem;
   }
 
   .modalImage {
-    max-height: 65vh;
+    max-height: 75vh;
   }
 
   .modalMetadata {
