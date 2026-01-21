@@ -15,17 +15,21 @@ const About: React.FC<AboutProps> = ({ profile }) => {
             <span className={styles.titleAccent}>Atmosphere.</span>
           </h2>
           <div className={styles.line}></div>
-          <p className={styles.description}>
-            {profile.bio ||
-              "Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye."}
-          </p>
+          <div
+            className={styles.description}
+            dangerouslySetInnerHTML={{
+              __html:
+                profile.bio ||
+                "Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye.",
+            }}
+          />
           <div className={styles.stats}>
             <div className={styles.statItem}>
-              <p className={styles.statValue}>Bortle 1</p>
+              <p className={styles.statValue}>Bortle 4</p>
               <p className={styles.statLabel}>Site Quality</p>
             </div>
             <div className={styles.statItem}>
-              <p className={styles.statValue}>130mm</p>
+              <p className={styles.statValue}>430mm</p>
               <p className={styles.statLabel}>Primary Optics</p>
             </div>
           </div>

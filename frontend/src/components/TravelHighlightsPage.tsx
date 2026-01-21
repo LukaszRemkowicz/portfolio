@@ -6,6 +6,8 @@ import { AstroImage } from "../types";
 import { api } from "../api/api";
 import ImageModal from "./common/ImageModal";
 import LoadingScreen from "./common/LoadingScreen";
+import StarBackground from "./StarBackground";
+import { useAppStore } from "../store/useStore";
 
 const TravelHighlightsPage: React.FC = () => {
   const { countrySlug, placeSlug } = useParams<{
@@ -22,6 +24,12 @@ const TravelHighlightsPage: React.FC = () => {
   const [story, setStory] = useState<string | null>(null);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [highlightName, setHighlightName] = useState<string | null>(null);
+
+  const { backgroundUrl, loadInitialData } = useAppStore();
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -92,11 +100,20 @@ const TravelHighlightsPage: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      <StarBackground />
       <div
         className={styles.hero}
-        style={{
-          backgroundImage: `url(${ASSETS.galleryFallback})`,
-        }}
+        style={
+          backgroundUrl
+            ? {
+                backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${backgroundUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
+            : {
+                backgroundImage: `url(${ASSETS.galleryFallback})`,
+              }
+        }
       >
         <h1 className={styles.heroTitle}>{displayTitle}</h1>
         <p className={styles.heroSubtitle}>
@@ -105,7 +122,7 @@ const TravelHighlightsPage: React.FC = () => {
       </div>
 
       {/* Dynamic Story Section */}
-      {story && (
+      {story && story.trim().length > 0 && (
         <section className={styles.expeditionContainer}>
           <div className={styles.glassCard}>
             <header className={styles.metaInfo}>
@@ -117,7 +134,7 @@ const TravelHighlightsPage: React.FC = () => {
                         year: "numeric",
                       })
                       .toUpperCase()
-                  : "DATE UNKNOWN"}
+                  : "RECENT EXPEDITION"}
               </span>
               <span className={styles.separator}>|</span>
               <span className={styles.badge}>
@@ -132,9 +149,12 @@ const TravelHighlightsPage: React.FC = () => {
             </h2>
 
             <div className={styles.storyContent}>
-              {story.split("\n").map((paragraph, idx) => (
-                <p key={idx}>{paragraph}</p>
-              ))}
+              {story
+                .trim()
+                .split("\n")
+                .map((paragraph, idx) => (
+                  <p key={idx}>{paragraph}</p>
+                ))}
             </div>
           </div>
         </section>

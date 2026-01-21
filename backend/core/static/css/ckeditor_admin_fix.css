@@ -1,0 +1,60 @@
+/* CKEditor 5 Theme Awareness for Django Admin */
+
+:root {
+    /* Map CKEditor variables to Django Admin variables for base colors */
+    --ck-color-base-background: var(--body-bg);
+    --ck-color-base-text: var(--body-fg);
+    --ck-color-editor-base-text: var(--body-fg);
+    --ck-color-base-border: var(--border-color);
+
+    /* Input fields and editable areas */
+    --ck-color-textarea-background: var(--body-bg);
+
+    /* Toolbars and other UI elements */
+    --ck-color-toolbar-background: var(--body-bg);
+    --ck-color-toolbar-border: var(--border-color);
+
+    /* Buttons */
+    --ck-color-button-default-background: transparent;
+    --ck-color-button-default-hover-background: var(--selected-bg);
+    --ck-color-button-default-active-background: var(--selected-bg);
+
+    /* List items / Dropdowns */
+    --ck-color-list-background: var(--body-bg);
+    --ck-color-list-button-hover-background: var(--selected-bg);
+}
+
+/* Ensure the main editing area respects the theme */
+.ck-editor__main {
+    background-color: var(--body-bg) !important;
+    color: var(--body-fg) !important;
+}
+
+.ck-content {
+    background-color: var(--body-bg) !important;
+    color: var(--body-fg) !important;
+}
+
+/* Tooltip and other UI components might need explicit overrides if they don't inherit well */
+.ck.ck-toolbar {
+    background: var(--body-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+.ck.ck-button:hover {
+    background: var(--selected-bg) !important;
+}
+
+.ck.ck-button.ck-on {
+    background: var(--selected-bg) !important;
+    color: var(--primary) !important;
+}
+
+/* Fix for the toolbar icons visibility in dark mode */
+[data-theme='dark'] .ck.ck-icon {
+    color: var(--body-fg) !important;
+}
+
+[data-theme='dark'] .ck.ck-icon * {
+    fill: var(--body-fg) !important;
+}

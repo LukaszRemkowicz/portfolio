@@ -2,6 +2,8 @@
 import logging
 from typing import Optional
 
+from django_ckeditor_5.fields import CKEditor5Field
+
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import IntegrityError, models
 from django.utils.translation import gettext_lazy as _
@@ -45,7 +47,7 @@ class User(AbstractUser):
             "the first segment will be large/bold, following text will be smaller."
         ),
     )
-    bio = models.TextField(max_length=10000, blank=True, help_text="General/Global bio about you")
+    bio = CKEditor5Field(_("Bio"), config_name="extends", blank=True)
     contact_email = models.EmailField(
         blank=True, help_text="Public contact email displayed in footer"
     )

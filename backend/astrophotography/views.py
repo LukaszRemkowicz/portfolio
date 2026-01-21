@@ -154,9 +154,10 @@ class TravelHighlightsBySlugView(APIView):
                 "country_code": slider.country.code,
                 "place": slider.place.name if slider.place else None,
                 "images": serializer.data,
-                # include slugs in response if helpful, though frontend likely has them from URL
                 "country_slug": slider.country_slug,
                 "place_slug": slider.place_slug,
                 "story": slider.story,
+                "highlight_name": slider.highlight_name,
+                "created_at": slider.created_at,
             }
         )
