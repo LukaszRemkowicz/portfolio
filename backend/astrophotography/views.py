@@ -103,7 +103,7 @@ class MainPageLocationViewSet(ReadOnlyModelViewSet):
     ViewSet for listing active Main Page Location Sliders.
     """
 
-    queryset = MainPageLocation.objects.filter(is_active=True).order_by("country")
+    queryset = MainPageLocation.objects.filter(is_active=True).order_by("-adventure_date")
     serializer_class = MainPageLocationSerializer
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 

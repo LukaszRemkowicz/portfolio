@@ -343,7 +343,7 @@ class MainPageLocation(models.Model):
     class Meta:
         verbose_name = _("Main Page Location")
         verbose_name_plural = _("Main Page Locations")
-        ordering = ["country"]
+        ordering = ["-adventure_date"]
 
 
 class MainPageBackgroundImage(BaseImage):
