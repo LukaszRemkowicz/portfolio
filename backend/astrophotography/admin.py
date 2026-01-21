@@ -27,13 +27,22 @@ class AstroImageAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "name",
-                    "path",
                     "description",
                     "capture_date",
-                    "celestial_object",
                     "astrobin_url",
-                    "tags",
                 )
+            },
+        ),
+        (
+            _("Media"),
+            {
+                "fields": ("path", "thumbnail"),
+            },
+        ),
+        (
+            _("Tags"),
+            {
+                "fields": ("celestial_object", "tags"),
             },
         ),
         (
@@ -54,6 +63,13 @@ class AstroImageAdmin(admin.ModelAdmin):
             _("Technical Details"),
             {
                 "fields": ("exposure_details", "processing_details"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("Metadata"),
+            {
+                "fields": ("created_at", "updated_at"),
                 "classes": ("collapse",),
             },
         ),
