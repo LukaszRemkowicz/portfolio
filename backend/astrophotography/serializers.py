@@ -101,6 +101,7 @@ class AstroImageSerializer(serializers.ModelSerializer):
             "lens",
             "location",
             "exposure_details",
+            "processing_details",
             "celestial_object",
             "astrobin_url",
             "description",

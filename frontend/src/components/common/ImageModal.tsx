@@ -83,6 +83,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
       : null;
     const cameraValue = getEquipmentValue(source.camera, "model");
     const trackerValue = getEquipmentValue(source.tracker, "name");
+    const tripodValue = getEquipmentValue(source.tripod, "name");
 
     const items = [
       {
@@ -112,6 +113,13 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
             ? "Trackers"
             : "Tracker",
         value: trackerValue,
+      },
+      {
+        label:
+          Array.isArray(source.tripod) && source.tripod.length > 1
+            ? "Tripods"
+            : "Tripod",
+        value: tripodValue,
       },
       {
         label: "Exposure",
