@@ -136,6 +136,7 @@ export interface MainLayoutProps {
 
 export interface FilterParams {
   filter?: string;
+  tag?: string;
   travel?: string;
   limit?: number;
 }

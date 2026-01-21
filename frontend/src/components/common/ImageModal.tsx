@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { Calendar, MapPin, X } from "lucide-react";
 import styles from "../../styles/components/ImageModal.module.css";
 import { AstroImage } from "../../types";
 import { fetchAstroImage } from "../../api/services";
-import { sanitizeHtml } from "../../utils/html";
+import { sanitizeHtml, slugify } from "../../utils/html";
 
 interface ImageModalProps {
   image: AstroImage | null;
@@ -12,6 +13,7 @@ interface ImageModalProps {
 }
 
 const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
+  const navigate = useNavigate();
   const [description, setDescription] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -55,6 +57,12 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
     [],
   );
 
+  const handleTagClick = useCallback((tag: string) => {
+    onClose();
+    const tagSlug = slugify(tag);
+    navigate(`/astrophotography?tag=${encodeURIComponent(tagSlug)}`);
+  }, [navigate, onClose]);
+
   if (!image) return null;
 
   return createPortal(
@@ -84,9 +92,14 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
           {image.tags && image.tags.length > 0 && (
             <div className={styles.tagsContainer}>
               {image.tags.map((tag, index) => (
-                <span key={index} className={styles.tagBadge}>
-                  #{tag}
-                </span>
+                <button
+                  key={index}
+                  className={styles.tagBadge}
+                  onClick={() => handleTagClick(tag)}
+                  title={`View more ${tag} items`}
+                >
+                  #{tag.replace(/^#/, "")}
+                </button>
               ))}
             </div>
           )}

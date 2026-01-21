@@ -117,6 +117,15 @@
   font-size: 0.75rem;
   font-family: var(--font-family-mono);
   border: 1px solid rgba(56, 189, 248, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tagBadge:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: var(--celestial-blue);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
 }
 
 .modalDescription {

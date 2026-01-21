@@ -37,7 +37,7 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
         # Filter by Tags
         tag_slug = self.request.query_params.get("tag")
         if tag_slug:
-            queryset = queryset.filter(tags__name__in=[tag_slug])
+            queryset = queryset.filter(tags__slug__in=[tag_slug])
 
         # Filter by Travel (matches location or place name)
         travel_param = self.request.query_params.get("travel")

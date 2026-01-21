@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import styles from "../styles/components/AstroGallery.module.css";
 import { ASSETS } from "../api/routes";
 import { AstroImage, FilterType } from "../types";
@@ -17,7 +18,9 @@ const AstroGallery: React.FC = () => {
     loadInitialData,
   } = useAppStore();
   const loading = isInitialLoading || isImagesLoading;
-  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedFilter = searchParams.get("filter");
+  const selectedTag = searchParams.get("tag");
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
 
   useEffect(() => {
@@ -25,11 +28,20 @@ const AstroGallery: React.FC = () => {
   }, [loadInitialData]);
 
   useEffect(() => {
-    loadImages(selectedFilter ? { filter: selectedFilter } : {});
-  }, [selectedFilter, loadImages]);
+    loadImages({
+      ...(selectedFilter ? { filter: selectedFilter } : {}),
+      ...(selectedTag ? { tag: selectedTag } : {}),
+    });
+  }, [selectedFilter, selectedTag, loadImages]);
 
   const handleFilterClick = (filter: FilterType): void => {
-    setSelectedFilter(selectedFilter === filter ? null : filter);
+    if (selectedFilter === filter) {
+      searchParams.delete("filter");
+    } else {
+      searchParams.set("filter", filter);
+      searchParams.delete("tag"); // Clicking a category clears the tag filter
+    }
+    setSearchParams(searchParams);
   };
 
   const handleImageClick = (image: AstroImage): void => {
@@ -62,9 +74,8 @@ const AstroGallery: React.FC = () => {
         {FILTERS.map((filter: FilterType) => (
           <div
             key={filter}
-            className={`${styles.filterBox} ${
-              selectedFilter === filter ? styles.activeFilter : ""
-            }`}
+            className={`${styles.filterBox} ${selectedFilter === filter ? styles.activeFilter : ""
+              }`}
             onClick={() => handleFilterClick(filter)}
           >
             {filter}
