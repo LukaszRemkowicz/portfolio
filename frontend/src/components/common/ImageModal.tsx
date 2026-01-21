@@ -100,6 +100,10 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
               .join(", ")
           : null,
       },
+      {
+        label: "Exposure",
+        value: source.exposure_details || null,
+      },
     ].filter((item) => item.value);
 
     if (items.length === 0) return null;
@@ -107,8 +111,13 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
     return (
       <div className={styles.specsBar}>
         {items.map((item) => (
-          <div key={item.label} className={styles.specItem}>
-            <span className={styles.specLabel}>{item.label}:</span>
+          <div
+            key={item.label}
+            className={`${styles.specItem} ${
+              item.label === "Exposure" ? styles.fullWidth : ""
+            }`}
+          >
+            <span className={styles.specLabel}>{item.label}</span>
             <span className={styles.specValue}>{item.value}</span>
           </div>
         ))}

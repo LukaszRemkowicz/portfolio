@@ -206,6 +206,13 @@
   font-weight: 600;
 }
 
+.specItem.fullWidth {
+  flex-basis: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+}
+
 @media (min-width: 1024px) {
   .modalContent {
     max-width: 900px;
