@@ -5,6 +5,7 @@ import { MapPin } from "lucide-react";
 import { fetchTravelHighlights } from "../api/services";
 import { MainPageLocation } from "../types";
 import { useAppStore } from "../store/useStore";
+import { stripHtml } from "../utils/html";
 
 const TravelCard: React.FC<{ location: MainPageLocation }> = ({ location }) => {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ const TravelCard: React.FC<{ location: MainPageLocation }> = ({ location }) => {
   // Use description from first image if available, or a generic one
   const description =
     location.images.length > 0
-      ? location.images[0].description
+      ? stripHtml(location.images[0].description)
       : `Explore the cosmic wonders of ${location.country_name}.`;
 
   const handleCardClick = () => {

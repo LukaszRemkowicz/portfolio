@@ -4,6 +4,7 @@ import { MapPin } from "lucide-react";
 import { AstroImage } from "../types";
 import { useAppStore } from "../store/useStore";
 import ImageModal from "./common/ImageModal";
+import { stripHtml } from "../utils/html";
 
 interface GalleryCardProps {
   item: AstroImage;
@@ -42,9 +43,14 @@ const GalleryCard = memo(({ item, onClick, isNew }: GalleryCardProps) => {
           {item.location}
         </p>
         <p className={styles.cardDescription}>
-          {item.description && item.description.length > 80
-            ? `${item.description.substring(0, 80)}...`
-            : item.description}
+          {item.description
+            ? (() => {
+                const plainDescription = stripHtml(item.description);
+                return plainDescription.length > 80
+                  ? `${plainDescription.substring(0, 80)}...`
+                  : plainDescription;
+              })()
+            : ""}
         </p>
         <div className={styles.divider} aria-hidden="true"></div>
       </div>

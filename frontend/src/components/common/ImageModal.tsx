@@ -4,6 +4,7 @@ import { Calendar, MapPin, X } from "lucide-react";
 import styles from "../../styles/components/ImageModal.module.css";
 import { AstroImage } from "../../types";
 import { fetchAstroImage } from "../../api/services";
+import { sanitizeHtml } from "../../utils/html";
 
 interface ImageModalProps {
   image: AstroImage | null;
@@ -89,9 +90,16 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
               ))}
             </div>
           )}
-          <div className={styles.modalDescription}>
-            {loading ? "Loading cosmic details..." : description}
-          </div>
+          <div
+            className={styles.modalDescription}
+            dangerouslySetInnerHTML={{
+              __html: sanitizeHtml(
+                loading
+                  ? "Loading cosmic details..."
+                  : description || "No description available.",
+              ),
+            }}
+          />
         </div>
       </div>
     </div>,

@@ -114,7 +114,9 @@
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity 1s ease-out;
+  transition:
+    opacity 1s ease-out,
+    transform 0.7s var(--transition-normal);
 }
 
 .cardImage.show {
@@ -123,6 +125,7 @@
 
 .card:hover .cardImage.show {
   opacity: 0.8;
+  transform: scale(1.05);
 }
 
 .newBadge {

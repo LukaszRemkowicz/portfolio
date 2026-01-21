@@ -8,6 +8,7 @@ import ImageModal from "./common/ImageModal";
 import LoadingScreen from "./common/LoadingScreen";
 import StarBackground from "./StarBackground";
 import { useAppStore } from "../store/useStore";
+import { sanitizeHtml } from "../utils/html";
 
 const TravelHighlightsPage: React.FC = () => {
   const { countrySlug, placeSlug } = useParams<{
@@ -152,14 +153,10 @@ const TravelHighlightsPage: React.FC = () => {
               {highlightName || "About this place"}
             </h2>
 
-            <div className={styles.storyContent}>
-              {story
-                .trim()
-                .split("\n")
-                .map((paragraph, idx) => (
-                  <p key={idx}>{paragraph}</p>
-                ))}
-            </div>
+            <div
+              className={styles.storyContent}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(story) }}
+            />
           </div>
         </section>
       )}
@@ -184,9 +181,14 @@ const TravelHighlightsPage: React.FC = () => {
 
                   <div className={styles.viewerDetails}>
                     <h4 className={styles.imageTitle}>{image.name}</h4>
-                    <p className={styles.imageDescription}>
-                      {image.description || "No description available."}
-                    </p>
+                    <div
+                      className={styles.imageDescription}
+                      dangerouslySetInnerHTML={{
+                        __html: sanitizeHtml(
+                          image.description || "No description available.",
+                        ),
+                      }}
+                    />
 
                     <div className={styles.imageMeta}>
                       {image.equipment && (

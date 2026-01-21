@@ -49,9 +49,8 @@
 .viewerFrame {
   position: relative;
   width: 100%;
-  max-height: 380px;
-  /* Further reduced height per user request */
   display: flex;
+  flex-direction: column;
   background-color: #0f172a;
   border-radius: 20px;
   overflow: hidden;
@@ -60,8 +59,8 @@
 }
 
 .imageWrapper {
-  flex: 1.5;
-  /* Takes up more space */
+  width: 100%;
+  aspect-ratio: 16 / 9;
   position: relative;
   overflow: hidden;
   background: #000;
@@ -81,13 +80,11 @@
 }
 
 .viewerDetails {
-  flex: 1;
-  /* Takes up less space */
-  padding: 2.5rem;
+  width: 100%;
+  padding: 2rem;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  justify-content: flex-start;
   background: rgba(15, 23, 42, 0.4);
 }
 
@@ -103,13 +100,14 @@
 
 .imageDescription {
   font-family: "Inter", sans-serif;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   line-height: 1.6;
   color: #94a3b8;
   margin-bottom: 2rem;
   display: -webkit-box;
   -webkit-line-clamp: 6;
   /* Limit text lines */
+  line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -351,7 +349,7 @@
 }
 
 .storyTitle {
-  font-size: 3rem;
+  font-size: 2.5rem;
   color: white;
   margin-bottom: 3rem;
   font-weight: 700;
@@ -364,7 +362,7 @@
 }
 
 .storyContent {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   color: rgba(255, 255, 255, 0.9);
   text-align: left;
   font-weight: 300;

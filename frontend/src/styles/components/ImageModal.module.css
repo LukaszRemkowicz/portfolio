@@ -13,6 +13,15 @@
   overflow-y: auto;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+}
+
+.modalOverlay::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 .modalContent {
@@ -20,15 +29,24 @@
   width: 90%;
   max-width: 1200px;
   max-height: 90vh;
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(15, 23, 42, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.5rem;
-  padding: 2rem;
+  border-radius: 1.25rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
   overflow-y: auto;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+}
+
+.modalContent::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 .modalClose {
@@ -65,9 +83,9 @@
 .modalMetadata {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.5rem;
+  gap: 1.25rem;
   align-items: center;
-  padding-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -103,38 +121,28 @@
 
 .modalDescription {
   color: var(--celestial-white);
-  line-height: 1.8;
-  font-size: 1.125rem;
+  line-height: 1.6;
+  font-size: 0.9375rem;
   opacity: 0.9;
-  max-width: 65ch;
 }
 
 @media (min-width: 1024px) {
   .modalContent {
-    flex-direction: row;
-    align-items: flex-start;
+    max-width: 900px;
+    padding: 2rem;
   }
 
   .modalImage {
-    width: 60%;
-    max-height: 80vh;
+    max-height: 65vh;
   }
 
   .modalMetadata {
-    flex-direction: column;
-    align-items: flex-start;
-    border-bottom: none;
-    width: 40%;
-    padding-left: 2rem;
-    padding-bottom: 0;
-  }
-
-  .tagsContainer {
-    margin-left: 0;
-    margin-top: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 1.25rem;
+    width: 100%;
   }
 
   .modalDescription {
-    margin-top: 2rem;
+    margin-top: 0.5rem;
   }
 }
