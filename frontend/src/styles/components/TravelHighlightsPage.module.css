@@ -17,7 +17,7 @@
 .gallerySection {
   width: 100%;
   max-width: 1000px;
-  margin: 0 auto 4rem;
+  margin: 0 auto 2rem;
   padding: 0 1rem;
 }
 
@@ -50,7 +50,7 @@
   position: relative;
   width: 100%;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   background-color: #0f172a;
   border-radius: 20px;
   overflow: hidden;
@@ -59,8 +59,9 @@
 }
 
 .imageWrapper {
-  width: 100%;
-  aspect-ratio: 16 / 9;
+  width: 40%;
+  aspect-ratio: auto;
+  min-height: 100%;
   position: relative;
   overflow: hidden;
   background: #000;
@@ -80,7 +81,7 @@
 }
 
 .viewerDetails {
-  width: 100%;
+  width: 60%;
   padding: 2rem;
   display: flex;
   flex-direction: column;
@@ -170,8 +171,18 @@
 
 @media (max-width: 640px) {
   .viewerFrame {
-    aspect-ratio: 4/3;
+    aspect-ratio: auto;
     border-radius: 12px;
+    flex-direction: column;
+  }
+
+  .imageWrapper {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+  }
+
+  .viewerDetails {
+    width: 100%;
   }
 
   .galleryTitle {
