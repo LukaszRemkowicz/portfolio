@@ -189,39 +189,7 @@ const TravelHighlightsPage: React.FC = () => {
                       }}
                     />
 
-                    <div className={styles.imageMeta}>
-                      {/* Specs Section */}
-                      <div className={styles.specsContainer}>
-                        {((image.lens && image.lens.length > 0) ||
-                          (image.telescope && image.telescope.length > 0)) && (
-                          <div className={styles.specItem}>
-                            <span className={styles.specLabel}>LENS</span>
-                            <span className={styles.specValue}>
-                              {[
-                                ...(image.lens || []),
-                                ...(image.telescope || []),
-                              ]
-                                .map((item) =>
-                                  typeof item === "string" ? item : item.model,
-                                )
-                                .join(", ")}
-                            </span>
-                          </div>
-                        )}
-                        {image.camera && image.camera.length > 0 && (
-                          <div className={styles.specItem}>
-                            <span className={styles.specLabel}>CAMERA</span>
-                            <span className={styles.specValue}>
-                              {image.camera
-                                .map((item) =>
-                                  typeof item === "string" ? item : item.model,
-                                )
-                                .join(", ")}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    <div className={styles.imageMeta}></div>
                   </div>
                 </div>
               </div>

@@ -121,21 +121,10 @@ class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
 class AstroImageThumbnailSerializer(serializers.ModelSerializer):
     url = serializers.ImageField(source="path")
     thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
-    camera = serializers.StringRelatedField(many=True)
-    lens = serializers.StringRelatedField(many=True)
-    telescope = serializers.StringRelatedField(many=True)
 
     class Meta:
         model = AstroImage
-        fields = [
-            "pk",
-            "url",
-            "thumbnail_url",
-            "description",
-            "camera",
-            "lens",
-            "telescope",
-        ]
+        fields = ["pk", "url", "thumbnail_url", "description"]
 
 
 class MainPageLocationSerializer(serializers.ModelSerializer):
