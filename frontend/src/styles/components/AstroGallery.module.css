@@ -16,16 +16,21 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 350px);
+  /* Use auto-fill to naturally wrap items based on available width */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
-  max-width: calc(3 * 350px + 2 * 1.5rem);
+  max-width: 1200px;
+  /* Allow it to grow but not indefinitely */
+  width: 95%;
+  /* Ensure some breathing room on edges */
   margin: 0 auto;
   justify-content: center;
 }
 
 .gridItem {
-  width: 350px;
-  height: 350px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  /* Maintain square shape */
   background-color: var(--portfolio-bg-light);
   border-radius: var(--radius-lg);
   overflow: hidden;
