@@ -69,52 +69,49 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
     const source = detailedImage || image;
     if (!source) return null;
 
-    const telescopeValue =
-      Array.isArray(source.telescope) && source.telescope.length > 0
-        ? source.telescope
-            .map((t: EquipmentItem | string) =>
-              typeof t === "string" ? t : t.model,
-            )
-            .join(", ")
-        : null;
+    const getEquipmentValue = (
+      items: (EquipmentItem | string)[] | undefined,
+      key: "model" | "name",
+    ) => {
+      if (!Array.isArray(items) || items.length === 0) return null;
+      return items.map((t) => (typeof t === "string" ? t : t[key])).join(", ");
+    };
 
-    const lensValue =
-      !telescopeValue && Array.isArray(source.lens) && source.lens.length > 0
-        ? source.lens
-            .map((t: EquipmentItem | string) =>
-              typeof t === "string" ? t : t.model,
-            )
-            .join(", ")
-        : null;
+    const telescopeValue = getEquipmentValue(source.telescope, "model");
+    const lensValue = !telescopeValue
+      ? getEquipmentValue(source.lens, "model")
+      : null;
+    const cameraValue = getEquipmentValue(source.camera, "model");
+    const trackerValue = getEquipmentValue(source.tracker, "name");
 
     const items = [
       {
-        label: "Telescope",
+        label:
+          Array.isArray(source.telescope) && source.telescope.length > 1
+            ? "Telescopes"
+            : "Telescope",
         value: telescopeValue,
       },
       {
-        label: "Lenses",
+        label:
+          Array.isArray(source.lens) && source.lens.length > 1
+            ? "Lenses"
+            : "Lens",
         value: lensValue,
       },
       {
-        label: "Camera",
-        value: Array.isArray(source.camera)
-          ? source.camera
-              .map((t: EquipmentItem | string) =>
-                typeof t === "string" ? t : t.model,
-              )
-              .join(", ")
-          : null,
+        label:
+          Array.isArray(source.camera) && source.camera.length > 1
+            ? "Cameras"
+            : "Camera",
+        value: cameraValue,
       },
       {
-        label: "Tracker",
-        value: Array.isArray(source.tracker)
-          ? source.tracker
-              .map((t: EquipmentItem | string) =>
-                typeof t === "string" ? t : t.name,
-              )
-              .join(", ")
-          : null,
+        label:
+          Array.isArray(source.tracker) && source.tracker.length > 1
+            ? "Trackers"
+            : "Tracker",
+        value: trackerValue,
       },
       {
         label: "Exposure",
