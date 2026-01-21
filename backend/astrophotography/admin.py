@@ -5,13 +5,20 @@ from django.utils.translation import gettext_lazy as _
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
 from .forms import AstroImageForm
-from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Place
+from .models import AstroImage, Equipment, MainPageBackgroundImage, MainPageLocation, Place
 
 
 @admin.register(Place)
 class PlaceAdmin(admin.ModelAdmin):
     list_display = ("name",)
     search_fields = ("name",)
+
+
+@admin.register(Equipment)
+class EquipmentAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "camera", "telescope", "lens", "tracker", "tripod")
+    search_fields = ("camera", "telescope", "lens", "tracker", "tripod")
+    list_filter = ("camera", "telescope")
 
 
 @admin.register(AstroImage)

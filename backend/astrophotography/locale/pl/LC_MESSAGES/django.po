@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-21 13:30+0000\n"
+"POT-Creation-Date: 2026-01-21 13:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -51,6 +51,11 @@ msgstr "Wybierz lub wpisz miejsce..."
 msgid "Select background image..."
 msgstr "Duży plik zdjęcia tła."
 
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select equipment..."
+msgstr "Duży plik zdjęcia tła."
+
 msgid "Landscape"
 msgstr "Krajobraz"
 
@@ -87,6 +92,42 @@ msgstr "Miejsce"
 msgid "Places"
 msgstr "Miejsca"
 
+msgid "Telescope"
+msgstr ""
+
+msgid "Telescope model and specifications"
+msgstr ""
+
+msgid "Camera"
+msgstr ""
+
+msgid "Camera model and specifications"
+msgstr ""
+
+msgid "Tracker/Mount"
+msgstr ""
+
+msgid "Star tracker or mount model"
+msgstr ""
+
+msgid "Tripod"
+msgstr ""
+
+msgid "Tripod model"
+msgstr ""
+
+msgid "Lens"
+msgstr ""
+
+msgid "Lens model and focal length"
+msgstr ""
+
+msgid "Cannot have both telescope and lens. Please choose one or the other."
+msgstr ""
+
+msgid "Equipment"
+msgstr "Sprzęt"
+
 msgid "Capture Date"
 msgstr "Data wykonania"
 
@@ -105,11 +146,10 @@ msgstr "Miejsce/Miasto"
 msgid "Specific city or region (e.g. Hawaii, Tenerife)."
 msgstr "Konkretne miasto lub region (np. Hawaje, Teneryfa)."
 
-msgid "Equipment"
-msgstr "Sprzęt"
-
-msgid "Equipment used (telescope, camera, mount, filters, etc.)."
-msgstr "Użyty sprzęt (teleskop, kamera, montaż, filtry itp.)."
+#, fuzzy
+#| msgid "Relevant tags for the image."
+msgid "Equipment setup used for this image."
+msgstr "Tagi powiązane ze zdjęciem."
 
 msgid "Exposure Details"
 msgstr "Szczegóły ekspozycji"
@@ -238,3 +278,6 @@ msgstr "Zdjęcie Tła Strony Głównej"
 
 msgid "Main Page Background Images"
 msgstr "Zdjęcia Tła Strony Głównej"
+
+#~ msgid "Equipment used (telescope, camera, mount, filters, etc.)."
+#~ msgstr "Użyty sprzęt (teleskop, kamera, montaż, filtry itp.)."

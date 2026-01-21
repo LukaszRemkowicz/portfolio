@@ -30,6 +30,12 @@ class AstroImageForm(forms.ModelForm):
                     "data-allow-clear": "true",
                 },
             ),
+            "equipment": ThemedSelect2Widget(
+                attrs={
+                    "data-placeholder": _("Select equipment..."),
+                    "data-allow-clear": "true",
+                },
+            ),
         }
 
     def clean_place(self):
