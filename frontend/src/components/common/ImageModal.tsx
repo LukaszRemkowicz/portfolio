@@ -60,10 +60,12 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
   );
 
   const handleTagClick = useCallback((tag: string) => {
-    onClose();
+    // We don't call onClose() here because navigate() will change the URL,
+    // and the parent component's useEffect will close the modal since the 'img' param will be gone.
+    // This allows the browser's back button to return to the modal!
     const tagSlug = slugify(tag);
     navigate(`/astrophotography?tag=${encodeURIComponent(tagSlug)}`);
-  }, [navigate, onClose]);
+  }, [navigate]);
 
   const renderEquipment = () => {
     // Prefer detailedImage data, fallback to image prop (which is guaranteed non-null here)

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useSearchParams } from "react-router-dom";
 import styles from "../styles/components/Gallery.module.css";
 import { MapPin } from "lucide-react";
 import { AstroImage } from "../types";
@@ -45,11 +46,11 @@ const GalleryCard = memo(({ item, onClick, isNew }: GalleryCardProps) => {
         <p className={styles.cardDescription}>
           {item.description
             ? (() => {
-                const plainDescription = stripHtml(item.description);
-                return plainDescription.length > 80
-                  ? `${plainDescription.substring(0, 80)}...`
-                  : plainDescription;
-              })()
+              const plainDescription = stripHtml(item.description);
+              return plainDescription.length > 80
+                ? `${plainDescription.substring(0, 80)}...`
+                : plainDescription;
+            })()
             : ""}
         </p>
         <div className={styles.divider} aria-hidden="true"></div>
@@ -70,6 +71,22 @@ const Gallery: React.FC = () => {
     features,
   } = useAppStore();
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Sync modalImage with 'img' query parameter
+  useEffect(() => {
+    const imgId = searchParams.get("img");
+    if (imgId) {
+      const img = images.find((i) => i.pk.toString() === imgId);
+      if (img) {
+        setModalImage(img);
+      } else {
+        setModalImage(null);
+      }
+    } else {
+      setModalImage(null);
+    }
+  }, [searchParams, images]);
 
   useEffect(() => {
     if (features?.lastimages !== false) {
@@ -109,8 +126,15 @@ const Gallery: React.FC = () => {
 
   const handleImageClick = useCallback((image: AstroImage): void => {
     console.log("Card clicked!", image.name);
-    setModalImage(image);
-  }, []);
+    // Use URL params for modal state to support browser back button
+    searchParams.set("img", image.pk.toString());
+    setSearchParams(searchParams);
+  }, [searchParams, setSearchParams]);
+
+  const closeModal = useCallback(() => {
+    searchParams.delete("img");
+    setSearchParams(searchParams);
+  }, [searchParams, setSearchParams]);
 
   // Hide the entire section if disabled via admin toggle or if no images
   if (features?.lastimages === false || (!loading && images.length === 0)) {
@@ -174,7 +198,7 @@ const Gallery: React.FC = () => {
         )}
       </div>
 
-      <ImageModal image={modalImage} onClose={() => setModalImage(null)} />
+      <ImageModal image={modalImage} onClose={closeModal} />
     </section>
   );
 };
