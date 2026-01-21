@@ -43,7 +43,7 @@ class TestTravelHighlightsBySlugView:
         assert data["country"] == "United States of America"
         assert data["place"] is None
         assert len(data["images"]) == 1
-        assert data["images"][0]["location"] == "US"
+        assert "United States" in data["images"][0]["location"]
 
     def test_get_by_country_and_place_slug(self):
         url = reverse(

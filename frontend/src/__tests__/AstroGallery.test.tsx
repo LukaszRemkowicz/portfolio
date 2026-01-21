@@ -1,5 +1,6 @@
 import React from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
 import AstroGallery from "../components/AstroGallery";
 import { AstroImage } from "../types";
@@ -104,7 +105,11 @@ describe("AstroGallery Component", () => {
         ),
     );
 
-    render(<AstroGallery />);
+    render(
+      <MemoryRouter>
+        <AstroGallery />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => {
       expect(screen.getByText(/Synchronizing/i)).toBeInTheDocument();
@@ -125,7 +130,11 @@ describe("AstroGallery Component", () => {
     mockFetchAstroImages.mockResolvedValue([]);
     mockFetchBackground.mockResolvedValue("/test-bg.jpg");
 
-    render(<AstroGallery />);
+    render(
+      <MemoryRouter>
+        <AstroGallery />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => {
       expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
@@ -168,10 +177,16 @@ describe("AstroGallery Component", () => {
     mockFetchAstroImages.mockResolvedValue(mockImages);
     mockFetchBackground.mockResolvedValue("/test-bg.jpg");
 
-    render(<AstroGallery />);
+    render(
+      <MemoryRouter>
+        <AstroGallery />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => {
-      expect(screen.getAllByRole("img").length).toBe(2);
+      expect(
+        screen.getAllByRole("button", { name: /View details for/i }).length,
+      ).toBe(2);
     });
   });
 
@@ -189,7 +204,11 @@ describe("AstroGallery Component", () => {
     mockFetchAstroImages.mockRejectedValue(new Error("API Error"));
     mockFetchBackground.mockRejectedValue(new Error("API Error"));
 
-    render(<AstroGallery />);
+    render(
+      <MemoryRouter>
+        <AstroGallery />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => {
       expect(
@@ -221,7 +240,11 @@ describe("AstroGallery Component", () => {
     mockFetchAstroImages.mockResolvedValue(mockImages);
     mockFetchBackground.mockResolvedValue("/test-bg.jpg");
 
-    render(<AstroGallery />);
+    render(
+      <MemoryRouter>
+        <AstroGallery />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => {
       expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
@@ -272,21 +295,34 @@ describe("AstroGallery Component", () => {
     mockFetchBackground.mockResolvedValue("/test-bg.jpg");
     mockFetchAstroImage.mockResolvedValue(mockImageDetail);
 
-    render(<AstroGallery />);
+    render(
+      <MemoryRouter>
+        <AstroGallery />
+      </MemoryRouter>,
+    );
 
-    await waitFor(() => {
-      expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
-    });
-
-    const images = await screen.findAllByRole("img");
-    const firstImage = images[0];
+    // Wait for images to load and capture them
+    const buttons = await waitFor(
+      () => {
+        const btns = screen.getAllByRole("button", {
+          name: /View details for/i,
+        });
+        expect(btns.length).toBeGreaterThan(0);
+        return btns;
+      },
+      { timeout: 3000 },
+    );
+    const firstImageButton = buttons[0];
 
     await act(async () => {
-      firstImage.click();
+      firstImageButton.click();
     });
 
-    await waitFor(() => {
-      expect(screen.getByText("Test description")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Test description 1")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
   });
 });

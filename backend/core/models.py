@@ -1,10 +1,10 @@
 import uuid
 from io import BytesIO
-from PIL import Image
-from django.core.files.base import ContentFile
 
 from django_ckeditor_5.fields import CKEditor5Field
+from PIL import Image
 
+from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 

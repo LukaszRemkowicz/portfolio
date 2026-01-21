@@ -166,9 +166,7 @@ class TravelHighlightsBySlugView(APIView):
                     if slider.background_image and slider.background_image.thumbnail
                     else None
                 ),
-                "adventure_date": (
-                    MainPageLocationSerializer(slider).data.get("adventure_date")
-                ),
+                "adventure_date": (MainPageLocationSerializer(slider).data.get("adventure_date")),
                 "created_at": slider.created_at,
             }
         )

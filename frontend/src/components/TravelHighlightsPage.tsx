@@ -113,13 +113,13 @@ const TravelHighlightsPage: React.FC = () => {
         style={
           locationBackgroundImage || backgroundUrl
             ? {
-              backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${getMediaUrl(locationBackgroundImage || backgroundUrl)})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }
+                backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${getMediaUrl(locationBackgroundImage || backgroundUrl)})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
             : {
-              backgroundImage: `url(${ASSETS.galleryFallback})`,
-            }
+                backgroundImage: `url(${ASSETS.galleryFallback})`,
+              }
         }
       >
         <h1 className={styles.heroTitle}>{displayTitle}</h1>
@@ -134,16 +134,16 @@ const TravelHighlightsPage: React.FC = () => {
           <div className={styles.glassCard}>
             <header className={styles.metaInfo}>
               <span className={styles.badge}>
-                ADVENTURE DATE | {" "}
+                ADVENTURE DATE |{" "}
                 {adventureDate
                   ? adventureDate.toUpperCase()
                   : createdAt
                     ? new Date(createdAt)
-                      .toLocaleDateString("en-US", {
-                        month: "long",
-                        year: "numeric",
-                      })
-                      .toUpperCase()
+                        .toLocaleDateString("en-US", {
+                          month: "long",
+                          year: "numeric",
+                        })
+                        .toUpperCase()
                     : "RECENT EXPEDITION"}
               </span>
             </header>
@@ -189,8 +189,7 @@ const TravelHighlightsPage: React.FC = () => {
                       }}
                     />
 
-                    <div className={styles.imageMeta}>
-                    </div>
+                    <div className={styles.imageMeta}></div>
                   </div>
                 </div>
               </div>

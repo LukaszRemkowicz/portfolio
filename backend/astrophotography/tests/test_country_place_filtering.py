@@ -36,7 +36,7 @@ class TestAstroImageViewSetCountryPlaceFiltering:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data) == 3  # us_image1, us_image2, us_hawaii_image
-        assert all(img["location"] == "US" for img in data)
+        assert all("United States" in img["location"] for img in data)
 
     def test_filter_by_invalid_country_code(self):
         """Test filtering by non-existent country code returns empty list."""
@@ -54,7 +54,7 @@ class TestAstroImageViewSetCountryPlaceFiltering:
         data = response.json()
         # Should include us_hawaii_image and images with NULL place
         assert len(data) == 3  # us_image1, us_image2, us_hawaii_image
-        assert all(img["location"] == "US" for img in data)
+        assert all("United States" in img["location"] for img in data)
 
     def test_filter_by_country_and_non_existent_place(self):
         """Test filtering by country and non-existent place includes NULL place images."""
@@ -64,7 +64,7 @@ class TestAstroImageViewSetCountryPlaceFiltering:
         data = response.json()
         # Should include only images with NULL place (us_image1, us_image2)
         assert len(data) == 2
-        assert all(img["location"] == "US" for img in data)
+        assert all("United States" in img["location"] for img in data)
 
     def test_place_filter_without_country_ignored(self):
         """Test that place filter alone is ignored (requires country)."""
@@ -86,7 +86,7 @@ class TestAstroImageViewSetCountryPlaceFiltering:
         data = response.json()
         # Should match Poland images
         assert len(data) >= 1
-        assert any(img["location"] == "PL" for img in data)
+        assert any("Poland" in img["location"] for img in data)
 
     def test_no_filters_returns_all_images(self):
         """Test that no filters return all images."""

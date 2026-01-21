@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import admin
-from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.forms import RangeWidget
+from django.utils.translation import gettext_lazy as _
 
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
@@ -156,9 +156,6 @@ class MainPageBackgroundImageAdmin(admin.ModelAdmin):
             {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
         ),
     )
-
-
-
 
 
 class MainPageLocationForm(forms.ModelForm):

@@ -1,13 +1,9 @@
-from io import BytesIO
-from django.contrib.postgres.fields import DateRangeField
-
 from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
-from PIL import Image
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TaggedItemBase
 
-from django.core.files.base import ContentFile
+from django.contrib.postgres.fields import DateRangeField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -215,9 +211,6 @@ class AstroImage(BaseImage):
         verbose_name = _("Astrophotography Image")
         verbose_name_plural = _("Astrophotography Images")
         ordering = ["-created_at"]
-
-
-
 
 
 class MainPageLocation(models.Model):

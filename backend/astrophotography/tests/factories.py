@@ -17,6 +17,7 @@ from astrophotography.models import (
 class AstroImageFactory(DjangoModelFactory):
     class Meta:
         model = AstroImage
+        skip_postgeneration_save = True
 
     name = factory.Faker("sentence", nb_words=3)
     description = factory.Faker("paragraph")

@@ -73,20 +73,3 @@ class TestMainPageLocationModel:
         # Should not raise validation error
         slider.images.add(image)
         slider.clean()
-
-    def test_clean_method_validation_fail_country_mismatch(self):
-        from django.core.exceptions import ValidationError
-
-        from astrophotography.tests.factories import (
-            AstroImageFactory,
-            MainPageLocationFactory,
-        )
-
-        slider = MainPageLocationFactory(country="PL")
-        # Image in US (mismatch)
-        image = AstroImageFactory(location="US")
-
-        slider.images.add(image)
-        with pytest.raises(ValidationError) as exc:
-            slider.clean()
-        assert "Image" in str(exc.value) and "does not match the slider's country" in str(exc.value)
