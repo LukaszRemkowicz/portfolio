@@ -85,8 +85,10 @@
   padding: 2rem;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
+  align-items: center;
   background: rgba(15, 23, 42, 0.4);
+  text-align: center;
 }
 
 .imageTitle {
@@ -111,6 +113,13 @@
   line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-align: center;
+}
+
+.imageDescription p,
+.imageDescription div {
+  display: inline;
+  margin: 0;
 }
 
 .imageMeta {
@@ -178,11 +187,20 @@
 
   .imageWrapper {
     width: 100%;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 4 / 3;
   }
 
   .viewerDetails {
     width: 100%;
+    padding: 1.5rem;
+  }
+
+  .imageTitle {
+    font-size: 1.5rem;
+  }
+
+  .imageDescription {
+    font-size: 0.875rem;
   }
 
   .galleryTitle {
