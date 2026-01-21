@@ -1,28 +1,37 @@
-/* Modern & Premium Select2 Theme for Django Admin */
+/* Modern & Premium Select2 Theme for Django Admin - Django Theme Toggle Support */
 
-/* 1. The Main Selection Box */
+/* LIGHT MODE STYLES (Default) */
 .select2-container--default .select2-selection--single,
 .select2-container--default .select2-selection--multiple,
 .themed-select2+.select2-container .select2-selection--single,
 .themed-select2+.select2-container .select2-selection--multiple {
-    background-color: #1a1a1a !important;
-    border: 1px solid #333 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #ddd !important;
     border-radius: 8px !important;
     min-height: 44px !important;
     height: auto !important;
     padding: 0 !important;
-    color: #e0e0e0 !important;
+    color: #333 !important;
     transition: all 0.2s ease !important;
     display: flex !important;
     flex-direction: column !important;
     position: relative !important;
     overflow: hidden !important;
-    /* Prevent leaks like 'Hawaii' being outside */
     min-width: 400px !important;
     max-width: 100% !important;
 }
 
-/* 2. Multi-select Content Wrapper */
+/* DARK MODE STYLES - Triggered by Django admin theme toggle */
+[data-theme="dark"] .select2-container--default .select2-selection--single,
+[data-theme="dark"] .select2-container--default .select2-selection--multiple,
+[data-theme="dark"] .themed-select2+.select2-container .select2-selection--single,
+[data-theme="dark"] .themed-select2+.select2-container .select2-selection--multiple {
+    background-color: #1a1a1a !important;
+    border-color: #333 !important;
+    color: #e0e0e0 !important;
+}
+
+/* Multi-select Content Wrapper */
 .select2-container--default .select2-selection--multiple .select2-selection__rendered {
     display: flex !important;
     flex-direction: row !important;
@@ -34,7 +43,7 @@
     width: 100% !important;
 }
 
-/* 3. SEARCH BAR ON TOP */
+/* SEARCH BAR ON TOP */
 .select2-container--default .select2-selection--multiple .select2-search--inline {
     order: -1 !important;
     width: 100% !important;
@@ -44,48 +53,56 @@
 }
 
 .select2-container--default .select2-selection--multiple .select2-search__field {
-    background: rgba(255, 255, 255, 0.05) !important;
-    color: #fff !important;
+    background: rgba(0, 0, 0, 0.03) !important;
+    color: #333 !important;
     margin: 0 !important;
     height: 32px !important;
     width: 100% !important;
     padding: 0 12px !important;
     font-size: 14px !important;
     border-radius: 6px !important;
-    border: 1px solid #333 !important;
-    border-bottom: 2px solid #444 !important;
+    border: 1px solid #ddd !important;
+    border-bottom: 2px solid #ddd !important;
 }
 
-/* 4. MODERN HORIZONTAL TAGS (BELOW SEARCH) */
+[data-theme="dark"] .select2-container--default .select2-selection--multiple .select2-search__field {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #e0e0e0 !important;
+    border-color: #333 !important;
+    border-bottom-color: #333 !important;
+}
+
+/* MODERN HORIZONTAL TAGS (BELOW SEARCH) */
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background-color: #2a2a2a !important;
-    border: 1px solid #484848 !important;
-    /* Slightly lighter border */
-    color: #79aec8 !important;
+    background-color: #f0f0f0 !important;
+    border: 1px solid #ddd !important;
+    color: #417690 !important;
     border-radius: 6px !important;
     padding: 4px 12px !important;
     margin: 0 !important;
     font-size: 13px !important;
     font-weight: 500 !important;
     display: inline-flex !important;
-    /* Inline flex for better content fit */
     flex-direction: row !important;
     align-items: center !important;
     height: auto !important;
-    /* Let height fit content */
     min-height: 28px !important;
     gap: 10px !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
     white-space: normal !important;
-    /* Allow text to wrap if very long */
     max-width: none !important;
-    /* Don't clip! */
 }
 
-/* "X" ON THE RIGHT SITE */
+[data-theme="dark"] .select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #2a2a2a !important;
+    border-color: #484848 !important;
+    color: #79aec8 !important;
+}
+
+/* "X" ON THE RIGHT SIDE */
 .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
     order: 2 !important;
-    color: #888 !important;
+    color: #999 !important;
     margin: 0 !important;
     padding: 0 !important;
     font-size: 18px !important;
@@ -99,23 +116,43 @@
 }
 
 .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #dc3545 !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: #888 !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
     color: #ff5c5c !important;
 }
 
-/* 5. SINGLE SELECT (Consistent look) */
+/* SINGLE SELECT (Consistent look) */
 .select2-container--default .select2-selection--single .select2-selection__rendered {
     padding: 0 15px !important;
     line-height: 42px !important;
+    color: #333 !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-selection--single .select2-selection__rendered {
     color: #e0e0e0 !important;
 }
 
-/* 6. Professional Arrow & Clear indicator */
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #999 !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #888 !important;
+}
+
+/* Professional Arrow & Clear indicator */
 .select2-container--default .select2-selection--single .select2-selection__arrow b,
 .select2-container--default .select2-selection--multiple::after {
     border: none !important;
     content: "\25BE" !important;
     font-family: Arial !important;
-    color: #555 !important;
+    color: #666 !important;
     position: absolute !important;
     right: 15px !important;
     top: 22px !important;
@@ -124,8 +161,13 @@
     pointer-events: none !important;
 }
 
+[data-theme="dark"] .select2-container--default .select2-selection--single .select2-selection__arrow b,
+[data-theme="dark"] .select2-container--default .select2-selection--multiple::after {
+    color: #555 !important;
+}
+
 .select2-container--default .select2-selection__clear {
-    color: #ff5c5c !important;
+    color: #dc3545 !important;
     font-size: 20px !important;
     margin-right: 25px !important;
     cursor: pointer !important;
@@ -134,42 +176,70 @@
     font-family: sans-serif !important;
 }
 
+[data-theme="dark"] .select2-container--default .select2-selection__clear {
+    color: #ff5c5c !important;
+}
+
 .select2-container--default .select2-selection__clear:hover {
-    color: #ff2a2a !important;
+    opacity: 0.8 !important;
 }
 
 .select2-container--default .select2-selection--single .select2-selection__arrow {
     display: none !important;
 }
 
-/* 7. Dropdown Menu */
+/* Dropdown Menu */
 .select2-dropdown {
-    background-color: #222 !important;
-    border: 1px solid #333 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #ddd !important;
     border-radius: 0 0 10px 10px !important;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7) !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2) !important;
     margin-top: -2px !important;
     z-index: 9999 !important;
 }
 
+[data-theme="dark"] .select2-dropdown {
+    background-color: #222 !important;
+    border-color: #333 !important;
+}
+
 .select2-results__option {
     padding: 12px 18px !important;
-    color: #ccc !important;
+    color: #333 !important;
+}
+
+[data-theme="dark"] .select2-results__option {
+    color: #e0e0e0 !important;
 }
 
 .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #f5f5f5 !important;
+    color: #333 !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-results__option--highlighted[aria-selected] {
     background-color: #333 !important;
     color: #79aec8 !important;
 }
 
-/* 8. Active/Focus Highlight */
+.select2-container--default .select2-results__option[aria-selected=true] {
+    background-color: #f0f0f0 !important;
+    color: #417690 !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-results__option[aria-selected=true] {
+    background-color: #2a2a2a !important;
+    color: #79aec8 !important;
+}
+
+/* Active/Focus Highlight */
 .select2-container--default.select2-container--focus .select2-selection--single,
 .select2-container--default.select2-container--focus .select2-selection--multiple {
     border-color: #79aec8 !important;
     box-shadow: 0 0 0 4px rgba(121, 174, 200, 0.15) !important;
 }
 
-/* 9. Django Admin Action Icons (RelatedFieldWidgetWrapper) */
+/* Django Admin Action Icons (RelatedFieldWidgetWrapper) */
 .related-widget-wrapper {
     display: flex !important;
     align-items: center !important;
@@ -182,7 +252,6 @@
     min-width: 400px !important;
 }
 
-/* Hide the default vertical positioning help text if needed, but here we want to style the links */
 .related-widget-wrapper>a {
     display: inline-flex !important;
     align-items: center !important;
@@ -190,13 +259,21 @@
     width: 24px !important;
     height: 24px !important;
     text-decoration: none !important;
-    background: #333 !important;
+    background: #f0f0f0 !important;
     border-radius: 4px !important;
     transition: background 0.2s !important;
     vertical-align: middle !important;
 }
 
+[data-theme="dark"] .related-widget-wrapper>a {
+    background: #333 !important;
+}
+
 .related-widget-wrapper>a:hover {
+    background: #e0e0e0 !important;
+}
+
+[data-theme="dark"] .related-widget-wrapper>a:hover {
     background: #444 !important;
 }
 
@@ -204,12 +281,17 @@
 .related-widget-wrapper .change-related img,
 .related-widget-wrapper .delete-related img,
 .related-widget-wrapper .view-related img {
-    filter: invert(1) brightness(0.8) !important;
     width: 14px !important;
     height: 14px !important;
 }
 
-.related-widget-wrapper .add-related img {
+[data-theme="dark"] .related-widget-wrapper .add-related img,
+[data-theme="dark"] .related-widget-wrapper .change-related img,
+[data-theme="dark"] .related-widget-wrapper .delete-related img,
+[data-theme="dark"] .related-widget-wrapper .view-related img {
+    filter: invert(1) brightness(0.8) !important;
+}
+
+[data-theme="dark"] .related-widget-wrapper .add-related img {
     filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%) !important;
-    /* Match green-ish plus */
 }

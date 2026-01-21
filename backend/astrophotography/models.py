@@ -192,7 +192,7 @@ class MainPageLocation(models.Model):
         null=True,
         blank=True,
         related_name="location_backgrounds",
-        verbose_name=_("Custom Background"),
+        verbose_name=_("Background Image"),
         help_text=_("Optional specific background image for this location's page."),
     )
 
