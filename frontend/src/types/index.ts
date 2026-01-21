@@ -30,6 +30,12 @@ export interface BackgroundImage {
   url?: string;
 }
 
+export interface EquipmentItem {
+  id: number;
+  model?: string;
+  name?: string;
+}
+
 export interface AstroImage {
   pk: number;
   url: string;
@@ -40,7 +46,11 @@ export interface AstroImage {
   created_at?: string;
   capture_date?: string;
   location?: string;
-  equipment?: string;
+  telescope?: EquipmentItem[] | string[];
+  camera?: EquipmentItem[] | string[];
+  tracker?: EquipmentItem[] | string[];
+  tripod?: EquipmentItem[] | string[];
+  lens?: EquipmentItem[] | string[];
   exposure_details?: string;
   processing_details?: string;
   celestial_object?: string;

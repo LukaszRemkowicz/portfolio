@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { Calendar, MapPin, X } from "lucide-react";
+import { Calendar, Camera, Disc, MapPin, Repeat, Telescope, Triangle, X } from "lucide-react";
 import styles from "../../styles/components/ImageModal.module.css";
 import { AstroImage } from "../../types";
 import { fetchAstroImage } from "../../api/services";
@@ -14,6 +14,7 @@ interface ImageModalProps {
 
 const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
   const navigate = useNavigate();
+  const [detailedImage, setDetailedImage] = useState<AstroImage | null>(null);
   const [description, setDescription] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -22,16 +23,17 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
 
     // Reset state
     setDescription("");
+    setDetailedImage(null);
 
     // Optimization: if image already has a substantial description, use it
     if (image.description && image.description.length > 100) {
       setDescription(image.description);
-      return;
     }
 
     setLoading(true);
     fetchAstroImage(image.pk)
       .then((data: AstroImage) => {
+        setDetailedImage(data);
         setDescription(data.description || "No description available.");
       })
       .catch(() => {
@@ -62,6 +64,68 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
     const tagSlug = slugify(tag);
     navigate(`/astrophotography?tag=${encodeURIComponent(tagSlug)}`);
   }, [navigate, onClose]);
+
+  const renderEquipment = () => {
+    // Prefer detailedImage data, fallback to image prop (which is guaranteed non-null here)
+    const source = detailedImage || image;
+    if (!source) return null;
+
+    const items = [
+      {
+        icon: <Telescope size={16} />,
+        label: "Telescope",
+        value: Array.isArray(source.telescope)
+          ? source.telescope.map((t: any) => typeof t === "string" ? t : t.model).join(", ")
+          : null
+      },
+      {
+        icon: <Camera size={16} />,
+        label: "Camera",
+        value: Array.isArray(source.camera)
+          ? source.camera.map((t: any) => typeof t === "string" ? t : t.model).join(", ")
+          : null
+      },
+      {
+        icon: <Disc size={16} />,
+        label: "Lens",
+        value: Array.isArray(source.lens)
+          ? source.lens.map((t: any) => typeof t === "string" ? t : t.model).join(", ")
+          : null
+      },
+      {
+        icon: <Repeat size={16} />,
+        label: "Tracker",
+        value: Array.isArray(source.tracker)
+          ? source.tracker.map((t: any) => typeof t === "string" ? t : t.name).join(", ")
+          : null
+      },
+      {
+        icon: <Triangle size={16} />,
+        label: "Tripod",
+        value: Array.isArray(source.tripod)
+          ? source.tripod.map((t: any) => typeof t === "string" ? t : t.name).join(", ")
+          : null
+      },
+    ].filter(item => item.value);
+
+    if (items.length === 0) return null;
+
+    return (
+      <div className={styles.equipmentSection}>
+        <div className={styles.equipmentGrid}>
+          {items.map((item, idx) => (
+            <div key={idx} className={styles.equipmentItem}>
+              <span className={styles.equipmentIcon}>{item.icon}</span>
+              <div className={styles.equipmentInfo}>
+                <span className={styles.equipmentLabel}>{item.label}</span>
+                <span className={styles.equipmentValue}>{item.value}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   if (!image) return null;
 
@@ -103,16 +167,19 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
               ))}
             </div>
           )}
-          <div
-            className={styles.modalDescription}
-            dangerouslySetInnerHTML={{
-              __html: sanitizeHtml(
-                loading
-                  ? "Loading cosmic details..."
-                  : description || "No description available.",
-              ),
-            }}
-          />
+          <div className={styles.descriptionWrapper}>
+            {renderEquipment()}
+            <div
+              className={styles.modalDescription}
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHtml(
+                  loading
+                    ? "Loading cosmic details..."
+                    : description || "No description available.",
+                ),
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>,

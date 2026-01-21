@@ -58,7 +58,7 @@ class AstroImageSerializerList(serializers.ModelSerializer):
     telescope = serializers.StringRelatedField(many=True)
     tracker = serializers.StringRelatedField(many=True)
     tripod = serializers.StringRelatedField(many=True)
-    location = serializers.CharField()
+    location = serializers.CharField(source="location.name")
 
     class Meta:
         model = AstroImage
