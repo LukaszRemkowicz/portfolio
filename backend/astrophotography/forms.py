@@ -33,7 +33,6 @@ class AstroImageForm(forms.ModelForm):
             "equipment": ThemedSelect2MultipleWidget(
                 attrs={
                     "data-placeholder": _("Select equipment..."),
-                    "data-allow-clear": "true",
                 },
             ),
         }
