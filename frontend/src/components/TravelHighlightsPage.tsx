@@ -190,11 +190,6 @@ const TravelHighlightsPage: React.FC = () => {
                     />
 
                     <div className={styles.imageMeta}>
-                      {image.celestial_object && (
-                        <div className={styles.metaItem}>
-                          <strong>Object:</strong> {image.celestial_object}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
