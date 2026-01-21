@@ -419,3 +419,39 @@
     font-size: 1rem;
   }
 }
+.specsContainer {
+  display: flex;
+  gap: 3rem;
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+.specItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.specLabel {
+  font-family: "Space Grotesk", monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--celestial-blue);
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.specValue {
+  font-family: "Outfit", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+@media (max-width: 640px) {
+  .specsContainer {
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+}
