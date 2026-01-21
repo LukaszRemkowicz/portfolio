@@ -127,13 +127,11 @@ class AstroImage(BaseImage):
         verbose_name=_("Place/City"),
         help_text=_("Specific city or region (e.g. Hawaii, Tenerife)."),
     )
-    equipment = models.ForeignKey(
+    equipment = models.ManyToManyField(
         "Equipment",
-        on_delete=models.SET_NULL,
-        null=True,
         blank=True,
         verbose_name=_("Equipment"),
-        help_text=_("Equipment setup used for this image."),
+        help_text=_("Equipment used for this image."),
     )
     exposure_details = models.TextField(
         blank=True,
