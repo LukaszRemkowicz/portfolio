@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-21 13:55+0000\n"
+"POT-Creation-Date: 2026-01-21 14:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -51,11 +51,6 @@ msgstr "Wybierz lub wpisz miejsce..."
 msgid "Select background image..."
 msgstr "Duży plik zdjęcia tła."
 
-#, fuzzy
-#| msgid "The large background image file."
-msgid "Select equipment..."
-msgstr "Duży plik zdjęcia tła."
-
 msgid "Landscape"
 msgstr "Krajobraz"
 
@@ -92,6 +87,24 @@ msgstr "Miejsce"
 msgid "Places"
 msgstr "Miejsca"
 
+msgid "Capture Date"
+msgstr "Data wykonania"
+
+msgid "The date when the photo was taken."
+msgstr "Data wykonania zdjęcia."
+
+msgid "Country"
+msgstr "Kraj"
+
+msgid "The country where the photo was taken."
+msgstr "Kraj, w którym wykonano zdjęcie."
+
+msgid "Place/City"
+msgstr "Miejsce/Miasto"
+
+msgid "Specific city or region (e.g. Hawaii, Tenerife)."
+msgstr "Konkretne miasto lub region (np. Hawaje, Teneryfa)."
+
 msgid "Telescope"
 msgstr ""
 
@@ -122,35 +135,6 @@ msgstr ""
 msgid "Lens model and focal length"
 msgstr ""
 
-msgid "Cannot have both telescope and lens. Please choose one or the other."
-msgstr ""
-
-msgid "Equipment"
-msgstr "Sprzęt"
-
-msgid "Capture Date"
-msgstr "Data wykonania"
-
-msgid "The date when the photo was taken."
-msgstr "Data wykonania zdjęcia."
-
-msgid "Country"
-msgstr "Kraj"
-
-msgid "The country where the photo was taken."
-msgstr "Kraj, w którym wykonano zdjęcie."
-
-msgid "Place/City"
-msgstr "Miejsce/Miasto"
-
-msgid "Specific city or region (e.g. Hawaii, Tenerife)."
-msgstr "Konkretne miasto lub region (np. Hawaje, Teneryfa)."
-
-#, fuzzy
-#| msgid "Relevant tags for the image."
-msgid "Equipment used for this image."
-msgstr "Tagi powiązane ze zdjęciem."
-
 msgid "Exposure Details"
 msgstr "Szczegóły ekspozycji"
 
@@ -180,6 +164,9 @@ msgstr "Miniatura"
 
 msgid "Relevant tags for the image."
 msgstr "Tagi powiązane ze zdjęciem."
+
+msgid "Cannot have both telescope and lens. Please choose one or the other."
+msgstr ""
 
 msgid "Astrophotography Image"
 msgstr "Zdjęcie Astrofotograficzne"
@@ -278,6 +265,19 @@ msgstr "Zdjęcie Tła Strony Głównej"
 
 msgid "Main Page Background Images"
 msgstr "Zdjęcia Tła Strony Głównej"
+
+#, fuzzy
+#~| msgid "The large background image file."
+#~ msgid "Select equipment..."
+#~ msgstr "Duży plik zdjęcia tła."
+
+#~ msgid "Equipment"
+#~ msgstr "Sprzęt"
+
+#, fuzzy
+#~| msgid "Relevant tags for the image."
+#~ msgid "Equipment used for this image."
+#~ msgstr "Tagi powiązane ze zdjęciem."
 
 #~ msgid "Equipment used (telescope, camera, mount, filters, etc.)."
 #~ msgstr "Użyty sprzęt (teleskop, kamera, montaż, filtry itp.)."

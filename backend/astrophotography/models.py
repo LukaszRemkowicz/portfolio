@@ -44,9 +44,26 @@ class Place(models.Model):
         ordering = ["name"]
 
 
-class Equipment(models.Model):
-    """Model for astrophotography equipment setup"""
+class AstroImage(BaseImage):
+    """Model for astrophotography images"""
 
+    capture_date = models.DateField(
+        verbose_name=_("Capture Date"), help_text=_("The date when the photo was taken.")
+    )
+    location = CountryField(
+        blank=True,
+        null=True,
+        verbose_name=_("Country"),
+        help_text=_("The country where the photo was taken."),
+    )
+    place = models.ForeignKey(
+        Place,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Place/City"),
+        help_text=_("Specific city or region (e.g. Hawaii, Tenerife)."),
+    )
     telescope = models.CharField(
         max_length=255,
         blank=True,
@@ -77,62 +94,6 @@ class Equipment(models.Model):
         verbose_name=_("Lens"),
         help_text=_("Lens model and focal length"),
     )
-
-    def clean(self):
-        from django.core.exceptions import ValidationError
-
-        # Ensure telescope and lens are mutually exclusive
-        if self.telescope and self.lens:
-            raise ValidationError(
-                _("Cannot have both telescope and lens. Please choose one or the other.")
-            )
-
-    def __str__(self):
-        parts = []
-        if self.camera:
-            parts.append(self.camera)
-        if self.telescope:
-            parts.append(self.telescope)
-        elif self.lens:
-            parts.append(self.lens)
-        if self.tripod:
-            parts.append(self.tripod)
-        if self.tracker:
-            parts.append(self.tracker)
-        return ", ".join(parts) if parts else "Equipment"
-
-    class Meta:
-        verbose_name = _("Equipment")
-        verbose_name_plural = _("Equipment")
-        ordering = ["camera", "telescope"]
-
-
-class AstroImage(BaseImage):
-    """Model for astrophotography images"""
-
-    capture_date = models.DateField(
-        verbose_name=_("Capture Date"), help_text=_("The date when the photo was taken.")
-    )
-    location = CountryField(
-        blank=True,
-        null=True,
-        verbose_name=_("Country"),
-        help_text=_("The country where the photo was taken."),
-    )
-    place = models.ForeignKey(
-        Place,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name=_("Place/City"),
-        help_text=_("Specific city or region (e.g. Hawaii, Tenerife)."),
-    )
-    equipment = models.ManyToManyField(
-        "Equipment",
-        blank=True,
-        verbose_name=_("Equipment"),
-        help_text=_("Equipment used for this image."),
-    )
     exposure_details = models.TextField(
         blank=True,
         verbose_name=_("Exposure Details"),
@@ -160,6 +121,16 @@ class AstroImage(BaseImage):
     tags = TaggableManager(
         through=UUIDTaggedItem, verbose_name=_("Tags"), help_text=_("Relevant tags for the image.")
     )
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        super().clean()
+        # Ensure telescope and lens are mutually exclusive
+        if self.telescope and self.lens:
+            raise ValidationError(
+                _("Cannot have both telescope and lens. Please choose one or the other.")
+            )
 
     def save(self, *args, **kwargs):
         if self.path and not self.thumbnail:

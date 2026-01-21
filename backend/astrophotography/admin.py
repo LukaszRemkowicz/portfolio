@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
 from .forms import AstroImageForm
-from .models import AstroImage, Equipment, MainPageBackgroundImage, MainPageLocation, Place
+from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Place
 
 
 @admin.register(Place)
@@ -14,19 +14,50 @@ class PlaceAdmin(admin.ModelAdmin):
     search_fields = ("name",)
 
 
-@admin.register(Equipment)
-class EquipmentAdmin(admin.ModelAdmin):
-    list_display = ("__str__", "camera", "telescope", "lens", "tracker", "tripod")
-    search_fields = ("camera", "telescope", "lens", "tracker", "tripod")
-    list_filter = ("camera", "telescope")
-
-
 @admin.register(AstroImage)
 class AstroImageAdmin(admin.ModelAdmin):
     form = AstroImageForm
     list_display = ("name", "capture_date", "location", "place", "has_thumbnail", "tag_list")
     list_filter = ("celestial_object", "tags")
-    search_fields = ("name", "description", "location", "place__name", "equipment")
+    search_fields = ("name", "description", "location", "place__name", "camera", "telescope")
+
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "name",
+                    "path",
+                    "description",
+                    "capture_date",
+                    "celestial_object",
+                    "astrobin_url",
+                    "tags",
+                )
+            },
+        ),
+        (
+            _("Where image was taken?"),
+            {
+                "fields": ("location", "place"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("Equipment"),
+            {
+                "fields": ("telescope", "camera", "lens", "tracker", "tripod"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("Technical Details"),
+            {
+                "fields": ("exposure_details", "processing_details"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
 
     def tag_list(self, obj):
         return ", ".join(o.name for o in obj.tags.all())

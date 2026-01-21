@@ -5,7 +5,7 @@ from django import forms
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.utils.translation import gettext_lazy as _
 
-from core.widgets import ThemedSelect2MultipleWidget, ThemedSelect2Widget
+from core.widgets import ThemedSelect2Widget
 
 from .models import AstroImage, Place
 
@@ -28,11 +28,6 @@ class AstroImageForm(forms.ModelForm):
                 attrs={
                     "data-placeholder": _("Select or type place..."),
                     "data-allow-clear": "true",
-                },
-            ),
-            "equipment": ThemedSelect2MultipleWidget(
-                attrs={
-                    "data-placeholder": _("Select equipment..."),
                 },
             ),
         }
