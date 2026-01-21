@@ -132,12 +132,18 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
     country_name = serializers.CharField(source="country.name", read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
     background_image = serializers.SerializerMethodField()
+    background_image_thumbnail = serializers.SerializerMethodField()
     adventure_date = serializers.SerializerMethodField()
 
     def get_background_image(self, obj):
         if obj.background_image:
             return obj.background_image.path.url
         return None
+
+    def get_background_image_thumbnail(self, obj):
+        if obj.background_image and obj.background_image.thumbnail:
+            return obj.background_image.thumbnail.url
+        return self.get_background_image(obj)
 
     def get_adventure_date(self, obj):
         if not obj.adventure_date:
@@ -187,6 +193,7 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
             "adventure_date",
             "story",
             "background_image",
+            "background_image_thumbnail",
             "images",
             "created_at",
         ]

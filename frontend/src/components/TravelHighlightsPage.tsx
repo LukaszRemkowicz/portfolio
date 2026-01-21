@@ -71,7 +71,9 @@ const TravelHighlightsPage: React.FC = () => {
         setAdventureDate(data.adventure_date || null);
         setCreatedAt(data.created_at || null);
         setHighlightName(data.highlight_name || null);
-        setLocationBackgroundImage(data.background_image || null);
+        setLocationBackgroundImage(
+          data.background_image_thumbnail || data.background_image || null,
+        );
 
         // Process images with defensive checks
         const imagesArray = Array.isArray(data.images) ? data.images : [];
@@ -113,13 +115,13 @@ const TravelHighlightsPage: React.FC = () => {
         style={
           locationBackgroundImage || backgroundUrl
             ? {
-                backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${locationBackgroundImage || backgroundUrl})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }
+              backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${getMediaUrl(locationBackgroundImage || backgroundUrl)})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }
             : {
-                backgroundImage: `url(${ASSETS.galleryFallback})`,
-              }
+              backgroundImage: `url(${ASSETS.galleryFallback})`,
+            }
         }
       >
         <h1 className={styles.heroTitle}>{displayTitle}</h1>
@@ -138,11 +140,11 @@ const TravelHighlightsPage: React.FC = () => {
                   ? adventureDate.toUpperCase()
                   : createdAt
                     ? new Date(createdAt)
-                        .toLocaleDateString("en-US", {
-                          month: "long",
-                          year: "numeric",
-                        })
-                        .toUpperCase()
+                      .toLocaleDateString("en-US", {
+                        month: "long",
+                        year: "numeric",
+                      })
+                      .toUpperCase()
                     : "RECENT EXPEDITION"}
               </span>
               <span className={styles.separator}>|</span>

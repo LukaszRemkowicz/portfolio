@@ -196,9 +196,6 @@ class AstroImage(BaseImage):
         verbose_name=_("Astrobin URL"),
         help_text=_("Link to this image on Astrobin (e.g., https://www.astrobin.com/XXXXX/)"),
     )
-    thumbnail = models.ImageField(
-        upload_to="thumbnails/", blank=True, null=True, editable=False, verbose_name=_("Thumbnail")
-    )
     tags = TaggableManager(
         through=UUIDTaggedItem, verbose_name=_("Tags"), help_text=_("Relevant tags for the image.")
     )
@@ -209,29 +206,7 @@ class AstroImage(BaseImage):
         pass
 
     def save(self, *args, **kwargs):
-        if self.path and not self.thumbnail:
-            self.thumbnail = self.make_thumbnail(self.path, size=(400, 400))
         super().save(*args, **kwargs)
-
-    def make_thumbnail(self, image, size=(400, 400)):
-        """Generates a thumbnail for the image."""
-        img = Image.open(image)
-        # Handle transparency: create a white background if image has alpha channel
-        if img.mode in ("RGBA", "P"):
-            img = img.convert("RGBA")
-            bg = Image.new("RGB", img.size, (255, 255, 255))
-            bg.paste(img, mask=img.split()[3])
-            img = bg
-        else:
-            img = img.convert("RGB")
-
-        img.thumbnail(size)
-
-        thumb_io = BytesIO()
-        img.save(thumb_io, "JPEG", quality=85)
-
-        thumbnail_name = f"thumb_{image.name.split('/')[-1]}"
-        return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
 
     def __str__(self):
         return f"{self.name} ({self.capture_date})" if self.capture_date else self.name

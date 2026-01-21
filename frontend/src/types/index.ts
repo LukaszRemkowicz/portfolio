@@ -68,6 +68,7 @@ export interface MainPageLocation {
   adventure_date?: string;
   story?: string;
   background_image?: string | null;
+  background_image_thumbnail?: string | null;
   created_at: string;
   images: AstroImage[];
 }

@@ -1,4 +1,7 @@
 import uuid
+from io import BytesIO
+from PIL import Image
+from django.core.files.base import ContentFile
 
 from django_ckeditor_5.fields import CKEditor5Field
 
@@ -28,13 +31,41 @@ class BaseImage(models.Model):
         help_text=_("Optional detailed description of the image."),
         config_name="default",
     )
+    thumbnail = models.ImageField(
+        upload_to="thumbnails/", blank=True, null=True, editable=False, verbose_name=_("Thumbnail")
+    )
 
     class Meta:
         abstract = True
         ordering = ["-created_at"]
 
+    def save(self, *args, **kwargs):
+        if self.path and not self.thumbnail:
+            self.thumbnail = self.make_thumbnail(self.path)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
+
+    def make_thumbnail(self, image, size=(400, 400)):
+        """Generates a thumbnail for the image."""
+        img = Image.open(image)
+        # Handle transparency: create a white background if image has alpha channel
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGBA")
+            bg = Image.new("RGB", img.size, (255, 255, 255))
+            bg.paste(img, mask=img.split()[3])
+            img = bg
+        else:
+            img = img.convert("RGB")
+
+        img.thumbnail(size)
+
+        thumb_io = BytesIO()
+        img.save(thumb_io, "JPEG", quality=85)
+
+        thumbnail_name = f"thumb_{image.name.split('/')[-1]}"
+        return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
 
 
 class LandingPageSettings(models.Model):
