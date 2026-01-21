@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
+from django.contrib.postgres.forms import RangeWidget
 
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
@@ -157,6 +158,9 @@ class MainPageBackgroundImageAdmin(admin.ModelAdmin):
     )
 
 
+
+
+
 class MainPageLocationForm(forms.ModelForm):
     images = forms.ModelMultipleChoiceField(
         queryset=AstroImage.objects.all(),
@@ -228,6 +232,9 @@ class MainPageLocationForm(forms.ModelForm):
                     "data-allow-clear": "true",
                 },
             ),
+            "adventure_date": RangeWidget(
+                base_widget=forms.DateInput(attrs={"type": "date", "onclick": "this.showPicker()"})
+            ),
         }
 
     def clean(self):
@@ -270,10 +277,20 @@ class MainPageLocationAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "country", "place")
     search_fields = ("country", "place__name", "highlight_name")
     readonly_fields = ("created_at", "updated_at", "country_slug", "place_slug")
+
+    class Media:
+        css = {
+            "all": (
+                "core/css/select2_admin.css",
+                "core/css/admin_date_clean.css",
+            )
+        }
+
     fields = (
         "highlight_name",
         "country",
         "place",
+        "adventure_date",
         "country_slug",
         "place_slug",
         "is_active",

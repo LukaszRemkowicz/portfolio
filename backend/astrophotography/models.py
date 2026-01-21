@@ -1,4 +1,5 @@
 from io import BytesIO
+from django.contrib.postgres.fields import DateRangeField
 
 from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
@@ -241,6 +242,9 @@ class AstroImage(BaseImage):
         ordering = ["-created_at"]
 
 
+
+
+
 class MainPageLocation(models.Model):
     """Model to manage which images appear in the travel section for a specific location"""
 
@@ -276,6 +280,12 @@ class MainPageLocation(models.Model):
         null=True,
         verbose_name=_("Highlight Name"),
         help_text=_("Optional custom name for the travel highlight (overrides Country/Place)."),
+    )
+    adventure_date = DateRangeField(
+        blank=True,
+        null=True,
+        verbose_name=_("Adventure Date Range"),
+        help_text=_("The date range of the expedition."),
     )
     country_slug = models.SlugField(
         max_length=100,

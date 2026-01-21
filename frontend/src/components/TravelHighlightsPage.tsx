@@ -23,6 +23,7 @@ const TravelHighlightsPage: React.FC = () => {
   const [country, setCountry] = useState<string>("");
   const [place, setPlace] = useState<string | null>(null);
   const [story, setStory] = useState<string | null>(null);
+  const [adventureDate, setAdventureDate] = useState<string | null>(null);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [highlightName, setHighlightName] = useState<string | null>(null);
   const [locationBackgroundImage, setLocationBackgroundImage] = useState<
@@ -67,6 +68,7 @@ const TravelHighlightsPage: React.FC = () => {
         setCountry(data.country || "");
         setPlace(data.place || null);
         setStory(data.story || null);
+        setAdventureDate(data.adventure_date || null);
         setCreatedAt(data.created_at || null);
         setHighlightName(data.highlight_name || null);
         setLocationBackgroundImage(data.background_image || null);
@@ -132,14 +134,16 @@ const TravelHighlightsPage: React.FC = () => {
           <div className={styles.glassCard}>
             <header className={styles.metaInfo}>
               <span className={styles.badge}>
-                {createdAt
-                  ? new Date(createdAt)
-                      .toLocaleDateString("en-US", {
-                        month: "long",
-                        year: "numeric",
-                      })
-                      .toUpperCase()
-                  : "RECENT EXPEDITION"}
+                {adventureDate
+                  ? adventureDate.toUpperCase()
+                  : createdAt
+                    ? new Date(createdAt)
+                        .toLocaleDateString("en-US", {
+                          month: "long",
+                          year: "numeric",
+                        })
+                        .toUpperCase()
+                    : "RECENT EXPEDITION"}
               </span>
               <span className={styles.separator}>|</span>
               <span className={styles.badge}>
@@ -191,9 +195,9 @@ const TravelHighlightsPage: React.FC = () => {
                     />
 
                     <div className={styles.imageMeta}>
-                      {image.equipment && (
+                      {image.celestial_object && (
                         <div className={styles.metaItem}>
-                          <strong>Equipment:</strong> {image.equipment}
+                          <strong>Object:</strong> {image.celestial_object}
                         </div>
                       )}
                     </div>

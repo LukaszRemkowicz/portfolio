@@ -34,11 +34,15 @@ const TravelCard: React.FC<{ location: MainPageLocation }> = ({ location }) => {
     ? `${location.place_name}, ${location.country_name}`
     : location.country_name;
 
-  // Use description from first image if available, or a generic one
-  const description =
-    location.images.length > 0
+  // Prioritize story from location model, fall back to first image description
+  const description = React.useMemo(() => {
+    if (location.story && location.story.trim()) {
+      return stripHtml(location.story);
+    }
+    return location.images.length > 0
       ? stripHtml(location.images[0].description)
       : `Explore the cosmic wonders of ${location.country_name}.`;
+  }, [location.story, location.images, location.country_name]);
 
   const handleCardClick = () => {
     const url = location.place_slug

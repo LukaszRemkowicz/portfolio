@@ -1,0 +1,37 @@
+/* Clean Date Picker for Django Admin */
+
+input[type="date"] {
+    position: relative;
+    cursor: pointer;
+    min-width: 151px;
+}
+
+/* Hide the native calendar icon in Chrome/Safari/Edge */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    background: transparent;
+    bottom: 0;
+    color: transparent;
+    cursor: pointer;
+    height: auto;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: auto;
+    display: block;
+    /* Keep it so it remains clickable if clicking near the end */
+    -webkit-appearance: none;
+}
+
+/* For Firefox, we rely on the click trigger */
+input[type="date"] {
+    appearance: none;
+    -moz-appearance: textfield;
+}
+
+/* Hide "string" like placeholder behavior when possible, or just focus on the icon */
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-clear-button {
+    display: none;
+    -webkit-appearance: none;
+}

@@ -65,6 +65,7 @@ export interface MainPageLocation {
   place_name: string | null;
   place_slug: string | null;
   highlight_name?: string;
+  adventure_date?: string;
   story?: string;
   background_image?: string | null;
   created_at: string;

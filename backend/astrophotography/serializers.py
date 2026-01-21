@@ -132,11 +132,47 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
     country_name = serializers.CharField(source="country.name", read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
     background_image = serializers.SerializerMethodField()
+    adventure_date = serializers.SerializerMethodField()
 
     def get_background_image(self, obj):
         if obj.background_image:
             return obj.background_image.path.url
         return None
+
+    def get_adventure_date(self, obj):
+        if not obj.adventure_date:
+            return None
+
+        lower = obj.adventure_date.lower
+        upper = obj.adventure_date.upper
+
+        if not lower:
+            return None
+
+        # upper represents the first day AFTER the range in PostgreSQL DateRange
+        # So we subtract one day for display if it exists
+        from datetime import timedelta
+
+        display_upper = upper - timedelta(days=1) if upper else None
+
+        def format_date(dt):
+            # Format: 20 Jan 2026
+            return dt.strftime("%-d %b %Y")
+
+        if not display_upper or lower == display_upper:
+            return format_date(lower)
+
+        # Smart formatting for ranges
+        if lower.year == display_upper.year:
+            if lower.month == display_upper.month:
+                # 20 - 25 Jan 2026
+                return f"{lower.day} - {display_upper.day} {lower.strftime('%b %Y')}"
+            else:
+                # 20 Jan - 05 Feb 2026
+                return f"{lower.strftime('%-d %b')} - {display_upper.strftime('%-d %b %Y')}"
+
+        # 20 Jan 2025 - 05 Jan 2026
+        return f"{format_date(lower)} - {format_date(display_upper)}"
 
     class Meta:
         model = MainPageLocation
@@ -148,6 +184,7 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
             "place_name",
             "place_slug",
             "highlight_name",
+            "adventure_date",
             "story",
             "background_image",
             "images",
