@@ -1,5 +1,6 @@
 from io import BytesIO
 
+from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
 from PIL import Image
 from taggit.managers import TaggableManager
@@ -179,11 +180,12 @@ class MainPageLocation(models.Model):
         verbose_name=_("Place Slug"),
         help_text=_("Auto-generated slug for the place."),
     )
-    story = models.TextField(
+    story = CKEditor5Field(
         blank=True,
         null=True,
         verbose_name=_("Story/Blog Text"),
         help_text=_("Optional story or blog text to display above the images."),
+        config_name="default",
     )
 
     background_image = models.ForeignKey(

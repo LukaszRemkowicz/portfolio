@@ -1,5 +1,7 @@
 import uuid
 
+from django_ckeditor_5.fields import CKEditor5Field
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -20,10 +22,11 @@ class BaseImage(models.Model):
     name = models.CharField(
         max_length=255, verbose_name=_("Name"), help_text=_("A descriptive name for this image.")
     )
-    description = models.TextField(
+    description = CKEditor5Field(
         blank=True,
         verbose_name=_("Description"),
         help_text=_("Optional detailed description of the image."),
+        config_name="default",
     )
 
     class Meta:

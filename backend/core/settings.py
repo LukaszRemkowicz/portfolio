@@ -226,6 +226,9 @@ CACHES = {
 
 # Django Select2 Configuration
 SELECT2_CACHE_BACKEND = "select2"
+# Disable i18n file loading for English (default locale) to prevent TypeError
+# when i18n file loads before Select2 itself
+SELECT2_I18N = "none"
 
 # File Upload Settings
 FILE_UPLOAD_PERMISSIONS = 0o644
