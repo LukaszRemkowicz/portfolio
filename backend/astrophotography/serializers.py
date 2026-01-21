@@ -46,7 +46,9 @@ class TrackerSerializer(serializers.ModelSerializer):
 class TripodSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tripod
-        fields = ["id", "name"]
+        fields = [
+            "name",
+        ]
 
 
 class AstroImageSerializerList(serializers.ModelSerializer):

@@ -177,6 +177,24 @@
   margin: 0;
 }
 
+.modalDescription a,
+.descriptionParagraph a,
+.specValue a {
+  color: var(--celestial-blue);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: all 0.3s ease;
+}
+
+.modalDescription a:hover,
+.descriptionParagraph a:hover,
+.specValue a:hover {
+  color: var(--celestial-white);
+  text-decoration-color: var(--celestial-white);
+  opacity: 1;
+}
+
 .modalDescription::first-letter {
   float: left;
   font-size: 3.5rem;

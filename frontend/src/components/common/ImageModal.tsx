@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { X } from "lucide-react";
+import { X, Calendar, MapPin } from "lucide-react";
 import styles from "../../styles/components/ImageModal.module.css";
 import { AstroImage, EquipmentItem } from "../../types";
 import { fetchAstroImage } from "../../api/services";
@@ -185,11 +185,19 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
             <div className={styles.metaRow}>
               {image.capture_date && (
                 <span className={styles.metaItem}>
-                  {new Date(image.capture_date).toLocaleDateString()}
+                  <Calendar size={14} className={styles.metaIcon} />
+                  {new Date(image.capture_date).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
                 </span>
               )}
               {image.location && (
-                <span className={styles.metaItem}>{image.location}</span>
+                <span className={styles.metaItem}>
+                  <MapPin size={14} className={styles.metaIcon} />
+                  {image.location}
+                </span>
               )}
             </div>
           </div>
