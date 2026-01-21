@@ -199,7 +199,6 @@ class AstroImage(BaseImage):
     def clean(self):
         super().clean()
         # Note: M2M fields validation is primarily handled in the form
-        pass
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
