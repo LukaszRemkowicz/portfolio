@@ -230,6 +230,27 @@ class MainPageLocationForm(forms.ModelForm):
             ),
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        country = cleaned_data.get("country")
+        images = cleaned_data.get("images")
+
+        if country and images:
+            for image in images:
+                if image.location != country:
+                    raise forms.ValidationError(
+                        _(
+                            "Image '%(image)s' (%(location)s) does not match "
+                            "the slider's country (%(country)s)."
+                        )
+                        % {
+                            "image": image.name,
+                            "location": image.location.name if image.location else "Unknown",
+                            "country": country.name,
+                        }
+                    )
+        return cleaned_data
+
     def clean_place(self):
         place = self.cleaned_data.get("place")
         if not place:

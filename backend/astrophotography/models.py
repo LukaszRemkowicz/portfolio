@@ -321,28 +321,6 @@ class MainPageLocation(models.Model):
 
         super().save(*args, **kwargs)
 
-    def clean(self):
-        from django.core.exceptions import ValidationError
-
-        # Ensure that if we have images, they match the country
-        # Note: checking m2m in clean() is tricky because they might not be saved yet
-        # for new instances, but works for updates or if instance is saved.
-        # However, for new instances, self.pk might be None, and we can't check m2m.
-        if self.pk:
-            for image in self.images.all():
-                if image.location != self.country:
-                    raise ValidationError(
-                        _(
-                            "Image '%(image)s' (%(location)s) does not match "
-                            "the slider's country (%(country)s)."
-                        )
-                        % {
-                            "image": image.name,
-                            "location": image.location.name if image.location else "Unknown",
-                            "country": self.country.name,
-                        }
-                    )
-
     def __str__(self):
         if self.highlight_name:
             return f"{self.highlight_name} ({'Active' if self.is_active else 'Inactive'})"
