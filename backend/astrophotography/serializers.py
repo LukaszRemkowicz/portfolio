@@ -1,6 +1,16 @@
 from rest_framework import serializers
 
-from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Place
+from .models import (
+    AstroImage,
+    Camera,
+    Lens,
+    MainPageBackgroundImage,
+    MainPageLocation,
+    Place,
+    Telescope,
+    Tracker,
+    Tripod,
+)
 
 
 class PlaceSerializer(serializers.ModelSerializer):
@@ -9,10 +19,45 @@ class PlaceSerializer(serializers.ModelSerializer):
         fields = ["id", "name"]
 
 
+class CameraSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Camera
+        fields = ["id", "model"]
+
+
+class LensSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lens
+        fields = ["id", "model"]
+
+
+class TelescopeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Telescope
+        fields = ["id", "model"]
+
+
+class TrackerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tracker
+        fields = ["id", "name"]
+
+
+class TripodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tripod
+        fields = ["id", "name"]
+
+
 class AstroImageSerializerList(serializers.ModelSerializer):
     url = serializers.ImageField(source="path")
     thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
     tags = serializers.StringRelatedField(many=True)
+    camera = serializers.StringRelatedField(many=True)
+    lens = serializers.StringRelatedField(many=True)
+    telescope = serializers.StringRelatedField(many=True)
+    tracker = serializers.StringRelatedField(many=True)
+    tripod = serializers.StringRelatedField(many=True)
     location = serializers.CharField()
 
     class Meta:
@@ -24,6 +69,11 @@ class AstroImageSerializerList(serializers.ModelSerializer):
             "url",
             "thumbnail_url",
             "tags",
+            "camera",
+            "lens",
+            "telescope",
+            "tracker",
+            "tripod",
             "capture_date",
             "location",
             "celestial_object",
@@ -32,6 +82,12 @@ class AstroImageSerializerList(serializers.ModelSerializer):
 
 
 class AstroImageSerializer(serializers.ModelSerializer):
+    camera = CameraSerializer(many=True, read_only=True)
+    lens = LensSerializer(many=True, read_only=True)
+    telescope = TelescopeSerializer(many=True, read_only=True)
+    tracker = TrackerSerializer(many=True, read_only=True)
+    tripod = TripodSerializer(many=True, read_only=True)
+
     class Meta:
         model = AstroImage
         fields = [

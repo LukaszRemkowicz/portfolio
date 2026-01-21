@@ -5,7 +5,7 @@ from django import forms
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.utils.translation import gettext_lazy as _
 
-from core.widgets import ThemedSelect2Widget
+from core.widgets import ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
 from .models import AstroImage, Place
 
@@ -30,6 +30,31 @@ class AstroImageForm(forms.ModelForm):
                     "data-allow-clear": "true",
                 },
             ),
+            "telescope": ThemedSelect2MultipleWidget(
+                attrs={
+                    "data-placeholder": _("Select telescope(s)..."),
+                },
+            ),
+            "camera": ThemedSelect2MultipleWidget(
+                attrs={
+                    "data-placeholder": _("Select camera(s)..."),
+                },
+            ),
+            "lens": ThemedSelect2MultipleWidget(
+                attrs={
+                    "data-placeholder": _("Select lens(es)..."),
+                },
+            ),
+            "tracker": ThemedSelect2MultipleWidget(
+                attrs={
+                    "data-placeholder": _("Select mount/tracker(s)..."),
+                },
+            ),
+            "tripod": ThemedSelect2MultipleWidget(
+                attrs={
+                    "data-placeholder": _("Select tripod(s)..."),
+                },
+            ),
         }
 
     def clean_place(self):
@@ -43,6 +68,17 @@ class AstroImageForm(forms.ModelForm):
             # If Select2 returned the string directly because it's a new tag
             place, _ = Place.objects.get_or_create(name=place)
         return place
+
+    def clean(self):
+        cleaned_data = super().clean()
+        telescope = cleaned_data.get("telescope")
+        lens = cleaned_data.get("lens")
+
+        if telescope and telescope.exists() and lens and lens.exists():
+            raise forms.ValidationError(
+                _("Cannot have both telescope and lens. Please choose one or the other.")
+            )
+        return cleaned_data
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

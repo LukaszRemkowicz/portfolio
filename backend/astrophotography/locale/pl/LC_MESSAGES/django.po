@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-21 14:00+0000\n"
+"POT-Creation-Date: 2026-01-21 15:05+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,6 +19,24 @@ msgstr ""
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && "
 "(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
 "n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
+
+msgid "Media"
+msgstr ""
+
+msgid "Tags"
+msgstr "Tagi"
+
+msgid "Where image was taken?"
+msgstr ""
+
+msgid "Equipment"
+msgstr "Sprzęt"
+
+msgid "Technical Details"
+msgstr ""
+
+msgid "Metadata"
+msgstr ""
 
 msgid "Images"
 msgstr "Zdjęcia"
@@ -51,6 +69,34 @@ msgstr "Wybierz lub wpisz miejsce..."
 msgid "Select background image..."
 msgstr "Duży plik zdjęcia tła."
 
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select telescope(s)..."
+msgstr "Duży plik zdjęcia tła."
+
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select camera(s)..."
+msgstr "Duży plik zdjęcia tła."
+
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select lens(es)..."
+msgstr "Duży plik zdjęcia tła."
+
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select mount/tracker(s)..."
+msgstr "Duży plik zdjęcia tła."
+
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select tripod(s)..."
+msgstr "Duży plik zdjęcia tła."
+
+msgid "Cannot have both telescope and lens. Please choose one or the other."
+msgstr ""
+
 msgid "Landscape"
 msgstr "Krajobraz"
 
@@ -72,9 +118,6 @@ msgstr "Zorza Polarna"
 msgid "Tag"
 msgstr "Tag"
 
-msgid "Tags"
-msgstr "Tagi"
-
 msgid "Name"
 msgstr "Nazwa"
 
@@ -86,6 +129,54 @@ msgstr "Miejsce"
 
 msgid "Places"
 msgstr "Miejsca"
+
+msgid "Model"
+msgstr ""
+
+msgid "Telescope model and specifications"
+msgstr ""
+
+msgid "Telescope"
+msgstr ""
+
+msgid "Telescopes"
+msgstr ""
+
+msgid "Camera model and specifications"
+msgstr ""
+
+msgid "Camera"
+msgstr ""
+
+msgid "Cameras"
+msgstr ""
+
+msgid "Lens model and focal length"
+msgstr ""
+
+msgid "Lens"
+msgstr ""
+
+msgid "Lenses"
+msgstr ""
+
+msgid "Star tracker or mount model"
+msgstr ""
+
+msgid "Tracker"
+msgstr ""
+
+msgid "Trackers"
+msgstr ""
+
+msgid "Tripod model"
+msgstr ""
+
+msgid "Tripod"
+msgstr ""
+
+msgid "Tripods"
+msgstr ""
 
 msgid "Capture Date"
 msgstr "Data wykonania"
@@ -105,34 +196,7 @@ msgstr "Miejsce/Miasto"
 msgid "Specific city or region (e.g. Hawaii, Tenerife)."
 msgstr "Konkretne miasto lub region (np. Hawaje, Teneryfa)."
 
-msgid "Telescope"
-msgstr ""
-
-msgid "Telescope model and specifications"
-msgstr ""
-
-msgid "Camera"
-msgstr ""
-
-msgid "Camera model and specifications"
-msgstr ""
-
 msgid "Tracker/Mount"
-msgstr ""
-
-msgid "Star tracker or mount model"
-msgstr ""
-
-msgid "Tripod"
-msgstr ""
-
-msgid "Tripod model"
-msgstr ""
-
-msgid "Lens"
-msgstr ""
-
-msgid "Lens model and focal length"
 msgstr ""
 
 msgid "Exposure Details"
@@ -164,9 +228,6 @@ msgstr "Miniatura"
 
 msgid "Relevant tags for the image."
 msgstr "Tagi powiązane ze zdjęciem."
-
-msgid "Cannot have both telescope and lens. Please choose one or the other."
-msgstr ""
 
 msgid "Astrophotography Image"
 msgstr "Zdjęcie Astrofotograficzne"
@@ -265,14 +326,6 @@ msgstr "Zdjęcie Tła Strony Głównej"
 
 msgid "Main Page Background Images"
 msgstr "Zdjęcia Tła Strony Głównej"
-
-#, fuzzy
-#~| msgid "The large background image file."
-#~ msgid "Select equipment..."
-#~ msgstr "Duży plik zdjęcia tła."
-
-#~ msgid "Equipment"
-#~ msgstr "Sprzęt"
 
 #, fuzzy
 #~| msgid "Relevant tags for the image."

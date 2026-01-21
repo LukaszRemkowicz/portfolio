@@ -5,11 +5,51 @@ from django.utils.translation import gettext_lazy as _
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
 from .forms import AstroImageForm
-from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Place
+from .models import (
+    AstroImage,
+    Camera,
+    Lens,
+    MainPageBackgroundImage,
+    MainPageLocation,
+    Place,
+    Telescope,
+    Tracker,
+    Tripod,
+)
 
 
 @admin.register(Place)
 class PlaceAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)
+
+
+@admin.register(Camera)
+class CameraAdmin(admin.ModelAdmin):
+    list_display = ("model",)
+    search_fields = ("model",)
+
+
+@admin.register(Lens)
+class LensAdmin(admin.ModelAdmin):
+    list_display = ("model",)
+    search_fields = ("model",)
+
+
+@admin.register(Telescope)
+class TelescopeAdmin(admin.ModelAdmin):
+    list_display = ("model",)
+    search_fields = ("model",)
+
+
+@admin.register(Tracker)
+class TrackerAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)
+
+
+@admin.register(Tripod)
+class TripodAdmin(admin.ModelAdmin):
     list_display = ("name",)
     search_fields = ("name",)
 
@@ -19,7 +59,17 @@ class AstroImageAdmin(admin.ModelAdmin):
     form = AstroImageForm
     list_display = ("name", "capture_date", "location", "place", "has_thumbnail", "tag_list")
     list_filter = ("celestial_object", "tags")
-    search_fields = ("name", "description", "location", "place__name", "camera", "telescope")
+    search_fields = (
+        "name",
+        "description",
+        "location",
+        "place__name",
+        "camera__model",
+        "lens__model",
+        "telescope__model",
+        "tracker__name",
+        "tripod__name",
+    )
 
     fieldsets = (
         (

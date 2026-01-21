@@ -44,6 +44,86 @@ class Place(models.Model):
         ordering = ["name"]
 
 
+class Telescope(models.Model):
+    model = models.CharField(
+        max_length=255,
+        verbose_name=_("Model"),
+        help_text=_("Telescope model and specifications"),
+    )
+
+    def __str__(self):
+        return self.model
+
+    class Meta:
+        verbose_name = _("Telescope")
+        verbose_name_plural = _("Telescopes")
+        ordering = ["model"]
+
+
+class Camera(models.Model):
+    model = models.CharField(
+        max_length=255,
+        verbose_name=_("Model"),
+        help_text=_("Camera model and specifications"),
+    )
+
+    def __str__(self):
+        return self.model
+
+    class Meta:
+        verbose_name = _("Camera")
+        verbose_name_plural = _("Cameras")
+        ordering = ["model"]
+
+
+class Lens(models.Model):
+    model = models.CharField(
+        max_length=255,
+        verbose_name=_("Model"),
+        help_text=_("Lens model and focal length"),
+    )
+
+    def __str__(self):
+        return self.model
+
+    class Meta:
+        verbose_name = _("Lens")
+        verbose_name_plural = _("Lenses")
+        ordering = ["model"]
+
+
+class Tracker(models.Model):
+    name = models.CharField(
+        max_length=255,
+        verbose_name=_("Name"),
+        help_text=_("Star tracker or mount model"),
+    )
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _("Tracker")
+        verbose_name_plural = _("Trackers")
+        ordering = ["name"]
+
+
+class Tripod(models.Model):
+    name = models.CharField(
+        max_length=255,
+        verbose_name=_("Name"),
+        help_text=_("Tripod model"),
+    )
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _("Tripod")
+        verbose_name_plural = _("Tripods")
+        ordering = ["name"]
+
+
 class AstroImage(BaseImage):
     """Model for astrophotography images"""
 
@@ -64,32 +144,32 @@ class AstroImage(BaseImage):
         verbose_name=_("Place/City"),
         help_text=_("Specific city or region (e.g. Hawaii, Tenerife)."),
     )
-    telescope = models.CharField(
-        max_length=255,
+    telescope = models.ManyToManyField(
+        Telescope,
         blank=True,
         verbose_name=_("Telescope"),
         help_text=_("Telescope model and specifications"),
     )
-    camera = models.CharField(
-        max_length=255,
+    camera = models.ManyToManyField(
+        Camera,
         blank=True,
         verbose_name=_("Camera"),
         help_text=_("Camera model and specifications"),
     )
-    tracker = models.CharField(
-        max_length=255,
+    tracker = models.ManyToManyField(
+        Tracker,
         blank=True,
         verbose_name=_("Tracker/Mount"),
         help_text=_("Star tracker or mount model"),
     )
-    tripod = models.CharField(
-        max_length=255,
+    tripod = models.ManyToManyField(
+        Tripod,
         blank=True,
         verbose_name=_("Tripod"),
         help_text=_("Tripod model"),
     )
-    lens = models.CharField(
-        max_length=255,
+    lens = models.ManyToManyField(
+        Lens,
         blank=True,
         verbose_name=_("Lens"),
         help_text=_("Lens model and focal length"),
@@ -123,14 +203,9 @@ class AstroImage(BaseImage):
     )
 
     def clean(self):
-        from django.core.exceptions import ValidationError
-
         super().clean()
-        # Ensure telescope and lens are mutually exclusive
-        if self.telescope and self.lens:
-            raise ValidationError(
-                _("Cannot have both telescope and lens. Please choose one or the other.")
-            )
+        # Note: M2M fields validation is primarily handled in the form
+        pass
 
     def save(self, *args, **kwargs):
         if self.path and not self.thumbnail:
