@@ -88,6 +88,8 @@ class AstroImageSerializer(serializers.ModelSerializer):
     tracker = TrackerSerializer(many=True, read_only=True)
     tripod = TripodSerializer(many=True, read_only=True)
 
+    location = serializers.CharField(source="location.name", read_only=True)
+
     class Meta:
         model = AstroImage
         fields = [
@@ -97,6 +99,7 @@ class AstroImageSerializer(serializers.ModelSerializer):
             "tracker",
             "tripod",
             "lens",
+            "location",
             "exposure_details",
             "celestial_object",
             "astrobin_url",
