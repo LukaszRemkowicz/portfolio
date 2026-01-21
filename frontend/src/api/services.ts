@@ -9,7 +9,7 @@ import {
   FilterParams,
   EnabledFeatures,
   Project,
-  MainPageLocationSlider,
+  MainPageLocation,
 } from "../types";
 import { NotFoundError } from "./errors";
 
@@ -158,13 +158,11 @@ export const fetchProjects = async (): Promise<Project[]> => {
   return data;
 };
 
-export const fetchTravelHighlights = async (): Promise<
-  MainPageLocationSlider[]
-> => {
-  const response: AxiosResponse<MainPageLocationSlider[]> = await api.get(
+export const fetchTravelHighlights = async (): Promise<MainPageLocation[]> => {
+  const response: AxiosResponse<MainPageLocation[]> = await api.get(
     API_ROUTES.travelHighlights,
   );
-  const data = handleResponse<MainPageLocationSlider[]>(response);
+  const data = handleResponse<MainPageLocation[]>(response);
 
   if (Array.isArray(data)) {
     return data.map((slider) => ({

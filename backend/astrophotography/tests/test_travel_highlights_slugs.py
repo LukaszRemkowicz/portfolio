@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from astrophotography.tests.factories import (
     AstroImageFactory,
-    MainPageLocationSliderFactory,
+    MainPageLocationFactory,
     PlaceFactory,
 )
 
@@ -16,7 +16,7 @@ class TestTravelHighlightsBySlugView:
     def setup_method(self):
         self.client = APIClient()
         self.place = PlaceFactory(name="High Tatras")
-        self.slider_with_place = MainPageLocationSliderFactory(
+        self.slider_with_place = MainPageLocationFactory(
             country="PL", place=self.place, is_active=True
         )
         # Ensure slugs are generated
@@ -24,9 +24,7 @@ class TestTravelHighlightsBySlugView:
         # Let's double check slugs are there
         self.slider_with_place.refresh_from_db()
 
-        self.slider_no_place = MainPageLocationSliderFactory(
-            country="US", place=None, is_active=True
-        )
+        self.slider_no_place = MainPageLocationFactory(country="US", place=None, is_active=True)
         self.slider_no_place.refresh_from_db()
 
         # Create some images

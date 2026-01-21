@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import AstroImage, MainPageBackgroundImage, MainPageLocationSlider, Place
+from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Place
 
 
 class PlaceSerializer(serializers.ModelSerializer):
@@ -61,13 +61,19 @@ class AstroImageThumbnailSerializer(serializers.ModelSerializer):
         fields = ["pk", "url", "thumbnail_url", "description"]
 
 
-class MainPageLocationSliderSerializer(serializers.ModelSerializer):
+class MainPageLocationSerializer(serializers.ModelSerializer):
     place_name = serializers.CharField(source="place.name", read_only=True)
     country_name = serializers.CharField(source="country.name", read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
+    background_image = serializers.SerializerMethodField()
+
+    def get_background_image(self, obj):
+        if obj.background_image:
+            return obj.background_image.path.url
+        return None
 
     class Meta:
-        model = MainPageLocationSlider
+        model = MainPageLocation
         fields = [
             "pk",
             "country",
@@ -77,6 +83,7 @@ class MainPageLocationSliderSerializer(serializers.ModelSerializer):
             "place_slug",
             "highlight_name",
             "story",
+            "background_image",
             "images",
             "created_at",
         ]

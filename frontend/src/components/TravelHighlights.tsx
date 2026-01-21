@@ -3,15 +3,13 @@ import { useNavigate } from "react-router-dom";
 import styles from "../styles/components/TravelHighlights.module.css";
 import { MapPin } from "lucide-react";
 import { fetchTravelHighlights } from "../api/services";
-import { MainPageLocationSlider } from "../types";
+import { MainPageLocation } from "../types";
 import { useAppStore } from "../store/useStore";
 
-const TravelCard: React.FC<{ slider: MainPageLocationSlider }> = ({
-  slider,
-}) => {
+const TravelCard: React.FC<{ location: MainPageLocation }> = ({ location }) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = React.useState(0);
-  const images = slider.images.map((img) => img.thumbnail_url || img.url);
+  const images = location.images.map((img) => img.thumbnail_url || img.url);
 
   React.useEffect(() => {
     if (images.length <= 1) return;
@@ -31,20 +29,20 @@ const TravelCard: React.FC<{ slider: MainPageLocationSlider }> = ({
         ];
 
   // Construct display location: "Place, Country" or just "Country"
-  const displayLocation = slider.place_name
-    ? `${slider.place_name}, ${slider.country_name}`
-    : slider.country_name;
+  const displayLocation = location.place_name
+    ? `${location.place_name}, ${location.country_name}`
+    : location.country_name;
 
   // Use description from first image if available, or a generic one
   const description =
-    slider.images.length > 0
-      ? slider.images[0].description
-      : `Explore the cosmic wonders of ${slider.country_name}.`;
+    location.images.length > 0
+      ? location.images[0].description
+      : `Explore the cosmic wonders of ${location.country_name}.`;
 
   const handleCardClick = () => {
-    const url = slider.place_slug
-      ? `/travel-highlights/${slider.country_slug}/${slider.place_slug}`
-      : `/travel-highlights/${slider.country_slug}`;
+    const url = location.place_slug
+      ? `/travel-highlights/${location.country_slug}/${location.place_slug}`
+      : `/travel-highlights/${location.country_slug}`;
 
     navigate(url);
   };
@@ -60,7 +58,7 @@ const TravelCard: React.FC<{ slider: MainPageLocationSlider }> = ({
           <img
             key={index}
             src={img}
-            alt={`Travel highlight from ${slider.country_name}`}
+            alt={`Travel highlight from ${location.country_name}`}
             className={`${styles.cardImage} ${index === currentIndex ? styles.active : ""}`}
             loading="lazy"
           />
@@ -69,7 +67,9 @@ const TravelCard: React.FC<{ slider: MainPageLocationSlider }> = ({
       <div className={styles.cardContent}>
         <span className={styles.category}>Adventure</span>
         <h3 className={styles.cardTitle}>
-          {slider.highlight_name || slider.place_name || slider.country_name}
+          {location.highlight_name ||
+            location.place_name ||
+            location.country_name}
         </h3>
         <p className={styles.cardLocation}>
           <MapPin size={12} className={styles.metaIcon} />
@@ -83,7 +83,7 @@ const TravelCard: React.FC<{ slider: MainPageLocationSlider }> = ({
 };
 
 const TravelHighlights: React.FC = () => {
-  const [sliders, setSliders] = React.useState<MainPageLocationSlider[]>([]);
+  const [locations, setLocations] = React.useState<MainPageLocation[]>([]);
   const [loading, setLoading] = React.useState(true);
   const { features } = useAppStore();
 
@@ -95,7 +95,7 @@ const TravelHighlights: React.FC = () => {
       }
       try {
         const data = await fetchTravelHighlights();
-        setSliders(data);
+        setLocations(data);
       } catch (error) {
         console.error("Failed to fetch travel highlights:", error);
       } finally {
@@ -113,7 +113,7 @@ const TravelHighlights: React.FC = () => {
     return null;
   }
 
-  if (sliders.length === 0) {
+  if (locations.length === 0) {
     return null; // Hide section if no content
   }
 
@@ -128,8 +128,8 @@ const TravelHighlights: React.FC = () => {
       </header>
 
       <div className={styles.grid}>
-        {sliders.map((slider) => (
-          <TravelCard key={slider.pk} slider={slider} />
+        {locations.map((location) => (
+          <TravelCard key={location.pk} location={location} />
         ))}
       </div>
     </section>

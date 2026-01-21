@@ -80,24 +80,24 @@ class TestBackgroundMainPageView:
 
 
 @pytest.mark.django_db
-class TestMainPageLocationSliderViewSet:
+class TestMainPageLocationViewSet:
     def test_list_active_sliders(self, api_client):
         """Test listing only active sliders ordered by country"""
         from astrophotography.tests.factories import (
             AstroImageFactory,
-            MainPageLocationSliderFactory,
+            MainPageLocationFactory,
         )
 
         # Create active slider for PL
         img_pl = AstroImageFactory(location="PL")
-        MainPageLocationSliderFactory(country="PL", is_active=True, images=[img_pl])
+        MainPageLocationFactory(country="PL", is_active=True, images=[img_pl])
 
         # Create active slider for US
         img_us = AstroImageFactory(location="US")
-        MainPageLocationSliderFactory(country="US", is_active=True, images=[img_us])
+        MainPageLocationFactory(country="US", is_active=True, images=[img_us])
 
         # Create inactive slider (should not be listed)
-        MainPageLocationSliderFactory(country="NO", is_active=False)
+        MainPageLocationFactory(country="NO", is_active=False)
 
         url = reverse("astroimages:travel-highlights-list")
         response = api_client.get(url)
@@ -126,18 +126,18 @@ class TestTravelHighlightsBySlugView:
         """Test retrieving highlights with a story"""
         from astrophotography.tests.factories import (
             AstroImageFactory,
-            MainPageLocationSliderFactory,
+            MainPageLocationFactory,
         )
 
         # Create slider with story
-        slider = MainPageLocationSliderFactory(
+        slider = MainPageLocationFactory(
             country="PL",
             # place is usually a Place object, but factory might handle string?
             # In factory definition (not seen but typical), it might trigger creation.
             # Safest is to let factory handle it or create place manually if needed.
             # Assuming factory is smart enough or I will fix if it errors.
             # Actually, looking at factory usage in other tests:
-            # MainPageLocationSliderFactory(country="PL", is_active=True, images=[img_pl])
+            # MainPageLocationFactory(country="PL", is_active=True, images=[img_pl])
             # It doesn't set place.
             highlight_name="Tatras Mountains",
             story="A beautiful mountain range.",

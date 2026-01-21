@@ -37,9 +37,9 @@ class PlaceFactory(DjangoModelFactory):
     name = factory.Faker("city")
 
 
-class MainPageLocationSliderFactory(DjangoModelFactory):
+class MainPageLocationFactory(DjangoModelFactory):
     class Meta:
-        model = "astrophotography.MainPageLocationSlider"
+        model = "astrophotography.MainPageLocation"
         skip_postgeneration_save = True
 
     country = factory.Iterator(["PL", "US", "NO", "CL"])

@@ -47,7 +47,7 @@ export interface AstroImage {
   astrobin_url?: string;
 }
 
-export interface MainPageLocationSlider {
+export interface MainPageLocation {
   pk: number;
   country: string;
   country_name: string;
@@ -56,11 +56,12 @@ export interface MainPageLocationSlider {
   place_slug: string | null;
   highlight_name?: string;
   story?: string;
+  background_image?: string | null;
   created_at: string;
   images: AstroImage[];
 }
 
-export type LocationSliderResponse = MainPageLocationSlider[];
+export type LocationResponse = MainPageLocation[];
 
 export interface ContactFormData {
   name: string;

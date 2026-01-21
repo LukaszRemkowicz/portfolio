@@ -25,7 +25,7 @@ describe("About Component", () => {
   it("renders technical stats", () => {
     render(<About profile={mockProfile} />);
 
-    expect(screen.getByText("Bortle 1")).toBeInTheDocument();
-    expect(screen.getByText("130mm")).toBeInTheDocument();
+    expect(screen.getByText("Bortle 4")).toBeInTheDocument();
+    expect(screen.getByText("430mm")).toBeInTheDocument();
   });
 });

@@ -15,12 +15,14 @@ describe("HomePage Component", () => {
   const mockFetchBackground = services.fetchBackground as jest.Mock;
   const mockFetchEnabledFeatures = services.fetchEnabledFeatures as jest.Mock;
   const mockFetchAstroImages = services.fetchAstroImages as jest.Mock;
+  const mockFetchTravelHighlights = services.fetchTravelHighlights as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockFetchBackground.mockResolvedValue("/test-bg.jpg");
     mockFetchEnabledFeatures.mockResolvedValue({ programming: true });
     mockFetchAstroImages.mockResolvedValue([]);
+    mockFetchTravelHighlights.mockResolvedValue([]);
 
     // Reset Zustand store to initial state
     useAppStore.setState({

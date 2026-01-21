@@ -9,6 +9,8 @@ class LandingPageSettingsFactory(DjangoModelFactory):
         django_get_or_create = ("pk",)
 
     contact_form_enabled = True
-    location_slider_enabled = True
+    travel_highlights_enabled = True
     programming_enabled = True
+    lastimages_enabled = True
+    meteors_enabled = True
     pk = 1

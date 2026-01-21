@@ -46,27 +46,27 @@ class TestPlaceModel:
 
 
 @pytest.mark.django_db
-class TestMainPageLocationSliderModel:
+class TestMainPageLocationModel:
     def test_string_representation(self):
-        from astrophotography.tests.factories import MainPageLocationSliderFactory
+        from astrophotography.tests.factories import MainPageLocationFactory
 
-        slider = MainPageLocationSliderFactory(country="PL", place__name="Bieszczady")
-        assert str(slider) == "Slider for Poland (Bieszczady) (Active)"
+        slider = MainPageLocationFactory(country="PL", place__name="Bieszczady")
+        assert str(slider) == "Location: Poland (Bieszczady) (Active)"
 
     def test_string_representation_with_highlight_name(self):
-        from astrophotography.tests.factories import MainPageLocationSliderFactory
+        from astrophotography.tests.factories import MainPageLocationFactory
 
-        slider = MainPageLocationSliderFactory(highlight_name="Magical Poland")
+        slider = MainPageLocationFactory(highlight_name="Magical Poland")
         assert str(slider) == "Magical Poland (Active)"
 
     def test_clean_method_validation_success(self):
         from astrophotography.tests.factories import (
             AstroImageFactory,
-            MainPageLocationSliderFactory,
+            MainPageLocationFactory,
         )
 
         # Slider for PL
-        slider = MainPageLocationSliderFactory(country="PL")
+        slider = MainPageLocationFactory(country="PL")
         # Image in PL
         image = AstroImageFactory(location="PL")
 
@@ -79,10 +79,10 @@ class TestMainPageLocationSliderModel:
 
         from astrophotography.tests.factories import (
             AstroImageFactory,
-            MainPageLocationSliderFactory,
+            MainPageLocationFactory,
         )
 
-        slider = MainPageLocationSliderFactory(country="PL")
+        slider = MainPageLocationFactory(country="PL")
         # Image in US (mismatch)
         image = AstroImageFactory(location="US")
 

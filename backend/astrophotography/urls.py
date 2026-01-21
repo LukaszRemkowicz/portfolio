@@ -5,7 +5,7 @@ from django.urls import include, path
 from .views import (
     AstroImageViewSet,
     MainPageBackgroundImageView,
-    MainPageLocationSliderViewSet,
+    MainPageLocationViewSet,
     TravelHighlightsBySlugView,
 )
 
@@ -14,7 +14,7 @@ app_name = "astroimages"
 router = DefaultRouter()
 router.register("image", AstroImageViewSet, basename="astroimage")
 router.register("background", MainPageBackgroundImageView, basename="backgroundImage")
-router.register("travel-highlights", MainPageLocationSliderViewSet, basename="travel-highlights")
+router.register("travel-highlights", MainPageLocationViewSet, basename="travel-highlights")
 
 
 urlpatterns = [

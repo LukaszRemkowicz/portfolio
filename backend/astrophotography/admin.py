@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
 from .forms import AstroImageForm
-from .models import AstroImage, MainPageBackgroundImage, MainPageLocationSlider, Place
+from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Place
 
 
 @admin.register(Place)
@@ -77,7 +77,7 @@ class MainPageBackgroundImageAdmin(admin.ModelAdmin):
     )
 
 
-class MainPageLocationSliderForm(forms.ModelForm):
+class MainPageLocationForm(forms.ModelForm):
     images = forms.ModelMultipleChoiceField(
         queryset=AstroImage.objects.all(),
         widget=ThemedSelect2MultipleWidget(),
@@ -112,6 +112,7 @@ class MainPageLocationSliderForm(forms.ModelForm):
                 location=self.instance.country, place=self.instance.place
             )
             self.fields["images"].queryset = qs
+            self.fields["background_image"].queryset = qs
 
             if not qs.exists():
                 self.fields["images"].widget = ReadOnlyMessageWidget(
@@ -124,12 +125,13 @@ class MainPageLocationSliderForm(forms.ModelForm):
         else:
             # Creation mode
             self.fields["images"].queryset = AstroImage.objects.none()
+            self.fields["background_image"].queryset = AstroImage.objects.none()
             self.fields["images"].widget = ReadOnlyMessageWidget(
                 message=_("Save the slider first to select images for this country.")
             )
 
     class Meta:
-        model = MainPageLocationSlider
+        model = MainPageLocation
         fields = "__all__"
         widgets = {
             "country": ThemedSelect2Widget(),
@@ -137,6 +139,12 @@ class MainPageLocationSliderForm(forms.ModelForm):
                 tags=True,
                 attrs={
                     "data-placeholder": _("Select or type place..."),
+                    "data-allow-clear": "true",
+                },
+            ),
+            "background_image": ThemedSelect2Widget(
+                attrs={
+                    "data-placeholder": _("Select background image..."),
                     "data-allow-clear": "true",
                 },
             ),
@@ -153,9 +161,9 @@ class MainPageLocationSliderForm(forms.ModelForm):
         return place
 
 
-@admin.register(MainPageLocationSlider)
-class MainPageLocationSliderAdmin(admin.ModelAdmin):
-    form = MainPageLocationSliderForm
+@admin.register(MainPageLocation)
+class MainPageLocationAdmin(admin.ModelAdmin):
+    form = MainPageLocationForm
     list_display = ("pk", "country", "place", "highlight_name", "is_active")
     list_display_links = ("pk", "country")
     list_filter = ("is_active", "country", "place")
@@ -169,6 +177,7 @@ class MainPageLocationSliderAdmin(admin.ModelAdmin):
         "place_slug",
         "is_active",
         "story",
+        "background_image",
         "images",
         "created_at",
         "updated_at",

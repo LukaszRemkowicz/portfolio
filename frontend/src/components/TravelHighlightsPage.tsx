@@ -24,6 +24,9 @@ const TravelHighlightsPage: React.FC = () => {
   const [story, setStory] = useState<string | null>(null);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [highlightName, setHighlightName] = useState<string | null>(null);
+  const [locationBackgroundImage, setLocationBackgroundImage] = useState<
+    string | null
+  >(null);
 
   const { backgroundUrl, loadInitialData } = useAppStore();
 
@@ -65,6 +68,7 @@ const TravelHighlightsPage: React.FC = () => {
         setStory(data.story || null);
         setCreatedAt(data.created_at || null);
         setHighlightName(data.highlight_name || null);
+        setLocationBackgroundImage(data.background_image || null);
 
         // Process images with defensive checks
         const imagesArray = Array.isArray(data.images) ? data.images : [];
@@ -104,9 +108,9 @@ const TravelHighlightsPage: React.FC = () => {
       <div
         className={styles.hero}
         style={
-          backgroundUrl
+          locationBackgroundImage || backgroundUrl
             ? {
-                backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${backgroundUrl})`,
+                backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${locationBackgroundImage || backgroundUrl})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
               }

@@ -9,12 +9,12 @@ from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
 from core.throttling import GalleryRateThrottle
 
-from .models import AstroImage, MainPageBackgroundImage, MainPageLocationSlider
+from .models import AstroImage, MainPageBackgroundImage, MainPageLocation
 from .serializers import (
     AstroImageSerializer,
     AstroImageSerializerList,
     MainPageBackgroundImageSerializer,
-    MainPageLocationSliderSerializer,
+    MainPageLocationSerializer,
 )
 
 
@@ -98,13 +98,13 @@ class MainPageBackgroundImageView(ViewSet):
         return Response({"url": None})
 
 
-class MainPageLocationSliderViewSet(ReadOnlyModelViewSet):
+class MainPageLocationViewSet(ReadOnlyModelViewSet):
     """
     ViewSet for listing active Main Page Location Sliders.
     """
 
-    queryset = MainPageLocationSlider.objects.filter(is_active=True).order_by("country")
-    serializer_class = MainPageLocationSliderSerializer
+    queryset = MainPageLocation.objects.filter(is_active=True).order_by("country")
+    serializer_class = MainPageLocationSerializer
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
 
@@ -119,7 +119,7 @@ class TravelHighlightsBySlugView(APIView):
     def get(self, request, country_slug=None, place_slug=None):
         from django.shortcuts import get_object_or_404
 
-        from .models import MainPageLocationSlider
+        from .models import MainPageLocation
 
         # Query the slider by slugs
         # If place_slug is None, we look for a slider with that country slug and no place slug
@@ -132,7 +132,7 @@ class TravelHighlightsBySlugView(APIView):
         else:
             filter_kwargs["place_slug__isnull"] = True
 
-        slider = get_object_or_404(MainPageLocationSlider, is_active=True, **filter_kwargs)
+        slider = get_object_or_404(MainPageLocation, is_active=True, **filter_kwargs)
 
         # now get images based on slider's location info
         # User requirement: filter by location and place from the slider object
@@ -158,6 +158,9 @@ class TravelHighlightsBySlugView(APIView):
                 "place_slug": slider.place_slug,
                 "story": slider.story,
                 "highlight_name": slider.highlight_name,
+                "background_image": (
+                    slider.background_image.path.url if slider.background_image else None
+                ),
                 "created_at": slider.created_at,
             }
         )

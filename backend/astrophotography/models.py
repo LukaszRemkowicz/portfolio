@@ -130,7 +130,7 @@ class AstroImage(BaseImage):
         ordering = ["-created_at"]
 
 
-class MainPageLocationSlider(models.Model):
+class MainPageLocation(models.Model):
     """Model to manage which images appear in the travel section for a specific location"""
 
     country = CountryField(
@@ -186,6 +186,16 @@ class MainPageLocationSlider(models.Model):
         help_text=_("Optional story or blog text to display above the images."),
     )
 
+    background_image = models.ForeignKey(
+        "AstroImage",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="location_backgrounds",
+        verbose_name=_("Custom Background"),
+        help_text=_("Optional specific background image for this location's page."),
+    )
+
     def save(self, *args, **kwargs):
         from django.utils.text import slugify
 
@@ -228,11 +238,11 @@ class MainPageLocationSlider(models.Model):
         location = f"{self.country.name}"
         if self.place:
             location += f" ({self.place})"
-        return f"Slider for {location} ({'Active' if self.is_active else 'Inactive'})"
+        return f"Location: {location} ({'Active' if self.is_active else 'Inactive'})"
 
     class Meta:
-        verbose_name = _("Main Page Location Slider")
-        verbose_name_plural = _("Main Page Location Sliders")
+        verbose_name = _("Main Page Location")
+        verbose_name_plural = _("Main Page Locations")
         ordering = ["country"]
 
 
