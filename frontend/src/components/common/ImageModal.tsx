@@ -69,16 +69,32 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
     const source = detailedImage || image;
     if (!source) return null;
 
+    const telescopeValue =
+      Array.isArray(source.telescope) && source.telescope.length > 0
+        ? source.telescope
+            .map((t: EquipmentItem | string) =>
+              typeof t === "string" ? t : t.model,
+            )
+            .join(", ")
+        : null;
+
+    const lensValue =
+      !telescopeValue && Array.isArray(source.lens) && source.lens.length > 0
+        ? source.lens
+            .map((t: EquipmentItem | string) =>
+              typeof t === "string" ? t : t.model,
+            )
+            .join(", ")
+        : null;
+
     const items = [
       {
         label: "Telescope",
-        value: Array.isArray(source.telescope)
-          ? source.telescope
-              .map((t: EquipmentItem | string) =>
-                typeof t === "string" ? t : t.model,
-              )
-              .join(", ")
-          : null,
+        value: telescopeValue,
+      },
+      {
+        label: "Lenses",
+        value: lensValue,
       },
       {
         label: "Camera",
