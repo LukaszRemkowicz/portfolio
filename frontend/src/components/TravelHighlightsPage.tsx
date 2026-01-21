@@ -136,6 +136,7 @@ const TravelHighlightsPage: React.FC = () => {
           <div className={styles.glassCard}>
             <header className={styles.metaInfo}>
               <span className={styles.badge}>
+                ADVENTURE TIME | {" "}
                 {adventureDate
                   ? adventureDate.toUpperCase()
                   : createdAt
@@ -146,12 +147,6 @@ const TravelHighlightsPage: React.FC = () => {
                       })
                       .toUpperCase()
                     : "RECENT EXPEDITION"}
-              </span>
-              <span className={styles.separator}>|</span>
-              <span className={styles.badge}>
-                {place
-                  ? `${place.toUpperCase()}, ${country.toUpperCase()}`
-                  : country.toUpperCase()}
               </span>
             </header>
 

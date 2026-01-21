@@ -161,6 +161,14 @@ class TravelHighlightsBySlugView(APIView):
                 "background_image": (
                     slider.background_image.path.url if slider.background_image else None
                 ),
+                "background_image_thumbnail": (
+                    slider.background_image.thumbnail.url
+                    if slider.background_image and slider.background_image.thumbnail
+                    else None
+                ),
+                "adventure_date": (
+                    MainPageLocationSerializer(slider).data.get("adventure_date")
+                ),
                 "created_at": slider.created_at,
             }
         )
