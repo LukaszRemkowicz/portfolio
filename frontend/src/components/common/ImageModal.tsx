@@ -115,9 +115,27 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
       },
       {
         label: "Exposure",
-        value: source.exposure_details
-          ? source.exposure_details.replace(" Foreground:", "\nForeground:")
-          : null,
+        value: source.exposure_details ? (
+          <>
+            {source.exposure_details
+              .replace(" Foreground:", "\nForeground:")
+              .split("\n")
+              .map((line, idx) => {
+                const parts = line.split(":");
+                if (parts.length > 1) {
+                  return (
+                    <div key={idx}>
+                      {parts[0]}:
+                      <span className={styles.lightWeight}>
+                        {parts.slice(1).join(":")}
+                      </span>
+                    </div>
+                  );
+                }
+                return <div key={idx}>{line}</div>;
+              })}
+          </>
+        ) : null,
       },
     ].filter((item) => item.value);
 
@@ -145,7 +163,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
   return createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-        <button className={styles.closeButton} onClick={onClose}>
+        <button className={styles.modalClose} onClick={onClose}>
           <X size={24} />
         </button>
 
@@ -167,11 +185,11 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
               )}
             </div>
           </div>
-          <div className={styles.modalTags}>
+          <div className={styles.tagsContainer}>
             {image.tags?.map((tag) => (
               <button
                 key={tag}
-                className={styles.tag}
+                className={styles.tagBadge}
                 onClick={() => handleTagClick(tag)}
               >
                 #{tag}

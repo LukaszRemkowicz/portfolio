@@ -83,10 +83,32 @@
 .modalMetadata {
   display: flex;
   flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.metadataLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.modalTitle {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--celestial-white);
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
   gap: 1.25rem;
-  align-items: center;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .metaItem {
@@ -96,10 +118,11 @@
   color: var(--celestial-blue);
   font-family: var(--font-family-mono);
   font-size: 0.875rem;
+  opacity: 0.8;
 }
 
 .metaIcon {
-  opacity: 0.8;
+  opacity: 0.6;
 }
 
 .tagsContainer {
@@ -205,6 +228,11 @@
   color: var(--celestial-white);
   font-weight: 600;
   white-space: pre-line;
+  opacity: 0.8;
+}
+
+.lightWeight {
+  font-weight: 300;
 }
 
 .specItem.fullWidth {
