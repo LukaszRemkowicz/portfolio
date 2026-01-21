@@ -36,7 +36,11 @@ class AstroImageSerializer(serializers.ModelSerializer):
         model = AstroImage
         fields = [
             "capture_date",
-            "equipment",
+            "telescope",
+            "camera",
+            "tracker",
+            "tripod",
+            "lens",
             "exposure_details",
             "celestial_object",
             "astrobin_url",

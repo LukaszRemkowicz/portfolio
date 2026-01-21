@@ -15,7 +15,11 @@ class AstroImageFactory(DjangoModelFactory):
     path = factory.django.ImageField()
     capture_date = factory.LazyFunction(lambda: timezone.now().date())
     location = "PL"
-    equipment = "EQ6-R, Newton 200/1000, ASI2600MC"
+    telescope = "Newton 200/1000"
+    camera = "ASI2600MC"
+    tracker = "EQ6-R"
+    tripod = "Ulanzi Zero Y"
+    lens = ""
     exposure_details = "60x300s, Gain 100"
     processing_details = "PixInsight, BlurXTerminator"
     celestial_object = "Deep Sky"

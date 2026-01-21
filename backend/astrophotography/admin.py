@@ -68,30 +68,6 @@ class AstroImageAdmin(admin.ModelAdmin):
     def has_thumbnail(self, obj):
         return bool(obj.thumbnail)
 
-    fieldsets = (
-        (None, {"fields": ("name", "description", "path", "tags")}),
-        (
-            "Capture Details",
-            {
-                "fields": (
-                    "capture_date",
-                    "location",
-                    "place",
-                    "celestial_object",
-                    "equipment",
-                    "exposure_details",
-                )
-            },
-        ),
-        ("Processing", {"fields": ("processing_details",)}),
-        ("Links", {"fields": ("astrobin_url",)}),
-        ("Thumbnail", {"fields": ("thumbnail",)}),
-        (
-            "Metadata",
-            {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
-        ),
-    )
-
     readonly_fields = ("created_at", "updated_at", "thumbnail")
 
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
