@@ -204,6 +204,7 @@
   font-size: 1rem;
   color: var(--celestial-white);
   font-weight: 600;
+  white-space: pre-line;
 }
 
 .specItem.fullWidth {

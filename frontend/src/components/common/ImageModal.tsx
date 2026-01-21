@@ -115,7 +115,9 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
       },
       {
         label: "Exposure",
-        value: source.exposure_details || null,
+        value: source.exposure_details
+          ? source.exposure_details.replace(" Foreground:", "\nForeground:")
+          : null,
       },
     ].filter((item) => item.value);
 
