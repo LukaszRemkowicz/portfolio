@@ -78,7 +78,7 @@ class Equipment(models.Model):
         help_text=_("Lens model and focal length"),
     )
 
-    def save(self, *args, **kwargs):
+    def clean(self):
         from django.core.exceptions import ValidationError
 
         # Ensure telescope and lens are mutually exclusive
@@ -86,7 +86,6 @@ class Equipment(models.Model):
             raise ValidationError(
                 _("Cannot have both telescope and lens. Please choose one or the other.")
             )
-        super().save(*args, **kwargs)
 
     def __str__(self):
         parts = []
