@@ -71,9 +71,7 @@ const TravelHighlightsPage: React.FC = () => {
         setAdventureDate(data.adventure_date || null);
         setCreatedAt(data.created_at || null);
         setHighlightName(data.highlight_name || null);
-        setLocationBackgroundImage(
-          data.background_image_thumbnail || data.background_image || null,
-        );
+        setLocationBackgroundImage(data.background_image || null);
 
         // Process images with defensive checks
         const imagesArray = Array.isArray(data.images) ? data.images : [];
@@ -136,7 +134,7 @@ const TravelHighlightsPage: React.FC = () => {
           <div className={styles.glassCard}>
             <header className={styles.metaInfo}>
               <span className={styles.badge}>
-                ADVENTURE TIME | {" "}
+                ADVENTURE DATE | {" "}
                 {adventureDate
                   ? adventureDate.toUpperCase()
                   : createdAt
