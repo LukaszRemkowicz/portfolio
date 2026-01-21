@@ -6,6 +6,7 @@ import { AstroImage, FilterType } from "../types";
 import { useAppStore } from "../store/useStore";
 import ImageModal from "./common/ImageModal";
 import LoadingScreen from "./common/LoadingScreen";
+import GalleryCard from "./common/GalleryCard";
 
 const AstroGallery: React.FC = () => {
   const {
@@ -97,25 +98,24 @@ const AstroGallery: React.FC = () => {
         {FILTERS.map((filter: FilterType) => (
           <div
             key={filter}
-            className={`${styles.filterBox} ${selectedFilter === filter ? styles.activeFilter : ""
-              }`}
+            className={`${styles.filterBox} ${
+              selectedFilter === filter ? styles.activeFilter : ""
+            }`}
             onClick={() => handleFilterClick(filter)}
           >
             {filter}
           </div>
         ))}
       </div>
+
       <div className={styles.grid}>
         {images.length > 0 ? (
           images.map((image: AstroImage) => (
-            <div key={image.pk} className={styles.gridItem}>
-              <img
-                src={image.thumbnail_url || image.url}
-                alt={image.name || `Astro Image ${image.pk}`}
-                onClick={() => handleImageClick(image)}
-                style={{ cursor: "pointer" }}
-              />
-            </div>
+            <GalleryCard
+              key={image.pk}
+              item={image}
+              onClick={handleImageClick}
+            />
           ))
         ) : (
           <div className={styles.noResults}>

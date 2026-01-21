@@ -1,65 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import styles from "../styles/components/Gallery.module.css";
-import { MapPin } from "lucide-react";
 import { AstroImage } from "../types";
 import { useAppStore } from "../store/useStore";
 import ImageModal from "./common/ImageModal";
-import { stripHtml } from "../utils/html";
-
-interface GalleryCardProps {
-  item: AstroImage;
-  onClick: (image: AstroImage) => void;
-  isNew: (dateString?: string) => boolean;
-}
-
-const GalleryCard = memo(({ item, onClick, isNew }: GalleryCardProps) => {
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  return (
-    <button
-      className={styles.card}
-      onClick={() => onClick(item)}
-      aria-label={`View details for ${item.name}`}
-      type="button"
-    >
-      {isNew(item.created_at) && <div className={styles.newBadge}>NEW</div>}
-      <div className={styles.imageWrapper} aria-hidden="true">
-        <div
-          className={`${styles.placeholder} ${isLoaded ? styles.hide : ""}`}
-        />
-        <img
-          src={item.thumbnail_url || item.url}
-          alt=""
-          loading="lazy"
-          onLoad={() => setIsLoaded(true)}
-          className={`${styles.cardImage} ${isLoaded ? styles.show : ""}`}
-        />
-      </div>
-      <div className={styles.cardContent}>
-        <span className={styles.category}>{item.celestial_object}</span>
-        <h3 className={styles.cardTitle}>{item.name}</h3>
-        <p className={styles.cardLocation}>
-          <MapPin size={12} className={styles.metaIcon} />
-          {item.location}
-        </p>
-        <p className={styles.cardDescription}>
-          {item.description
-            ? (() => {
-              const plainDescription = stripHtml(item.description);
-              return plainDescription.length > 80
-                ? `${plainDescription.substring(0, 80)}...`
-                : plainDescription;
-            })()
-            : ""}
-        </p>
-        <div className={styles.divider} aria-hidden="true"></div>
-      </div>
-    </button>
-  );
-});
-
-GalleryCard.displayName = "GalleryCard";
+import GalleryCard from "./common/GalleryCard";
 
 const Gallery: React.FC = () => {
   const [filter, setFilter] = useState("all");
@@ -115,21 +60,15 @@ const Gallery: React.FC = () => {
       .slice(0, 9);
   }, [images, filter]);
 
-  const isNew = useCallback((dateString?: string) => {
-    if (!dateString) return false;
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
-    return diffDays < 7;
-  }, []);
-
-  const handleImageClick = useCallback((image: AstroImage): void => {
-    console.log("Card clicked!", image.name);
-    // Use URL params for modal state to support browser back button
-    searchParams.set("img", image.pk.toString());
-    setSearchParams(searchParams);
-  }, [searchParams, setSearchParams]);
+  const handleImageClick = useCallback(
+    (image: AstroImage): void => {
+      console.log("Card clicked!", image.name);
+      // Use URL params for modal state to support browser back button
+      searchParams.set("img", image.pk.toString());
+      setSearchParams(searchParams);
+    },
+    [searchParams, setSearchParams],
+  );
 
   const closeModal = useCallback(() => {
     searchParams.delete("img");
@@ -184,12 +123,7 @@ const Gallery: React.FC = () => {
           <div className={styles.error}>{error}</div>
         ) : filteredImages.length > 0 ? (
           filteredImages.map((item) => (
-            <GalleryCard
-              key={item.pk}
-              item={item}
-              onClick={handleImageClick}
-              isNew={isNew}
-            />
+            <GalleryCard key={item.pk} item={item} onClick={handleImageClick} />
           ))
         ) : (
           <div className={styles.noResults}>
