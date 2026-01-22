@@ -30,8 +30,14 @@
   font-family: var(--font-family-heading);
 }
 
-.link:hover {
+.link:hover,
+.link.active {
   color: var(--celestial-white);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+.drawerLinks a.active {
+  color: var(--celestial-blue);
 }
 
 .menuTrigger {

@@ -16,7 +16,7 @@ import "./styles/components/App.module.css";
 
 const App: React.FC = () => {
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router>
       <ScrollToHash />
       <Suspense fallback={<LoadingScreen />}>
         <Routes>

@@ -169,7 +169,11 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
   if (!image) return null;
 
   return createPortal(
-    <div className={styles.modalOverlay} onClick={onClose}>
+    <div
+      className={styles.modalOverlay}
+      onClick={onClose}
+      data-testid="image-modal"
+    >
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <button className={styles.modalClose} onClick={onClose}>
           <X size={24} />

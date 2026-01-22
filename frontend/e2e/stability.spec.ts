@@ -4,6 +4,61 @@ test.describe("Stability Check", () => {
   test("should load the main page and NOT reload (checking for infinite loop)", async ({
     page,
   }) => {
+    // Catch-all mock for API v1
+    await page.route("**/api/v1/**", async (route) => {
+      const url = route.request().url();
+
+      if (url.includes("/profile/")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            first_name: "Test",
+            last_name: "User",
+            short_description: "Sky Hunter",
+          }),
+        });
+      }
+
+      if (url.includes("/background/")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            url: "https://via.placeholder.com/1920x1080",
+          }),
+        });
+      }
+
+      if (url.includes("/whats-enabled/")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            travelHighlights: true,
+            gallery: true,
+            contactForm: true,
+            lastimages: true,
+          }),
+        });
+      }
+
+      if (url.includes("/image/")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([]),
+        });
+      }
+
+      // Default fallback
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      });
+    });
+
     // 1. Navigate to the home page
     await page.goto("/");
 

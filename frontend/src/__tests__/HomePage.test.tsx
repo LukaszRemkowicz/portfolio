@@ -1,6 +1,6 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
+import { render, screen, waitFor, act } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
 import HomePage from "../HomePage";
 import { UserProfile } from "../types";
@@ -39,11 +39,13 @@ describe("HomePage Component", () => {
   it("shows loading state initially", async () => {
     mockFetchProfile.mockReturnValue(new Promise(() => {})); // Never resolves
 
-    render(
-      <BrowserRouter>
-        <HomePage />
-      </BrowserRouter>,
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <HomePage />
+        </MemoryRouter>,
+      );
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/Synchronizing/i)).toBeInTheDocument();
@@ -63,11 +65,13 @@ describe("HomePage Component", () => {
 
     mockFetchProfile.mockResolvedValue(mockProfile);
 
-    render(
-      <BrowserRouter>
-        <HomePage />
-      </BrowserRouter>,
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <HomePage />
+        </MemoryRouter>,
+      );
+    });
 
     await waitFor(
       () => {

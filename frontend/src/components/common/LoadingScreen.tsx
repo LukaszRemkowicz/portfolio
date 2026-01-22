@@ -11,7 +11,10 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
   fullScreen = true,
 }) => {
   return (
-    <div className={fullScreen ? styles.loadingScreen : ""}>
+    <div
+      className={fullScreen ? styles.loadingScreen : ""}
+      data-testid="loading-screen"
+    >
       <div className={styles.spinner} />
       <span className={styles.text}>{message}</span>
     </div>

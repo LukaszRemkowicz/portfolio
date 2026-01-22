@@ -9,20 +9,18 @@ import LoadingScreen from "./common/LoadingScreen";
 import GalleryCard from "./common/GalleryCard";
 
 const AstroGallery: React.FC = () => {
-  const {
-    images,
-    isImagesLoading,
-    isInitialLoading,
-    error,
-    backgroundUrl: background,
-    loadImages,
-    loadInitialData,
-  } = useAppStore();
-  const loading = isInitialLoading || isImagesLoading;
+  const images = useAppStore((state) => state.images);
+  const isInitialLoading = useAppStore((state) => state.isInitialLoading);
+  const isImagesLoading = useAppStore((state) => state.isImagesLoading);
+  const background = useAppStore((state) => state.backgroundUrl);
+  const error = useAppStore((state) => state.error);
+  const loadInitialData = useAppStore((state) => state.loadInitialData);
+  const loadImages = useAppStore((state) => state.loadImages);
   const [searchParams, setSearchParams] = useSearchParams();
-  const selectedFilter = searchParams.get("filter");
-  const selectedTag = searchParams.get("tag");
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
+
+  const selectedFilter = searchParams.get("filter") as FilterType | null;
+  const selectedTag = searchParams.get("tag");
 
   // Sync modalImage with 'img' query parameter
   useEffect(() => {
@@ -53,26 +51,29 @@ const AstroGallery: React.FC = () => {
   }, [selectedFilter, selectedTag, loadImages]);
 
   const handleFilterClick = (filter: FilterType): void => {
+    const nextParams = new URLSearchParams(searchParams);
     if (selectedFilter === filter) {
-      searchParams.delete("filter");
+      nextParams.delete("filter");
     } else {
-      searchParams.set("filter", filter);
-      searchParams.delete("tag"); // Clicking a category clears the tag filter
+      nextParams.set("filter", filter);
+      nextParams.delete("tag"); // Clicking a category clears the tag filter
     }
-    setSearchParams(searchParams);
+    setSearchParams(nextParams);
   };
 
   const handleImageClick = (image: AstroImage): void => {
-    searchParams.set("img", image.pk.toString());
-    setSearchParams(searchParams);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("img", image.pk.toString());
+    setSearchParams(nextParams);
   };
 
   const closeModal = (): void => {
-    searchParams.delete("img");
-    setSearchParams(searchParams);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("img");
+    setSearchParams(nextParams);
   };
 
-  if (loading) return <LoadingScreen />;
+  if (isInitialLoading) return <LoadingScreen />;
   if (error) return <div className={styles.error}>{error}</div>;
 
   const FILTERS: FilterType[] = [
@@ -95,21 +96,30 @@ const AstroGallery: React.FC = () => {
         <h1 className={styles.heroTitle}>Gallery</h1>
       </div>
       <div className={styles.filtersSection}>
-        {FILTERS.map((filter: FilterType) => (
-          <div
-            key={filter}
-            className={`${styles.filterBox} ${
-              selectedFilter === filter ? styles.activeFilter : ""
-            }`}
-            onClick={() => handleFilterClick(filter)}
-          >
-            {filter}
-          </div>
-        ))}
+        {FILTERS.map((filter: FilterType) => {
+          const isActive = selectedFilter === filter;
+          return (
+            <button
+              key={filter}
+              type="button"
+              className={`${styles.filterBox} ${
+                isActive ? styles.activeFilter : ""
+              }`}
+              onClick={() => handleFilterClick(filter)}
+              aria-pressed={isActive}
+            >
+              {filter}
+            </button>
+          );
+        })}
       </div>
 
       <div className={styles.grid}>
-        {images.length > 0 ? (
+        {isImagesLoading ? (
+          <div className={styles.noResults}>
+            <p>Scanning deep space sectors...</p>
+          </div>
+        ) : images.length > 0 ? (
           images.map((image: AstroImage) => (
             <GalleryCard
               key={image.pk}
