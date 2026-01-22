@@ -1,3 +1,4 @@
+# backend/programming/models.py
 from django.db import models
 
 from core.models import BaseImage
@@ -19,7 +20,7 @@ class Project(models.Model):
         verbose_name_plural = "Projects"
         ordering = ["-created_at"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
