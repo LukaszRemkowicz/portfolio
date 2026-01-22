@@ -258,23 +258,17 @@ LOGGING = {
         "console": {
             "level": "INFO" if not DEBUG else "DEBUG",
             "class": "logging.StreamHandler",
-            "formatter": "simple",
-        },
-        "file": {
-            "level": "ERROR",
-            "class": "logging.FileHandler",
-            "filename": os.path.join(BASE_DIR, "django_error.log"),
-            "formatter": "verbose",
+            "formatter": "simple" if not DEBUG else "verbose",
         },
     },
     "loggers": {
         "django": {
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
             "level": "INFO",
             "propagate": True,
         },
         "core": {
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
             "level": "DEBUG" if DEBUG else "INFO",
             "propagate": True,
         },

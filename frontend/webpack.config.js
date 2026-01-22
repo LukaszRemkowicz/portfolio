@@ -104,7 +104,10 @@ module.exports = (env, argv) => {
       open: true,
       hot: true,
       historyApiFallback: true,
-      server: "http",
+      server: {
+        type: httpsConfig ? "https" : "http",
+        options: httpsConfig || undefined,
+      },
       allowedHosts: "all",
       client: {
         webSocketURL: "wss://portfolio.local/ws",

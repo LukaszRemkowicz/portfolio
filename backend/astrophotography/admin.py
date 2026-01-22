@@ -298,9 +298,6 @@ class MainPageLocationAdmin(admin.ModelAdmin):
         "updated_at",
     )
 
-    def get_form(self, request, obj=None, **kwargs):
-        return super().get_form(request, obj, **kwargs)
-
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         extra_context = extra_context or {}
         # Hide "Save and add another" button when editing (only show when adding)

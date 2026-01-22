@@ -197,13 +197,6 @@ class AstroImage(BaseImage):
         through=UUIDTaggedItem, verbose_name=_("Tags"), help_text=_("Relevant tags for the image.")
     )
 
-    def clean(self) -> None:
-        super().clean()
-        # Note: M2M fields validation is primarily handled in the form
-
-    def save(self, *args: list, **kwargs: dict) -> None:
-        super().save(*args, **kwargs)
-
     def __str__(self) -> str:
         return f"{self.name} ({self.capture_date})" if self.capture_date else self.name
 
