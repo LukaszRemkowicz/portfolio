@@ -15,6 +15,13 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
+// Mock crypto.randomUUID for JSDOM
+Object.defineProperty(window, "crypto", {
+  value: {
+    randomUUID: () => "test-uuid-" + Math.random().toString(36).substring(2, 9),
+  },
+});
+
 // Suppress React Router v6 future flag warnings in tests
 // This can be done by configuring the router in individual tests or globally if using Data Router,
 // but for standard BrowserRouter usage in tests, we can suppress the warning via console mock or by setting a global flag if supported.

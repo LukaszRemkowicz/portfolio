@@ -28,10 +28,10 @@ interface AppState {
   isImagesLoading: boolean;
   isProjectsLoading: boolean;
   error: string | null;
-  initialSessionId: number;
-  imagesSessionId: number;
-  projectsSessionId: number;
-  tagsSessionId: number;
+  initialSessionId: string;
+  imagesSessionId: string;
+  projectsSessionId: string;
+  tagsSessionId: string;
 
   // Actions
   loadInitialData: () => Promise<void>;
@@ -52,10 +52,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   isImagesLoading: false,
   isProjectsLoading: false,
   error: null,
-  initialSessionId: 0,
-  imagesSessionId: 0,
-  projectsSessionId: 0,
-  tagsSessionId: 0,
+  initialSessionId: "",
+  imagesSessionId: "",
+  projectsSessionId: "",
+  tagsSessionId: "",
 
   clearError: () => set({ error: null }),
 
@@ -63,7 +63,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Avoid double loading if already have data
     if (get().profile && get().backgroundUrl) return;
 
-    const sessionId = Date.now() + Math.random();
+    const sessionId = crypto.randomUUID();
     set({ isInitialLoading: true, error: null, initialSessionId: sessionId });
     try {
       const [profileData, bgUrl, featuresData] = await Promise.all([
@@ -95,7 +95,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   loadImages: async (params = {}) => {
-    const sessionId = Date.now() + Math.random();
+    const sessionId = crypto.randomUUID();
     set({ isImagesLoading: true, error: null, imagesSessionId: sessionId });
     try {
       const data = await fetchAstroImages(params);
@@ -122,7 +122,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   loadProjects: async () => {
-    const sessionId = Date.now() + Math.random();
+    const sessionId = crypto.randomUUID();
     set({ isProjectsLoading: true, error: null, projectsSessionId: sessionId });
     try {
       const data = await fetchProjects();
@@ -144,7 +144,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   loadTags: async (category?: string) => {
-    const sessionId = Date.now() + Math.random();
+    const sessionId = crypto.randomUUID();
     set({ tagsSessionId: sessionId });
     try {
       const data = await fetchTags(category);
