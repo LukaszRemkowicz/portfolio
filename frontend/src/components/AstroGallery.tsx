@@ -7,11 +7,13 @@ import { useAppStore } from "../store/useStore";
 import ImageModal from "./common/ImageModal";
 import LoadingScreen from "./common/LoadingScreen";
 import GalleryCard from "./common/GalleryCard";
+import TagSidebar from "./TagSidebar";
 
 const AstroGallery: React.FC = () => {
   const images = useAppStore((state) => state.images);
   const isInitialLoading = useAppStore((state) => state.isInitialLoading);
   const isImagesLoading = useAppStore((state) => state.isImagesLoading);
+  const tags = useAppStore((state) => state.tags);
   const background = useAppStore((state) => state.backgroundUrl);
   const error = useAppStore((state) => state.error);
   const loadInitialData = useAppStore((state) => state.loadInitialData);
@@ -61,6 +63,16 @@ const AstroGallery: React.FC = () => {
     setSearchParams(nextParams);
   };
 
+  const handleTagSelect = (tagSlug: string | null): void => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (tagSlug) {
+      nextParams.set("tag", tagSlug);
+    } else {
+      nextParams.delete("tag");
+    }
+    setSearchParams(nextParams);
+  };
+
   const handleImageClick = (image: AstroImage): void => {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("img", image.pk.toString());
@@ -95,47 +107,61 @@ const AstroGallery: React.FC = () => {
       >
         <h1 className={styles.heroTitle}>Gallery</h1>
       </div>
-      <div className={styles.filtersSection}>
-        {FILTERS.map((filter: FilterType) => {
-          const isActive = selectedFilter === filter;
-          return (
-            <button
-              key={filter}
-              type="button"
-              className={`${styles.filterBox} ${
-                isActive ? styles.activeFilter : ""
-              }`}
-              onClick={() => handleFilterClick(filter)}
-              aria-pressed={isActive}
-            >
-              {filter}
-            </button>
-          );
-        })}
-      </div>
+      <div className={styles.mainContent}>
+        <div className={styles.sidebarWrapper}>
+          <h3 className={styles.sidebarLabel}>
+            Filter by category or explore images using the tags below.{" "}
+          </h3>
+          <TagSidebar
+            tags={tags}
+            selectedTag={selectedTag}
+            onTagSelect={handleTagSelect}
+          />
+        </div>
 
-      <div className={styles.grid}>
-        {isImagesLoading ? (
-          <div className={styles.noResults}>
-            <p>Scanning deep space sectors...</p>
+        <div className={styles.galleryArea}>
+          <div className={styles.filtersSection}>
+            {FILTERS.map((filter: FilterType) => {
+              const isActive = selectedFilter === filter;
+              return (
+                <button
+                  key={filter}
+                  type="button"
+                  className={`${styles.filterBox} ${
+                    isActive ? styles.activeFilter : ""
+                  }`}
+                  onClick={() => handleFilterClick(filter)}
+                  aria-pressed={isActive}
+                >
+                  {filter}
+                </button>
+              );
+            })}
           </div>
-        ) : images.length > 0 ? (
-          images.map((image: AstroImage) => (
-            <GalleryCard
-              key={image.pk}
-              item={image}
-              onClick={handleImageClick}
-            />
-          ))
-        ) : (
-          <div className={styles.noResults}>
-            <p>No images found for this filter.</p>
-            <p className={styles.noResultsHint}>
-              Try selecting a different category or clear the filter to see all
-              images.
-            </p>
+
+          <div className={styles.grid}>
+            {isImagesLoading ? (
+              <div className={styles.noResults}>
+                <p>Scanning deep space sectors...</p>
+              </div>
+            ) : images.length > 0 ? (
+              images.map((image: AstroImage) => (
+                <GalleryCard
+                  key={image.pk}
+                  item={image}
+                  onClick={handleImageClick}
+                />
+              ))
+            ) : (
+              <div className={styles.noResults}>
+                <p>No images found for this filter.</p>
+                <p className={styles.noResultsHint}>
+                  Try selecting a different category or tag to see more images.
+                </p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
       <ImageModal image={modalImage} onClose={closeModal} />
     </div>

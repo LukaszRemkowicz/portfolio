@@ -1,0 +1,120 @@
+.sidebar {
+  width: 280px;
+  background-color: rgba(2, 4, 10, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  height: fit-content;
+  max-height: calc(100vh - var(--navbar-height) - 4rem);
+  height: fit-content;
+  max-height: calc(100vh - var(--navbar-height) - 4rem);
+  overflow: hidden;
+  overflow: hidden;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  opacity: 0.8;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--glass-border);
+  background-color: rgba(12, 17, 32, 0.4);
+}
+
+.headerIcon {
+  color: var(--celestial-blue);
+}
+
+.title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--celestial-white);
+  margin: 0;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: var(--font-family-heading);
+}
+
+.tagList {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3) var(--space-2);
+  overflow-y: auto;
+}
+
+.tagItem {
+  background: none;
+  border: none;
+  padding: var(--space-3) var(--space-5);
+  text-align: left;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+  font-family: var(--font-family-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tagItem:hover {
+  color: var(--celestial-white);
+  background-color: var(--glass-border);
+}
+
+.active {
+  color: var(--celestial-white) !important;
+  background-color: rgba(56, 189, 248, 0.1) !important;
+  border-left: 3px solid var(--celestial-blue);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  font-weight: var(--font-weight-bold);
+}
+
+/* Custom scrollbar for tagList */
+.tagList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.tagList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tagList::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: var(--radius-full);
+}
+
+@media (max-width: 992px) {
+  .sidebar {
+    width: 100%;
+    position: relative;
+    top: 0;
+    max-height: 300px;
+    margin-bottom: var(--space-6);
+  }
+
+  .tagList {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .tagItem {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    background-color: rgba(12, 17, 32, 0.4);
+    border: 1px solid var(--glass-border);
+  }
+
+  .active {
+    border-left: none;
+    border: 1px solid var(--celestial-blue);
+    border-radius: var(--radius-full);
+  }
+}

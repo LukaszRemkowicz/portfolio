@@ -57,6 +57,11 @@ export interface AstroImage {
   astrobin_url?: string;
 }
 
+export interface Tag {
+  name: string;
+  slug: string;
+}
+
 export interface MainPageLocation {
   pk: number;
   country: string;
@@ -196,6 +201,7 @@ export interface ApiRoutes {
   projects: string;
   travelHighlights: string;
   travelBySlug: string;
+  tags: string;
 }
 
 // Legacy Gallery Item (for old gallery data structure)

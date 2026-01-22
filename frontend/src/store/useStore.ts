@@ -5,6 +5,7 @@ import {
   FilterParams,
   EnabledFeatures,
   Project,
+  Tag,
 } from "../types";
 import {
   fetchProfile,
@@ -12,6 +13,7 @@ import {
   fetchAstroImages,
   fetchEnabledFeatures,
   fetchProjects,
+  fetchTags,
 } from "../api/services";
 import { NetworkError, ServerError } from "../api/errors";
 
@@ -20,6 +22,7 @@ interface AppState {
   backgroundUrl: string | null;
   images: AstroImage[];
   projects: Project[];
+  tags: Tag[];
   features: EnabledFeatures | null;
   isInitialLoading: boolean;
   isImagesLoading: boolean;
@@ -30,6 +33,7 @@ interface AppState {
   loadInitialData: () => Promise<void>;
   loadImages: (params?: FilterParams) => Promise<void>;
   loadProjects: () => Promise<void>;
+  loadTags: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -38,6 +42,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   backgroundUrl: null,
   images: [],
   projects: [],
+  tags: [],
   features: null,
   isInitialLoading: false,
   isImagesLoading: false,
@@ -52,15 +57,17 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set({ isInitialLoading: true, error: null });
     try {
-      const [profileData, bgUrl, featuresData] = await Promise.all([
+      const [profileData, bgUrl, featuresData, tagsData] = await Promise.all([
         fetchProfile(),
         fetchBackground(),
         fetchEnabledFeatures(),
+        fetchTags(),
       ]);
       set({
         profile: profileData,
         backgroundUrl: bgUrl,
         features: featuresData,
+        tags: tagsData,
       });
     } catch (e: unknown) {
       let message = "An unexpected anomaly occurred.";
@@ -111,6 +118,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       console.error("Store projects load failure:", e);
     } finally {
       set({ isProjectsLoading: false });
+    }
+  },
+  loadTags: async () => {
+    try {
+      const data = await fetchTags();
+      set({ tags: data });
+    } catch (e: unknown) {
+      console.error("Store tags load failure:", e);
     }
   },
 }));

@@ -10,6 +10,7 @@ import {
   EnabledFeatures,
   Project,
   MainPageLocation,
+  Tag,
 } from "../types";
 import { NotFoundError } from "./errors";
 
@@ -127,6 +128,11 @@ export const fetchContact = async (
     contactData,
   );
   return handleResponse<void>(response);
+};
+
+export const fetchTags = async (): Promise<Tag[]> => {
+  const response: AxiosResponse<Tag[]> = await api.get(API_ROUTES.tags);
+  return handleResponse<Tag[]>(response);
 };
 
 export const fetchEnabledFeatures = async (): Promise<EnabledFeatures> => {

@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
+from taggit.models import Tag
 
 from core.throttling import GalleryRateThrottle
 
@@ -170,3 +171,15 @@ class TravelHighlightsBySlugView(APIView):
                 "created_at": slider.created_at,
             }
         )
+
+
+class TagsView(ViewSet):
+    """
+    ViewSet to return all tags currently associated with AstroImages.
+    """
+
+    throttle_classes = [GalleryRateThrottle, UserRateThrottle]
+
+    def list(self, request: Request) -> Response:
+        tags = Tag.objects.filter(astroimage__isnull=False).distinct().order_by("name")
+        return Response([{"name": tag.name, "slug": tag.slug} for tag in tags])

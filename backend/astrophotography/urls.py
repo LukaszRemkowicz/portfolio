@@ -6,6 +6,7 @@ from .views import (
     AstroImageViewSet,
     MainPageBackgroundImageView,
     MainPageLocationViewSet,
+    TagsView,
     TravelHighlightsBySlugView,
 )
 
@@ -15,6 +16,7 @@ router = DefaultRouter()
 router.register("image", AstroImageViewSet, basename="astroimage")
 router.register("background", MainPageBackgroundImageView, basename="backgroundImage")
 router.register("travel-highlights", MainPageLocationViewSet, basename="travel-highlights")
+router.register("tags", TagsView, basename="tags")
 
 
 urlpatterns = [
