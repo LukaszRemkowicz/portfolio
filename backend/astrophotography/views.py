@@ -181,5 +181,30 @@ class TagsView(ViewSet):
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
     def list(self, request: Request) -> Response:
-        tags = Tag.objects.filter(astroimage__isnull=False).distinct().order_by("name")
-        return Response([{"name": tag.name, "slug": tag.slug} for tag in tags])
+        from django.db.models import Count, Q
+
+        # Base filter: Tag must have at least one visible AstroImage
+        # default to showing tags with at least 1 image globaly, unless filtered
+
+        category_filter = request.query_params.get("filter")
+
+        # We want to count how many images match this tag AND the category filter
+        annotation_filter = Q(astroimage__isnull=False)
+        if category_filter:
+            annotation_filter &= Q(astroimage__celestial_object=category_filter)
+
+        # We invoke distinct() to ensure we don't double count if joins go wrong,
+        # though count distinct=True is usually safer for M2M.
+        # But here we aggregate on the Tag model.
+
+        tags = (
+            Tag.objects.filter(astroimage__isnull=False)
+            .annotate(num_times=Count("astroimage", filter=annotation_filter, distinct=True))
+            .filter(num_times__gt=0)
+            .order_by("name")
+            .distinct()
+        )
+
+        return Response(
+            [{"name": tag.name, "slug": tag.slug, "count": tag.num_times} for tag in tags]
+        )

@@ -130,8 +130,14 @@ export const fetchContact = async (
   return handleResponse<void>(response);
 };
 
-export const fetchTags = async (): Promise<Tag[]> => {
-  const response: AxiosResponse<Tag[]> = await api.get(API_ROUTES.tags);
+export const fetchTags = async (category_filter?: string): Promise<Tag[]> => {
+  const params: { filter?: string } = {};
+  if (category_filter) {
+    params.filter = category_filter;
+  }
+  const response: AxiosResponse<Tag[]> = await api.get(API_ROUTES.tags, {
+    params,
+  });
   return handleResponse<Tag[]>(response);
 };
 

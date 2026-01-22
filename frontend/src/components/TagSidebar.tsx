@@ -35,7 +35,7 @@ const TagSidebar: React.FC<TagSidebarProps> = ({
             }`}
             onClick={() => onTagSelect(tag.slug)}
           >
-            {tag.name}
+            {tag.name} <span className={styles.count}>({tag.count})</span>
           </button>
         ))}
       </div>

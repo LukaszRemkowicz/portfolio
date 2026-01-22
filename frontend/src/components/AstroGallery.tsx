@@ -18,6 +18,7 @@ const AstroGallery: React.FC = () => {
   const error = useAppStore((state) => state.error);
   const loadInitialData = useAppStore((state) => state.loadInitialData);
   const loadImages = useAppStore((state) => state.loadImages);
+  const loadTags = useAppStore((state) => state.loadTags);
   const [searchParams, setSearchParams] = useSearchParams();
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
 
@@ -51,6 +52,11 @@ const AstroGallery: React.FC = () => {
       ...(selectedTag ? { tag: selectedTag } : {}),
     });
   }, [selectedFilter, selectedTag, loadImages]);
+
+  // Refresh tags when category changes
+  useEffect(() => {
+    loadTags(selectedFilter || undefined);
+  }, [selectedFilter, loadTags]);
 
   const handleFilterClick = (filter: FilterType): void => {
     const nextParams = new URLSearchParams(searchParams);

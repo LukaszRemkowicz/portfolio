@@ -60,6 +60,7 @@ export interface AstroImage {
 export interface Tag {
   name: string;
   slug: string;
+  count: number;
 }
 
 export interface MainPageLocation {

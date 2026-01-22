@@ -33,7 +33,7 @@ interface AppState {
   loadInitialData: () => Promise<void>;
   loadImages: (params?: FilterParams) => Promise<void>;
   loadProjects: () => Promise<void>;
-  loadTags: () => Promise<void>;
+  loadTags: (category?: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -57,17 +57,15 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set({ isInitialLoading: true, error: null });
     try {
-      const [profileData, bgUrl, featuresData, tagsData] = await Promise.all([
+      const [profileData, bgUrl, featuresData] = await Promise.all([
         fetchProfile(),
         fetchBackground(),
         fetchEnabledFeatures(),
-        fetchTags(),
       ]);
       set({
         profile: profileData,
         backgroundUrl: bgUrl,
         features: featuresData,
-        tags: tagsData,
       });
     } catch (e: unknown) {
       let message = "An unexpected anomaly occurred.";
@@ -120,9 +118,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ isProjectsLoading: false });
     }
   },
-  loadTags: async () => {
+  loadTags: async (category?: string) => {
     try {
-      const data = await fetchTags();
+      const data = await fetchTags(category);
       set({ tags: data });
     } catch (e: unknown) {
       console.error("Store tags load failure:", e);
