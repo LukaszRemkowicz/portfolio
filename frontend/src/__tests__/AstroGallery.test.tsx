@@ -153,9 +153,16 @@ describe("AstroGallery Component", () => {
       );
     });
 
-    // Wait for loading screen to be removed first to ensure stable rendering
+    // Wait for initial loading screen to be removed
     await waitFor(() => {
       expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
+
+    // Wait for images loading state to resolve (important for tests triggered by effects)
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/Scanning deep space sectors/i),
+      ).not.toBeInTheDocument();
     });
 
     // Verify images were fetched
