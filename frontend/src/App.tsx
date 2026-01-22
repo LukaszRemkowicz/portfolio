@@ -9,9 +9,9 @@ const TravelHighlightsPage = lazy(
   () => import("./components/TravelHighlightsPage"),
 );
 import MainLayout from "./components/MainLayout";
-
 import LoadingScreen from "./components/common/LoadingScreen";
 import ScrollToHash from "./components/common/ScrollToHash";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 import "./styles/components/App.module.css";
 
 const App: React.FC = () => {
@@ -19,33 +19,35 @@ const App: React.FC = () => {
     <Router>
       <ScrollToHash />
       <Suspense fallback={<LoadingScreen />}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route
-            path="/astrophotography"
-            element={
-              <MainLayout>
-                <AstroGallery />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/programming"
-            element={
-              <MainLayout>
-                <Programming />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/travel-highlights/:countrySlug/:placeSlug?"
-            element={
-              <MainLayout>
-                <TravelHighlightsPage />
-              </MainLayout>
-            }
-          />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route
+              path="/astrophotography"
+              element={
+                <MainLayout>
+                  <AstroGallery />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/programming"
+              element={
+                <MainLayout>
+                  <Programming />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/travel-highlights/:countrySlug/:placeSlug?"
+              element={
+                <MainLayout>
+                  <TravelHighlightsPage />
+                </MainLayout>
+              }
+            />
+          </Routes>
+        </ErrorBoundary>
       </Suspense>
     </Router>
   );

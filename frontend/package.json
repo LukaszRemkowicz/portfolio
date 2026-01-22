@@ -67,5 +67,10 @@
     "webpack-dev-server": "^5.2.2",
     "workbox-webpack-plugin": "^7.4.0",
     "workbox-window": "^7.4.0"
-  }
+  },
+  "browserslist": [
+    ">0.5%",
+    "last 2 versions",
+    "not dead"
+  ]
 }

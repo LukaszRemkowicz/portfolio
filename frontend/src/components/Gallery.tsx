@@ -8,13 +8,11 @@ import GalleryCard from "./common/GalleryCard";
 
 const Gallery: React.FC = () => {
   const [filter, setFilter] = useState("all");
-  const {
-    images,
-    isImagesLoading: loading,
-    error,
-    loadImages,
-    features,
-  } = useAppStore();
+  const images = useAppStore((state) => state.images);
+  const loading = useAppStore((state) => state.isImagesLoading);
+  const error = useAppStore((state) => state.error);
+  const loadImages = useAppStore((state) => state.loadImages);
+  const features = useAppStore((state) => state.features);
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
