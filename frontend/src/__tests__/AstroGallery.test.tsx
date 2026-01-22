@@ -57,6 +57,9 @@ describe("AstroGallery Component", () => {
       isImagesLoading: true,
       isProjectsLoading: false,
       error: null,
+      initialSessionId: 0,
+      imagesSessionId: 0,
+      projectsSessionId: 0,
     });
   };
 

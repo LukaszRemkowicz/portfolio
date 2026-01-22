@@ -25,7 +25,6 @@ const AstroGallery: React.FC = () => {
   const selectedFilter = searchParams.get("filter") as FilterType | null;
   const selectedTag = searchParams.get("tag");
 
-  // Sync modalImage with 'img' query parameter
   useEffect(() => {
     const imgId = searchParams.get("img");
     if (imgId) {

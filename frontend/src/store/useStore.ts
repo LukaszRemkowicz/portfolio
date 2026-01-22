@@ -28,6 +28,9 @@ interface AppState {
   isImagesLoading: boolean;
   isProjectsLoading: boolean;
   error: string | null;
+  initialSessionId: number;
+  imagesSessionId: number;
+  projectsSessionId: number;
 
   // Actions
   loadInitialData: () => Promise<void>;
@@ -48,6 +51,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   isImagesLoading: false,
   isProjectsLoading: false,
   error: null,
+  initialSessionId: 0,
+  imagesSessionId: 0,
+  projectsSessionId: 0,
 
   clearError: () => set({ error: null }),
 
@@ -55,13 +61,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Avoid double loading if already have data
     if (get().profile && get().backgroundUrl) return;
 
-    set({ isInitialLoading: true, error: null });
+    const sessionId = get().initialSessionId + 1;
+    set({ isInitialLoading: true, error: null, initialSessionId: sessionId });
     try {
       const [profileData, bgUrl, featuresData] = await Promise.all([
         fetchProfile(),
         fetchBackground(),
         fetchEnabledFeatures(),
       ]);
+
+      if (get().initialSessionId !== sessionId) return;
+
       set({
         profile: profileData,
         backgroundUrl: bgUrl,
@@ -77,14 +87,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ error: message });
       console.error("Store initial load failure:", e);
     } finally {
-      set({ isInitialLoading: false });
+      if (get().initialSessionId === sessionId) {
+        set({ isInitialLoading: false });
+      }
     }
   },
 
   loadImages: async (params = {}) => {
-    set({ isImagesLoading: true, error: null });
+    const sessionId = get().imagesSessionId + 1;
+    set({ isImagesLoading: true, error: null, imagesSessionId: sessionId });
     try {
       const data = await fetchAstroImages(params);
+
+      if (get().imagesSessionId !== sessionId) return;
+
       set({ images: data });
     } catch (e: unknown) {
       let message = "Failed to fetch gallery images.";
@@ -96,14 +112,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ error: message });
       console.error("Store image load failure:", e);
     } finally {
-      set({ isImagesLoading: false });
+      if (get().imagesSessionId === sessionId) {
+        set({ isImagesLoading: false });
+      }
     }
   },
 
   loadProjects: async () => {
-    set({ isProjectsLoading: true, error: null });
+    const sessionId = get().projectsSessionId + 1;
+    set({ isProjectsLoading: true, error: null, projectsSessionId: sessionId });
     try {
       const data = await fetchProjects();
+
+      if (get().projectsSessionId !== sessionId) return;
+
       set({ projects: data });
     } catch (e: unknown) {
       let message = "Failed to fetch programming projects.";
@@ -115,7 +137,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ error: message });
       console.error("Store projects load failure:", e);
     } finally {
-      set({ isProjectsLoading: false });
+      if (get().projectsSessionId === sessionId) {
+        set({ isProjectsLoading: false });
+      }
     }
   },
   loadTags: async (category?: string) => {
