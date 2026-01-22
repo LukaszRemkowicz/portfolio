@@ -75,9 +75,8 @@ def test_contact_throttling_limit_exceeded(
         if response.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             throttled = True
             assert (
-                "throttled" in response.data.get("detail", "").lower()
-                or "rate limit" in response.data.get("detail", "").lower()
-                or "too many" in response.data.get("detail", "").lower()
+                response.data.get("detail")
+                == "You've submitted too many messages. Please wait 1 hour to send another one."
             )
             break
         else:
