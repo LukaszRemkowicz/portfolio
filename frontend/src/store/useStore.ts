@@ -70,26 +70,25 @@ export const useAppStore = create<AppState>((set, get) => ({
         fetchEnabledFeatures(),
       ]);
 
-      if (get().initialSessionId !== sessionId) return;
-
-      set({
-        profile: profileData,
-        backgroundUrl: bgUrl,
-        features: featuresData,
-      });
-    } catch (e: unknown) {
-      let message = "An unexpected anomaly occurred.";
-      if (e instanceof NetworkError) {
-        message = "Signal lost. Please check your network connection.";
-      } else if (e instanceof ServerError) {
-        message = "The cosmic archives are temporarily unreachable.";
-      }
-      set({ error: message });
-      console.error("Store initial load failure:", e);
-    } finally {
       if (get().initialSessionId === sessionId) {
-        set({ isInitialLoading: false });
+        set({
+          profile: profileData,
+          backgroundUrl: bgUrl,
+          features: featuresData,
+          isInitialLoading: false,
+        });
       }
+    } catch (e: unknown) {
+      if (get().initialSessionId === sessionId) {
+        let message = "An unexpected anomaly occurred.";
+        if (e instanceof NetworkError) {
+          message = "Signal lost. Please check your network connection.";
+        } else if (e instanceof ServerError) {
+          message = "The cosmic archives are temporarily unreachable.";
+        }
+        set({ error: message, isInitialLoading: false });
+      }
+      console.error("Store initial load failure:", e);
     }
   },
 
@@ -99,22 +98,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const data = await fetchAstroImages(params);
 
-      if (get().imagesSessionId !== sessionId) return;
-
-      set({ images: data });
-    } catch (e: unknown) {
-      let message = "Failed to fetch gallery images.";
-      if (e instanceof NetworkError) {
-        message = "Connection failed. The cosmic relay is offline.";
-      } else if (e instanceof ServerError) {
-        message = "Server collision detected. Please try again later.";
-      }
-      set({ error: message });
-      console.error("Store image load failure:", e);
-    } finally {
+      // Only update if this is still the current session
       if (get().imagesSessionId === sessionId) {
-        set({ isImagesLoading: false });
+        set({
+          images: data,
+          isImagesLoading: false,
+        });
       }
+    } catch (e: unknown) {
+      if (get().imagesSessionId === sessionId) {
+        let message = "Failed to fetch gallery images.";
+        if (e instanceof NetworkError) {
+          message = "Connection failed. The cosmic relay is offline.";
+        } else if (e instanceof ServerError) {
+          message = "Server collision detected. Please try again later.";
+        }
+        set({ error: message, isImagesLoading: false });
+      }
+      console.error("Store image load failure:", e);
     }
   },
 
@@ -124,22 +125,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const data = await fetchProjects();
 
-      if (get().projectsSessionId !== sessionId) return;
-
-      set({ projects: data });
-    } catch (e: unknown) {
-      let message = "Failed to fetch programming projects.";
-      if (e instanceof NetworkError) {
-        message = "Connection failure while accessing project archives.";
-      } else if (e instanceof ServerError) {
-        message = "Project database is temporarily unavailable.";
-      }
-      set({ error: message });
-      console.error("Store projects load failure:", e);
-    } finally {
       if (get().projectsSessionId === sessionId) {
-        set({ isProjectsLoading: false });
+        set({ projects: data, isProjectsLoading: false });
       }
+    } catch (e: unknown) {
+      if (get().projectsSessionId === sessionId) {
+        let message = "Failed to fetch programming projects.";
+        if (e instanceof NetworkError) {
+          message = "Connection failure while accessing project archives.";
+        } else if (e instanceof ServerError) {
+          message = "Project database is temporarily unavailable.";
+        }
+        set({ error: message, isProjectsLoading: false });
+      }
+      console.error("Store projects load failure:", e);
     }
   },
   loadTags: async (category?: string) => {
