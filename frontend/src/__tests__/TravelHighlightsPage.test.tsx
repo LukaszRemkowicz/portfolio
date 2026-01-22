@@ -175,7 +175,12 @@ describe("TravelHighlightsPage", () => {
       { timeout: 3000 },
     );
 
-    expect(await screen.findByText("Click Me")).toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(screen.getByAltText("Click Me")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
 
     const image = screen.getByAltText("Click Me");
 

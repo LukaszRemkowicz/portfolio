@@ -168,13 +168,17 @@ describe("AstroGallery Component", () => {
     // Verify images were fetched
     expect(fetchAstroImages).toHaveBeenCalled();
 
-    // Now find the card
-    const card = await screen.findByRole(
-      "button",
-      { name: /View details for Test Image 1/i },
-      { timeout: 3000 },
+    // Wait for the card to be present and stable
+    await waitFor(
+      () => {
+        expect(
+          screen.getByRole("button", {
+            name: /View details for Test Image 1/i,
+          }),
+        ).toBeInTheDocument();
+      },
+      { timeout: 4000 },
     );
-    expect(card).toBeInTheDocument();
   });
 
   it("handles API errors gracefully", async () => {
@@ -287,11 +291,21 @@ describe("AstroGallery Component", () => {
       expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
     });
 
-    const firstImageButton = await screen.findByRole(
-      "button",
-      { name: /View details for Test Image 1/i },
-      { timeout: 3000 },
+    // Wait for the button to be present and stable before clicking
+    await waitFor(
+      () => {
+        expect(
+          screen.getByRole("button", {
+            name: /View details for Test Image 1/i,
+          }),
+        ).toBeInTheDocument();
+      },
+      { timeout: 4000 },
     );
+
+    const firstImageButton = screen.getByRole("button", {
+      name: /View details for Test Image 1/i,
+    });
 
     await act(async () => {
       fireEvent.click(firstImageButton);
@@ -327,9 +341,16 @@ describe("AstroGallery Component", () => {
       expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
     });
 
-    // Wait for tags to be rendered
-    const nebulaTag = await screen.findByText(/Nebula/i);
-    expect(screen.getByText(/Galaxies/i)).toBeInTheDocument();
+    // Wait for tags to be rendered and stable
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Nebula/i)).toBeInTheDocument();
+        expect(screen.getByText(/Galaxies/i)).toBeInTheDocument();
+      },
+      { timeout: 4000 },
+    );
+
+    const nebulaTag = screen.getByText(/Nebula/i);
 
     await act(async () => {
       fireEvent.click(nebulaTag);
