@@ -18,6 +18,7 @@ const Contact: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
     {},
   );
+  const [serverError, setServerError] = useState<string | null>(null);
   const { features, isInitialLoading: isLoading } = useAppStore();
   const isEnabled = features?.contactForm === true;
 
@@ -37,11 +38,14 @@ const Contact: React.FC = () => {
         }
         return prev;
       });
+      // Clear server error on user input
+      if (serverError) setServerError(null);
     },
-    [],
+    [serverError],
   );
 
   const validateForm = useCallback((): boolean => {
+    // ... (rest of validateForm is same, just skipped for brevity logic)
     const errors: ValidationErrors = {};
     if (!formData.name || formData.name.trim().length < 2) {
       errors.name = ["Name must be at least 2 characters long."];
@@ -73,6 +77,7 @@ const Contact: React.FC = () => {
       e.preventDefault();
       setIsSubmitting(true);
       setSubmitStatus(null);
+      setServerError(null);
       setValidationErrors({});
 
       if (!validateForm()) {
@@ -96,11 +101,14 @@ const Contact: React.FC = () => {
           setSubmitStatus("validation_error");
         } else if (error instanceof AppError) {
           setSubmitStatus("error");
-          // Optionally store the specific error message to display to the user
+          setServerError(error.message);
           console.error(`Status code ${error.statusCode}: ${error.message}`);
         } else {
           console.error("Unknown error:", error);
           setSubmitStatus("error");
+          setServerError(
+            "Transmission failure. Please check your signal or try again later.",
+          );
         }
       } finally {
         setIsSubmitting(false);
@@ -116,6 +124,7 @@ const Contact: React.FC = () => {
   return (
     <section id="contact" className={styles.section}>
       <div className={styles.container}>
+        {/* ... header ... */}
         <div className={styles.header}>
           <h2 className={styles.title}>Direct Inquiry</h2>
           <p className={styles.subtitle}>
@@ -275,8 +284,8 @@ const Contact: React.FC = () => {
             )}
             {submitStatus === "error" && (
               <p className={styles.errorMessage} role="alert">
-                Transmission failure. Please check your signal or try again
-                later.
+                {serverError ||
+                  "Transmission failure. Please check your signal or try again later."}
               </p>
             )}
             {submitStatus === "validation_error" && (

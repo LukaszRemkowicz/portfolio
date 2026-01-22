@@ -42,6 +42,14 @@ class ContactMessageEmailService:
             from_email: str = settings.DEFAULT_FROM_EMAIL
             recipient_list: List[str] = [settings.CONTACT_EMAIL]
 
+            if settings.DEBUG:
+                logger.info("DEBUG=True: Simulating email send.")
+                logger.info(f"To: {recipient_list}")
+                logger.info(f"Subject: {subject}")
+                logger.info(f"Body: {message}")
+                logger.info(f"Fake Email notification sent for message ID={contact_message.id}")
+                return
+
             send_mail(
                 subject=subject,
                 message=message,
