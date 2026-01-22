@@ -15,39 +15,42 @@
 }
 
 .mainContent {
-  display: flex;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  grid-template-rows: auto 1fr;
   gap: 2.5rem;
+  row-gap: 2rem;
   max-width: 1400px;
   width: 95%;
   margin: 0 auto;
-  align-items: flex-start;
+  align-items: start;
   padding: 0 1rem;
   text-align: left;
 }
 
-.sidebarWrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.sidebarContainer {
+  grid-column: 1;
+  grid-row: 2;
   position: sticky;
   top: calc(var(--navbar-height) + 2rem);
+  width: 100%;
 }
 
 .sidebarLabel {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-light);
+  grid-column: 1;
+  grid-row: 1;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-muted);
   margin: 0;
-  padding-left: 0.5rem;
-}
-
-.galleryArea {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  padding-left: 0.25rem;
+  line-height: 1.4;
+  align-self: center;
 }
 
 .grid {
+  grid-column: 2;
+  grid-row: 2;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
@@ -95,10 +98,12 @@
 }
 
 .filtersSection {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   justify-content: flex-start;
   gap: 1rem;
-  margin: 0 0 2rem 0;
+  margin: 0;
   flex-wrap: wrap;
 }
 
@@ -154,11 +159,21 @@
 
 @media (max-width: 992px) {
   .mainContent {
+    display: flex;
     flex-direction: column;
     gap: 1.5rem;
   }
 
-  .sidebarWrapper {
+  /* Reset grid placement for flex usage */
+  .sidebarContainer,
+  .sidebarLabel,
+  .filtersSection,
+  .grid {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .sidebarContainer {
     position: static;
     width: 100%;
   }

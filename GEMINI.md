@@ -1,5 +1,5 @@
 ---
-description: Gemini agent rules for building and maintaining this repo
+description: Cursor agent rules for building and maintaining this repo
 globs:
   - "**/*"
 alwaysApply: true

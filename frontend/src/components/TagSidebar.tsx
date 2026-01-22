@@ -18,7 +18,7 @@ const TagSidebar: React.FC<TagSidebarProps> = ({
     <aside className={styles.sidebar}>
       <div className={styles.header}>
         <Sliders size={16} className={styles.headerIcon} />
-        <h2 className={styles.title}>SPECIFICATIONS</h2>
+        <h2 className={styles.title}>Tags</h2>
       </div>
       <div className={styles.tagList}>
         <button

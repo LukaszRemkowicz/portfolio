@@ -108,10 +108,11 @@ const AstroGallery: React.FC = () => {
         <h1 className={styles.heroTitle}>Gallery</h1>
       </div>
       <div className={styles.mainContent}>
-        <div className={styles.sidebarWrapper}>
-          <h3 className={styles.sidebarLabel}>
-            Filter by category or explore images using the tags below.{" "}
-          </h3>
+        <h3 className={styles.sidebarLabel}>
+          Filter by category or explore images using the tags below.
+        </h3>
+
+        <div className={styles.sidebarContainer}>
           <TagSidebar
             tags={tags}
             selectedTag={selectedTag}
@@ -119,48 +120,46 @@ const AstroGallery: React.FC = () => {
           />
         </div>
 
-        <div className={styles.galleryArea}>
-          <div className={styles.filtersSection}>
-            {FILTERS.map((filter: FilterType) => {
-              const isActive = selectedFilter === filter;
-              return (
-                <button
-                  key={filter}
-                  type="button"
-                  className={`${styles.filterBox} ${
-                    isActive ? styles.activeFilter : ""
-                  }`}
-                  onClick={() => handleFilterClick(filter)}
-                  aria-pressed={isActive}
-                >
-                  {filter}
-                </button>
-              );
-            })}
-          </div>
+        <div className={styles.filtersSection}>
+          {FILTERS.map((filter: FilterType) => {
+            const isActive = selectedFilter === filter;
+            return (
+              <button
+                key={filter}
+                type="button"
+                className={`${styles.filterBox} ${
+                  isActive ? styles.activeFilter : ""
+                }`}
+                onClick={() => handleFilterClick(filter)}
+                aria-pressed={isActive}
+              >
+                {filter}
+              </button>
+            );
+          })}
+        </div>
 
-          <div className={styles.grid}>
-            {isImagesLoading ? (
-              <div className={styles.noResults}>
-                <p>Scanning deep space sectors...</p>
-              </div>
-            ) : images.length > 0 ? (
-              images.map((image: AstroImage) => (
-                <GalleryCard
-                  key={image.pk}
-                  item={image}
-                  onClick={handleImageClick}
-                />
-              ))
-            ) : (
-              <div className={styles.noResults}>
-                <p>No images found for this filter.</p>
-                <p className={styles.noResultsHint}>
-                  Try selecting a different category or tag to see more images.
-                </p>
-              </div>
-            )}
-          </div>
+        <div className={styles.grid}>
+          {isImagesLoading ? (
+            <div className={styles.noResults}>
+              <p>Scanning deep space sectors...</p>
+            </div>
+          ) : images.length > 0 ? (
+            images.map((image: AstroImage) => (
+              <GalleryCard
+                key={image.pk}
+                item={image}
+                onClick={handleImageClick}
+              />
+            ))
+          ) : (
+            <div className={styles.noResults}>
+              <p>No images found for this filter.</p>
+              <p className={styles.noResultsHint}>
+                Try selecting a different category or tag to see more images.
+              </p>
+            </div>
+          )}
         </div>
       </div>
       <ImageModal image={modalImage} onClose={closeModal} />
