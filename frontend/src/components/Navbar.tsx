@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
-import Logo from "./common/Logo";
-import styles from "../styles/components/Navbar.module.css";
-import { Menu, X } from "lucide-react";
-import { NavbarProps } from "../types";
-import { useAppStore } from "../store/useStore";
+import React, { useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import Logo from './common/Logo';
+import styles from '../styles/components/Navbar.module.css';
+import { Menu, X } from 'lucide-react';
+import { NavbarProps } from '../types';
+import { useAppStore } from '../store/useStore';
 
 const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,36 +21,36 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
 
         <div className={styles.links}>
           <NavLink
-            to="/"
+            to='/'
             end
             className={({ isActive }) =>
-              `${styles.link} ${isActive ? styles.active : ""}`
+              `${styles.link} ${isActive ? styles.active : ''}`
             }
           >
             Home
           </NavLink>
           <NavLink
-            to="/astrophotography"
+            to='/astrophotography'
             className={({ isActive }) =>
-              `${styles.link} ${isActive ? styles.active : ""}`
+              `${styles.link} ${isActive ? styles.active : ''}`
             }
           >
             Astrophotography
           </NavLink>
           {isProgrammingEnabled && (
             <NavLink
-              to="/programming"
+              to='/programming'
               className={({ isActive }) =>
-                `${styles.link} ${isActive ? styles.active : ""}`
+                `${styles.link} ${isActive ? styles.active : ''}`
               }
             >
               Programming
             </NavLink>
           )}
-          <Link to="/#about" className={styles.link}>
+          <Link to='/#about' className={styles.link}>
             About
           </Link>
-          <Link to="/#contact" className={styles.link}>
+          <Link to='/#contact' className={styles.link}>
             Contact
           </Link>
         </div>
@@ -58,7 +58,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
         <button
           className={styles.menuTrigger}
           onClick={toggleMenu}
-          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={isMenuOpen}
         >
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -73,40 +73,40 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
             </button>
             <div className={styles.drawerLinks}>
               <NavLink
-                to="/"
+                to='/'
                 onClick={toggleMenu}
                 end
-                className={({ isActive }) => (isActive ? styles.active : "")}
+                className={({ isActive }) => (isActive ? styles.active : '')}
               >
                 Home
               </NavLink>
               <NavLink
-                to="/astrophotography"
+                to='/astrophotography'
                 onClick={toggleMenu}
-                className={({ isActive }) => (isActive ? styles.active : "")}
+                className={({ isActive }) => (isActive ? styles.active : '')}
               >
                 Astrophotography
               </NavLink>
               {isProgrammingEnabled && (
                 <NavLink
-                  to="/programming"
+                  to='/programming'
                   onClick={toggleMenu}
-                  className={({ isActive }) => (isActive ? styles.active : "")}
+                  className={({ isActive }) => (isActive ? styles.active : '')}
                 >
                   Programming
                 </NavLink>
               )}
               <Link
-                to="/#about"
+                to='/#about'
                 onClick={toggleMenu}
-                className={location.hash === "#about" ? styles.active : ""}
+                className={location.hash === '#about' ? styles.active : ''}
               >
                 About
               </Link>
               <Link
-                to="/#contact"
+                to='/#contact'
                 onClick={toggleMenu}
-                className={location.hash === "#contact" ? styles.active : ""}
+                className={location.hash === '#contact' ? styles.active : ''}
               >
                 Contact
               </Link>

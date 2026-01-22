@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 import {
   UserProfile,
   AstroImage,
@@ -6,7 +6,7 @@ import {
   EnabledFeatures,
   Project,
   Tag,
-} from "../types";
+} from '../types';
 import {
   fetchProfile,
   fetchBackground,
@@ -14,8 +14,8 @@ import {
   fetchEnabledFeatures,
   fetchProjects,
   fetchTags,
-} from "../api/services";
-import { NetworkError, ServerError } from "../api/errors";
+} from '../api/services';
+import { NetworkError, ServerError } from '../api/errors';
 
 interface AppState {
   profile: UserProfile | null;
@@ -52,10 +52,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   isImagesLoading: false,
   isProjectsLoading: false,
   error: null,
-  initialSessionId: "",
-  imagesSessionId: "",
-  projectsSessionId: "",
-  tagsSessionId: "",
+  initialSessionId: '',
+  imagesSessionId: '',
+  projectsSessionId: '',
+  tagsSessionId: '',
 
   clearError: () => set({ error: null }),
 
@@ -82,15 +82,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     } catch (e: unknown) {
       if (get().initialSessionId === sessionId) {
-        let message = "An unexpected anomaly occurred.";
+        let message = 'An unexpected anomaly occurred.';
         if (e instanceof NetworkError) {
-          message = "Signal lost. Please check your network connection.";
+          message = 'Signal lost. Please check your network connection.';
         } else if (e instanceof ServerError) {
-          message = "The cosmic archives are temporarily unreachable.";
+          message = 'The cosmic archives are temporarily unreachable.';
         }
         set({ error: message, isInitialLoading: false });
       }
-      console.error("Store initial load failure:", e);
+      console.error('Store initial load failure:', e);
     }
   },
 
@@ -109,15 +109,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     } catch (e: unknown) {
       if (get().imagesSessionId === sessionId) {
-        let message = "Failed to fetch gallery images.";
+        let message = 'Failed to fetch gallery images.';
         if (e instanceof NetworkError) {
-          message = "Connection failed. The cosmic relay is offline.";
+          message = 'Connection failed. The cosmic relay is offline.';
         } else if (e instanceof ServerError) {
-          message = "Server collision detected. Please try again later.";
+          message = 'Server collision detected. Please try again later.';
         }
         set({ error: message, isImagesLoading: false });
       }
-      console.error("Store image load failure:", e);
+      console.error('Store image load failure:', e);
     }
   },
 
@@ -132,15 +132,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     } catch (e: unknown) {
       if (get().projectsSessionId === sessionId) {
-        let message = "Failed to fetch programming projects.";
+        let message = 'Failed to fetch programming projects.';
         if (e instanceof NetworkError) {
-          message = "Connection failure while accessing project archives.";
+          message = 'Connection failure while accessing project archives.';
         } else if (e instanceof ServerError) {
-          message = "Project database is temporarily unavailable.";
+          message = 'Project database is temporarily unavailable.';
         }
         set({ error: message, isProjectsLoading: false });
       }
-      console.error("Store projects load failure:", e);
+      console.error('Store projects load failure:', e);
     }
   },
   loadTags: async (category?: string) => {
@@ -152,7 +152,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         set({ tags: data });
       }
     } catch (e: unknown) {
-      console.error("Store tags load failure:", e);
+      console.error('Store tags load failure:', e);
     }
   },
 }));

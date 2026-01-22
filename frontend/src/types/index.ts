@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode } from 'react';
 
 // API Response Types
 export interface UserProfile {
@@ -15,7 +15,7 @@ export interface UserProfile {
 }
 
 export interface Profile {
-  type: "PROGRAMMING" | "ASTRO";
+  type: 'PROGRAMMING' | 'ASTRO';
   is_active: boolean;
   title: string;
   specific_bio: string;
@@ -101,10 +101,10 @@ export interface ValidationErrors {
   message?: string[];
 }
 export type SubmitStatus =
-  | "success"
-  | "validation_error"
-  | "rate_limited"
-  | "error"
+  | 'success'
+  | 'validation_error'
+  | 'rate_limited'
+  | 'error'
   | null;
 
 export interface ProjectImage {
@@ -160,12 +160,12 @@ export interface FilterParams {
 }
 
 export type FilterType =
-  | "Landscape"
-  | "Deep Sky"
-  | "Startrails"
-  | "Solar System"
-  | "Milky Way"
-  | "Northern Lights";
+  | 'Landscape'
+  | 'Deep Sky'
+  | 'Startrails'
+  | 'Solar System'
+  | 'Milky Way'
+  | 'Northern Lights';
 
 // API Types
 export interface ApiResponse<T = unknown> {

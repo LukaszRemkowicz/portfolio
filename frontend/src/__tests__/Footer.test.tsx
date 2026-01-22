@@ -1,35 +1,35 @@
-import React from "react";
-import { render, screen } from "@testing-library/react";
-import "@testing-library/jest-dom";
-import Footer from "../components/Footer";
-import { useAppStore } from "../store/useStore";
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import Footer from '../components/Footer';
+import { useAppStore } from '../store/useStore';
 
 // Mock the store
-jest.mock("../store/useStore");
+jest.mock('../store/useStore');
 
 const mockUseAppStore = useAppStore as unknown as jest.Mock;
 
-describe("Footer Component", () => {
+describe('Footer Component', () => {
   beforeEach(() => {
     mockUseAppStore.mockClear();
   });
 
-  it("renders copyright text", () => {
+  it('renders copyright text', () => {
     mockUseAppStore.mockReturnValue({
-      profile: { contact_email: "test@example.com" },
+      profile: { contact_email: 'test@example.com' },
     });
     render(<Footer />);
-    expect(screen.getByText("Łukasz Remkowicz © 2026")).toBeInTheDocument();
+    expect(screen.getByText('Łukasz Remkowicz © 2026')).toBeInTheDocument();
   });
 
-  it("renders social links when profile data is present", () => {
+  it('renders social links when profile data is present', () => {
     const mockProfile = {
-      contact_email: "test@example.com",
+      contact_email: 'test@example.com',
       profiles: [
         {
-          type: "ASTRO",
-          ig_url: "https://instagram.com/test",
-          astrobin_url: "https://astrobin.com/test",
+          type: 'ASTRO',
+          ig_url: 'https://instagram.com/test',
+          astrobin_url: 'https://astrobin.com/test',
         },
       ],
     };
@@ -37,27 +37,27 @@ describe("Footer Component", () => {
 
     render(<Footer />);
 
-    const igLink = screen.getByText("Instagram");
-    const astroLink = screen.getByText("Astrobin");
+    const igLink = screen.getByText('Instagram');
+    const astroLink = screen.getByText('Astrobin');
 
     expect(igLink).toBeInTheDocument();
-    expect(igLink.closest("a")).toHaveAttribute(
-      "href",
-      "https://instagram.com/test",
+    expect(igLink.closest('a')).toHaveAttribute(
+      'href',
+      'https://instagram.com/test'
     );
 
     expect(astroLink).toBeInTheDocument();
-    expect(astroLink.closest("a")).toHaveAttribute(
-      "href",
-      "https://astrobin.com/test",
+    expect(astroLink.closest('a')).toHaveAttribute(
+      'href',
+      'https://astrobin.com/test'
     );
   });
 
-  it("does not render social links when profile data is missing", () => {
+  it('does not render social links when profile data is missing', () => {
     mockUseAppStore.mockReturnValue({ profile: { profiles: [] } });
     render(<Footer />);
 
-    expect(screen.queryByText("Instagram")).not.toBeInTheDocument();
-    expect(screen.queryByText("Astrobin")).not.toBeInTheDocument();
+    expect(screen.queryByText('Instagram')).not.toBeInTheDocument();
+    expect(screen.queryByText('Astrobin')).not.toBeInTheDocument();
   });
 });

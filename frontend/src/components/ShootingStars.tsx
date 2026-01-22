@@ -1,7 +1,7 @@
-import React, { useState, useEffect, memo, useRef } from "react";
-import styles from "../styles/components/ShootingStars.module.css";
-import { CONFIG } from "../config";
-import { useAppStore } from "../store/useStore";
+import React, { useState, useEffect, memo, useRef } from 'react';
+import styles from '../styles/components/ShootingStars.module.css';
+import { CONFIG } from '../config';
+import { useAppStore } from '../store/useStore';
 
 interface DustParticle {
   id: number;
@@ -41,15 +41,15 @@ interface ShootingStarsProps {
 
 const MemoizedStar = memo(({ star }: { star: ShootingStar }) => (
   <div
-    className={`${styles.shootingStar} ${star.isBolid ? styles.bolid : ""}`}
+    className={`${styles.shootingStar} ${star.isBolid ? styles.bolid : ''}`}
     style={
       {
         left: star.left,
         top: star.top,
         animation: `${styles.move} ${star.duration}s linear forwards`,
-        "--angle": `${star.angle}deg`,
-        "--distance": `${star.distance}px`,
-        "--width": `${star.width}px`,
+        '--angle': `${star.angle}deg`,
+        '--distance': `${star.distance}px`,
+        '--width': `${star.width}px`,
       } as React.CSSProperties
     }
   >
@@ -58,7 +58,7 @@ const MemoizedStar = memo(({ star }: { star: ShootingStar }) => (
       style={
         {
           animation: `${styles.streakFade} ${star.duration}s linear forwards`,
-          "--opacity": star.opacity,
+          '--opacity': star.opacity,
         } as React.CSSProperties
       }
     />
@@ -71,21 +71,21 @@ const MemoizedStar = memo(({ star }: { star: ShootingStar }) => (
             animationDelay: `${star.duration * 0.6}s`,
           }}
         />
-        {star.dustParticles?.map((particle) => (
+        {star.dustParticles?.map(particle => (
           <div
             key={particle.id}
             className={styles.bolidDust}
             style={
               {
-                "--p-size": `${particle.size}px`,
-                "--p-blur": `${particle.blur}px`,
-                "--p-opacity": particle.opacity,
-                "--p-rotate": particle.rotate,
-                "--p-skew": particle.skew,
-                "--p-x": `${particle.offsetX}px`,
-                "--p-y": `${particle.offsetY}px`,
-                "--p-drift-x": `${particle.driftX}px`,
-                "--p-drift-y": `${particle.driftY}px`,
+                '--p-size': `${particle.size}px`,
+                '--p-blur': `${particle.blur}px`,
+                '--p-opacity': particle.opacity,
+                '--p-rotate': particle.rotate,
+                '--p-skew': particle.skew,
+                '--p-x': `${particle.offsetX}px`,
+                '--p-y': `${particle.offsetY}px`,
+                '--p-drift-x': `${particle.driftX}px`,
+                '--p-drift-y': `${particle.driftY}px`,
                 animation: `${styles.driftAndFade} ${particle.duration}s ease-out forwards`,
                 animationDelay: `${particle.delay}s`,
               } as React.CSSProperties
@@ -97,13 +97,13 @@ const MemoizedStar = memo(({ star }: { star: ShootingStar }) => (
   </div>
 ));
 
-MemoizedStar.displayName = "MemoizedStar";
+MemoizedStar.displayName = 'MemoizedStar';
 
 const ShootingStars: React.FC<ShootingStarsProps> = ({
   minDelay = 4000,
   maxDelay = 12000,
   initialDelay = 5000,
-  className = "",
+  className = '',
   random = CONFIG.randomShootingStars,
 }) => {
   const { features } = useAppStore();
@@ -203,21 +203,21 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
         isBolid,
         dustParticles,
       };
-      setShootingStars((prev) => [...prev, newStar]);
+      setShootingStars(prev => [...prev, newStar]);
 
       // Calculate when to remove the star from state
       // Bolids need to hang around longer for their dust to finish
       let totalLifetime = duration * 1000;
       if (isBolid && dustParticles.length > 0) {
         const maxDustTime = Math.max(
-          ...dustParticles.map((p) => p.delay + p.duration),
+          ...dustParticles.map(p => p.delay + p.duration)
         );
         totalLifetime = Math.max(totalLifetime, maxDustTime * 1000);
       }
 
       // Remove the star after its animation (and dust) completes
       setTimeout(() => {
-        setShootingStars((prev) => prev.filter((star) => star.id !== id));
+        setShootingStars(prev => prev.filter(star => star.id !== id));
       }, totalLifetime + 100); // Add small buffer
 
       // Schedule next star
@@ -234,7 +234,7 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
 
   return (
     <div className={`${styles.starContainer} ${className}`}>
-      {shootingStars.map((star) => (
+      {shootingStars.map(star => (
         <MemoizedStar key={star.id} star={star} />
       ))}
     </div>

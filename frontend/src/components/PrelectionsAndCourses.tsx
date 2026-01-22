@@ -1,5 +1,5 @@
-import React from "react";
-import styles from "../styles/components/PrelectionsAndCourses.module.css";
+import React from 'react';
+import styles from '../styles/components/PrelectionsAndCourses.module.css';
 
 const PrelectionsAndCourses: React.FC = () => {
   return (

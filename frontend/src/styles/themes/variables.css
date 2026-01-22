@@ -43,9 +43,9 @@
   --border-dark: #343a40;
 
   /* Typography */
-  --font-family-primary: "Inter", sans-serif;
-  --font-family-heading: "Space Grotesk", sans-serif;
-  --font-family-mono: "Courier New", monospace;
+  --font-family-primary: 'Inter', sans-serif;
+  --font-family-heading: 'Space Grotesk', sans-serif;
+  --font-family-mono: 'Courier New', monospace;
 
   /* Font Sizes */
   --font-size-xs: 0.75rem;

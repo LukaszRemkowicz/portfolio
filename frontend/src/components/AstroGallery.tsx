@@ -1,34 +1,34 @@
-import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import styles from "../styles/components/AstroGallery.module.css";
-import { ASSETS } from "../api/routes";
-import { AstroImage, FilterType } from "../types";
-import { useAppStore } from "../store/useStore";
-import ImageModal from "./common/ImageModal";
-import LoadingScreen from "./common/LoadingScreen";
-import GalleryCard from "./common/GalleryCard";
-import TagSidebar from "./TagSidebar";
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import styles from '../styles/components/AstroGallery.module.css';
+import { ASSETS } from '../api/routes';
+import { AstroImage, FilterType } from '../types';
+import { useAppStore } from '../store/useStore';
+import ImageModal from './common/ImageModal';
+import LoadingScreen from './common/LoadingScreen';
+import GalleryCard from './common/GalleryCard';
+import TagSidebar from './TagSidebar';
 
 const AstroGallery: React.FC = () => {
-  const images = useAppStore((state) => state.images);
-  const isInitialLoading = useAppStore((state) => state.isInitialLoading);
-  const isImagesLoading = useAppStore((state) => state.isImagesLoading);
-  const tags = useAppStore((state) => state.tags);
-  const background = useAppStore((state) => state.backgroundUrl);
-  const error = useAppStore((state) => state.error);
-  const loadInitialData = useAppStore((state) => state.loadInitialData);
-  const loadImages = useAppStore((state) => state.loadImages);
-  const loadTags = useAppStore((state) => state.loadTags);
+  const images = useAppStore(state => state.images);
+  const isInitialLoading = useAppStore(state => state.isInitialLoading);
+  const isImagesLoading = useAppStore(state => state.isImagesLoading);
+  const tags = useAppStore(state => state.tags);
+  const background = useAppStore(state => state.backgroundUrl);
+  const error = useAppStore(state => state.error);
+  const loadInitialData = useAppStore(state => state.loadInitialData);
+  const loadImages = useAppStore(state => state.loadImages);
+  const loadTags = useAppStore(state => state.loadTags);
   const [searchParams, setSearchParams] = useSearchParams();
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
 
-  const selectedFilter = searchParams.get("filter") as FilterType | null;
-  const selectedTag = searchParams.get("tag");
+  const selectedFilter = searchParams.get('filter') as FilterType | null;
+  const selectedTag = searchParams.get('tag');
 
   useEffect(() => {
-    const imgId = searchParams.get("img");
+    const imgId = searchParams.get('img');
     if (imgId) {
-      const img = images.find((i) => i.pk.toString() === imgId);
+      const img = images.find(i => i.pk.toString() === imgId);
       if (img) {
         setModalImage(img);
       } else {
@@ -60,10 +60,10 @@ const AstroGallery: React.FC = () => {
   const handleFilterClick = (filter: FilterType): void => {
     const nextParams = new URLSearchParams(searchParams);
     if (selectedFilter === filter) {
-      nextParams.delete("filter");
+      nextParams.delete('filter');
     } else {
-      nextParams.set("filter", filter);
-      nextParams.delete("tag"); // Clicking a category clears the tag filter
+      nextParams.set('filter', filter);
+      nextParams.delete('tag'); // Clicking a category clears the tag filter
     }
     setSearchParams(nextParams);
   };
@@ -71,22 +71,22 @@ const AstroGallery: React.FC = () => {
   const handleTagSelect = (tagSlug: string | null): void => {
     const nextParams = new URLSearchParams(searchParams);
     if (tagSlug) {
-      nextParams.set("tag", tagSlug);
+      nextParams.set('tag', tagSlug);
     } else {
-      nextParams.delete("tag");
+      nextParams.delete('tag');
     }
     setSearchParams(nextParams);
   };
 
   const handleImageClick = (image: AstroImage): void => {
     const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("img", image.pk.toString());
+    nextParams.set('img', image.pk.toString());
     setSearchParams(nextParams);
   };
 
   const closeModal = (): void => {
     const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete("img");
+    nextParams.delete('img');
     setSearchParams(nextParams);
   };
 
@@ -94,12 +94,12 @@ const AstroGallery: React.FC = () => {
   if (error) return <div className={styles.error}>{error}</div>;
 
   const FILTERS: FilterType[] = [
-    "Landscape",
-    "Deep Sky",
-    "Startrails",
-    "Solar System",
-    "Milky Way",
-    "Northern Lights",
+    'Landscape',
+    'Deep Sky',
+    'Startrails',
+    'Solar System',
+    'Milky Way',
+    'Northern Lights',
   ];
 
   return (
@@ -131,9 +131,9 @@ const AstroGallery: React.FC = () => {
             return (
               <button
                 key={filter}
-                type="button"
+                type='button'
                 className={`${styles.filterBox} ${
-                  isActive ? styles.activeFilter : ""
+                  isActive ? styles.activeFilter : ''
                 }`}
                 onClick={() => handleFilterClick(filter)}
                 aria-pressed={isActive}

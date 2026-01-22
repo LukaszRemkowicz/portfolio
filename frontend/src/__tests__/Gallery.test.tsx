@@ -1,28 +1,28 @@
-import React from "react";
+import React from 'react';
 import {
   render,
   screen,
   waitFor,
   fireEvent,
   act,
-} from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import "@testing-library/jest-dom";
-import Gallery from "../components/Gallery";
-import { useAppStore } from "../store/useStore";
-import { fetchAstroImages } from "../api/services";
+} from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import '@testing-library/jest-dom';
+import Gallery from '../components/Gallery';
+import { useAppStore } from '../store/useStore';
+import { fetchAstroImages } from '../api/services';
 
 // Mock Services
-jest.mock("../api/services", () => ({
+jest.mock('../api/services', () => ({
   fetchAstroImages: jest.fn().mockResolvedValue([]),
   fetchBackground: jest.fn().mockResolvedValue(null),
   fetchEnabledFeatures: jest.fn().mockResolvedValue({}),
   fetchAstroImage: jest.fn().mockResolvedValue({
     camera_settings: {
-      focal_length: "50mm",
-      aperture: "f/2.8",
-      iso: "1600",
-      shutter_speed: "30s",
+      focal_length: '50mm',
+      aperture: 'f/2.8',
+      iso: '1600',
+      shutter_speed: '30s',
     },
     equipment: [],
     software: [],
@@ -30,7 +30,7 @@ jest.mock("../api/services", () => ({
   fetchProfile: jest.fn().mockResolvedValue({}),
 }));
 
-describe("Gallery Component", () => {
+describe('Gallery Component', () => {
   const mockFetchAstroImages = fetchAstroImages as jest.Mock;
 
   beforeEach(() => {
@@ -45,16 +45,16 @@ describe("Gallery Component", () => {
     mockFetchAstroImages.mockResolvedValue([]);
   });
 
-  it("renders the gallery using store data", async () => {
+  it('renders the gallery using store data', async () => {
     // Mock API return
     mockFetchAstroImages.mockResolvedValue([
       {
         pk: 1,
-        name: "M31 Andromeda",
-        url: "test.jpg",
-        thumbnail_url: "thumb.jpg",
-        tags: ["deepsky", "galaxy"],
-        created_at: "2023-01-01",
+        name: 'M31 Andromeda',
+        url: 'test.jpg',
+        thumbnail_url: 'thumb.jpg',
+        tags: ['deepsky', 'galaxy'],
+        created_at: '2023-01-01',
       },
     ]);
 
@@ -62,30 +62,30 @@ describe("Gallery Component", () => {
       render(
         <MemoryRouter>
           <Gallery />
-        </MemoryRouter>,
+        </MemoryRouter>
       );
     });
 
     // Wait for load to complete
-    expect(await screen.findByText("Latest images")).toBeInTheDocument();
-    expect(await screen.findByText("M31 Andromeda")).toBeInTheDocument();
+    expect(await screen.findByText('Latest images')).toBeInTheDocument();
+    expect(await screen.findByText('M31 Andromeda')).toBeInTheDocument();
   });
 
-  it("filters images when category is selected", async () => {
+  it('filters images when category is selected', async () => {
     mockFetchAstroImages.mockResolvedValue([
       {
         pk: 1,
-        name: "Deep Sky Object",
-        url: "dso.jpg",
-        tags: ["deepsky"],
-        created_at: "2023-01-01",
+        name: 'Deep Sky Object',
+        url: 'dso.jpg',
+        tags: ['deepsky'],
+        created_at: '2023-01-01',
       },
       {
         pk: 2,
-        name: "Landscape Object",
-        url: "lands.jpg",
-        tags: ["astrolandscape"],
-        created_at: "2023-01-02",
+        name: 'Landscape Object',
+        url: 'lands.jpg',
+        tags: ['astrolandscape'],
+        created_at: '2023-01-02',
       },
     ]);
 
@@ -93,30 +93,30 @@ describe("Gallery Component", () => {
       render(
         <MemoryRouter>
           <Gallery />
-        </MemoryRouter>,
+        </MemoryRouter>
       );
     });
 
-    expect(await screen.findByText("Deep Sky Object")).toBeInTheDocument();
-    expect(screen.getByText("Landscape Object")).toBeInTheDocument();
+    expect(await screen.findByText('Deep Sky Object')).toBeInTheDocument();
+    expect(screen.getByText('Landscape Object')).toBeInTheDocument();
 
-    const filterBtn = screen.getByText("Deep Sky");
+    const filterBtn = screen.getByText('Deep Sky');
     fireEvent.click(filterBtn);
 
     // Filter logic is inside Gallery component using useMemo, not API call
     // Wait for update
     await waitFor(() => {
-      expect(screen.getByText("Deep Sky Object")).toBeInTheDocument();
-      expect(screen.queryByText("Landscape Object")).not.toBeInTheDocument();
+      expect(screen.getByText('Deep Sky Object')).toBeInTheDocument();
+      expect(screen.queryByText('Landscape Object')).not.toBeInTheDocument();
     });
   });
 
-  it("opens modal when image clicked", async () => {
+  it('opens modal when image clicked', async () => {
     mockFetchAstroImages.mockResolvedValue([
       {
         pk: 1,
-        name: "Test Image",
-        url: "test.jpg",
+        name: 'Test Image',
+        url: 'test.jpg',
         tags: [],
       },
     ]);
@@ -125,19 +125,19 @@ describe("Gallery Component", () => {
       render(
         <MemoryRouter>
           <Gallery />
-        </MemoryRouter>,
+        </MemoryRouter>
       );
     });
 
     expect(
-      await screen.findByLabelText("View details for Test Image"),
+      await screen.findByLabelText('View details for Test Image')
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText("View details for Test Image"));
+    fireEvent.click(screen.getByLabelText('View details for Test Image'));
 
-    expect(await screen.findByTestId("image-modal")).toBeInTheDocument();
+    expect(await screen.findByTestId('image-modal')).toBeInTheDocument();
   });
 
-  it("renders nothing if feature disabled and no images", async () => {
+  it('renders nothing if feature disabled and no images', async () => {
     useAppStore.setState({
       features: { lastimages: false },
       images: [],
@@ -147,10 +147,10 @@ describe("Gallery Component", () => {
       render(
         <MemoryRouter>
           <Gallery />
-        </MemoryRouter>,
+        </MemoryRouter>
       );
     });
 
-    expect(screen.queryByText("Latest images")).not.toBeInTheDocument();
+    expect(screen.queryByText('Latest images')).not.toBeInTheDocument();
   });
 });
