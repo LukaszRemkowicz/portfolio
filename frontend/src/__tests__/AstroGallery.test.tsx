@@ -12,6 +12,7 @@ jest.mock("../api/services", () => ({
   fetchAstroImage: jest.fn(),
   fetchEnabledFeatures: jest.fn(),
   fetchProfile: jest.fn(),
+  fetchTags: jest.fn(),
 }));
 
 import {
@@ -20,8 +21,10 @@ import {
   fetchAstroImage,
   fetchEnabledFeatures,
   fetchProfile,
+  fetchTags,
 } from "../api/services";
 import { useAppStore } from "../store/useStore";
+import { Tag } from "../types";
 
 /**
  * Test suite for the AstroGallery component
@@ -33,6 +36,7 @@ describe("AstroGallery Component", () => {
   const mockFetchAstroImage = fetchAstroImage as jest.MockedFunction<
     typeof fetchAstroImage
   >;
+  const mockFetchTags = fetchTags as jest.MockedFunction<typeof fetchTags>;
 
   const resetStore = () => {
     useAppStore.setState({
@@ -40,6 +44,7 @@ describe("AstroGallery Component", () => {
       backgroundUrl: null,
       images: [],
       projects: [],
+      tags: [],
       features: null,
       isInitialLoading: false,
       isImagesLoading: false,
@@ -64,6 +69,7 @@ describe("AstroGallery Component", () => {
       name: "Test",
       description: "Test",
     });
+    mockFetchTags.mockResolvedValue([]);
     resetStore();
   });
 
@@ -239,5 +245,67 @@ describe("AstroGallery Component", () => {
     expect(
       within(modal).getByText(/Test detailed description/),
     ).toBeInTheDocument();
+  });
+
+  it("renders tags in Sidebar and filters by them", async () => {
+    const mockTags: Tag[] = [
+      { name: "Nebula", slug: "nebula", count: 5 },
+      { name: "Galaxies", slug: "galaxies", count: 3 },
+    ];
+    mockFetchTags.mockResolvedValue(mockTags);
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route path="/" element={<AstroGallery />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    });
+
+    // Check tags are rendered
+    await waitFor(() => {
+      expect(screen.getByText(/Nebula/i)).toBeInTheDocument();
+      expect(screen.getByText(/Galaxies/i)).toBeInTheDocument();
+    });
+
+    // Click a tag
+    const nebulaTag = screen.getByText(/Nebula/i);
+    await act(async () => {
+      nebulaTag.click();
+    });
+
+    // Verify imagery is refetched with the tag filter
+    await waitFor(() => {
+      expect(fetchAstroImages).toHaveBeenCalledWith(
+        expect.objectContaining({ tag: "nebula" }),
+      );
+    });
+  });
+
+  it("refetches tags when category filter changes", async () => {
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route path="/" element={<AstroGallery />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    });
+
+    // Clear initial load call
+    mockFetchTags.mockClear();
+
+    const milkiWayFilter = screen.getByText(/Milky Way/i);
+    await act(async () => {
+      milkiWayFilter.click();
+    });
+
+    // Verify fetchTags was called with "Milky Way"
+    await waitFor(() => {
+      expect(fetchTags).toHaveBeenCalledWith("Milky Way");
+    });
   });
 });

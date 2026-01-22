@@ -45,7 +45,6 @@ const Contact: React.FC = () => {
   );
 
   const validateForm = useCallback((): boolean => {
-    // ... (rest of validateForm is same, just skipped for brevity logic)
     const errors: ValidationErrors = {};
     if (!formData.name || formData.name.trim().length < 2) {
       errors.name = ["Name must be at least 2 characters long."];
@@ -124,7 +123,6 @@ const Contact: React.FC = () => {
   return (
     <section id="contact" className={styles.section}>
       <div className={styles.container}>
-        {/* ... header ... */}
         <div className={styles.header}>
           <h2 className={styles.title}>Direct Inquiry</h2>
           <p className={styles.subtitle}>
@@ -133,7 +131,11 @@ const Contact: React.FC = () => {
         </div>
 
         <div className={styles.formWrapper}>
-          <form onSubmit={handleSubmit} className={styles.contactForm}>
+          <form
+            onSubmit={handleSubmit}
+            className={styles.contactForm}
+            aria-label="Contact Form"
+          >
             {/* Honeypot field */}
             <input
               type="text"
