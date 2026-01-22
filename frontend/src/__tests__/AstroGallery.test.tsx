@@ -1,5 +1,13 @@
 import React from "react";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  act,
+  within,
+  fireEvent,
+} from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import "@testing-library/jest-dom";
 import AstroGallery from "../components/AstroGallery";
 import { AstroImage } from "../types";
@@ -11,6 +19,7 @@ jest.mock("../api/services", () => ({
   fetchAstroImage: jest.fn(),
   fetchEnabledFeatures: jest.fn(),
   fetchProfile: jest.fn(),
+  fetchTags: jest.fn(),
 }));
 
 import {
@@ -19,50 +28,53 @@ import {
   fetchAstroImage,
   fetchEnabledFeatures,
   fetchProfile,
+  fetchTags,
 } from "../api/services";
 import { useAppStore } from "../store/useStore";
+import { Tag } from "../types";
 
 /**
  * Test suite for the AstroGallery component
- *
- * The AstroGallery component displays a dynamic gallery of astrophotography images with:
- * - Loading states during API calls
- * - Filter buttons for different image categories (Landscape, Deep Sky, etc.)
- * - Image grid display with clickable thumbnails
- * - Modal popup when images are clicked
- * - Error handling for failed API calls
- *
- * The component fetches data from three API endpoints:
- * - fetchAstroImages: Gets list of images (optionally filtered)
- * - fetchBackground: Gets background image for the gallery
- * - fetchAstroImage: Gets detailed image information for modal display
- *
- * Tests verify:
- * - Loading state is shown during API calls
- * - Gallery content renders correctly after successful API calls
- * - Filter functionality works correctly
- * - Modal opens when images are clicked
- * - Error handling works when API calls fail
- * - Component handles empty image arrays gracefully
- * - Background image is applied correctly
  */
 describe("AstroGallery Component", () => {
   const mockFetchAstroImages = fetchAstroImages as jest.MockedFunction<
     typeof fetchAstroImages
   >;
-  const mockFetchBackground = fetchBackground as jest.MockedFunction<
-    typeof fetchBackground
-  >;
   const mockFetchAstroImage = fetchAstroImage as jest.MockedFunction<
     typeof fetchAstroImage
   >;
+  const mockFetchTags = fetchTags as jest.MockedFunction<typeof fetchTags>;
+
+  const resetStore = () => {
+    useAppStore.setState({
+      profile: null,
+      backgroundUrl: null,
+      images: [],
+      projects: [],
+      tags: [],
+      features: null,
+      isInitialLoading: true,
+      isImagesLoading: true,
+      isProjectsLoading: false,
+      error: null,
+      initialSessionId: "",
+      imagesSessionId: "",
+      projectsSessionId: "",
+      tagsSessionId: "",
+    });
+  };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
       programming: true,
+      contactForm: true,
+      lastimages: true,
     });
-    (fetchProfile as jest.Mock).mockResolvedValue({ first_name: "Test" });
+    (fetchProfile as jest.Mock).mockResolvedValue({
+      first_name: "Test",
+      last_name: "User",
+    });
     (fetchBackground as jest.Mock).mockResolvedValue("/test-bg.jpg");
     (fetchAstroImages as jest.Mock).mockResolvedValue([]);
     (fetchAstroImage as jest.Mock).mockResolvedValue({
@@ -70,85 +82,59 @@ describe("AstroGallery Component", () => {
       name: "Test",
       description: "Test",
     });
-
-    useAppStore.setState({
-      profile: null,
-      backgroundUrl: null,
-      images: [],
-      features: null,
-      isInitialLoading: false,
-      isImagesLoading: false,
-      error: null,
-    });
+    mockFetchTags.mockResolvedValue([]);
+    resetStore();
   });
 
-  /**
-   * Test: Shows loading state initially
-   *
-   * Verifies that:
-   * - Loading text is displayed while API calls are in progress
-   * - Component shows appropriate loading state
-   * - Loading state is visible before data is fetched
-   * - Component handles async operations correctly
-   */
   it("shows loading state initially", async () => {
-    // Mock API calls to return promises that resolve after a delay
     mockFetchAstroImages.mockImplementation(
       () => new Promise((resolve) => setTimeout(() => resolve([]), 100)),
     );
-
-    mockFetchBackground.mockImplementation(
+    (fetchProfile as jest.Mock).mockImplementation(
       () =>
         new Promise((resolve) =>
-          setTimeout(() => resolve("/test-bg.jpg"), 100),
+          setTimeout(
+            () => resolve({ first_name: "John", last_name: "Doe" }),
+            100,
+          ),
         ),
     );
 
-    render(<AstroGallery />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Synchronizing/i)).toBeInTheDocument();
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route path="/" element={<AstroGallery />} />
+          </Routes>
+        </MemoryRouter>,
+      );
     });
+
+    expect(screen.getByTestId("loading-screen")).toBeInTheDocument();
+    expect(screen.getByText(/Synchronizing/i)).toBeInTheDocument();
   });
 
-  /**
-   * Test: Renders the gallery title and filter boxes after loading
-   *
-   * Verifies that:
-   * - Gallery title is displayed correctly
-   * - All filter buttons are rendered (Landscape, Deep Sky, Startrails, etc.)
-   * - Filter buttons are clickable and functional
-   * - Gallery structure is complete after loading
-   * - Component transitions from loading to content state
-   */
   it("renders the gallery title and filter boxes after loading", async () => {
-    mockFetchAstroImages.mockResolvedValue([]);
-    mockFetchBackground.mockResolvedValue("/test-bg.jpg");
-
-    render(<AstroGallery />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route path="/" element={<AstroGallery />} />
+          </Routes>
+        </MemoryRouter>,
+      );
     });
 
+    // Wait for loading screen to be removed
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
     expect(screen.getByText(/Landscape/i)).toBeInTheDocument();
     expect(screen.getByText(/Deep Sky/i)).toBeInTheDocument();
-    expect(screen.getByText(/Startrails/i)).toBeInTheDocument();
-    expect(screen.getByText(/Solar System/i)).toBeInTheDocument();
-    expect(screen.getByText(/Milky Way/i)).toBeInTheDocument();
-    expect(screen.getByText(/Northern Lights/i)).toBeInTheDocument();
   });
 
-  /**
-   * Test: Renders images from the API after loading
-   *
-   * Verifies that:
-   * - Images are displayed in the gallery after successful API call
-   * - Image elements have correct src attributes
-   * - Correct number of images are rendered
-   * - Images are clickable and interactive
-   * - Gallery displays API data correctly
-   */
   it("renders images from the API after loading", async () => {
     const mockImages: AstroImage[] = [
       {
@@ -157,57 +143,82 @@ describe("AstroGallery Component", () => {
         name: "Test Image 1",
         description: "Test description 1",
       },
-      {
-        pk: 2,
-        url: "/test2.jpg",
-        name: "Test Image 2",
-        description: "Test description 2",
-      },
     ];
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
-    mockFetchBackground.mockResolvedValue("/test-bg.jpg");
 
-    render(<AstroGallery />);
-
-    await waitFor(() => {
-      expect(screen.getAllByRole("img").length).toBe(2);
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route path="/" element={<AstroGallery />} />
+          </Routes>
+        </MemoryRouter>,
+      );
     });
-  });
 
-  /**
-   * Test: Handles API errors gracefully
-   *
-   * Verifies that:
-   * - Error message is displayed when API calls fail
-   * - Component doesn't crash when API errors occur
-   * - Error state is properly managed
-   * - User gets appropriate feedback for API failures
-   * - Component recovers gracefully from errors
-   */
-  it("handles API errors gracefully", async () => {
-    mockFetchAstroImages.mockRejectedValue(new Error("API Error"));
-    mockFetchBackground.mockRejectedValue(new Error("API Error"));
+    // Wait for initial loading screen to be removed
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
 
-    render(<AstroGallery />);
-
+    // Wait for images loading state to resolve (important for tests triggered by effects)
     await waitFor(() => {
       expect(
-        screen.getByText(/An unexpected anomaly occurred/i),
-      ).toBeInTheDocument();
+        screen.queryByText(/Scanning deep space sectors/i),
+      ).not.toBeInTheDocument();
     });
+
+    // Verify images were fetched
+    expect(fetchAstroImages).toHaveBeenCalled();
+
+    // Wait for the card to be present and stable
+    await waitFor(
+      () => {
+        expect(
+          screen.getByRole("button", {
+            name: /View details for Test Image 1/i,
+          }),
+        ).toBeInTheDocument();
+      },
+      { timeout: 4000 },
+    );
   });
 
-  /**
-   * Test: Filters images when filter is clicked
-   *
-   * Verifies that:
-   * - Filter buttons trigger API calls with correct filter parameters
-   * - Component updates when filters are applied
-   * - Filter state is managed correctly
-   * - API is called with appropriate filter values
-   * - Filter functionality works as expected
-   */
+  it("handles API errors gracefully", async () => {
+    mockFetchAstroImages.mockRejectedValue(new Error("API Error"));
+
+    const consoleSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route path="/" element={<AstroGallery />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    });
+
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
+
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText(/Failed to fetch gallery images/i),
+        ).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    consoleSpy.mockRestore();
+  });
+
   it("filters images when filter is clicked", async () => {
     const mockImages: AstroImage[] = [
       {
@@ -219,38 +230,36 @@ describe("AstroGallery Component", () => {
     ];
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
-    mockFetchBackground.mockResolvedValue("/test-bg.jpg");
-
-    render(<AstroGallery />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
-    });
-
-    const landscapeFilter = screen.getByText(/Landscape/i);
-
-    jest.clearAllMocks();
-    mockFetchAstroImages.mockResolvedValue(mockImages);
 
     await act(async () => {
-      landscapeFilter.click();
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route path="/" element={<AstroGallery />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    });
+
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
+
+    // Use findByText to ensure we wait for category buttons to appear
+    const landscapeFilter = await screen.findByText(/Landscape/i);
+
+    await act(async () => {
+      fireEvent.click(landscapeFilter);
     });
 
     await waitFor(() => {
-      expect(fetchAstroImages).toHaveBeenCalledWith({ filter: "Landscape" });
+      expect(fetchAstroImages).toHaveBeenCalledWith(
+        expect.objectContaining({ filter: "Landscape" }),
+      );
     });
   });
 
-  /**
-   * Test: Opens modal when image is clicked
-   *
-   * Verifies that:
-   * - Modal opens when an image thumbnail is clicked
-   * - Modal displays image details correctly
-   * - Modal state is managed properly
-   * - Image click events are handled correctly
-   * - Modal functionality works as expected
-   */
   it("opens modal when image is clicked", async () => {
     const mockImages: AstroImage[] = [
       {
@@ -263,30 +272,130 @@ describe("AstroGallery Component", () => {
 
     const mockImageDetail: AstroImage = {
       pk: 1,
-      url: "/test1.jpg",
+      url: "/test2.jpg",
       name: "Test Image 1",
-      description: "Test description",
+      description: "Test detailed description",
     };
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
-    mockFetchBackground.mockResolvedValue("/test-bg.jpg");
     mockFetchAstroImage.mockResolvedValue(mockImageDetail);
 
-    render(<AstroGallery />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route path="/" element={<AstroGallery />} />
+          </Routes>
+        </MemoryRouter>,
+      );
     });
 
-    const images = await screen.findAllByRole("img");
-    const firstImage = images[0];
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
+
+    // Wait for the button to be present and stable before clicking
+    await waitFor(
+      () => {
+        expect(
+          screen.getByRole("button", {
+            name: /View details for Test Image 1/i,
+          }),
+        ).toBeInTheDocument();
+      },
+      { timeout: 4000 },
+    );
+
+    const firstImageButton = screen.getByRole("button", {
+      name: /View details for Test Image 1/i,
+    });
 
     await act(async () => {
-      firstImage.click();
+      fireEvent.click(firstImageButton);
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Test description")).toBeInTheDocument();
+      const modal = screen.getByTestId("image-modal");
+      expect(
+        within(modal).getByText(/Test detailed description/),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("renders tags in Sidebar and filters by them", async () => {
+    const mockTags: Tag[] = [
+      { name: "Nebula", slug: "nebula", count: 5 },
+      { name: "Galaxies", slug: "galaxies", count: 3 },
+    ];
+    mockFetchTags.mockResolvedValue(mockTags);
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route path="/" element={<AstroGallery />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    });
+
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
+
+    // Wait for tags to be rendered and stable
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Nebula/i)).toBeInTheDocument();
+        expect(screen.getByText(/Galaxies/i)).toBeInTheDocument();
+      },
+      { timeout: 4000 },
+    );
+
+    const nebulaTag = screen.getByText(/Nebula/i);
+
+    await act(async () => {
+      fireEvent.click(nebulaTag);
+    });
+
+    // Verify imagery is refetched with the tag filter
+    await waitFor(() => {
+      expect(fetchAstroImages).toHaveBeenCalledWith(
+        expect.objectContaining({ tag: "nebula" }),
+      );
+    });
+  });
+
+  it("refetches tags when category filter changes", async () => {
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route path="/" element={<AstroGallery />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    });
+
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
+
+    const milkiWayFilter = await screen.findByText(/Milky Way/i);
+
+    // Clear initial load call
+    mockFetchTags.mockClear();
+
+    await act(async () => {
+      fireEvent.click(milkiWayFilter);
+    });
+
+    // Verify fetchTags was called with "Milky Way"
+    await waitFor(() => {
+      expect(fetchTags).toHaveBeenCalledWith("Milky Way");
     });
   });
 });

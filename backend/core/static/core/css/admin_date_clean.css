@@ -1,0 +1,79 @@
+/* Premium Date Picker for Django Admin - Matching Select2 Theme */
+
+/* Container for the date range fields to ensure proper alignment */
+.field-adventure_date .flex-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+input[type="date"] {
+    position: relative;
+    cursor: pointer;
+    min-width: 180px;
+    height: 44px;
+    padding: 0 15px;
+    font-size: 14px;
+    font-family: inherit;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background-color: #ffffff;
+    color: #333;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+/* Dark Mode Support - Django Admin */
+[data-theme="dark"] input[type="date"] {
+    background-color: #1a1a1a;
+    border-color: #333;
+    color: #e0e0e0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Hover & Focus States */
+input[type="date"]:hover {
+    border-color: #bbb;
+}
+
+[data-theme="dark"] input[type="date"]:hover {
+    border-color: #444;
+}
+
+input[type="date"]:focus {
+    outline: none;
+    border-color: #79aec8;
+    box-shadow: 0 0 0 4px rgba(121, 174, 200, 0.15);
+}
+
+/* Hide the native calendar icon in Chrome/Safari/Edge but keep the click behavior */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    background: transparent;
+    bottom: 0;
+    color: transparent;
+    cursor: pointer;
+    height: auto;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: auto;
+    display: block;
+    -webkit-appearance: none;
+}
+
+/* Hide inner browser elements for a cleaner look */
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-clear-button {
+    display: none;
+    -webkit-appearance: none;
+}
+
+/* Firefox specific clean-up */
+@-moz-document url-prefix() {
+    input[type="date"] {
+        padding-right: 15px;
+    }
+}

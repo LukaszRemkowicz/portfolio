@@ -8,6 +8,9 @@ import {
   ContactFormData,
   FilterParams,
   EnabledFeatures,
+  Project,
+  MainPageLocation,
+  Tag,
 } from "../types";
 import { NotFoundError } from "./errors";
 
@@ -127,6 +130,17 @@ export const fetchContact = async (
   return handleResponse<void>(response);
 };
 
+export const fetchTags = async (category_filter?: string): Promise<Tag[]> => {
+  const params: { filter?: string } = {};
+  if (category_filter) {
+    params.filter = category_filter;
+  }
+  const response: AxiosResponse<Tag[]> = await api.get(API_ROUTES.tags, {
+    params,
+  });
+  return handleResponse<Tag[]>(response);
+};
+
 export const fetchEnabledFeatures = async (): Promise<EnabledFeatures> => {
   try {
     const response: AxiosResponse<EnabledFeatures> = await api.get(
@@ -139,4 +153,38 @@ export const fetchEnabledFeatures = async (): Promise<EnabledFeatures> => {
     // Return empty object on error - safer than crashing
     return {};
   }
+};
+export const fetchProjects = async (): Promise<Project[]> => {
+  const response: AxiosResponse<Project[]> = await api.get(API_ROUTES.projects);
+  const data = handleResponse<Project[]>(response);
+  if (Array.isArray(data)) {
+    return data.map((project) => ({
+      ...project,
+      images: project.images.map((image) => ({
+        ...image,
+        url: getMediaUrl(image.url) || "",
+        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+      })),
+    }));
+  }
+  return data;
+};
+
+export const fetchTravelHighlights = async (): Promise<MainPageLocation[]> => {
+  const response: AxiosResponse<MainPageLocation[]> = await api.get(
+    API_ROUTES.travelHighlights,
+  );
+  const data = handleResponse<MainPageLocation[]>(response);
+
+  if (Array.isArray(data)) {
+    return data.map((slider) => ({
+      ...slider,
+      images: slider.images.map((image) => ({
+        ...image,
+        url: getMediaUrl(image.url) || "",
+        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+      })),
+    }));
+  }
+  return [];
 };

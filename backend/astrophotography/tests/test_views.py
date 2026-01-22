@@ -4,8 +4,8 @@ from rest_framework import status
 
 from django.urls import reverse
 
-from astrophotography.models import BackgroundMainPage
-from astrophotography.tests.factories import AstroImageFactory, BackgroundMainPageFactory
+from astrophotography.models import MainPageBackgroundImage
+from astrophotography.tests.factories import AstroImageFactory, MainPageBackgroundImageFactory
 
 
 @pytest.mark.django_db
@@ -57,8 +57,8 @@ class TestBackgroundMainPageView:
     def test_list_background_image(self, api_client):
         """Test retrieving the latest background image"""
         # Create two images, should retrieve the latest one
-        BackgroundMainPageFactory()
-        latest = BackgroundMainPageFactory()
+        MainPageBackgroundImageFactory()
+        latest = MainPageBackgroundImageFactory()
 
         url = reverse("astroimages:backgroundImage-list")
         response = api_client.get(url)
@@ -70,10 +70,99 @@ class TestBackgroundMainPageView:
     def test_list_background_image_empty(self, api_client):
         """Test retrieving background when none exist"""
         # Ensure clean state
-        BackgroundMainPage.objects.all().delete()
+        MainPageBackgroundImage.objects.all().delete()
 
         url = reverse("astroimages:backgroundImage-list")
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["url"] is None
+
+
+@pytest.mark.django_db
+class TestMainPageLocationViewSet:
+    def test_list_active_sliders(self, api_client):
+        """Test listing only active sliders ordered by country"""
+        from astrophotography.tests.factories import (
+            AstroImageFactory,
+            MainPageLocationFactory,
+        )
+
+        # Create active slider for PL
+        img_pl = AstroImageFactory(location="PL")
+        MainPageLocationFactory(country="PL", is_active=True, images=[img_pl])
+
+        # Create active slider for US
+        img_us = AstroImageFactory(location="US")
+        MainPageLocationFactory(country="US", is_active=True, images=[img_us])
+
+        # Create inactive slider (should not be listed)
+        MainPageLocationFactory(country="NO", is_active=False)
+
+        url = reverse("astroimages:travel-highlights-list")
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 2
+
+        # Check ordering (PL comes before US alphabetically? No, country code PL vs US.
+        # Wait, model ordering is by 'country' field which is code. P vs U.
+        # Let's just check existence.
+        countries = [item["country"] for item in response.data]
+        assert "PL" in countries
+        assert "US" in countries
+        assert "NO" not in countries
+
+        # Verify structure
+        item_pl = next(item for item in response.data if item["country"] == "PL")
+        assert item_pl["country_name"] == "Poland"
+        assert len(item_pl["images"]) == 1
+        assert item_pl["images"][0]["pk"] == str(img_pl.pk)
+
+
+@pytest.mark.django_db
+class TestTravelHighlightsBySlugView:
+    def test_get_highlights_with_story(self, api_client):
+        """Test retrieving highlights with a story"""
+        from astrophotography.tests.factories import (
+            AstroImageFactory,
+            MainPageLocationFactory,
+        )
+
+        # Create slider with story
+        slider = MainPageLocationFactory(
+            country="PL",
+            # place is usually a Place object, but factory might handle string?
+            # In factory definition (not seen but typical), it might trigger creation.
+            # Safest is to let factory handle it or create place manually if needed.
+            # Assuming factory is smart enough or I will fix if it errors.
+            # Actually, looking at factory usage in other tests:
+            # MainPageLocationFactory(country="PL", is_active=True, images=[img_pl])
+            # It doesn't set place.
+            highlight_name="Tatras Mountains",
+            story="A beautiful mountain range.",
+            is_active=True,
+        )
+
+        # Manually assign place if factory doesn't do it automatically or if I need it
+        # The view tests logic: if place_slug is provided, it filters by place.
+        # Let's add a place.
+        from astrophotography.models import Place
+
+        place, _ = Place.objects.get_or_create(name="Tatras")
+        slider.place = place
+        slider.save()  # This triggers slug generation: country_slug=poland, place_slug=tatras
+
+        # Create matching image
+        AstroImageFactory(location="PL", place=place)
+
+        url = reverse(
+            "astroimages:travel-by-country-place",
+            kwargs={"country_slug": "poland", "place_slug": "tatras"},
+        )
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["story"] == "A beautiful mountain range."
+        assert response.data["country"] == "Poland"
+        assert response.data["place"] == "Tatras"

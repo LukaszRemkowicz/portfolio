@@ -1,5 +1,5 @@
 module.exports = {
-  // setupFilesAfterEnv removed - each test file imports jest-dom directly
+  setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"],
   testMatch: [
     "<rootDir>/src/__tests__/**/*.test.{js,jsx,ts,tsx}",
     "<rootDir>/src/**/*.test.{js,jsx,ts,tsx}",
@@ -17,6 +17,11 @@ module.exports = {
     "src/**/*.{js,jsx,ts,tsx}",
     "!src/__tests__/**",
     "!src/index.{js,jsx,ts,tsx}",
+    "!src/reportWebVitals.ts",
+    "!src/setupTests.ts",
+    "!src/types/**/*.ts",
+    "!src/config.ts",
+    "!src/**/*.d.ts",
   ],
   transform: {
     "^.+\\.(ts|tsx)$": [

@@ -2,60 +2,84 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Landing Page", () => {
   test.beforeEach(async ({ page }) => {
-    // Mock the features endpoint to enable contact form
-    await page.route("**/api/v1/whats-enabled/", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ contactForm: true, programming: true }),
-      });
-    });
+    // Catch-all mock for API v1
+    await page.route("**/api/v1/**", async (route) => {
+      const url = route.request().url();
 
-    // Mock images to ensure gallery has content
-    await page.route("**/api/v1/astro-images*", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          {
-            pk: 1,
-            name: "Test Galaxy",
-            url: "https://via.placeholder.com/150",
-            thumbnail_url: "https://via.placeholder.com/150",
-            description: "A test galaxy far away",
-            capture_date: "2023-01-01",
-            location: "Backyard",
-            tags: ["Galaxy", "Deep Sky"],
-          },
-          {
-            pk: 2,
-            name: "Test Nebula",
-            url: "https://via.placeholder.com/150",
-            thumbnail_url: "https://via.placeholder.com/150",
-            description: "A test nebula",
-            capture_date: "2023-01-02",
-            location: "Mountain",
-            tags: ["Nebula"],
-          },
-        ]),
-      });
-    });
+      if (url.includes("/profile/")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            first_name: "Test",
+            last_name: "User",
+            short_description: "Sky Hunter",
+          }),
+        });
+      }
 
-    // Mock individual image details if needed (modal fetch)
-    await page.route("**/api/v1/astro-images/1/", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          pk: 1,
-          name: "Test Galaxy",
-          url: "https://via.placeholder.com/600",
-          description: "Detailed description of test galaxy",
-          capture_date: "2023-01-01",
-          location: "Backyard",
-          tags: ["Galaxy", "Deep Sky"],
-        }),
-      });
+      if (url.includes("/background/")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            url: "https://via.placeholder.com/1920x1080",
+          }),
+        });
+      }
+
+      if (url.includes("/whats-enabled/")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            contactForm: true,
+            programming: true,
+            gallery: true,
+            lastimages: true,
+          }),
+        });
+      }
+
+      if (url.includes("/image/")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([
+            {
+              pk: 1,
+              name: "Test Galaxy",
+              url: "https://via.placeholder.com/800x600",
+              thumbnail_url: "https://via.placeholder.com/200x150",
+              description: "A test galaxy far away",
+              capture_date: "2023-01-01",
+              location: "Backyard",
+              tags: ["Galaxy", "Deep Sky"],
+            },
+            {
+              pk: 2,
+              name: "Test Nebula",
+              url: "https://via.placeholder.com/800x600",
+              thumbnail_url: "https://via.placeholder.com/200x150",
+              description: "A test nebula",
+              capture_date: "2023-01-02",
+              location: "Mountain",
+              tags: ["Nebula"],
+            },
+          ]),
+        });
+      }
+
+      // Default fallback for other API calls (like /contact/ which might be handled in the test itself)
+      if (route.request().method() === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([]),
+        });
+      }
+
+      return route.continue();
     });
 
     await page.goto("/");
@@ -82,45 +106,65 @@ test.describe("Landing Page", () => {
 
     // Go back to home - click the logo
     await page.click('nav a:has-text("Łukasz Remkowicz")');
-    await expect(page).toHaveURL("https://portfolio.local/");
+    await expect(page).toHaveURL("http://localhost:3000/");
   });
 
   test("should open image modal in gallery", async ({ page }) => {
-    // Wait for images to load - match any image in the grid
-    // The grid container usually has a class with 'grid'
-    const firstImage = page.locator('div[class*="grid"] img').first();
+    // Wait for images to load
+    const firstImage = page
+      .getByRole("button", { name: /View details for/ })
+      .first();
     await expect(firstImage).toBeVisible({ timeout: 20000 });
 
     // Click on the first image - use force to skip pointer-events issues
     await firstImage.click({ force: true });
 
-    // Modal should be visible - check for any overlay or modal class
-    const modal = page.locator('[class*="modalOverlay"], [class*="modal"]');
-    await expect(modal.first()).toBeVisible({ timeout: 10000 });
+    // Modal should be visible
+    const modal = page.getByTestId("image-modal");
+    await expect(modal).toBeVisible({ timeout: 10000 });
 
     // Close modal
     await page.keyboard.press("Escape");
-    await expect(modal.first()).not.toBeVisible();
+    await expect(modal).not.toBeVisible();
   });
 
-  test("should validate contact form", async ({ page }) => {
-    // Scroll to contact - using the actual title
+  test("should submit contact form", async ({ page }) => {
+    // Mock the contact endpoint
+    await page.route("**/api/v1/contact/", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true }),
+      });
+    });
+
+    // Scroll to contact
     const contactHeading = page.locator('h2:has-text("Direct Inquiry")');
     await expect(contactHeading).toBeVisible();
     await contactHeading.scrollIntoViewIfNeeded();
 
-    // Check if the form is there
-    const emailInput = page.locator('input[type="email"]');
-    await expect(emailInput).toBeVisible();
-
-    // Try to submit empty form
-    await page.click('button[type="submit"]');
-
-    // Check for some feedback (required attribute or error message)
-    const nameInput = page.locator('input[name="name"]');
-    const validationMessage = await nameInput.evaluate(
-      (node: HTMLInputElement) => node.validationMessage,
+    // Fill form
+    await page.fill('#contact input[name="name"]', "Test User", {
+      force: true,
+    });
+    await page.fill('#contact input[name="email"]', "test@example.com", {
+      force: true,
+    });
+    await page.fill('#contact input[name="subject"]', "Test Subject", {
+      force: true,
+    });
+    await page.fill(
+      '#contact textarea[name="message"]',
+      "This is a test message longer than 10 chars.",
+      { force: true },
     );
-    expect(validationMessage).not.toBe("");
+
+    // Submit
+    await page.click('#contact button[type="submit"]');
+
+    // Check for success message
+    await expect(
+      page.locator("text=Thank you! Your message has been sent successfully."),
+    ).toBeVisible();
   });
 });

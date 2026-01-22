@@ -30,6 +30,12 @@ export interface BackgroundImage {
   url?: string;
 }
 
+export interface EquipmentItem {
+  id: number;
+  model?: string;
+  name?: string;
+}
+
 export interface AstroImage {
   pk: number;
   url: string;
@@ -40,12 +46,40 @@ export interface AstroImage {
   created_at?: string;
   capture_date?: string;
   location?: string;
-  equipment?: string;
+  telescope?: EquipmentItem[] | string[];
+  camera?: EquipmentItem[] | string[];
+  tracker?: EquipmentItem[] | string[];
+  tripod?: EquipmentItem[] | string[];
+  lens?: EquipmentItem[] | string[];
   exposure_details?: string;
   processing_details?: string;
   celestial_object?: string;
   astrobin_url?: string;
 }
+
+export interface Tag {
+  name: string;
+  slug: string;
+  count: number;
+}
+
+export interface MainPageLocation {
+  pk: number;
+  country: string;
+  country_name: string;
+  country_slug: string;
+  place_name: string | null;
+  place_slug: string | null;
+  highlight_name?: string;
+  adventure_date?: string;
+  story?: string;
+  background_image?: string | null;
+  background_image_thumbnail?: string | null;
+  created_at: string;
+  images: AstroImage[];
+}
+
+export type LocationResponse = MainPageLocation[];
 
 export interface ContactFormData {
   name: string;
@@ -66,13 +100,33 @@ export interface ValidationErrors {
   subject?: string[];
   message?: string[];
 }
-
 export type SubmitStatus =
   | "success"
   | "validation_error"
   | "rate_limited"
   | "error"
   | null;
+
+export interface ProjectImage {
+  pk: number;
+  url: string;
+  thumbnail_url?: string;
+  is_cover: boolean;
+  name: string;
+}
+
+export interface Project {
+  pk: number;
+  name: string;
+  description: string;
+  technologies: string;
+  technologies_list: string[];
+  github_url?: string;
+  live_url?: string;
+  images: ProjectImage[];
+  created_at: string;
+  updated_at: string;
+}
 
 // Component Props Types
 export interface HomeProps {
@@ -100,6 +154,8 @@ export interface MainLayoutProps {
 
 export interface FilterParams {
   filter?: string;
+  tag?: string;
+  travel?: string;
   limit?: number;
 }
 
@@ -131,6 +187,9 @@ export interface ApiError {
 export interface EnabledFeatures {
   programming?: boolean;
   contactForm?: boolean;
+  lastimages?: boolean;
+  travelHighlights?: boolean;
+  meteors?: boolean;
 }
 
 export interface ApiRoutes {
@@ -140,6 +199,10 @@ export interface ApiRoutes {
   astroImage: string;
   contact: string;
   whatsEnabled: string;
+  projects: string;
+  travelHighlights: string;
+  travelBySlug: string;
+  tags: string;
 }
 
 // Legacy Gallery Item (for old gallery data structure)

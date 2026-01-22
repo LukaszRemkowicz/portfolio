@@ -5,6 +5,8 @@ from typing import Any, cast
 
 import environ
 
+from django.utils.translation import gettext_lazy as _
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -86,6 +88,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     # Third party apps
     "rest_framework",
     "corsheaders",
@@ -95,17 +98,23 @@ INSTALLED_APPS = [
     "programming.apps.ProgrammingConfig",
     "inbox.apps.InboxConfig",
     "taggit",
+    "django_countries",
+    "django_select2",
+    "django_ckeditor_5",
+    "core",
 ]
 
 # Security Settings (for Nginx SSL termination)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 MIDDLEWARE = [
+    "django.middleware.gzip.GZipMiddleware",  # Must be near the top
     "corsheaders.middleware.CorsMiddleware",  # Must be before CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
     "inbox.middleware.ContactFormKillSwitchMiddleware",
     # Check kill switch early (after security, before sessions)
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",  # Enable language selection
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -173,6 +182,18 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
+# Supported languages
+
+LANGUAGES = [
+    ("en", _("English")),
+    ("pl", _("Polish")),
+]
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, "core", "locale"),
+    os.path.join(BASE_DIR, "astrophotography", "locale"),
+]
+
 TIME_ZONE = "UTC"
 
 USE_I18N = True
@@ -190,15 +211,25 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# Cache Configuration (for rate limiting and throttling)
+# Cache Configuration (Redist for production-grade caching)
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "unique-snowflake",
-        "TIMEOUT": 3600,  # 1 hour default timeout
-        "OPTIONS": {"MAX_ENTRIES": 10000},
-    }
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env.str("REDIS_URL", default="redis://redis:6379/1"),
+        "TIMEOUT": 3600,
+    },
+    "select2": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env.str("REDIS_URL", default="redis://redis:6379/2"),
+        "TIMEOUT": 3600,
+    },
 }
+
+# Django Select2 Configuration
+SELECT2_CACHE_BACKEND = "select2"
+# Disable i18n file loading for English (default locale) to prevent TypeError
+# when i18n file loads before Select2 itself
+SELECT2_I18N = "none"
 
 # File Upload Settings
 FILE_UPLOAD_PERMISSIONS = 0o644
@@ -208,6 +239,47 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Logging Configuration
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "INFO" if not DEBUG else "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+        "file": {
+            "level": "ERROR",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(BASE_DIR, "django_error.log"),
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "core": {
+            "handlers": ["console", "file"],
+            "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": True,
+        },
+    },
+}
 
 # Rest Framework Settings
 REST_FRAMEWORK = {
@@ -258,3 +330,76 @@ EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default=cast(Any, ""))
 EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default=cast(Any, ""))
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="noreply@example.com")
 CONTACT_EMAIL = env.str("CONTACT_EMAIL", default="admin@example.com")
+
+# CKEditor 5 Configuration
+CKEDITOR_5_CONFIGS = {
+    "default": {
+        "toolbar": [
+            "heading",
+            "|",
+            "bold",
+            "italic",
+            "link",
+            "bulletedList",
+            "numberedList",
+            "blockQuote",
+            "imageUpload",
+        ],
+    },
+    "extends": {
+        "blockToolbar": [
+            "paragraph",
+            "heading1",
+            "heading2",
+            "heading3",
+            "|",
+            "bulletedList",
+            "numberedList",
+            "|",
+            "blockQuote",
+        ],
+        "toolbar": [
+            "heading",
+            "|",
+            "outdent",
+            "indent",
+            "|",
+            "bold",
+            "italic",
+            "link",
+            "underline",
+            "strikethrough",
+            "code",
+            "|",
+            "codeBlock",
+            "sourceEditing",
+            "insertImage",
+            "bulletedList",
+            "numberedList",
+            "todoList",
+            "|",
+            "blockQuote",
+            "imageUpload",
+            "|",
+            "fontSize",
+            "fontFamily",
+            "fontColor",
+            "fontBackgroundColor",
+            "mediaEmbed",
+            "removeFormat",
+            "insertTable",
+        ],
+        "image": {
+            "toolbar": [
+                "imageTextAlternative",
+                "|",
+                "imageStyle:alignLeft",
+                "imageStyle:alignCenter",
+                "imageStyle:alignRight",
+            ],
+            "styles": ["alignLeft", "alignCenter", "alignRight"],
+        },
+    },
+}
+
+CKEDITOR_5_CUSTOM_CSS = "css/ckeditor_admin_fix.css"

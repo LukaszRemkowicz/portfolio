@@ -16,6 +16,10 @@ export const API_ROUTES: ApiRoutes = {
   astroImage: "/api/v1/image/:id/",
   contact: "/api/v1/contact/",
   whatsEnabled: `${API_V1}/whats-enabled/`,
+  projects: "/api/v1/projects/",
+  travelHighlights: "/api/v1/travel-highlights/",
+  travelBySlug: `${API_V1}/travel/`,
+  tags: "/api/v1/tags/",
 };
 
 // Centralized asset fallbacks

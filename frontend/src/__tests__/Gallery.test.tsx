@@ -1,75 +1,156 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  act,
+} from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
 import Gallery from "../components/Gallery";
-import { fetchEnabledFeatures } from "../api/services";
 import { useAppStore } from "../store/useStore";
+import { fetchAstroImages } from "../api/services";
 
-// Mock the services
+// Mock Services
 jest.mock("../api/services", () => ({
-  fetchEnabledFeatures: jest.fn(),
-  fetchAstroImages: jest.fn().mockResolvedValue([
-    {
-      pk: 1,
-      name: "M31 Andromeda",
-      celestial_object: "Galaxy",
-      url: "test.jpg",
+  fetchAstroImages: jest.fn().mockResolvedValue([]),
+  fetchBackground: jest.fn().mockResolvedValue(null),
+  fetchEnabledFeatures: jest.fn().mockResolvedValue({}),
+  fetchAstroImage: jest.fn().mockResolvedValue({
+    camera_settings: {
+      focal_length: "50mm",
+      aperture: "f/2.8",
+      iso: "1600",
+      shutter_speed: "30s",
     },
-    {
-      pk: 2,
-      name: "Milky Way Core",
-      celestial_object: "Nebula",
-      url: "test2.jpg",
-    },
-  ]),
-  fetchAstroImage: jest.fn(),
+    equipment: [],
+    software: [],
+  }),
+  fetchProfile: jest.fn().mockResolvedValue({}),
 }));
 
 describe("Gallery Component", () => {
+  const mockFetchAstroImages = fetchAstroImages as jest.Mock;
+
   beforeEach(() => {
     jest.clearAllMocks();
     useAppStore.setState({
-      profile: null,
-      backgroundUrl: null,
       images: [],
-      features: null,
-      isInitialLoading: false,
       isImagesLoading: false,
       error: null,
+      features: { lastimages: true },
     });
+    // Default successful fetch to avoid unhandled rejections if store calls it
+    mockFetchAstroImages.mockResolvedValue([]);
   });
 
-  it("renders the gallery with the new portfolio title", async () => {
-    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
-      programming: true,
-    });
-    render(
-      <BrowserRouter>
-        <Gallery />
-      </BrowserRouter>,
-    );
+  it("renders the gallery using store data", async () => {
+    // Mock API return
+    mockFetchAstroImages.mockResolvedValue([
+      {
+        pk: 1,
+        name: "M31 Andromeda",
+        url: "test.jpg",
+        thumbnail_url: "thumb.jpg",
+        tags: ["deepsky", "galaxy"],
+        created_at: "2023-01-01",
+      },
+    ]);
 
-    expect(screen.getByText("Latest images")).toBeInTheDocument();
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <Gallery />
+        </MemoryRouter>,
+      );
+    });
+
+    // Wait for load to complete
+    expect(await screen.findByText("Latest images")).toBeInTheDocument();
+    expect(await screen.findByText("M31 Andromeda")).toBeInTheDocument();
+  });
+
+  it("filters images when category is selected", async () => {
+    mockFetchAstroImages.mockResolvedValue([
+      {
+        pk: 1,
+        name: "Deep Sky Object",
+        url: "dso.jpg",
+        tags: ["deepsky"],
+        created_at: "2023-01-01",
+      },
+      {
+        pk: 2,
+        name: "Landscape Object",
+        url: "lands.jpg",
+        tags: ["astrolandscape"],
+        created_at: "2023-01-02",
+      },
+    ]);
+
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <Gallery />
+        </MemoryRouter>,
+      );
+    });
+
+    expect(await screen.findByText("Deep Sky Object")).toBeInTheDocument();
+    expect(screen.getByText("Landscape Object")).toBeInTheDocument();
+
+    const filterBtn = screen.getByText("Deep Sky");
+    fireEvent.click(filterBtn);
+
+    // Filter logic is inside Gallery component using useMemo, not API call
+    // Wait for update
     await waitFor(() => {
-      expect(screen.getByText("M31 Andromeda")).toBeInTheDocument();
-      expect(screen.getByText("Milky Way Core")).toBeInTheDocument();
+      expect(screen.getByText("Deep Sky Object")).toBeInTheDocument();
+      expect(screen.queryByText("Landscape Object")).not.toBeInTheDocument();
     });
   });
 
-  it("renders filter buttons", async () => {
-    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
-      programming: true,
-    });
-    render(
-      <BrowserRouter>
-        <Gallery />
-      </BrowserRouter>,
-    );
+  it("opens modal when image clicked", async () => {
+    mockFetchAstroImages.mockResolvedValue([
+      {
+        pk: 1,
+        name: "Test Image",
+        url: "test.jpg",
+        tags: [],
+      },
+    ]);
 
-    expect(screen.getByText("All Works")).toBeInTheDocument();
-    expect(screen.getByText("Deep Sky")).toBeInTheDocument();
-    expect(screen.getByText("Astrolandscape")).toBeInTheDocument();
-    expect(screen.getByText("Timelapses")).toBeInTheDocument();
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <Gallery />
+        </MemoryRouter>,
+      );
+    });
+
+    expect(
+      await screen.findByLabelText("View details for Test Image"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("View details for Test Image"));
+
+    expect(await screen.findByTestId("image-modal")).toBeInTheDocument();
+  });
+
+  it("renders nothing if feature disabled and no images", async () => {
+    useAppStore.setState({
+      features: { lastimages: false },
+      images: [],
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <Gallery />
+        </MemoryRouter>,
+      );
+    });
+
+    expect(screen.queryByText("Latest images")).not.toBeInTheDocument();
   });
 });

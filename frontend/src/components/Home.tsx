@@ -6,11 +6,12 @@ import ShootingStars from "./ShootingStars";
 
 const Home: React.FC<HomeProps> = ({
   portraitUrl,
-  shortDescription,
+  shortDescription = "I am a professional astrophotographer capturing the silent majesty of deep-space phenomena. My work bridges the gap between scientific observation and cinematic fine art.",
   backgroundUrl,
 }) => {
   return (
-    <header
+    <section
+      id="home"
       className={styles.heroSection}
       style={
         backgroundUrl
@@ -29,10 +30,7 @@ const Home: React.FC<HomeProps> = ({
           The Beauty of <br />
           <span className={styles.heroTitleAccent}>Ancient Light.</span>
         </h1>
-        <p className={styles.heroDescription}>
-          {shortDescription ||
-            "I am a professional astrophotographer capturing the silent majesty of deep-space phenomena. My work bridges the gap between scientific observation and cinematic fine art."}
-        </p>
+        <p className={styles.heroDescription}>{shortDescription}</p>
 
         {portraitUrl && (
           <div className={styles.portraitWrapper}>
@@ -56,7 +54,7 @@ const Home: React.FC<HomeProps> = ({
           </a>
         </div>
       </div>
-    </header>
+    </section>
   );
 };
 

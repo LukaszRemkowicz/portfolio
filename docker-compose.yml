@@ -20,6 +20,7 @@ x-backend-common: &backend-common
     PYTHONPATH: "."
   depends_on:
     - db
+    - redis
 
 services:
   portfolio-fe:
@@ -71,6 +72,15 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      portfolio_network:
+        ipv4_address: 172.10.0.6
+    ports:
+      - "6379:6379"
 
   portfolio-nginx:
     image: nginx:1.25

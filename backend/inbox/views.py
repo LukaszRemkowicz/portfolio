@@ -33,10 +33,14 @@ class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     def throttled(self, request: Request, wait: int) -> None:
         """Custom throttled response with user-friendly message"""
-        raise Throttled(
-            detail="You've submitted too many messages. Please wait 1 hour.",
-            wait=wait,
+        # Create exception without 'wait' arg to prevent DRF from appending
+        # "Expected available in..." to the details.
+        exc = Throttled(
+            detail="You've submitted too many messages. Please wait 1 hour to send another one."
         )
+        # Manually set wait so Retry-After header is still populated by handler
+        exc.wait = wait
+        raise exc
 
     def get_client_ip(self, request: Request) -> str:
         """Extract client IP address from request"""

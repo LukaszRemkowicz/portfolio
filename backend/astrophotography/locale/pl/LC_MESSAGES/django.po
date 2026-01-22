@@ -1,0 +1,336 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-21 15:05+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && "
+"(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
+"n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
+
+msgid "Media"
+msgstr ""
+
+msgid "Tags"
+msgstr "Tagi"
+
+msgid "Where image was taken?"
+msgstr ""
+
+msgid "Equipment"
+msgstr "Sprzęt"
+
+msgid "Technical Details"
+msgstr ""
+
+msgid "Metadata"
+msgstr ""
+
+msgid "Images"
+msgstr "Zdjęcia"
+
+msgid ""
+"Select images to display in the slideshow for this location (filtered by "
+"country and place)."
+msgstr ""
+"Wybierz zdjęcia do wyświetlenia w pokazie slajdów dla tej lokalizacji "
+"(filtrowane po kraju i miejscu)."
+
+msgid "No matching items found for this country and place."
+msgstr "Nie znaleziono pasujących elementów dla tego kraju i miejsca."
+
+msgid ""
+"Please add images with these location details in the 'Astrophotography "
+"Images' section first."
+msgstr ""
+"Proszę najpierw dodać zdjęcia z tymi szczegółami lokalizacji w sekcji "
+"'Zdjęcia Astrofotograficzne'."
+
+msgid "Save the slider first to select images for this country."
+msgstr "Najpierw zapisz slider, aby wybrać zdjęcia dla tego kraju."
+
+msgid "Select or type place..."
+msgstr "Wybierz lub wpisz miejsce..."
+
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select background image..."
+msgstr "Duży plik zdjęcia tła."
+
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select telescope(s)..."
+msgstr "Duży plik zdjęcia tła."
+
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select camera(s)..."
+msgstr "Duży plik zdjęcia tła."
+
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select lens(es)..."
+msgstr "Duży plik zdjęcia tła."
+
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select mount/tracker(s)..."
+msgstr "Duży plik zdjęcia tła."
+
+#, fuzzy
+#| msgid "The large background image file."
+msgid "Select tripod(s)..."
+msgstr "Duży plik zdjęcia tła."
+
+msgid "Cannot have both telescope and lens. Please choose one or the other."
+msgstr ""
+
+msgid "Landscape"
+msgstr "Krajobraz"
+
+msgid "Deep Sky"
+msgstr "Głębokie Niebo"
+
+msgid "Startrails"
+msgstr "Startrails"
+
+msgid "Solar System"
+msgstr "Układ Słoneczny"
+
+msgid "Milky Way"
+msgstr "Droga Mleczna"
+
+msgid "Northern Lights"
+msgstr "Zorza Polarna"
+
+msgid "Tag"
+msgstr "Tag"
+
+msgid "Name"
+msgstr "Nazwa"
+
+msgid "The name of the specific place or city."
+msgstr "Nazwa konkretnego miejsca lub miasta."
+
+msgid "Place"
+msgstr "Miejsce"
+
+msgid "Places"
+msgstr "Miejsca"
+
+msgid "Model"
+msgstr ""
+
+msgid "Telescope model and specifications"
+msgstr ""
+
+msgid "Telescope"
+msgstr ""
+
+msgid "Telescopes"
+msgstr ""
+
+msgid "Camera model and specifications"
+msgstr ""
+
+msgid "Camera"
+msgstr ""
+
+msgid "Cameras"
+msgstr ""
+
+msgid "Lens model and focal length"
+msgstr ""
+
+msgid "Lens"
+msgstr ""
+
+msgid "Lenses"
+msgstr ""
+
+msgid "Star tracker or mount model"
+msgstr ""
+
+msgid "Tracker"
+msgstr ""
+
+msgid "Trackers"
+msgstr ""
+
+msgid "Tripod model"
+msgstr ""
+
+msgid "Tripod"
+msgstr ""
+
+msgid "Tripods"
+msgstr ""
+
+msgid "Capture Date"
+msgstr "Data wykonania"
+
+msgid "The date when the photo was taken."
+msgstr "Data wykonania zdjęcia."
+
+msgid "Country"
+msgstr "Kraj"
+
+msgid "The country where the photo was taken."
+msgstr "Kraj, w którym wykonano zdjęcie."
+
+msgid "Place/City"
+msgstr "Miejsce/Miasto"
+
+msgid "Specific city or region (e.g. Hawaii, Tenerife)."
+msgstr "Konkretne miasto lub region (np. Hawaje, Teneryfa)."
+
+msgid "Tracker/Mount"
+msgstr ""
+
+msgid "Exposure Details"
+msgstr "Szczegóły ekspozycji"
+
+msgid "Technical details of the exposure (gain, sub-exposures, total time)."
+msgstr "Dane techniczne ekspozycji (gain, sub-ekspozycje, łączny czas)."
+
+msgid "Processing Details"
+msgstr "Szczegóły obróbki"
+
+msgid "Software and techniques used for post-processing."
+msgstr "Oprogramowanie i techniki użyte do obróbki."
+
+msgid "Celestial Object"
+msgstr "Obiekt niebieski"
+
+msgid "The type of celestial object captured."
+msgstr "Typ uchwyconego obiektu."
+
+msgid "Astrobin URL"
+msgstr "Link Astrobin"
+
+msgid "Link to this image on Astrobin (e.g., https://www.astrobin.com/XXXXX/)"
+msgstr "Link do zdjęcia na Astrobin (np. https://www.astrobin.com/XXXXX/)"
+
+msgid "Thumbnail"
+msgstr "Miniatura"
+
+msgid "Relevant tags for the image."
+msgstr "Tagi powiązane ze zdjęciem."
+
+msgid "Astrophotography Image"
+msgstr "Zdjęcie Astrofotograficzne"
+
+msgid "Astrophotography Images"
+msgstr "Zdjęcia Astrofotograficzne"
+
+msgid "The country for this travel highlights slider."
+msgstr "Kraj dla tego slidera podróżniczego."
+
+msgid "Specific city or region (e.g. Hawaii, Tenerife)"
+msgstr "Konkretne miasto lub region (np. Hawaje, Teneryfa)"
+
+msgid ""
+"Select images to display in the slideshow for this location (filtered by "
+"country)."
+msgstr ""
+"Wybierz zdjęcia do wyświetlenia w sliderze dla tej lokalizacji (filtrowane "
+"po kraju)."
+
+msgid "Is Active"
+msgstr "Aktywny"
+
+msgid "Toggle visibility on the homepage."
+msgstr "Włącz widoczność na stronie głównej."
+
+msgid "Created At"
+msgstr "Utworzono"
+
+msgid "Updated At"
+msgstr "Zaktualizowano"
+
+msgid "Highlight Name"
+msgstr ""
+
+msgid ""
+"Optional custom name for the travel highlight (overrides Country/Place)."
+msgstr ""
+
+#, fuzzy
+#| msgid "Country"
+msgid "Country Slug"
+msgstr "Kraj"
+
+msgid "Auto-generated slug for the country."
+msgstr ""
+
+#, fuzzy
+#| msgid "Place"
+msgid "Place Slug"
+msgstr "Miejsce"
+
+msgid "Auto-generated slug for the place."
+msgstr ""
+
+msgid "Story/Blog Text"
+msgstr ""
+
+msgid "Optional story or blog text to display above the images."
+msgstr ""
+
+msgid "Background Image"
+msgstr "Zdjęcie Tła"
+
+msgid "Optional specific background image for this location's page."
+msgstr ""
+
+#, python-format
+msgid ""
+"Image '%(image)s' (%(location)s) does not match the slider's country "
+"(%(country)s)."
+msgstr ""
+"Zdjęcie '%(image)s' (%(location)s) nie pasuje do kraju slidera (%(country)s)."
+
+#, fuzzy
+#| msgid "Main Page Location Slider"
+msgid "Main Page Location"
+msgstr "Slider Lokalizacji na Stronie Głównej"
+
+#, fuzzy
+#| msgid "Main Page Location Sliders"
+msgid "Main Page Locations"
+msgstr "Slidery Lokalizacji na Stronie Głównej"
+
+msgid "Identifier for the background image."
+msgstr "Identyfikator zdjęcia tła."
+
+msgid "Image File"
+msgstr "Plik zdjęcia"
+
+msgid "The large background image file."
+msgstr "Duży plik zdjęcia tła."
+
+msgid "Main Page Background Image"
+msgstr "Zdjęcie Tła Strony Głównej"
+
+msgid "Main Page Background Images"
+msgstr "Zdjęcia Tła Strony Głównej"
+
+#, fuzzy
+#~| msgid "Relevant tags for the image."
+#~ msgid "Equipment used for this image."
+#~ msgstr "Tagi powiązane ze zdjęciem."
+
+#~ msgid "Equipment used (telescope, camera, mount, filters, etc.)."
+#~ msgstr "Użyty sprzęt (teleskop, kamera, montaż, filtry itp.)."

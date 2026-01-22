@@ -6,18 +6,18 @@ from rest_framework.test import APIClient
 
 from django.urls import reverse
 
-from inbox.models import ContactFormSettings
+from core.models import LandingPageSettings
 
 # Email sending and contact form setup are automatically handled by conftest.py fixtures
 
 
 @pytest.mark.django_db
 def test_contact_throttling_success(
-    mock_email_service: MagicMock, contact_form_settings: ContactFormSettings, api_client: APIClient
+    mock_email_service: MagicMock, landing_page_settings: LandingPageSettings, api_client: APIClient
 ) -> None:
     """Test that first 5 contact form submissions succeed"""
-    contact_form_settings.enabled = True
-    contact_form_settings.save()
+    landing_page_settings.contact_form_enabled = True
+    landing_page_settings.save()
 
     url = reverse("inbox:contact-message-list")
 
@@ -47,11 +47,11 @@ def test_contact_throttling_success(
 
 @pytest.mark.django_db
 def test_contact_throttling_limit_exceeded(
-    mock_email_service: MagicMock, contact_form_settings: ContactFormSettings, api_client: APIClient
+    mock_email_service: MagicMock, landing_page_settings: LandingPageSettings, api_client: APIClient
 ) -> None:
     """Test that contact form submission is throttled after limit"""
-    contact_form_settings.enabled = True
-    contact_form_settings.save()
+    landing_page_settings.contact_form_enabled = True
+    landing_page_settings.save()
 
     url = reverse("inbox:contact-message-list")
 
@@ -75,9 +75,8 @@ def test_contact_throttling_limit_exceeded(
         if response.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             throttled = True
             assert (
-                "throttled" in response.data.get("detail", "").lower()
-                or "rate limit" in response.data.get("detail", "").lower()
-                or "too many" in response.data.get("detail", "").lower()
+                response.data.get("detail")
+                == "You've submitted too many messages. Please wait 1 hour to send another one."
             )
             break
         else:
@@ -94,9 +93,12 @@ def test_contact_throttling_limit_exceeded(
 
 @pytest.mark.django_db
 def test_contact_throttling_headers(
-    mock_email_service: MagicMock, contact_form_settings: ContactFormSettings, api_client: APIClient
+    mock_email_service: MagicMock, landing_page_settings: LandingPageSettings, api_client: APIClient
 ) -> None:
     """Test that throttling response includes proper headers"""
+    landing_page_settings.contact_form_enabled = True
+    landing_page_settings.save()
+
     url = reverse("inbox:contact-message-list")
 
     # Use same email to hit throttling
@@ -141,11 +143,11 @@ def test_contact_endpoint_disallows_get(api_client: APIClient) -> None:
 
 @pytest.mark.django_db
 def test_contact_payload_too_large(
-    contact_form_settings: ContactFormSettings, api_client: APIClient
+    landing_page_settings: LandingPageSettings, api_client: APIClient
 ) -> None:
     """Test that large payloads are rejected with 413"""
-    contact_form_settings.enabled = True
-    contact_form_settings.save()
+    landing_page_settings.contact_form_enabled = True
+    landing_page_settings.save()
 
     url = reverse("inbox:contact-message-list")
     data = {
@@ -163,11 +165,11 @@ def test_contact_payload_too_large(
 
 @pytest.mark.django_db
 def test_contact_invalid_data(
-    contact_form_settings: ContactFormSettings, api_client: APIClient
+    landing_page_settings: LandingPageSettings, api_client: APIClient
 ) -> None:
     """Test that invalid data is rejected by the view before service call"""
-    contact_form_settings.enabled = True
-    contact_form_settings.save()
+    landing_page_settings.contact_form_enabled = True
+    landing_page_settings.save()
 
     url = reverse("inbox:contact-message-list")
     data = {

@@ -6,21 +6,21 @@ from django.db import DatabaseError
 from django.http import JsonResponse
 from django.test import RequestFactory
 
+from core.models import LandingPageSettings
 from inbox.middleware import ContactFormKillSwitchMiddleware
-from inbox.models import ContactFormSettings
 
-# Middleware, request_factory, and contact_form_settings fixtures are provided by conftest.py
+# Middleware, request_factory, and landing_page_settings fixtures are provided by conftest.py
 
 
 @pytest.mark.django_db
 def test_kill_switch_middleware_allows_post_when_enabled(
     kill_switch_middleware: ContactFormKillSwitchMiddleware,
     request_factory: RequestFactory,
-    contact_form_settings: ContactFormSettings,
+    landing_page_settings: LandingPageSettings,
 ) -> None:
     """Test kill_switch_middleware allows POST requests when form is enabled"""
-    contact_form_settings.enabled = True
-    contact_form_settings.save()
+    landing_page_settings.contact_form_enabled = True
+    landing_page_settings.save()
 
     request = request_factory.post("/api/v1/contact/")
     response = kill_switch_middleware.process_request(request)
@@ -32,11 +32,11 @@ def test_kill_switch_middleware_allows_post_when_enabled(
 def test_kill_switch_middleware_blocks_post_when_disabled(
     kill_switch_middleware: ContactFormKillSwitchMiddleware,
     request_factory: RequestFactory,
-    contact_form_settings: ContactFormSettings,
+    landing_page_settings: LandingPageSettings,
 ) -> None:
     """Test kill_switch_middleware blocks POST requests when form is disabled"""
-    contact_form_settings.enabled = False
-    contact_form_settings.save()
+    landing_page_settings.contact_form_enabled = False
+    landing_page_settings.save()
 
     request = request_factory.post("/api/v1/contact/")
     response = kill_switch_middleware.process_request(request)
@@ -56,11 +56,11 @@ def test_kill_switch_middleware_blocks_post_when_disabled(
 def test_kill_switch_middleware_ignores_non_post_requests(
     kill_switch_middleware: ContactFormKillSwitchMiddleware,
     request_factory: RequestFactory,
-    contact_form_settings: ContactFormSettings,
+    landing_page_settings: LandingPageSettings,
 ) -> None:
     """Test kill_switch_middleware ignores GET, PUT, DELETE, etc. requests"""
-    contact_form_settings.enabled = False  # Disabled, but should still allow non-POST
-    contact_form_settings.save()
+    landing_page_settings.contact_form_enabled = False  # Disabled, but should still allow non-POST
+    landing_page_settings.save()
 
     for method in ["GET", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]:
         request = getattr(request_factory, method.lower())("/api/v1/contact/")
@@ -72,11 +72,11 @@ def test_kill_switch_middleware_ignores_non_post_requests(
 def test_kill_switch_middleware_only_checks_contact_endpoint(
     kill_switch_middleware: ContactFormKillSwitchMiddleware,
     request_factory: RequestFactory,
-    contact_form_settings: ContactFormSettings,
+    landing_page_settings: LandingPageSettings,
 ) -> None:
     """Test kill_switch_middleware only checks contact endpoint, ignores other paths"""
-    contact_form_settings.enabled = False  # Disabled
-    contact_form_settings.save()
+    landing_page_settings.contact_form_enabled = False  # Disabled
+    landing_page_settings.save()
 
     other_paths = [
         "/api/v1/profile/",
@@ -98,11 +98,11 @@ def test_kill_switch_middleware_only_checks_contact_endpoint(
 def test_kill_switch_middleware_only_checks_exact_router_path(
     kill_switch_middleware: ContactFormKillSwitchMiddleware,
     request_factory: RequestFactory,
-    contact_form_settings: ContactFormSettings,
+    landing_page_settings: LandingPageSettings,
 ) -> None:
     """Test kill_switch_middleware only checks exact DRF router path with trailing slash"""
-    contact_form_settings.enabled = False
-    contact_form_settings.save()
+    landing_page_settings.contact_form_enabled = False
+    landing_page_settings.save()
 
     # DRF router always creates URLs with trailing slashes: /api/v1/contact/
     exact_router_path = "/api/v1/contact/"
@@ -130,9 +130,12 @@ def test_kill_switch_middleware_fails_closed_on_settings_error(
     """Test kill_switch_middleware fails closed (blocks request) if settings check fails"""
     request = request_factory.post("/api/v1/contact/")
 
-    # Mock get_settings to raise a DatabaseError
+    # Mock DB error when accessing settings
+    # Since we use LandingPageSettings.objects.first(), checking how to mock specific manager method
+    # or just the model attribute access if possible.
+    # Simplest is mocking the manager's first method.
     with patch(
-        "inbox.middleware.ContactFormSettings.get_settings",
+        "core.models.LandingPageSettings.objects.first",
         side_effect=DatabaseError("Database error"),
     ):
         response = kill_switch_middleware.process_request(request)
@@ -144,7 +147,7 @@ def test_kill_switch_middleware_fails_closed_on_settings_error(
 def test_kill_switch_middleware_logs_blocked_requests(
     kill_switch_middleware: ContactFormKillSwitchMiddleware,
     request_factory: RequestFactory,
-    contact_form_settings: ContactFormSettings,
+    landing_page_settings: LandingPageSettings,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test kill_switch_middleware logs blocked requests"""
@@ -152,8 +155,8 @@ def test_kill_switch_middleware_logs_blocked_requests(
 
     caplog.set_level(logging.WARNING)
 
-    contact_form_settings.enabled = False
-    contact_form_settings.save()
+    landing_page_settings.contact_form_enabled = False
+    landing_page_settings.save()
 
     request = request_factory.post("/api/v1/contact/")
     response = kill_switch_middleware.process_request(request)
@@ -177,7 +180,7 @@ def test_kill_switch_middleware_logs_errors(
     request = request_factory.post("/api/v1/contact/")
 
     with patch(
-        "inbox.middleware.ContactFormSettings.get_settings",
+        "core.models.LandingPageSettings.objects.first",
         side_effect=DatabaseError("Database error"),
     ):
         kill_switch_middleware.process_request(request)

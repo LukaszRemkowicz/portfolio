@@ -1,7 +1,7 @@
 import factory
 from factory.django import DjangoModelFactory
 
-from programming.models import ProgrammingPageConfig, Project, ProjectImage
+from programming.models import Project, ProjectImage
 
 
 class ProjectFactory(DjangoModelFactory):
@@ -22,12 +22,3 @@ class ProjectImageFactory(DjangoModelFactory):
     project = factory.SubFactory(ProjectFactory)
     image = factory.django.ImageField()
     is_cover = False
-
-
-class ProgrammingPageConfigFactory(DjangoModelFactory):
-    class Meta:
-        model = ProgrammingPageConfig
-        django_get_or_create = ("pk",)
-
-    pk = 1
-    enabled = False

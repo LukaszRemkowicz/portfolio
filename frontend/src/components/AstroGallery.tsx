@@ -1,42 +1,96 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import styles from "../styles/components/AstroGallery.module.css";
 import { ASSETS } from "../api/routes";
 import { AstroImage, FilterType } from "../types";
 import { useAppStore } from "../store/useStore";
 import ImageModal from "./common/ImageModal";
 import LoadingScreen from "./common/LoadingScreen";
+import GalleryCard from "./common/GalleryCard";
+import TagSidebar from "./TagSidebar";
 
 const AstroGallery: React.FC = () => {
-  const {
-    images,
-    isImagesLoading,
-    isInitialLoading,
-    error,
-    backgroundUrl: background,
-    loadImages,
-    loadInitialData,
-  } = useAppStore();
-  const loading = isInitialLoading || isImagesLoading;
-  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const images = useAppStore((state) => state.images);
+  const isInitialLoading = useAppStore((state) => state.isInitialLoading);
+  const isImagesLoading = useAppStore((state) => state.isImagesLoading);
+  const tags = useAppStore((state) => state.tags);
+  const background = useAppStore((state) => state.backgroundUrl);
+  const error = useAppStore((state) => state.error);
+  const loadInitialData = useAppStore((state) => state.loadInitialData);
+  const loadImages = useAppStore((state) => state.loadImages);
+  const loadTags = useAppStore((state) => state.loadTags);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
+
+  const selectedFilter = searchParams.get("filter") as FilterType | null;
+  const selectedTag = searchParams.get("tag");
+
+  useEffect(() => {
+    const imgId = searchParams.get("img");
+    if (imgId) {
+      const img = images.find((i) => i.pk.toString() === imgId);
+      if (img) {
+        setModalImage(img);
+      } else {
+        // If image not in current list (e.g. direct link), we might need to fetch it
+        // but for now we'll just close it if not found in current view
+        setModalImage(null);
+      }
+    } else {
+      setModalImage(null);
+    }
+  }, [searchParams, images]);
 
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
 
   useEffect(() => {
-    loadImages(selectedFilter ? { filter: selectedFilter } : {});
-  }, [selectedFilter, loadImages]);
+    loadImages({
+      ...(selectedFilter ? { filter: selectedFilter } : {}),
+      ...(selectedTag ? { tag: selectedTag } : {}),
+    });
+  }, [selectedFilter, selectedTag, loadImages]);
+
+  // Refresh tags when category changes
+  useEffect(() => {
+    loadTags(selectedFilter || undefined);
+  }, [selectedFilter, loadTags]);
 
   const handleFilterClick = (filter: FilterType): void => {
-    setSelectedFilter(selectedFilter === filter ? null : filter);
+    const nextParams = new URLSearchParams(searchParams);
+    if (selectedFilter === filter) {
+      nextParams.delete("filter");
+    } else {
+      nextParams.set("filter", filter);
+      nextParams.delete("tag"); // Clicking a category clears the tag filter
+    }
+    setSearchParams(nextParams);
+  };
+
+  const handleTagSelect = (tagSlug: string | null): void => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (tagSlug) {
+      nextParams.set("tag", tagSlug);
+    } else {
+      nextParams.delete("tag");
+    }
+    setSearchParams(nextParams);
   };
 
   const handleImageClick = (image: AstroImage): void => {
-    setModalImage(image);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("img", image.pk.toString());
+    setSearchParams(nextParams);
   };
 
-  if (loading) return <LoadingScreen />;
+  const closeModal = (): void => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("img");
+    setSearchParams(nextParams);
+  };
+
+  if (isInitialLoading) return <LoadingScreen />;
   if (error) return <div className={styles.error}>{error}</div>;
 
   const FILTERS: FilterType[] = [
@@ -58,32 +112,62 @@ const AstroGallery: React.FC = () => {
       >
         <h1 className={styles.heroTitle}>Gallery</h1>
       </div>
-      <div className={styles.filtersSection}>
-        {FILTERS.map((filter: FilterType) => (
-          <div
-            key={filter}
-            className={`${styles.filterBox} ${
-              selectedFilter === filter ? styles.activeFilter : ""
-            }`}
-            onClick={() => handleFilterClick(filter)}
-          >
-            {filter}
-          </div>
-        ))}
+      <div className={styles.mainContent}>
+        <h3 className={styles.sidebarLabel}>
+          Filter by category or explore images using the tags below.
+        </h3>
+
+        <div className={styles.sidebarContainer}>
+          <TagSidebar
+            tags={tags}
+            selectedTag={selectedTag}
+            onTagSelect={handleTagSelect}
+          />
+        </div>
+
+        <div className={styles.filtersSection}>
+          {FILTERS.map((filter: FilterType) => {
+            const isActive = selectedFilter === filter;
+            return (
+              <button
+                key={filter}
+                type="button"
+                className={`${styles.filterBox} ${
+                  isActive ? styles.activeFilter : ""
+                }`}
+                onClick={() => handleFilterClick(filter)}
+                aria-pressed={isActive}
+              >
+                {filter}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className={styles.grid}>
+          {isImagesLoading ? (
+            <div className={styles.noResults}>
+              <p>Scanning deep space sectors...</p>
+            </div>
+          ) : images.length > 0 ? (
+            images.map((image: AstroImage) => (
+              <GalleryCard
+                key={image.pk}
+                item={image}
+                onClick={handleImageClick}
+              />
+            ))
+          ) : (
+            <div className={styles.noResults}>
+              <p>No images found for this filter.</p>
+              <p className={styles.noResultsHint}>
+                Try selecting a different category or tag to see more images.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-      <div className={styles.grid}>
-        {images.map((image: AstroImage) => (
-          <div key={image.pk} className={styles.gridItem}>
-            <img
-              src={image.thumbnail_url || image.url}
-              alt={image.name || `Astro Image ${image.pk}`}
-              onClick={() => handleImageClick(image)}
-              style={{ cursor: "pointer" }}
-            />
-          </div>
-        ))}
-      </div>
-      <ImageModal image={modalImage} onClose={() => setModalImage(null)} />
+      <ImageModal image={modalImage} onClose={closeModal} />
     </div>
   );
 };

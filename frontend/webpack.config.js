@@ -45,6 +45,10 @@ module.exports = (env, argv) => {
         },
       },
     },
+    devtool:
+      argv.mode === "development"
+        ? "eval-cheap-module-source-map"
+        : "source-map",
     module: {
       rules: [
         {
@@ -52,6 +56,9 @@ module.exports = (env, argv) => {
           exclude: /node_modules/,
           use: {
             loader: "babel-loader",
+            options: {
+              cacheDirectory: true,
+            },
           },
         },
         {
@@ -95,7 +102,7 @@ module.exports = (env, argv) => {
       host: "0.0.0.0",
       port: 3000,
       open: true,
-      hot: false,
+      hot: true,
       historyApiFallback: true,
       server: "http",
       allowedHosts: "all",

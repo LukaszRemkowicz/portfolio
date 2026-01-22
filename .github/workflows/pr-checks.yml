@@ -42,7 +42,7 @@ jobs:
       run: npx tsc --noEmit
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
@@ -106,7 +106,7 @@ jobs:
       run: npm test -- --coverage --watchAll=false
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
@@ -170,7 +170,7 @@ jobs:
       run: npm audit --audit-level=moderate
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 

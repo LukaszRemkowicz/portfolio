@@ -186,3 +186,11 @@ Content-Type: {{contentType}}
 # Prerequisite: Ensure an image has the tag 'nebula' (or change to an existing tag)
 GET {{baseUrl}}/image/?tag=nebula
 Content-Type: {{contentType}}
+
+### ============================================================
+### TRAVEL HIGHLIGHTS API TESTS
+### ============================================================
+
+### Test 24: Fetch Travel Highlights (MainPageLocationSlider)
+GET {{baseUrl}}/travel-highlights/
+Content-Type: {{contentType}}

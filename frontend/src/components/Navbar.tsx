@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import Logo from "./common/Logo";
 import styles from "../styles/components/Navbar.module.css";
 import { Menu, X } from "lucide-react";
@@ -8,6 +8,7 @@ import { useAppStore } from "../store/useStore";
 
 const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
   const { features } = useAppStore();
   const isProgrammingEnabled = features?.programming === true;
 
@@ -19,16 +20,32 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
         <Logo />
 
         <div className={styles.links}>
-          <Link to="/" className={styles.link}>
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `${styles.link} ${isActive ? styles.active : ""}`
+            }
+          >
             Home
-          </Link>
-          <Link to="/astrophotography" className={styles.link}>
+          </NavLink>
+          <NavLink
+            to="/astrophotography"
+            className={({ isActive }) =>
+              `${styles.link} ${isActive ? styles.active : ""}`
+            }
+          >
             Astrophotography
-          </Link>
+          </NavLink>
           {isProgrammingEnabled && (
-            <Link to="/programming" className={styles.link}>
+            <NavLink
+              to="/programming"
+              className={({ isActive }) =>
+                `${styles.link} ${isActive ? styles.active : ""}`
+              }
+            >
               Programming
-            </Link>
+            </NavLink>
           )}
           <Link to="/#about" className={styles.link}>
             About
@@ -55,21 +72,42 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
               <X size={24} />
             </button>
             <div className={styles.drawerLinks}>
-              <Link to="/" onClick={toggleMenu}>
+              <NavLink
+                to="/"
+                onClick={toggleMenu}
+                end
+                className={({ isActive }) => (isActive ? styles.active : "")}
+              >
                 Home
-              </Link>
-              <Link to="/astrophotography" onClick={toggleMenu}>
+              </NavLink>
+              <NavLink
+                to="/astrophotography"
+                onClick={toggleMenu}
+                className={({ isActive }) => (isActive ? styles.active : "")}
+              >
                 Astrophotography
-              </Link>
+              </NavLink>
               {isProgrammingEnabled && (
-                <Link to="/programming" onClick={toggleMenu}>
+                <NavLink
+                  to="/programming"
+                  onClick={toggleMenu}
+                  className={({ isActive }) => (isActive ? styles.active : "")}
+                >
                   Programming
-                </Link>
+                </NavLink>
               )}
-              <Link to="/#about" onClick={toggleMenu}>
+              <Link
+                to="/#about"
+                onClick={toggleMenu}
+                className={location.hash === "#about" ? styles.active : ""}
+              >
                 About
               </Link>
-              <Link to="/#contact" onClick={toggleMenu}>
+              <Link
+                to="/#contact"
+                onClick={toggleMenu}
+                className={location.hash === "#contact" ? styles.active : ""}
+              >
                 Contact
               </Link>
             </div>

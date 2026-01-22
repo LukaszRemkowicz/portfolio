@@ -14,12 +14,6 @@ from django.core.cache import cache
 logger = logging.getLogger(__name__)
 
 
-class ContactThrottle(AnonRateThrottle):
-    """Custom throttle for contact form submissions - more restrictive for anonymous users"""
-
-    scope = "contact"
-
-
 class APIRateThrottle(AnonRateThrottle):
     """Custom throttle for general API calls"""
 

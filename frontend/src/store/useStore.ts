@@ -4,12 +4,16 @@ import {
   AstroImage,
   FilterParams,
   EnabledFeatures,
+  Project,
+  Tag,
 } from "../types";
 import {
   fetchProfile,
   fetchBackground,
   fetchAstroImages,
   fetchEnabledFeatures,
+  fetchProjects,
+  fetchTags,
 } from "../api/services";
 import { NetworkError, ServerError } from "../api/errors";
 
@@ -17,14 +21,23 @@ interface AppState {
   profile: UserProfile | null;
   backgroundUrl: string | null;
   images: AstroImage[];
+  projects: Project[];
+  tags: Tag[];
   features: EnabledFeatures | null;
   isInitialLoading: boolean;
   isImagesLoading: boolean;
+  isProjectsLoading: boolean;
   error: string | null;
+  initialSessionId: string;
+  imagesSessionId: string;
+  projectsSessionId: string;
+  tagsSessionId: string;
 
   // Actions
   loadInitialData: () => Promise<void>;
   loadImages: (params?: FilterParams) => Promise<void>;
+  loadProjects: () => Promise<void>;
+  loadTags: (category?: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -32,10 +45,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   profile: null,
   backgroundUrl: null,
   images: [],
+  projects: [],
+  tags: [],
   features: null,
   isInitialLoading: false,
   isImagesLoading: false,
+  isProjectsLoading: false,
   error: null,
+  initialSessionId: "",
+  imagesSessionId: "",
+  projectsSessionId: "",
+  tagsSessionId: "",
 
   clearError: () => set({ error: null }),
 
@@ -43,48 +63,96 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Avoid double loading if already have data
     if (get().profile && get().backgroundUrl) return;
 
-    set({ isInitialLoading: true, error: null });
+    const sessionId = crypto.randomUUID();
+    set({ isInitialLoading: true, error: null, initialSessionId: sessionId });
     try {
       const [profileData, bgUrl, featuresData] = await Promise.all([
         fetchProfile(),
         fetchBackground(),
         fetchEnabledFeatures(),
       ]);
-      set({
-        profile: profileData,
-        backgroundUrl: bgUrl,
-        features: featuresData,
-      });
-    } catch (e: unknown) {
-      let message = "An unexpected anomaly occurred.";
-      if (e instanceof NetworkError) {
-        message = "Signal lost. Please check your network connection.";
-      } else if (e instanceof ServerError) {
-        message = "The cosmic archives are temporarily unreachable.";
+
+      if (get().initialSessionId === sessionId) {
+        set({
+          profile: profileData,
+          backgroundUrl: bgUrl,
+          features: featuresData,
+          isInitialLoading: false,
+        });
       }
-      set({ error: message });
+    } catch (e: unknown) {
+      if (get().initialSessionId === sessionId) {
+        let message = "An unexpected anomaly occurred.";
+        if (e instanceof NetworkError) {
+          message = "Signal lost. Please check your network connection.";
+        } else if (e instanceof ServerError) {
+          message = "The cosmic archives are temporarily unreachable.";
+        }
+        set({ error: message, isInitialLoading: false });
+      }
       console.error("Store initial load failure:", e);
-    } finally {
-      set({ isInitialLoading: false });
     }
   },
 
   loadImages: async (params = {}) => {
-    set({ isImagesLoading: true, error: null });
+    const sessionId = crypto.randomUUID();
+    set({ isImagesLoading: true, error: null, imagesSessionId: sessionId });
     try {
       const data = await fetchAstroImages(params);
-      set({ images: data });
-    } catch (e: unknown) {
-      let message = "Failed to fetch gallery images.";
-      if (e instanceof NetworkError) {
-        message = "Connection failed. The cosmic relay is offline.";
-      } else if (e instanceof ServerError) {
-        message = "Server collision detected. Please try again later.";
+
+      // Only update if this is still the current session
+      if (get().imagesSessionId === sessionId) {
+        set({
+          images: data,
+          isImagesLoading: false,
+        });
       }
-      set({ error: message });
+    } catch (e: unknown) {
+      if (get().imagesSessionId === sessionId) {
+        let message = "Failed to fetch gallery images.";
+        if (e instanceof NetworkError) {
+          message = "Connection failed. The cosmic relay is offline.";
+        } else if (e instanceof ServerError) {
+          message = "Server collision detected. Please try again later.";
+        }
+        set({ error: message, isImagesLoading: false });
+      }
       console.error("Store image load failure:", e);
-    } finally {
-      set({ isImagesLoading: false });
+    }
+  },
+
+  loadProjects: async () => {
+    const sessionId = crypto.randomUUID();
+    set({ isProjectsLoading: true, error: null, projectsSessionId: sessionId });
+    try {
+      const data = await fetchProjects();
+
+      if (get().projectsSessionId === sessionId) {
+        set({ projects: data, isProjectsLoading: false });
+      }
+    } catch (e: unknown) {
+      if (get().projectsSessionId === sessionId) {
+        let message = "Failed to fetch programming projects.";
+        if (e instanceof NetworkError) {
+          message = "Connection failure while accessing project archives.";
+        } else if (e instanceof ServerError) {
+          message = "Project database is temporarily unavailable.";
+        }
+        set({ error: message, isProjectsLoading: false });
+      }
+      console.error("Store projects load failure:", e);
+    }
+  },
+  loadTags: async (category?: string) => {
+    const sessionId = crypto.randomUUID();
+    set({ tagsSessionId: sessionId });
+    try {
+      const data = await fetchTags(category);
+      if (get().tagsSessionId === sessionId) {
+        set({ tags: data });
+      }
+    } catch (e: unknown) {
+      console.error("Store tags load failure:", e);
     }
   },
 }));

@@ -37,9 +37,30 @@ class TestContactMessageEmailService:
         assert f"New Contact Message: {contact_message.subject}" in kwargs["subject"]
         assert contact_message.message in kwargs["message"]
         # Verify logger info was called
-        mock_logger.info.assert_called_with(
+        mock_logger.info.assert_any_call(
             f"Email notification sent for message ID={contact_message.id}"
         )
+
+    @patch("inbox.services.send_mail")
+    @patch("inbox.services.logger")
+    def test_send_notification_email_debug_simulation(
+        self, mock_logger: MagicMock, mock_send_mail: MagicMock, contact_message: ContactMessage
+    ) -> None:
+        """Test that email is simulated (logged) but NOT sent when DEBUG=True"""
+        from django.conf import settings
+
+        with patch.object(settings, "DEBUG", True):
+            # Call the service method
+            ContactMessageEmailService.send_notification_email(contact_message)
+
+            # Verify send_mail was NOT called
+            mock_send_mail.assert_not_called()
+
+            # Verify logger.info was called with simulation messages
+            mock_logger.info.assert_any_call("DEBUG=True: Simulating email send.")
+            mock_logger.info.assert_any_call(
+                f"Fake Email notification sent for message ID={contact_message.id}"
+            )
 
     @patch("inbox.services.send_mail")
     @patch("inbox.services.logger")

@@ -15,12 +15,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       className={`${styles["app-container"]} ${
         isProgramming ? styles["programming-bg"] : styles["astro-bg"]
       }`}
+      style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
     >
       <Navbar
         transparent={isAstroGallery || isProgramming}
         programmingBg={isProgramming}
       />
-      <main>{children}</main>
+      <main style={{ flex: 1 }}>{children}</main>
       <Footer />
     </div>
   );

@@ -2,9 +2,13 @@
 import logging
 from typing import Optional
 
+from django_ckeditor_5.fields import CKEditor5Field
+
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import IntegrityError, models
 from django.utils.translation import gettext_lazy as _
+
+from core.models import SingletonModel
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +30,7 @@ class UserManager(BaseUserManager):
         return user
 
 
-class User(AbstractUser):
+class User(AbstractUser, SingletonModel):
     """
     Custom user model with email as username.
     Singleton pattern: Only one user instance is allowed in the database.
@@ -45,7 +49,7 @@ class User(AbstractUser):
             "the first segment will be large/bold, following text will be smaller."
         ),
     )
-    bio = models.TextField(max_length=10000, blank=True, help_text="General/Global bio about you")
+    bio = CKEditor5Field(_("Bio"), config_name="extends", blank=True)
     contact_email = models.EmailField(
         blank=True, help_text="Public contact email displayed in footer"
     )
@@ -68,6 +72,7 @@ class User(AbstractUser):
     @classmethod
     def get_user(cls) -> Optional["User"]:
         """Get the singleton user instance, or None if it doesn't exist."""
+        # Usingload() from SingletonModel or first() is fine, we want explicit check here
         return cls.objects.first()
 
     def save(self, *args: tuple, **kwargs: dict) -> None:
@@ -78,10 +83,11 @@ class User(AbstractUser):
         # If this is a new user (no pk) and another user already exists, raise error
         if self.pk is None and type(self).objects.exists():
             existing_user = type(self).objects.first()
-            raise ValueError(
-                f"Only one user is allowed. User already exists: {existing_user.email}. "
-                "Update the existing user instead."
-            )
+            if existing_user:
+                raise ValueError(
+                    f"Only one user is allowed. User already exists: {existing_user.email}. "
+                    "Update the existing user instead."
+                )
 
         try:
             super().save(*args, **kwargs)

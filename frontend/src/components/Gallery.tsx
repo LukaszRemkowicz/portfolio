@@ -1,67 +1,41 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import styles from "../styles/components/Gallery.module.css";
-import { MapPin } from "lucide-react";
 import { AstroImage } from "../types";
 import { useAppStore } from "../store/useStore";
 import ImageModal from "./common/ImageModal";
-
-interface GalleryCardProps {
-  item: AstroImage;
-  onClick: (image: AstroImage) => void;
-  isNew: (dateString?: string) => boolean;
-}
-
-const GalleryCard = memo(({ item, onClick, isNew }: GalleryCardProps) => {
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  return (
-    <button
-      className={styles.card}
-      onClick={() => onClick(item)}
-      aria-label={`View details for ${item.name}`}
-      type="button"
-    >
-      {isNew(item.created_at) && <div className={styles.newBadge}>NEW</div>}
-      <div className={styles.imageWrapper} aria-hidden="true">
-        <div
-          className={`${styles.placeholder} ${isLoaded ? styles.hide : ""}`}
-        />
-        <img
-          src={item.thumbnail_url || item.url}
-          alt=""
-          loading="lazy"
-          onLoad={() => setIsLoaded(true)}
-          className={`${styles.cardImage} ${isLoaded ? styles.show : ""}`}
-        />
-      </div>
-      <div className={styles.cardContent}>
-        <span className={styles.category}>{item.celestial_object}</span>
-        <h3 className={styles.cardTitle}>{item.name}</h3>
-        <p className={styles.cardLocation}>
-          <MapPin size={12} className={styles.metaIcon} />
-          {item.location}
-        </p>
-        <p className={styles.cardDescription}>
-          {item.description && item.description.length > 80
-            ? `${item.description.substring(0, 80)}...`
-            : item.description}
-        </p>
-        <div className={styles.divider} aria-hidden="true"></div>
-      </div>
-    </button>
-  );
-});
-
-GalleryCard.displayName = "GalleryCard";
+import GalleryCard from "./common/GalleryCard";
 
 const Gallery: React.FC = () => {
   const [filter, setFilter] = useState("all");
-  const { images, isImagesLoading: loading, error, loadImages } = useAppStore();
+  const images = useAppStore((state) => state.images);
+  const loading = useAppStore((state) => state.isImagesLoading);
+  const error = useAppStore((state) => state.error);
+  const loadImages = useAppStore((state) => state.loadImages);
+  const features = useAppStore((state) => state.features);
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Sync modalImage with 'img' query parameter
+  useEffect(() => {
+    const imgId = searchParams.get("img");
+    if (imgId) {
+      const img = images.find((i) => i.pk.toString() === imgId);
+      if (img) {
+        setModalImage(img);
+      } else {
+        setModalImage(null);
+      }
+    } else {
+      setModalImage(null);
+    }
+  }, [searchParams, images]);
 
   useEffect(() => {
-    loadImages({ limit: 50 });
-  }, [loadImages]);
+    if (features?.lastimages !== false) {
+      loadImages({ limit: 50 });
+    }
+  }, [loadImages, features]);
 
   const filteredImages = useMemo(() => {
     if (filter === "all") return images.slice(0, 9);
@@ -84,22 +58,25 @@ const Gallery: React.FC = () => {
       .slice(0, 9);
   }, [images, filter]);
 
-  const isNew = useCallback((dateString?: string) => {
-    if (!dateString) return false;
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
-    return diffDays < 7;
-  }, []);
+  const handleImageClick = useCallback(
+    (image: AstroImage): void => {
+      console.log("Card clicked!", image.name);
+      // Use URL params for modal state to support browser back button
+      searchParams.set("img", image.pk.toString());
+      setSearchParams(searchParams);
+    },
+    [searchParams, setSearchParams],
+  );
 
-  const handleImageClick = useCallback((image: AstroImage): void => {
-    console.log("Card clicked!", image.name);
-    setModalImage(image);
-  }, []);
+  const closeModal = useCallback(() => {
+    searchParams.delete("img");
+    setSearchParams(searchParams);
+  }, [searchParams, setSearchParams]);
 
-  // Only hide the entire section if we have finished loading and there are NO images at all in the backend
-  if (!loading && images.length === 0) return null;
+  // Hide the entire section if disabled via admin toggle or if no images
+  if (features?.lastimages === false || (!loading && images.length === 0)) {
+    return null;
+  }
 
   return (
     <section id="gallery" className={styles.section}>
@@ -144,12 +121,7 @@ const Gallery: React.FC = () => {
           <div className={styles.error}>{error}</div>
         ) : filteredImages.length > 0 ? (
           filteredImages.map((item) => (
-            <GalleryCard
-              key={item.pk}
-              item={item}
-              onClick={handleImageClick}
-              isNew={isNew}
-            />
+            <GalleryCard key={item.pk} item={item} onClick={handleImageClick} />
           ))
         ) : (
           <div className={styles.noResults}>
@@ -158,7 +130,7 @@ const Gallery: React.FC = () => {
         )}
       </div>
 
-      <ImageModal image={modalImage} onClose={() => setModalImage(null)} />
+      <ImageModal image={modalImage} onClose={closeModal} />
     </section>
   );
 };

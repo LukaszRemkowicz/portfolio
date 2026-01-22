@@ -366,6 +366,12 @@ src/
 ### 🎯 Priority 2 - Nice to Have
 
 - [ ] **Complete Programming Page** - Implement actual programming projects showcase
+- [ ] **Filtering by Tags** - Add tag-based filtering to astrophotography gallery for more granular search
+- [ ] **React Admin Panel** - Create custom admin dashboard using React Admin or Refine framework
+  - Alternative to Django Admin with premium design matching portfolio aesthetic
+  - Connect to existing DRF API endpoints
+  - Features: Image management, drag-drop ordering, inline editing, better UX
+  - Frameworks to consider: [React Admin](https://marmelab.com/react-admin/), [Refine](https://refine.dev/)
 
 ---
 

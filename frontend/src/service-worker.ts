@@ -4,7 +4,7 @@ import { clientsClaim } from "workbox-core";
 import { ExpirationPlugin } from "workbox-expiration";
 import { precacheAndRoute, createHandlerBoundToURL } from "workbox-precaching";
 import { registerRoute } from "workbox-routing";
-import { CacheFirst, NetworkFirst } from "workbox-strategies";
+import { CacheFirst, StaleWhileRevalidate } from "workbox-strategies";
 import { CacheableResponsePlugin } from "workbox-cacheable-response";
 
 // eslint-disable-next-line no-undef
@@ -68,7 +68,7 @@ registerRoute(
 // Cache API responses with StaleWhileRevalidate
 registerRoute(
   ({ url }) => url.pathname.includes("/api/v1/"),
-  new NetworkFirst({
+  new StaleWhileRevalidate({
     cacheName: "api-cache",
     plugins: [
       new CacheableResponsePlugin({

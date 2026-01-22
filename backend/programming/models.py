@@ -1,5 +1,4 @@
-from typing import Optional
-
+# backend/programming/models.py
 from django.db import models
 
 from core.models import BaseImage
@@ -21,7 +20,7 @@ class Project(models.Model):
         verbose_name_plural = "Projects"
         ordering = ["-created_at"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -34,35 +33,3 @@ class ProjectImage(BaseImage):
     class Meta:
         verbose_name = "Project Image"
         verbose_name_plural = "Project Images"
-
-
-class ProgrammingPageConfig(models.Model):
-    """
-    Configuration for the programming page.
-    Singleton pattern: Only one configuration instance is allowed.
-    """
-
-    enabled = models.BooleanField(default=False)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Programming Page Configuration"
-        verbose_name_plural = "Programming Page Configuration"
-
-    def __str__(self) -> str:
-        return f"Programming Page Config (Enabled: {self.enabled})"
-
-    def save(self, *args: tuple, **kwargs: dict) -> None:
-        """Enforce singleton pattern"""
-        if not self.pk and ProgrammingPageConfig.objects.exists():
-            raise ValueError(
-                "Only one config is allowed. Programming config already exists. "
-                "Update the existing config instead."
-            )
-        super().save(*args, **kwargs)
-
-    @classmethod
-    def get_config(cls) -> Optional["ProgrammingPageConfig"]:
-        """Get the single configuration instance or create it if it doesn't exist"""
-        config, _created = cls.objects.get_or_create(pk=1)
-        return config

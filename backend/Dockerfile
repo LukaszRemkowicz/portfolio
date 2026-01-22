@@ -12,6 +12,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    gettext \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -42,7 +43,7 @@ USER appuser
 EXPOSE 8000
 
 # Dev command (Runserver)
-CMD python manage.py migrate && python manage.py runserver 0.0.0.0:8000
+CMD python manage.py migrate && python manage.py compilemessages && python manage.py runserver 0.0.0.0:8000
 
 # --- Production Stage ---
 FROM base AS production
@@ -66,4 +67,4 @@ USER appuser
 EXPOSE 8000
 
 # Prod command (Gunicorn)
-CMD python manage.py migrate && gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 4
+CMD python manage.py migrate && python manage.py compilemessages && gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 4

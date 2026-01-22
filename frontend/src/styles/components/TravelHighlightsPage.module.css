@@ -1,0 +1,439 @@
+.container {
+  text-align: center;
+  background-color: transparent;
+  color: var(--text-light);
+  padding-bottom: 2rem;
+  min-height: auto;
+}
+
+.title {
+  font-size: var(--font-size-5xl);
+  color: var(--text-light);
+  margin-bottom: var(--space-12);
+  font-weight: var(--font-weight-light);
+  letter-spacing: 2px;
+}
+
+.gallerySection {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto 2rem;
+  padding: 0 1rem;
+}
+
+.galleryTitle {
+  font-family: "Outfit", sans-serif;
+  /* or Space Grotesk based on preference, Outfit matches new update */
+  font-size: 2.5rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.2em;
+  color: #fff;
+  margin-bottom: 3rem;
+  text-transform: uppercase;
+  text-shadow: 0 0 20px rgba(77, 163, 255, 0.4);
+}
+
+.viewerContainer {
+  position: relative;
+  width: 100%;
+  animation: fadeIn 0.5s ease-out;
+  margin-bottom: 4rem;
+  /* Spacing between stacked cards */
+}
+
+.viewerContainer:last-child {
+  margin-bottom: 0;
+}
+
+.viewerFrame {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  background-color: #0f172a;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.imageWrapper {
+  width: 40%;
+  aspect-ratio: auto;
+  min-height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.viewerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* or contain, depending on preference. Cover looks cleaner for highlights */
+  transition: transform 0.5s ease;
+  cursor: zoom-in;
+}
+
+.viewerImage:hover {
+  transform: scale(1.05);
+}
+
+.viewerDetails {
+  width: 60%;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.4);
+  text-align: center;
+}
+
+.imageTitle {
+  font-family: "Outfit", sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 1rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.imageDescription {
+  font-family: "Inter", sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin-bottom: 2rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  /* Limit text lines */
+  line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: center;
+}
+
+.imageDescription p,
+.imageDescription div {
+  display: inline;
+  margin: 0;
+}
+
+.imageMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #64748b;
+  font-family: "Space Grotesk", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metaItem strong {
+  color: var(--celestial-blue);
+  margin-right: 0.5rem;
+}
+
+/* Navigation Arrows */
+.navArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.7);
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  transition: all 0.2s ease;
+  opacity: 0;
+  /* Hide by default, show on hover */
+}
+
+.viewerFrame:hover .navArrow {
+  opacity: 1;
+}
+
+.prevArrow {
+  left: 20px;
+}
+
+.nextArrow {
+  right: 80px;
+  /* Offset to avoid toolbar */
+}
+
+.navArrow:hover {
+  background: rgba(255, 255, 255, 0.1);
+  /* Lighter on hover */
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .viewerFrame {
+    aspect-ratio: auto;
+    border-radius: 12px;
+    flex-direction: column;
+  }
+
+  .imageWrapper {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+  }
+
+  .viewerDetails {
+    width: 100%;
+    padding: 1.5rem;
+  }
+
+  .imageTitle {
+    font-size: 1.5rem;
+  }
+
+  .imageDescription {
+    font-size: 0.875rem;
+  }
+
+  .galleryTitle {
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .nextArrow {
+    right: 60px;
+  }
+
+  .floatingToolbar {
+    right: 10px;
+    padding: 8px 4px;
+  }
+}
+
+.hero {
+  width: 100vw;
+  height: 33vh;
+  min-height: 250px;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  position: relative;
+  padding-top: 80px;
+  /* Add space for navbar overlay */
+}
+
+/* removed redundant overlay to match homepage style */
+
+.heroTitle {
+  color: #fff;
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  z-index: 2;
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.heroSubtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.25rem;
+  font-weight: 300;
+  letter-spacing: 1px;
+  z-index: 2;
+  position: relative;
+  max-width: 600px;
+  text-align: center;
+  padding: 0 2rem;
+}
+
+.filtersSection {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1.5rem 0 2.5rem 0;
+  flex-wrap: wrap;
+}
+
+.filterBox {
+  background: var(--portfolio-bg-light);
+  color: var(--text-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    border-color var(--transition-fast);
+  border: 2px solid transparent;
+}
+
+.filterBox:not(.activeFilter):hover {
+  background: #334155;
+  color: var(--accent-gold);
+  border-color: var(--accent-gold);
+}
+
+.activeFilter {
+  background: var(--accent-gold) !important;
+  color: var(--portfolio-bg-dark) !important;
+  border-color: var(--accent-gold) !important;
+  font-weight: var(--font-weight-bold);
+  box-shadow: 0 4px 16px rgba(255, 184, 0, 0.12);
+}
+
+.error {
+  color: #ef4444;
+  text-align: center;
+  font-size: 1.25rem;
+  height: calc(100vh - 80px);
+  /* Full viewport minus navbar height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.noResults {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-light);
+}
+
+.noResults p {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #cbd5e1;
+}
+
+.noResultsHint {
+  font-size: 1rem;
+  color: #94a3b8;
+  font-weight: 300;
+}
+
+.expeditionContainer {
+  display: flex;
+  justify-content: center;
+  padding: 0rem 1rem;
+  background: transparent;
+  width: 100%;
+  position: relative;
+  z-index: 5;
+}
+
+.glassCard {
+  max-width: 1000px;
+  width: 100%;
+  padding: 3rem;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  transition: transform 0.3s ease;
+}
+
+.glassCard:hover {
+  transform: translateY(-2px);
+}
+
+.metaInfo {
+  display: flex;
+  justify-content: center;
+  /* Center align meta info */
+  gap: 15px;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+  letter-spacing: 3px;
+  color: var(--celestial-blue);
+  text-transform: uppercase;
+  font-weight: 600;
+  align-items: center;
+}
+
+.badge {
+  /* Matching the metaInfo style, can be customized if needed */
+  display: inline-block;
+}
+
+.separator {
+  opacity: 0.5;
+  color: var(--celestial-white);
+}
+
+.storyTitle {
+  font-size: 2.5rem;
+  color: white;
+  margin-bottom: 3rem;
+  font-weight: 700;
+  font-family: "Outfit", sans-serif;
+  line-height: 1.1;
+  text-align: center;
+  /* Center the title */
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  /* Improve readability on stars */
+}
+
+.storyContent {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: left;
+  font-weight: 300;
+  line-height: 1.625;
+  /* Keep text left-aligned for reading */
+}
+
+.storyContent p {
+  margin: 0;
+}
+
+.storyContent p:last-child {
+  margin-bottom: 0;
+}
+
+/* Editorial Drop Cap Style */
+.storyContent p:first-of-type::first-letter {
+  float: left;
+  font-size: 5rem;
+  line-height: 0.75;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+  /* Pull text up slightly */
+  color: var(--celestial-blue);
+  font-weight: 700;
+  font-family: "Outfit", sans-serif;
+}
+
+@media (max-width: 640px) {
+  .expeditionContainer {
+    padding: 2rem 1rem;
+  }
+
+  .glassCard {
+    padding: 1.5rem;
+  }
+
+  .storyTitle {
+    font-size: 1.75rem;
+  }
+
+  .storyContent {
+    font-size: 1rem;
+  }
+}
