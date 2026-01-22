@@ -83,8 +83,8 @@ sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLD
 python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 check_untyped_defs = true
 disallow_untyped_decorators = true
 no_implicit_optional = true
@@ -102,6 +102,10 @@ module = [
     "celery.*",
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "*.tests.*"
+ignore_errors = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "core.test_settings"

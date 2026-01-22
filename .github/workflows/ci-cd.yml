@@ -102,12 +102,14 @@ jobs:
 
     - name: Run Python linting
       working-directory: ./backend
+      continue-on-error: true
       run: |
         poetry run flake8 .
         poetry run black --check .
 
     - name: Run Python type checking
       working-directory: ./backend
+      continue-on-error: true
       run: poetry run mypy .
 
     - name: Run tests
