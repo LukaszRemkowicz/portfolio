@@ -66,7 +66,33 @@ class BaseImage(models.Model):
         return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
 
 
-class LandingPageSettings(models.Model):
+class SingletonModel(models.Model):
+    """Abstract singleton model to ensure only one instance exists in the database."""
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args: list, **kwargs: dict) -> None:
+        if not self.pk and type(self).objects.exists():
+            # If creating a new one but instance already exists, stop or update existing.
+            # Default behavior for settings: update fields of the existing instance.
+            existing = type(self).objects.first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name not in ["id", "pk"]:
+                        setattr(existing, field.name, getattr(self, field.name))
+                existing.save(*args, **kwargs)
+                return
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls) -> "SingletonModel":
+        """Load the singleton instance, creating it with defaults if it doesn't exist."""
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
+class LandingPageSettings(SingletonModel):
     """Singleton-like model to store global landing page settings."""
 
     contact_form_enabled = models.BooleanField(default=True, verbose_name=_("Contact Form Enabled"))
@@ -85,20 +111,5 @@ class LandingPageSettings(models.Model):
         verbose_name = _("Landing Page Settings")
         verbose_name_plural = _("Landing Page Settings")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(_("Landing Page Settings"))
-
-    def save(self, *args: list, **kwargs: dict) -> None:
-        """Ensure only one instance exists."""
-        if not self.pk and LandingPageSettings.objects.exists():
-            # If you try to create a new one, but one exists, update the existing one instead
-            existing = LandingPageSettings.objects.first()
-            if existing:
-                existing.contact_form_enabled = self.contact_form_enabled
-                existing.travel_highlights_enabled = self.travel_highlights_enabled
-                existing.programming_enabled = self.programming_enabled
-                existing.lastimages_enabled = self.lastimages_enabled
-                existing.meteors_enabled = self.meteors_enabled
-                existing.save(*args, **kwargs)
-                return
-        super().save(*args, **kwargs)

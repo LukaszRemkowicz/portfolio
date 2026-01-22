@@ -9,6 +9,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
 
+from core.utils.logging import sanitize_for_logging
+
 from .models import ContactMessage
 
 logger = logging.getLogger(__name__)
@@ -97,11 +99,6 @@ class ContactSubmissionService:
     """
 
     @staticmethod
-    def _sanitize_for_logging(value: Any) -> str:
-        """Sanitize value for logging to prevent injection"""
-        return str(value).replace("\n", "").replace("\r", "")
-
-    @staticmethod
     def check_duplicate(validated_data: Dict[str, Any], client_ip: str) -> None:
         """
         Check for duplicate messages within a short timeframe.
@@ -114,15 +111,15 @@ class ContactSubmissionService:
             DuplicateSubmission: If duplicate message detected
         """
         # Sanitize IP for logging to prevent log injection
-        safe_ip = client_ip.replace("\n", "").replace("\r", "")
+        safe_ip = sanitize_for_logging(client_ip)
         logger.info(f"Contact form submission attempt from IP: {safe_ip}")
 
         email: Optional[str] = validated_data.get("email")
         subject: Optional[str] = validated_data.get("subject")
 
         # Sanitize email and subject for logging
-        safe_email = email.replace("\n", "").replace("\r", "") if email else ""
-        safe_subject = subject.replace("\n", "").replace("\r", "") if subject else ""
+        safe_email = sanitize_for_logging(email) if email else ""
+        safe_subject = sanitize_for_logging(subject) if subject else ""
 
         if email and subject:
             recent_duplicate: bool = ContactMessage.objects.filter(
@@ -146,12 +143,8 @@ class ContactSubmissionService:
             contact_message: The created ContactMessage instance
             client_ip: The IP address of the client
         """
-        safe_ip = client_ip.replace("\n", "").replace("\r", "")
-        safe_email = (
-            contact_message.email.replace("\n", "").replace("\r", "")
-            if contact_message.email
-            else ""
-        )
+        safe_ip = sanitize_for_logging(client_ip)
+        safe_email = sanitize_for_logging(contact_message.email) if contact_message.email else ""
 
         # 1. Send email notification
         ContactMessageEmailService.send_notification_email_async(contact_message)
@@ -176,5 +169,5 @@ class ContactSubmissionService:
                     sanitized_data[key] = "***"
             else:
                 sanitized_data[key] = f"{str(value)[:100]}..." if len(str(value)) > 100 else value
-        safe_ip = ContactSubmissionService._sanitize_for_logging(client_ip)
+        safe_ip = sanitize_for_logging(client_ip)
         logger.info(f"Contact form data received from IP {safe_ip}: {sanitized_data}")
