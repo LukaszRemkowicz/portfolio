@@ -1,16 +1,13 @@
-# backend/astrophotography/views.py
-from django_countries import countries
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
-from taggit.models import Tag
 
 from core.throttling import GalleryRateThrottle
 
-from .models import AstroImage, MainPageBackgroundImage, MainPageLocation
+from .models import MainPageBackgroundImage, MainPageLocation
 from .serializers import (
     AstroImageSerializer,
     AstroImageSerializerList,
@@ -28,59 +25,9 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
     def get_queryset(self):
-        queryset = AstroImage.objects.all().order_by("-created_at")
+        from .services import GalleryQueryService
 
-        # Filter by Celestial Object
-        filter_value = self.request.query_params.get("filter")
-        if filter_value:
-            queryset = queryset.filter(celestial_object=filter_value)
-
-        # Filter by Tags
-        tag_slug = self.request.query_params.get("tag")
-        if tag_slug:
-            queryset = queryset.filter(tags__slug__in=[tag_slug])
-
-        # Filter by Travel (matches location or place name)
-        travel_param = self.request.query_params.get("travel")
-        if travel_param:
-
-            from django.db.models import Q
-
-            # Implementation of a fuzzy country match
-            found_code = None
-            search_term = travel_param.lower()
-            for code, name in dict(countries).items():
-                if search_term == code.lower() or search_term in name.lower():
-                    found_code = code
-                    break
-
-            filter_q = Q(place__name__icontains=travel_param)
-            if found_code:
-                filter_q |= Q(location=found_code)
-
-            # Additional check for manual entry if no code found
-            if not found_code:
-                filter_q |= Q(location__icontains=travel_param)
-
-            queryset = queryset.filter(filter_q)
-
-        # Filter by Country and Place (explicit parameters)
-        country_param = self.request.query_params.get("country")
-        place_param = self.request.query_params.get("place")
-
-        if country_param:
-            from django.db.models import Q
-
-            # Filter by country code
-            queryset = queryset.filter(location=country_param)
-
-            # If place is specified, also filter by place
-            if place_param:
-                queryset = queryset.filter(
-                    Q(place__name__iexact=place_param) | Q(place__isnull=True)
-                )
-
-        return queryset
+        return GalleryQueryService.get_filtered_images(self.request.query_params)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -135,15 +82,10 @@ class TravelHighlightsBySlugView(APIView):
 
         slider = get_object_or_404(MainPageLocation, is_active=True, **filter_kwargs)
 
-        # now get images based on slider's location info
-        # User requirement: filter by location and place from the slider object
+        # Use Service to get images based on slider's location info
+        from .services import GalleryQueryService
 
-        queryset = AstroImage.objects.filter(location=slider.country)
-
-        if slider.place:
-            queryset = queryset.filter(place=slider.place)
-
-        queryset = queryset.order_by("-created_at")
+        queryset = GalleryQueryService.get_travel_highlight_images(slider)
 
         # Serialize the results
         serializer = AstroImageSerializerList(queryset, many=True, context={"request": request})
@@ -181,29 +123,10 @@ class TagsView(ViewSet):
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
     def list(self, request: Request) -> Response:
-        from django.db.models import Count, Q
-
-        # Base filter: Tag must have at least one visible AstroImage
-        # default to showing tags with at least 1 image globaly, unless filtered
+        from .services import GalleryQueryService
 
         category_filter = request.query_params.get("filter")
-
-        # We want to count how many images match this tag AND the category filter
-        annotation_filter = Q(astroimage__isnull=False)
-        if category_filter:
-            annotation_filter &= Q(astroimage__celestial_object=category_filter)
-
-        # We invoke distinct() to ensure we don't double count if joins go wrong,
-        # though count distinct=True is usually safer for M2M.
-        # But here we aggregate on the Tag model.
-
-        tags = (
-            Tag.objects.filter(astroimage__isnull=False)
-            .annotate(num_times=Count("astroimage", filter=annotation_filter, distinct=True))
-            .filter(num_times__gt=0)
-            .order_by("name")
-            .distinct()
-        )
+        tags = GalleryQueryService.get_tag_stats(category_filter)
 
         return Response(
             [{"name": tag.name, "slug": tag.slug, "count": tag.num_times} for tag in tags]
