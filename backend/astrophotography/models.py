@@ -1,3 +1,4 @@
+# backend/astrophotography/models.py
 from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
 from taggit.managers import TaggableManager
@@ -32,7 +33,7 @@ class Place(models.Model):
         help_text=_("The name of the specific place or city."),
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     class Meta:
@@ -48,7 +49,7 @@ class Telescope(models.Model):
         help_text=_("Telescope model and specifications"),
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.model
 
     class Meta:
@@ -64,7 +65,7 @@ class Camera(models.Model):
         help_text=_("Camera model and specifications"),
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.model
 
     class Meta:
@@ -80,7 +81,7 @@ class Lens(models.Model):
         help_text=_("Lens model and focal length"),
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.model
 
     class Meta:
@@ -96,7 +97,7 @@ class Tracker(models.Model):
         help_text=_("Star tracker or mount model"),
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     class Meta:
@@ -112,7 +113,7 @@ class Tripod(models.Model):
         help_text=_("Tripod model"),
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     class Meta:
@@ -196,14 +197,14 @@ class AstroImage(BaseImage):
         through=UUIDTaggedItem, verbose_name=_("Tags"), help_text=_("Relevant tags for the image.")
     )
 
-    def clean(self):
+    def clean(self) -> None:
         super().clean()
         # Note: M2M fields validation is primarily handled in the form
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: list, **kwargs: dict) -> None:
         super().save(*args, **kwargs)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} ({self.capture_date})" if self.capture_date else self.name
 
     class Meta:
@@ -285,7 +286,7 @@ class MainPageLocation(models.Model):
         help_text=_("Optional specific background image for this location's page."),
     )
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: list, **kwargs: dict) -> None:
         from django.utils.text import slugify
 
         if self.country:
@@ -298,7 +299,7 @@ class MainPageLocation(models.Model):
 
         super().save(*args, **kwargs)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.highlight_name:
             return f"{self.highlight_name} ({'Active' if self.is_active else 'Inactive'})"
 

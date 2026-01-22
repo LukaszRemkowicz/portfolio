@@ -1,3 +1,4 @@
+# backend/core/models.py
 import uuid
 from io import BytesIO
 
@@ -39,15 +40,15 @@ class BaseImage(models.Model):
         abstract = True
         ordering = ["-created_at"]
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: list, **kwargs: dict) -> None:
         if self.path and not self.thumbnail:
             self.thumbnail = self.make_thumbnail(self.path)
         super().save(*args, **kwargs)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def make_thumbnail(self, image, size=(400, 400)):
+    def make_thumbnail(self, image: models.ImageField, size: tuple = (400, 400)) -> ContentFile:
         """Generates a thumbnail for the image."""
         img = Image.open(image)
         # Handle transparency: create a white background if image has alpha channel
@@ -58,12 +59,9 @@ class BaseImage(models.Model):
             img = bg
         else:
             img = img.convert("RGB")
-
         img.thumbnail(size)
-
         thumb_io = BytesIO()
         img.save(thumb_io, "JPEG", quality=85)
-
         thumbnail_name = f"thumb_{image.name.split('/')[-1]}"
         return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
 
@@ -90,15 +88,17 @@ class LandingPageSettings(models.Model):
     def __str__(self):
         return str(_("Landing Page Settings"))
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: list, **kwargs: dict) -> None:
         """Ensure only one instance exists."""
         if not self.pk and LandingPageSettings.objects.exists():
             # If you try to create a new one, but one exists, update the existing one instead
             existing = LandingPageSettings.objects.first()
-            existing.contact_form_enabled = self.contact_form_enabled
-            existing.travel_highlights_enabled = self.travel_highlights_enabled
-            existing.programming_enabled = self.programming_enabled
-            existing.lastimages_enabled = self.lastimages_enabled
-            existing.meteors_enabled = self.meteors_enabled
-            return existing.save(*args, **kwargs)
-        return super().save(*args, **kwargs)
+            if existing:
+                existing.contact_form_enabled = self.contact_form_enabled
+                existing.travel_highlights_enabled = self.travel_highlights_enabled
+                existing.programming_enabled = self.programming_enabled
+                existing.lastimages_enabled = self.lastimages_enabled
+                existing.meteors_enabled = self.meteors_enabled
+                existing.save(*args, **kwargs)
+                return
+        super().save(*args, **kwargs)
