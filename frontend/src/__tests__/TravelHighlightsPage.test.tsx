@@ -4,6 +4,12 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import TravelHighlightsPage from "../components/TravelHighlightsPage";
 import { api } from "../api/api";
 import { useAppStore } from "../store/useStore";
+import {
+  fetchProfile,
+  fetchBackground,
+  fetchEnabledFeatures,
+  fetchAstroImage,
+} from "../api/services";
 
 // Mock API (direct axios calls)
 jest.mock("../api/api");
@@ -11,15 +17,31 @@ const mockedApi = api as jest.Mocked<typeof api>;
 
 // Mock Services (store calls)
 jest.mock("../api/services", () => ({
-  fetchProfile: jest.fn().mockResolvedValue({}),
-  fetchBackground: jest.fn().mockResolvedValue(null),
-  fetchEnabledFeatures: jest.fn().mockResolvedValue({}),
-  fetchAstroImage: jest.fn().mockResolvedValue({}),
+  fetchProfile: jest.fn(),
+  fetchBackground: jest.fn(),
+  fetchEnabledFeatures: jest.fn(),
+  fetchAstroImage: jest.fn(),
 }));
 
 describe("TravelHighlightsPage", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
+
+    // Re-set mock implementations because resetAllMocks clears them
+    (fetchProfile as jest.Mock).mockResolvedValue({});
+    (fetchBackground as jest.Mock).mockResolvedValue(null);
+    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
+      programming: true,
+      contactForm: true,
+      lastimages: true,
+    });
+    (fetchAstroImage as jest.Mock).mockResolvedValue({
+      pk: 1,
+      name: "Mock Image",
+      url: "/mock.jpg",
+      description: "Mock Description",
+    });
+
     useAppStore.setState({
       backgroundUrl: null,
       isInitialLoading: false,
@@ -27,30 +49,28 @@ describe("TravelHighlightsPage", () => {
     });
   });
 
-  const renderComponent = async (path = "/travel/iceland") => {
-    await act(async () => {
-      render(
-        <MemoryRouter initialEntries={[path]}>
-          <Routes>
-            <Route
-              path="/travel/:countrySlug"
-              element={<TravelHighlightsPage />}
-            />
-            <Route
-              path="/travel/:countrySlug/:placeSlug"
-              element={<TravelHighlightsPage />}
-            />
-          </Routes>
-        </MemoryRouter>,
-      );
-    });
+  const renderComponent = (path = "/travel/iceland") => {
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route
+            path="/travel/:countrySlug"
+            element={<TravelHighlightsPage />}
+          />
+          <Route
+            path="/travel/:countrySlug/:placeSlug"
+            element={<TravelHighlightsPage />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
   };
 
   test("renders loading state initially", async () => {
     // Keep promise pending
     mockedApi.get.mockReturnValue(new Promise(() => {}));
 
-    await renderComponent();
+    renderComponent();
 
     // Check for the loading screen using the testid we added
     expect(screen.getByTestId("loading-screen")).toBeInTheDocument();
@@ -68,8 +88,8 @@ describe("TravelHighlightsPage", () => {
         {
           pk: 1,
           name: "Aurora Borealis",
-          url: "aurora.jpg",
-          thumbnail_url: "aurora_thumb.jpg",
+          url: "/aurora.jpg",
+          thumbnail_url: "/aurora_thumb.jpg",
           description: "Green lights",
         },
       ],
@@ -77,7 +97,7 @@ describe("TravelHighlightsPage", () => {
 
     mockedApi.get.mockResolvedValue({ data: mockData });
 
-    await renderComponent();
+    renderComponent();
 
     // Use findBy which is implicitly waitFor + getBy
     expect(await screen.findByText("Reykjavik, Iceland")).toBeInTheDocument();
@@ -97,7 +117,7 @@ describe("TravelHighlightsPage", () => {
       .spyOn(console, "error")
       .mockImplementation(() => {});
 
-    await renderComponent();
+    renderComponent();
 
     expect(
       await screen.findByText(
@@ -115,13 +135,13 @@ describe("TravelHighlightsPage", () => {
         {
           pk: 1,
           name: "Click Me",
-          url: "click.jpg",
+          url: "/click.jpg",
         },
       ],
     };
     mockedApi.get.mockResolvedValue({ data: mockData });
 
-    await renderComponent();
+    renderComponent();
 
     expect(await screen.findByText("Click Me")).toBeInTheDocument();
 
@@ -132,6 +152,11 @@ describe("TravelHighlightsPage", () => {
     });
 
     // Look for modal using the testid we added
-    expect(await screen.findByTestId("image-modal")).toBeInTheDocument();
+    const modal = await screen.findByTestId(
+      "image-modal",
+      {},
+      { timeout: 3000 },
+    );
+    expect(modal).toBeInTheDocument();
   });
 });

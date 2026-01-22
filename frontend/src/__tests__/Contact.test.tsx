@@ -27,15 +27,13 @@ describe("Contact Component", () => {
     useAppStore.setState({ features: { contactForm: true } });
     render(<Contact />);
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole("heading", { name: /Direct Inquiry/i }),
-      ).toBeInTheDocument();
-      expect(screen.getByText("Identity")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /Submit Inquiry/i }),
-      ).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByRole("heading", { name: /Direct Inquiry/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Identity")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Submit Inquiry/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders nothing when contactForm is disabled", async () => {
@@ -54,20 +52,18 @@ describe("Contact Component", () => {
     const form = screen.getByRole("form");
     fireEvent.submit(form);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Name must be at least 2 characters/i),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Please provide a valid email/i),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Subject must be at least 5 characters/i),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Message must be at least 10 characters/i),
-      ).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByText(/Name must be at least 2 characters/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Please provide a valid email/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Subject must be at least 5 characters/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Message must be at least 10 characters/i),
+    ).toBeInTheDocument();
   });
 
   it("shows success message on successful submission", async () => {
@@ -91,11 +87,9 @@ describe("Contact Component", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Submit Inquiry/i }));
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/message has been sent successfully/i),
-      ).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByText(/message has been sent successfully/i),
+    ).toBeInTheDocument();
 
     // Verify inputs are cleared
     expect(screen.getByPlaceholderText(/Your Name/i)).toHaveValue("");
@@ -125,11 +119,9 @@ describe("Contact Component", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Submit Inquiry/i }));
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Too many requests. Wait 1 hour./i),
-      ).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByText(/Too many requests. Wait 1 hour./i),
+    ).toBeInTheDocument();
   });
 
   it("handles 400 validation errors from server", async () => {
@@ -159,10 +151,8 @@ describe("Contact Component", () => {
 
     fireEvent.submit(screen.getByRole("form"));
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Server says name is too short./i),
-      ).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByText(/Server says name is too short./i),
+    ).toBeInTheDocument();
   });
 });

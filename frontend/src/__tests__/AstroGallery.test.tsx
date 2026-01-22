@@ -1,5 +1,12 @@
 import React from "react";
-import { render, screen, waitFor, act, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  act,
+  within,
+  fireEvent,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import "@testing-library/jest-dom";
 import AstroGallery from "../components/AstroGallery";
@@ -54,9 +61,11 @@ describe("AstroGallery Component", () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
       programming: true,
+      contactForm: true,
+      lastimages: true,
     });
     (fetchProfile as jest.Mock).mockResolvedValue({
       first_name: "Test",
@@ -102,20 +111,20 @@ describe("AstroGallery Component", () => {
   });
 
   it("renders the gallery title and filter boxes after loading", async () => {
-    await act(async () => {
-      render(
-        <MemoryRouter initialEntries={["/"]}>
-          <Routes>
-            <Route path="/" element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>,
-      );
-    });
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<AstroGallery />} />
+        </Routes>
+      </MemoryRouter>,
+    );
 
+    // Wait for loading screen to be removed
     await waitFor(() => {
-      expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
     });
 
+    expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
     expect(screen.getByText(/Landscape/i)).toBeInTheDocument();
     expect(screen.getByText(/Deep Sky/i)).toBeInTheDocument();
   });
@@ -132,40 +141,49 @@ describe("AstroGallery Component", () => {
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
 
-    await act(async () => {
-      render(
-        <MemoryRouter initialEntries={["/"]}>
-          <Routes>
-            <Route path="/" element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>,
-      );
-    });
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<AstroGallery />} />
+        </Routes>
+      </MemoryRouter>,
+    );
 
-    const card = await screen.findByRole("button", {
-      name: /View details for Test Image 1/i,
-    });
+    // Wait for loading to finish and image to appear
+    const card = await screen.findByRole(
+      "button",
+      { name: /View details for Test Image 1/i },
+      { timeout: 3000 },
+    );
     expect(card).toBeInTheDocument();
   });
 
   it("handles API errors gracefully", async () => {
     mockFetchAstroImages.mockRejectedValue(new Error("API Error"));
 
-    await act(async () => {
-      render(
-        <MemoryRouter initialEntries={["/"]}>
-          <Routes>
-            <Route path="/" element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>,
-      );
-    });
+    // Suppress console error for this test since we expect a failure
+    const consoleSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Failed to fetch gallery images/i),
-      ).toBeInTheDocument();
-    });
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<AstroGallery />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText(/Failed to fetch gallery images/i),
+        ).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    consoleSpy.mockRestore();
   });
 
   it("filters images when filter is clicked", async () => {
@@ -180,20 +198,19 @@ describe("AstroGallery Component", () => {
 
     mockFetchAstroImages.mockResolvedValue(mockImages);
 
-    await act(async () => {
-      render(
-        <MemoryRouter initialEntries={["/"]}>
-          <Routes>
-            <Route path="/" element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>,
-      );
-    });
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<AstroGallery />} />
+        </Routes>
+      </MemoryRouter>,
+    );
 
+    // Use await findByText to ensure we wait for loading to finish
     const landscapeFilter = await screen.findByText(/Landscape/i);
 
     await act(async () => {
-      landscapeFilter.click();
+      fireEvent.click(landscapeFilter);
     });
 
     await waitFor(() => {
@@ -223,28 +240,30 @@ describe("AstroGallery Component", () => {
     mockFetchAstroImages.mockResolvedValue(mockImages);
     mockFetchAstroImage.mockResolvedValue(mockImageDetail);
 
-    await act(async () => {
-      render(
-        <MemoryRouter initialEntries={["/"]}>
-          <Routes>
-            <Route path="/" element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>,
-      );
-    });
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<AstroGallery />} />
+        </Routes>
+      </MemoryRouter>,
+    );
 
-    const firstImageButton = await screen.findByRole("button", {
-      name: /View details for Test Image 1/i,
-    });
+    const firstImageButton = await screen.findByRole(
+      "button",
+      { name: /View details for Test Image 1/i },
+      { timeout: 3000 },
+    );
 
     await act(async () => {
-      firstImageButton.click();
+      fireEvent.click(firstImageButton);
     });
 
     const modal = await screen.findByTestId("image-modal");
-    expect(
-      within(modal).getByText(/Test detailed description/),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        within(modal).getByText(/Test detailed description/),
+      ).toBeInTheDocument();
+    });
   });
 
   it("renders tags in Sidebar and filters by them", async () => {
@@ -254,26 +273,20 @@ describe("AstroGallery Component", () => {
     ];
     mockFetchTags.mockResolvedValue(mockTags);
 
-    await act(async () => {
-      render(
-        <MemoryRouter initialEntries={["/"]}>
-          <Routes>
-            <Route path="/" element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>,
-      );
-    });
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<AstroGallery />} />
+        </Routes>
+      </MemoryRouter>,
+    );
 
-    // Check tags are rendered
-    await waitFor(() => {
-      expect(screen.getByText(/Nebula/i)).toBeInTheDocument();
-      expect(screen.getByText(/Galaxies/i)).toBeInTheDocument();
-    });
+    // Wait for tags to be rendered
+    const nebulaTag = await screen.findByText(/Nebula/i);
+    expect(screen.getByText(/Galaxies/i)).toBeInTheDocument();
 
-    // Click a tag
-    const nebulaTag = screen.getByText(/Nebula/i);
     await act(async () => {
-      nebulaTag.click();
+      fireEvent.click(nebulaTag);
     });
 
     // Verify imagery is refetched with the tag filter
@@ -285,22 +298,21 @@ describe("AstroGallery Component", () => {
   });
 
   it("refetches tags when category filter changes", async () => {
-    await act(async () => {
-      render(
-        <MemoryRouter initialEntries={["/"]}>
-          <Routes>
-            <Route path="/" element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>,
-      );
-    });
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<AstroGallery />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const milkiWayFilter = await screen.findByText(/Milky Way/i);
 
     // Clear initial load call
     mockFetchTags.mockClear();
 
-    const milkiWayFilter = screen.getByText(/Milky Way/i);
     await act(async () => {
-      milkiWayFilter.click();
+      fireEvent.click(milkiWayFilter);
     });
 
     // Verify fetchTags was called with "Milky Way"
