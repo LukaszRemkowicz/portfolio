@@ -24,6 +24,21 @@ DATABASES["default"].setdefault("TEST", {}).update(  # noqa: F405
     }
 )
 
+# Use local memory cache for tests
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "test-unique-snowflake",
+    },
+    "select2": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "test-select2",
+    },
+}
+
+# Use console email backend for tests
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 # Faster test settings
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",

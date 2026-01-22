@@ -18,8 +18,14 @@ class GalleryQueryService:
     def get_filtered_images(params: Dict[str, Any]) -> QuerySet[AstroImage]:
         """
         Apply filters to the AstroImage queryset based on provided parameters.
+        Optimized with prefetch_related and select_related to avoid N+1 queries.
         """
-        queryset = AstroImage.objects.all().order_by("-created_at")
+        queryset = (
+            AstroImage.objects.select_related("place")
+            .prefetch_related("tags", "camera", "lens", "telescope", "tracker", "tripod")
+            .all()
+            .order_by("-created_at")
+        )
 
         # 1. Filter by Celestial Object (Category)
         category = params.get("filter")
@@ -50,8 +56,13 @@ class GalleryQueryService:
     def get_travel_highlight_images(slider: Any) -> QuerySet[AstroImage]:
         """
         Retrieve images for a specific travel highlight slider.
+        Optimized with prefetch_related and select_related.
         """
-        queryset = AstroImage.objects.filter(location=slider.country)
+        queryset = (
+            AstroImage.objects.select_related("place")
+            .prefetch_related("tags", "camera", "lens", "telescope", "tracker", "tripod")
+            .filter(location=slider.country)
+        )
         if slider.place:
             queryset = queryset.filter(place=slider.place)
         return queryset.order_by("-created_at")
