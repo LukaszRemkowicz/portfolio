@@ -21,12 +21,14 @@ Object.defineProperty(window, "matchMedia", {
 // Actually, the most reliable way in v6 is to mock the console or (better) ignore these specific warnings.
 const originalWarn = console.warn;
 console.warn = (...args) => {
-  if (
-    args[0] &&
-    typeof args[0] === "string" &&
-    args[0].includes("React Router Future Flag Warning")
-  ) {
-    return;
+  if (args[0] && typeof args[0] === "string") {
+    if (
+      args[0].includes("React Router Future Flag Warning") ||
+      args[0].includes("Profile not found, using fallbacks") ||
+      args[0].includes("Background image not found")
+    ) {
+      return;
+    }
   }
   originalWarn(...args);
 };

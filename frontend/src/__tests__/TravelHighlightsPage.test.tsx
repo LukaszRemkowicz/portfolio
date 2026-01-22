@@ -1,5 +1,11 @@
 import React from "react";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import TravelHighlightsPage from "../components/TravelHighlightsPage";
 import { api } from "../api/api";
@@ -49,28 +55,30 @@ describe("TravelHighlightsPage", () => {
     });
   });
 
-  const renderComponent = (path = "/travel/iceland") => {
-    render(
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route
-            path="/travel/:countrySlug"
-            element={<TravelHighlightsPage />}
-          />
-          <Route
-            path="/travel/:countrySlug/:placeSlug"
-            element={<TravelHighlightsPage />}
-          />
-        </Routes>
-      </MemoryRouter>,
-    );
+  const renderComponent = async (path = "/travel/iceland") => {
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route
+              path="/travel/:countrySlug"
+              element={<TravelHighlightsPage />}
+            />
+            <Route
+              path="/travel/:countrySlug/:placeSlug"
+              element={<TravelHighlightsPage />}
+            />
+          </Routes>
+        </MemoryRouter>,
+      );
+    });
   };
 
   test("renders loading state initially", async () => {
     // Keep promise pending
     mockedApi.get.mockReturnValue(new Promise(() => {}));
 
-    renderComponent();
+    await renderComponent();
 
     // Check for the loading screen using the testid we added
     expect(screen.getByTestId("loading-screen")).toBeInTheDocument();
@@ -97,7 +105,12 @@ describe("TravelHighlightsPage", () => {
 
     mockedApi.get.mockResolvedValue({ data: mockData });
 
-    renderComponent();
+    await renderComponent();
+
+    // Wait for loading screen to be removed
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
 
     // Use findBy which is implicitly waitFor + getBy
     expect(await screen.findByText("Reykjavik, Iceland")).toBeInTheDocument();
@@ -117,7 +130,12 @@ describe("TravelHighlightsPage", () => {
       .spyOn(console, "error")
       .mockImplementation(() => {});
 
-    renderComponent();
+    await renderComponent();
+
+    // Wait for loading screen to be removed
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
 
     expect(
       await screen.findByText(
@@ -141,7 +159,12 @@ describe("TravelHighlightsPage", () => {
     };
     mockedApi.get.mockResolvedValue({ data: mockData });
 
-    renderComponent();
+    await renderComponent();
+
+    // Wait for loading screen to be removed
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
 
     expect(await screen.findByText("Click Me")).toBeInTheDocument();
 
