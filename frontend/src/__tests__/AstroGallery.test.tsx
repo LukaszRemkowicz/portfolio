@@ -54,12 +54,13 @@ describe("AstroGallery Component", () => {
       tags: [],
       features: null,
       isInitialLoading: true,
-      isImagesLoading: false,
+      isImagesLoading: true,
       isProjectsLoading: false,
       error: null,
       initialSessionId: 0,
       imagesSessionId: 0,
       projectsSessionId: 0,
+      tagsSessionId: 0,
     });
   };
 

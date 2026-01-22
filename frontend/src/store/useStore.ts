@@ -31,6 +31,7 @@ interface AppState {
   initialSessionId: number;
   imagesSessionId: number;
   projectsSessionId: number;
+  tagsSessionId: number;
 
   // Actions
   loadInitialData: () => Promise<void>;
@@ -54,6 +55,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   initialSessionId: 0,
   imagesSessionId: 0,
   projectsSessionId: 0,
+  tagsSessionId: 0,
 
   clearError: () => set({ error: null }),
 
@@ -61,7 +63,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Avoid double loading if already have data
     if (get().profile && get().backgroundUrl) return;
 
-    const sessionId = get().initialSessionId + 1;
+    const sessionId = Date.now() + Math.random();
     set({ isInitialLoading: true, error: null, initialSessionId: sessionId });
     try {
       const [profileData, bgUrl, featuresData] = await Promise.all([
@@ -93,7 +95,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   loadImages: async (params = {}) => {
-    const sessionId = get().imagesSessionId + 1;
+    const sessionId = Date.now() + Math.random();
     set({ isImagesLoading: true, error: null, imagesSessionId: sessionId });
     try {
       const data = await fetchAstroImages(params);
@@ -120,7 +122,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   loadProjects: async () => {
-    const sessionId = get().projectsSessionId + 1;
+    const sessionId = Date.now() + Math.random();
     set({ isProjectsLoading: true, error: null, projectsSessionId: sessionId });
     try {
       const data = await fetchProjects();
@@ -142,9 +144,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   loadTags: async (category?: string) => {
+    const sessionId = Date.now() + Math.random();
+    set({ tagsSessionId: sessionId });
     try {
       const data = await fetchTags(category);
-      set({ tags: data });
+      if (get().tagsSessionId === sessionId) {
+        set({ tags: data });
+      }
     } catch (e: unknown) {
       console.error("Store tags load failure:", e);
     }
