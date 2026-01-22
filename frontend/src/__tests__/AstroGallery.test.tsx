@@ -54,7 +54,7 @@ describe("AstroGallery Component", () => {
       tags: [],
       features: null,
       isInitialLoading: true,
-      isImagesLoading: false,
+      isImagesLoading: true,
       isProjectsLoading: false,
       error: null,
     });
