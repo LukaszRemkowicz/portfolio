@@ -53,7 +53,7 @@ describe("AstroGallery Component", () => {
       projects: [],
       tags: [],
       features: null,
-      isInitialLoading: false,
+      isInitialLoading: true,
       isImagesLoading: false,
       isProjectsLoading: false,
       error: null,
@@ -153,17 +153,21 @@ describe("AstroGallery Component", () => {
       );
     });
 
-    // Wait for the card to be present and stable
-    await waitFor(
-      () => {
-        expect(
-          screen.getByRole("button", {
-            name: /View details for Test Image 1/i,
-          }),
-        ).toBeInTheDocument();
-      },
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
+
+    // Verify images were fetched
+    expect(fetchAstroImages).toHaveBeenCalled();
+
+    // Now find the card
+    const card = await screen.findByRole(
+      "button",
+      { name: /View details for Test Image 1/i },
       { timeout: 3000 },
     );
+    expect(card).toBeInTheDocument();
   });
 
   it("handles API errors gracefully", async () => {
@@ -181,6 +185,11 @@ describe("AstroGallery Component", () => {
           </Routes>
         </MemoryRouter>,
       );
+    });
+
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
     });
 
     await waitFor(
@@ -217,7 +226,12 @@ describe("AstroGallery Component", () => {
       );
     });
 
-    // Use await findByText to ensure we wait for loading to finish
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
+
+    // Use findByText to ensure we wait for category buttons to appear
     const landscapeFilter = await screen.findByText(/Landscape/i);
 
     await act(async () => {
@@ -261,6 +275,11 @@ describe("AstroGallery Component", () => {
       );
     });
 
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
+
     const firstImageButton = await screen.findByRole(
       "button",
       { name: /View details for Test Image 1/i },
@@ -296,6 +315,11 @@ describe("AstroGallery Component", () => {
       );
     });
 
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+    });
+
     // Wait for tags to be rendered
     const nebulaTag = await screen.findByText(/Nebula/i);
     expect(screen.getByText(/Galaxies/i)).toBeInTheDocument();
@@ -321,6 +345,11 @@ describe("AstroGallery Component", () => {
           </Routes>
         </MemoryRouter>,
       );
+    });
+
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
     });
 
     const milkiWayFilter = await screen.findByText(/Milky Way/i);

@@ -107,10 +107,13 @@ describe("TravelHighlightsPage", () => {
 
     await renderComponent();
 
-    // Wait for loading screen to be removed
-    await waitFor(() => {
-      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
-    });
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
 
     // Use findBy which is implicitly waitFor + getBy
     expect(await screen.findByText("Reykjavik, Iceland")).toBeInTheDocument();
@@ -132,10 +135,13 @@ describe("TravelHighlightsPage", () => {
 
     await renderComponent();
 
-    // Wait for loading screen to be removed
-    await waitFor(() => {
-      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
-    });
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
 
     expect(
       await screen.findByText(
@@ -161,10 +167,13 @@ describe("TravelHighlightsPage", () => {
 
     await renderComponent();
 
-    // Wait for loading screen to be removed
-    await waitFor(() => {
-      expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
-    });
+    // Wait for loading screen to be removed first to ensure stable rendering
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId("loading-screen")).not.toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
 
     expect(await screen.findByText("Click Me")).toBeInTheDocument();
 
