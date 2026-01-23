@@ -8,6 +8,7 @@ from taggit.models import GenericUUIDTaggedItemBase, TaggedItemBase
 
 from django.contrib.postgres.fields import DateRangeField
 from django.db import models
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from core.models import BaseImage
@@ -282,8 +283,6 @@ class MainPageLocation(models.Model):
     )
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        from django.utils.text import slugify
-
         if self.country:
             self.country_slug = slugify(self.country.name)
 

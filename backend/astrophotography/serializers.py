@@ -15,6 +15,7 @@ from .models import (
     Tracker,
     Tripod,
 )
+from .services import GalleryQueryService
 
 
 class PlaceSerializer(serializers.ModelSerializer):
@@ -145,21 +146,21 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
         return dt.strftime("%-d %b %Y")
 
     def get_background_image(self, obj: MainPageLocation) -> Optional[str]:
-        if obj.background_image:
-            return str(obj.background_image.path.url)
+        if bg := obj.background_image:
+            return str(bg.path.url)
         return None
 
     def get_background_image_thumbnail(self, obj: MainPageLocation) -> Optional[str]:
-        if obj.background_image and obj.background_image.thumbnail:
-            return str(obj.background_image.thumbnail.url)
+        if (bg := obj.background_image) and bg.thumbnail:
+            return str(bg.thumbnail.url)
         return self.get_background_image(obj)
 
     def get_adventure_date(self, obj: MainPageLocation) -> Optional[str]:
-        if not obj.adventure_date:
+        if not (dr := obj.adventure_date):
             return None
 
-        lower = obj.adventure_date.lower
-        upper = obj.adventure_date.upper
+        lower = dr.lower
+        upper = dr.upper
 
         if not lower:
             return None
@@ -200,3 +201,22 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
             "images",
             "created_at",
         ]
+
+
+class TravelHighlightDetailSerializer(MainPageLocationSerializer):
+    """
+    Detailed serializer for the Travel Highlight page.
+    Includes full image metadata and dynamic image filtering.
+    """
+
+    country = serializers.CharField(source="country.name", read_only=True)
+    country_code = serializers.CharField(source="country.code", read_only=True)
+    place = serializers.CharField(source="place.name", read_only=True, allow_null=True)
+    images = serializers.SerializerMethodField()
+
+    def get_images(self, obj: MainPageLocation) -> list:
+        queryset = GalleryQueryService.get_travel_highlight_images(obj)
+        return AstroImageSerializerList(queryset, many=True, context=self.context).data
+
+    class Meta(MainPageLocationSerializer.Meta):
+        fields = MainPageLocationSerializer.Meta.fields + ["country_code", "place"]
