@@ -1,5 +1,5 @@
-import React from 'react';
-import styles from '../../styles/components/LoadingScreen.module.css';
+import React from "react";
+import styles from "../../styles/components/LoadingScreen.module.css";
 
 interface LoadingScreenProps {
   message?: string;
@@ -7,13 +7,13 @@ interface LoadingScreenProps {
 }
 
 const LoadingScreen: React.FC<LoadingScreenProps> = ({
-  message = 'Synchronizing with the Cosmos',
+  message = "Synchronizing with the Cosmos",
   fullScreen = true,
 }) => {
   return (
     <div
-      className={fullScreen ? styles.loadingScreen : ''}
-      data-testid='loading-screen'
+      className={fullScreen ? styles.loadingScreen : ""}
+      data-testid="loading-screen"
     >
       <div className={styles.spinner} />
       <span className={styles.text}>{message}</span>

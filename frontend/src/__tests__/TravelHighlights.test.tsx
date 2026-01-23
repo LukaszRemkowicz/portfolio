@@ -1,19 +1,19 @@
-import React from 'react';
-import { render, screen, act } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import TravelHighlights from '../components/TravelHighlights';
-import { fetchTravelHighlights } from '../api/services';
-import { useAppStore } from '../store/useStore';
+import React from "react";
+import { render, screen, act } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import TravelHighlights from "../components/TravelHighlights";
+import { fetchTravelHighlights } from "../api/services";
+import { useAppStore } from "../store/useStore";
 
 // Mock Services
-jest.mock('../api/services', () => ({
+jest.mock("../api/services", () => ({
   fetchTravelHighlights: jest.fn().mockResolvedValue([]),
   fetchProfile: jest.fn().mockResolvedValue({}),
   fetchBackground: jest.fn().mockResolvedValue(null),
   fetchEnabledFeatures: jest.fn().mockResolvedValue({}),
 }));
 
-describe('TravelHighlights Component', () => {
+describe("TravelHighlights Component", () => {
   const mockedFetchTravelHighlights = fetchTravelHighlights as jest.Mock;
 
   beforeEach(() => {
@@ -23,19 +23,19 @@ describe('TravelHighlights Component', () => {
     });
   });
 
-  it('renders content when loaded with data', async () => {
+  it("renders content when loaded with data", async () => {
     const mockLocations = [
       {
         pk: 1,
-        country_name: 'Norway',
-        country_slug: 'norway',
-        highlight_name: 'Fjord Expedition',
+        country_name: "Norway",
+        country_slug: "norway",
+        highlight_name: "Fjord Expedition",
         images: [
           {
             pk: 101,
-            url: 'norway.jpg',
-            thumbnail_url: 'norway_thumb.jpg',
-            description: 'A beautiful fjord',
+            url: "norway.jpg",
+            thumbnail_url: "norway_thumb.jpg",
+            description: "A beautiful fjord",
           },
         ],
       },
@@ -46,15 +46,15 @@ describe('TravelHighlights Component', () => {
       render(
         <MemoryRouter>
           <TravelHighlights />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 
-    expect(await screen.findByText('Travel Highlights')).toBeInTheDocument();
-    expect(screen.getByText('Fjord Expedition')).toBeInTheDocument();
+    expect(await screen.findByText("Travel Highlights")).toBeInTheDocument();
+    expect(screen.getByText("Fjord Expedition")).toBeInTheDocument();
   });
 
-  it('renders nothing if feature is disabled', async () => {
+  it("renders nothing if feature is disabled", async () => {
     useAppStore.setState({
       features: { travelHighlights: false },
     });
@@ -62,18 +62,18 @@ describe('TravelHighlights Component', () => {
     await act(async () => {
       render(<TravelHighlights />);
     });
-    expect(screen.queryByText('Travel Highlights')).not.toBeInTheDocument();
+    expect(screen.queryByText("Travel Highlights")).not.toBeInTheDocument();
   });
 
-  it('cycles images automatically', async () => {
+  it("cycles images automatically", async () => {
     const mockLocations = [
       {
         pk: 1,
-        country_name: 'Multi Image',
-        country_slug: 'multi',
+        country_name: "Multi Image",
+        country_slug: "multi",
         images: [
-          { url: 'img1.jpg', thumbnail_url: 'thumb1.jpg', description: '1' },
-          { url: 'img2.jpg', thumbnail_url: 'thumb2.jpg', description: '2' },
+          { url: "img1.jpg", thumbnail_url: "thumb1.jpg", description: "1" },
+          { url: "img2.jpg", thumbnail_url: "thumb2.jpg", description: "2" },
         ],
       },
     ];
@@ -84,7 +84,7 @@ describe('TravelHighlights Component', () => {
       render(
         <MemoryRouter>
           <TravelHighlights />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
 
@@ -96,22 +96,22 @@ describe('TravelHighlights Component', () => {
     // Now we can find the text
     // Use getBy instead of findBy since we advanced timers
     // Use getAllByText because it appears in title and location
-    expect(screen.getAllByText('Multi Image').length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Multi Image").length).toBeGreaterThan(0);
 
-    const images = screen.getAllByRole('img');
+    const images = screen.getAllByRole("img");
     expect(images).toHaveLength(2);
 
     // First active
-    expect(images[0]).toHaveClass('active');
-    expect(images[1]).not.toHaveClass('active');
+    expect(images[0]).toHaveClass("active");
+    expect(images[1]).not.toHaveClass("active");
 
     act(() => {
       jest.advanceTimersByTime(7000);
     });
 
     // Second active
-    expect(images[0]).not.toHaveClass('active');
-    expect(images[1]).toHaveClass('active');
+    expect(images[0]).not.toHaveClass("active");
+    expect(images[1]).toHaveClass("active");
 
     jest.useRealTimers();
   });

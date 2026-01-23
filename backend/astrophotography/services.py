@@ -1,5 +1,5 @@
 # backend/astrophotography/services.py
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 from django_countries import countries
 
@@ -22,7 +22,9 @@ class GalleryQueryService:
         """
         queryset = (
             AstroImage.objects.select_related("place")
-            .prefetch_related("tags", "camera", "lens", "telescope", "tracker", "tripod")
+            .prefetch_related(
+                "tags", "camera", "lens", "telescope", "tracker", "tripod"
+            )  # type: ignore[misc]
             .all()
             .order_by("-created_at")
         )
@@ -60,7 +62,9 @@ class GalleryQueryService:
         """
         queryset = (
             AstroImage.objects.select_related("place")
-            .prefetch_related("tags", "camera", "lens", "telescope", "tracker", "tripod")
+            .prefetch_related(
+                "tags", "camera", "lens", "telescope", "tracker", "tripod"
+            )  # type: ignore[misc]
             .filter(location=slider.country)
         )
         if slider.place:
@@ -80,12 +84,13 @@ class GalleryQueryService:
         if category_filter:
             annotation_filter &= Q(astroimage__celestial_object=category_filter)
 
-        return (
+        return cast(
+            QuerySet,
             Tag.objects.filter(astroimage__isnull=False)
             .annotate(num_times=Count("astroimage", filter=annotation_filter, distinct=True))
             .filter(num_times__gt=0)
             .order_by("name")
-            .distinct()
+            .distinct(),
         )
 
     @staticmethod

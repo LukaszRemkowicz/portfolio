@@ -1,4 +1,6 @@
 # backend/astrophotography/models.py
+from typing import Any
+
 from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
 from taggit.managers import TaggableManager
@@ -279,7 +281,7 @@ class MainPageLocation(models.Model):
         help_text=_("Optional specific background image for this location's page."),
     )
 
-    def save(self, *args: list, **kwargs: dict) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:
         from django.utils.text import slugify
 
         if self.country:

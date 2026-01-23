@@ -172,28 +172,39 @@ class MainPageLocationForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._enhance_country_labels()
+        self._apply_dynamic_filtering()
+
+    def _enhance_country_labels(self):
         from django_countries import countries
 
-        # Enhance country labels
-        enhanced_choices = [("", "---------")]
-        for code, name in self.fields["country"].choices:
-            if code:
-                alpha3 = countries.alpha3(code)
-                label = f"{name} ({code}"
-                if alpha3:
-                    label += f", {alpha3}"
-                label += ")"
-                enhanced_choices.append((code, label))
-        self.fields["country"].choices = enhanced_choices
+        country_field = self.fields.get("country")
+        if isinstance(country_field, forms.ChoiceField):
+            enhanced_choices = [("", "---------")]
+            for code, name in country_field.choices:  # type: ignore[misc, union-attr]
+                if code:
+                    alpha3 = countries.alpha3(code)
+                    label = f"{name} ({code}"
+                    if alpha3:
+                        label += f", {alpha3}"
+                    label += ")"
+                    enhanced_choices.append((code, label))
+            country_field.choices = enhanced_choices
 
+    def _apply_dynamic_filtering(self):  # noqa: C901
         # Dynamic filtering for images field
         if self.instance.pk:
             # Edit mode
             qs = AstroImage.objects.filter(
                 location=self.instance.country, place=self.instance.place
             )
-            self.fields["images"].queryset = qs
-            self.fields["background_image"].queryset = qs
+            images_field = self.fields.get("images")
+            if isinstance(images_field, forms.ModelChoiceField):
+                images_field.queryset = qs
+
+            bg_image_field = self.fields.get("background_image")
+            if isinstance(bg_image_field, forms.ModelChoiceField):
+                bg_image_field.queryset = qs
 
             if not qs.exists():
                 self.fields["images"].widget = ReadOnlyMessageWidget(
@@ -205,8 +216,13 @@ class MainPageLocationForm(forms.ModelForm):
                 )
         else:
             # Creation mode
-            self.fields["images"].queryset = AstroImage.objects.none()
-            self.fields["background_image"].queryset = AstroImage.objects.none()
+            images_field = self.fields.get("images")
+            if isinstance(images_field, forms.ModelChoiceField):
+                images_field.queryset = AstroImage.objects.none()
+
+            bg_image_field = self.fields.get("background_image")
+            if isinstance(bg_image_field, forms.ModelChoiceField):
+                bg_image_field.queryset = AstroImage.objects.none()
             self.fields["images"].widget = ReadOnlyMessageWidget(
                 message=_("Save the slider first to select images for this country.")
             )
@@ -236,6 +252,8 @@ class MainPageLocationForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        if cleaned_data is None:
+            return None
         country = cleaned_data.get("country")
         images = cleaned_data.get("images")
 

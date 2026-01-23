@@ -1,24 +1,24 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import styles from '../styles/components/App.module.css';
-import { HomeProps } from '../types';
-import ShootingStars from './ShootingStars';
+import React from "react";
+import { Link } from "react-router-dom";
+import styles from "../styles/components/App.module.css";
+import { HomeProps } from "../types";
+import ShootingStars from "./ShootingStars";
 
 const Home: React.FC<HomeProps> = ({
   portraitUrl,
-  shortDescription = 'I am a professional astrophotographer capturing the silent majesty of deep-space phenomena. My work bridges the gap between scientific observation and cinematic fine art.',
+  shortDescription = "I am a professional astrophotographer capturing the silent majesty of deep-space phenomena. My work bridges the gap between scientific observation and cinematic fine art.",
   backgroundUrl,
 }) => {
   return (
     <section
-      id='home'
+      id="home"
       className={styles.heroSection}
       style={
         backgroundUrl
           ? {
               backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${backgroundUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
+              backgroundSize: "cover",
+              backgroundPosition: "center",
             }
           : undefined
       }
@@ -36,20 +36,20 @@ const Home: React.FC<HomeProps> = ({
           <div className={styles.portraitWrapper}>
             <img
               src={portraitUrl}
-              alt='Portrait'
+              alt="Portrait"
               className={styles.heroPortrait}
-              loading='eager'
+              loading="eager"
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              {...({ fetchpriority: 'high' } as any)}
+              {...({ fetchpriority: "high" } as any)}
             />
           </div>
         )}
 
         <div className={styles.heroActions}>
-          <Link to='/astrophotography' className={styles.primaryBtn}>
+          <Link to="/astrophotography" className={styles.primaryBtn}>
             View Portfolio
           </Link>
-          <a href='#about' className={styles.secondaryBtn}>
+          <a href="#about" className={styles.secondaryBtn}>
             About Me
           </a>
         </div>

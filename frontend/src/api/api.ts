@@ -1,5 +1,5 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import { API_BASE_URL } from './routes';
+import axios, { AxiosInstance, AxiosError } from "axios";
+import { API_BASE_URL } from "./routes";
 import {
   NetworkError,
   NotFoundError,
@@ -7,14 +7,14 @@ import {
   UnauthorizedError,
   ValidationError,
   AppError,
-} from './errors';
+} from "./errors";
 
 export const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
 });
 
 api.interceptors.response.use(
-  response => response,
+  (response) => response,
   (error: AxiosError) => {
     if (!error.response) {
       // Network error (no response received)
@@ -32,8 +32,8 @@ api.interceptors.response.use(
       case 400:
         throw new ValidationError(
           errorData?.errors || {},
-          errorData?.message || errorData?.detail || 'Validation failed.',
-          error
+          errorData?.message || errorData?.detail || "Validation failed.",
+          error,
         );
       case 401:
       case 403:
@@ -50,10 +50,10 @@ api.interceptors.response.use(
         throw new AppError(
           errorData?.message ||
             errorData?.detail ||
-            'An unexpected error occurred.',
+            "An unexpected error occurred.",
           status,
-          error
+          error,
         );
     }
-  }
+  },
 );

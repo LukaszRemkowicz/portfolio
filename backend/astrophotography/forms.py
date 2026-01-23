@@ -71,6 +71,8 @@ class AstroImageForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        if cleaned_data is None:
+            return None
         telescope = cleaned_data.get("telescope")
         lens = cleaned_data.get("lens")
 
@@ -84,9 +86,10 @@ class AstroImageForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         # Enhance location (country) labels with codes for better searchability
-        if "location" in self.fields:
+        location_field = self.fields.get("location")
+        if isinstance(location_field, forms.ChoiceField):
             enhanced_choices = [("", "---------")]
-            for code, name in self.fields["location"].choices:
+            for code, name in location_field.choices:  # type: ignore[misc, union-attr]
                 if code:
                     alpha3 = countries.alpha3(code)
                     label = f"{name} ({code}"
@@ -94,7 +97,7 @@ class AstroImageForm(forms.ModelForm):
                         label += f", {alpha3}"
                     label += ")"
                     enhanced_choices.append((code, label))
-            self.fields["location"].choices = enhanced_choices
+            location_field.choices = enhanced_choices
 
         if self.instance.pk:
             self.fields["tags"].initial = self.instance.tags.all()
@@ -112,7 +115,7 @@ class AstroImageForm(forms.ModelForm):
             old_save_m2m()
             save_tags()
 
-        self.save_m2m = save_m2m
+        setattr(self, "save_m2m", save_m2m)
 
         if commit:
             instance.save()

@@ -1,4 +1,8 @@
+from datetime import date, timedelta
+from typing import Optional
+
 from rest_framework import serializers
+from rest_framework.serializers import CharField, ImageField, StringRelatedField
 
 from .models import (
     AstroImage,
@@ -52,15 +56,15 @@ class TripodSerializer(serializers.ModelSerializer):
 
 
 class AstroImageSerializerList(serializers.ModelSerializer):
-    url = serializers.ImageField(source="path")
-    thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
-    tags = serializers.StringRelatedField(many=True)
-    camera = serializers.StringRelatedField(many=True)
-    lens = serializers.StringRelatedField(many=True)
-    telescope = serializers.StringRelatedField(many=True)
-    tracker = serializers.StringRelatedField(many=True)
-    tripod = serializers.StringRelatedField(many=True)
-    location = serializers.CharField(source="location.name")
+    url: ImageField = ImageField(source="path")
+    thumbnail_url: ImageField = ImageField(source="thumbnail", read_only=True)
+    tags: StringRelatedField = StringRelatedField(many=True)
+    camera: StringRelatedField = StringRelatedField(many=True)
+    lens: StringRelatedField = StringRelatedField(many=True)
+    telescope: StringRelatedField = StringRelatedField(many=True)
+    tracker: StringRelatedField = StringRelatedField(many=True)
+    tripod: StringRelatedField = StringRelatedField(many=True)
+    location: CharField = CharField(source="location.name")
 
     class Meta:
         model = AstroImage
@@ -135,17 +139,22 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
     background_image_thumbnail = serializers.SerializerMethodField()
     adventure_date = serializers.SerializerMethodField()
 
-    def get_background_image(self, obj):
+    @staticmethod
+    def format_date(dt: date) -> str:
+        """Format: 20 Jan 2026"""
+        return dt.strftime("%-d %b %Y")
+
+    def get_background_image(self, obj: MainPageLocation) -> Optional[str]:
         if obj.background_image:
-            return obj.background_image.path.url
+            return str(obj.background_image.path.url)
         return None
 
-    def get_background_image_thumbnail(self, obj):
+    def get_background_image_thumbnail(self, obj: MainPageLocation) -> Optional[str]:
         if obj.background_image and obj.background_image.thumbnail:
-            return obj.background_image.thumbnail.url
+            return str(obj.background_image.thumbnail.url)
         return self.get_background_image(obj)
 
-    def get_adventure_date(self, obj):
+    def get_adventure_date(self, obj: MainPageLocation) -> Optional[str]:
         if not obj.adventure_date:
             return None
 
@@ -157,16 +166,10 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
 
         # upper represents the first day AFTER the range in PostgreSQL DateRange
         # So we subtract one day for display if it exists
-        from datetime import timedelta
-
         display_upper = upper - timedelta(days=1) if upper else None
 
-        def format_date(dt):
-            # Format: 20 Jan 2026
-            return dt.strftime("%-d %b %Y")
-
         if not display_upper or lower == display_upper:
-            return format_date(lower)
+            return self.format_date(lower)
 
         # Smart formatting for ranges
         if lower.year == display_upper.year:
@@ -178,7 +181,7 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
                 return f"{lower.strftime('%-d %b')} - {display_upper.strftime('%-d %b %Y')}"
 
         # 20 Jan 2025 - 05 Jan 2026
-        return f"{format_date(lower)} - {format_date(display_upper)}"
+        return f"{self.format_date(lower)} - {self.format_date(display_upper)}"
 
     class Meta:
         model = MainPageLocation

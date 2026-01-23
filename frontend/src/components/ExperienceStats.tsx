@@ -1,5 +1,5 @@
-import React from 'react';
-import styles from '../styles/components/ExperienceStats.module.css';
+import React from "react";
+import styles from "../styles/components/ExperienceStats.module.css";
 
 /**
  * TODO: Connect to backend API to fetch real experience statistics.

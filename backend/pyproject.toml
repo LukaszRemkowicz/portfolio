@@ -81,6 +81,7 @@ sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLD
 
 [tool.mypy]
 python_version = "3.13"
+exclude = ["migrations/", "tests/"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
@@ -93,6 +94,13 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+plugins = [
+    "mypy_django_plugin.main",
+    "mypy_drf_plugin.main"
+]
+
+[tool.django-stubs]
+django_settings_module = "core.settings"
 
 [[tool.mypy.overrides]]
 module = [
@@ -100,6 +108,11 @@ module = [
     "rest_framework.*",
     "PIL.*",
     "celery.*",
+    "taggit.*",
+    "django_countries.*",
+    "django_ckeditor_5.*",
+    "django_select2.*",
+    "environ.*",
 ]
 ignore_missing_imports = true
 

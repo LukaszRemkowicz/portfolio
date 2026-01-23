@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import styles from '../styles/components/TravelHighlightsPage.module.css';
-import { API_ROUTES, getMediaUrl, ASSETS } from '../api/routes';
-import { AstroImage } from '../types';
-import { api } from '../api/api';
-import ImageModal from './common/ImageModal';
-import LoadingScreen from './common/LoadingScreen';
-import StarBackground from './StarBackground';
-import { useAppStore } from '../store/useStore';
-import { sanitizeHtml } from '../utils/html';
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import styles from "../styles/components/TravelHighlightsPage.module.css";
+import { API_ROUTES, getMediaUrl, ASSETS } from "../api/routes";
+import { AstroImage } from "../types";
+import { api } from "../api/api";
+import ImageModal from "./common/ImageModal";
+import LoadingScreen from "./common/LoadingScreen";
+import StarBackground from "./StarBackground";
+import { useAppStore } from "../store/useStore";
+import { sanitizeHtml } from "../utils/html";
 
 const TravelHighlightsPage: React.FC = () => {
   const { countrySlug, placeSlug } = useParams<{
@@ -20,7 +20,7 @@ const TravelHighlightsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
-  const [country, setCountry] = useState<string>('');
+  const [country, setCountry] = useState<string>("");
   const [place, setPlace] = useState<string | null>(null);
   const [story, setStory] = useState<string | null>(null);
   const [adventureDate, setAdventureDate] = useState<string | null>(null);
@@ -39,7 +39,7 @@ const TravelHighlightsPage: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       if (!countrySlug) {
-        setError('No location specified');
+        setError("No location specified");
         setLoading(false);
         return;
       }
@@ -54,18 +54,18 @@ const TravelHighlightsPage: React.FC = () => {
 
         // Fetch from new slug-based endpoint
         const response = await api.get(
-          `${API_ROUTES.travelBySlug}${slugPath}/`
+          `${API_ROUTES.travelBySlug}${slugPath}/`,
         );
 
         const data = response.data;
 
         // Validate response structure
-        if (!data || typeof data !== 'object') {
-          throw new Error('Invalid API response structure');
+        if (!data || typeof data !== "object") {
+          throw new Error("Invalid API response structure");
         }
 
         // Set metadata with fallbacks
-        setCountry(data.country || '');
+        setCountry(data.country || "");
         setPlace(data.place || null);
         setStory(data.story || null);
         setAdventureDate(data.adventure_date || null);
@@ -77,15 +77,15 @@ const TravelHighlightsPage: React.FC = () => {
         const imagesArray = Array.isArray(data.images) ? data.images : [];
         const processedImages = imagesArray.map((image: AstroImage) => ({
           ...image,
-          url: getMediaUrl(image.url) || '',
+          url: getMediaUrl(image.url) || "",
           thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
         }));
 
         setImages(processedImages);
       } catch (err) {
-        console.error('Failed to load travel highlights:', err);
+        console.error("Failed to load travel highlights:", err);
         setError(
-          'Failed to load travel highlights. Please check the URL and try again.'
+          "Failed to load travel highlights. Please check the URL and try again.",
         );
       } finally {
         setLoading(false);
@@ -103,7 +103,7 @@ const TravelHighlightsPage: React.FC = () => {
 
   // Display title: "Place, Country" or just "Country"
   const displayTitle =
-    place && country ? `${place}, ${country}` : country || 'Travel Highlights';
+    place && country ? `${place}, ${country}` : country || "Travel Highlights";
 
   return (
     <div className={styles.container}>
@@ -114,8 +114,8 @@ const TravelHighlightsPage: React.FC = () => {
           locationBackgroundImage || backgroundUrl
             ? {
                 backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${getMediaUrl(locationBackgroundImage || backgroundUrl)})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
+                backgroundSize: "cover",
+                backgroundPosition: "center",
               }
             : {
                 backgroundImage: `url(${ASSETS.galleryFallback})`,
@@ -134,22 +134,22 @@ const TravelHighlightsPage: React.FC = () => {
           <div className={styles.glassCard}>
             <header className={styles.metaInfo}>
               <span className={styles.badge}>
-                ADVENTURE DATE |{' '}
+                ADVENTURE DATE |{" "}
                 {adventureDate
                   ? adventureDate.toUpperCase()
                   : createdAt
                     ? new Date(createdAt)
-                        .toLocaleDateString('en-US', {
-                          month: 'long',
-                          year: 'numeric',
+                        .toLocaleDateString("en-US", {
+                          month: "long",
+                          year: "numeric",
                         })
                         .toUpperCase()
-                    : 'RECENT EXPEDITION'}
+                    : "RECENT EXPEDITION"}
               </span>
             </header>
 
             <h2 className={styles.storyTitle}>
-              {highlightName || 'About this place'}
+              {highlightName || "About this place"}
             </h2>
 
             <div
@@ -166,7 +166,7 @@ const TravelHighlightsPage: React.FC = () => {
 
         {images.length > 0 ? (
           <div className={styles.stackedCards}>
-            {images.map(image => (
+            {images.map((image) => (
               <div key={image.pk} className={styles.viewerContainer}>
                 <div className={styles.viewerFrame}>
                   <div className={styles.imageWrapper}>
@@ -184,7 +184,7 @@ const TravelHighlightsPage: React.FC = () => {
                       className={styles.imageDescription}
                       dangerouslySetInnerHTML={{
                         __html: sanitizeHtml(
-                          image.description || 'No description available.'
+                          image.description || "No description available.",
                         ),
                       }}
                     />

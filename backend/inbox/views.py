@@ -1,6 +1,6 @@
 # backend/inbox/views.py
 import logging
-from typing import Any, Optional
+from typing import Any, NoReturn, Optional
 
 from rest_framework import mixins, status, viewsets
 from rest_framework.exceptions import Throttled
@@ -31,7 +31,7 @@ class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     permission_classes = [AllowAny]  # Publicly accessible for contact form submissions
     throttle_classes = [ContactFormThrottle]  # DRF handles throttling before validation
 
-    def throttled(self, request: Request, wait: int) -> None:
+    def throttled(self, request: Request, wait: float) -> NoReturn:
         """Custom throttled response with user-friendly message"""
         # Create exception without 'wait' arg to prevent DRF from appending
         # "Expected available in..." to the details.
@@ -39,7 +39,7 @@ class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             detail="You've submitted too many messages. Please wait 1 hour to send another one."
         )
         # Manually set wait so Retry-After header is still populated by handler
-        exc.wait = wait
+        setattr(exc, "wait", wait)
         raise exc
 
     def get_client_ip(self, request: Request) -> str:

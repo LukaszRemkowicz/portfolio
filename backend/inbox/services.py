@@ -1,6 +1,7 @@
 # backend/inbox/services.py
 import logging
 import threading
+from datetime import timedelta
 from typing import Any, Dict, List, Optional
 
 from rest_framework.exceptions import APIException
@@ -125,7 +126,7 @@ class ContactSubmissionService:
             recent_duplicate: bool = ContactMessage.objects.filter(
                 email=email,
                 subject=subject,
-                created_at__gte=timezone.now() - timezone.timedelta(minutes=5),
+                created_at__gte=timezone.now() - timedelta(minutes=5),
             ).exists()
             if recent_duplicate:
                 logger.warning(

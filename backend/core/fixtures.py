@@ -1,12 +1,17 @@
-from typing import Any, Generator
+from typing import TYPE_CHECKING, Any, Generator
 
 import pytest
+
+if TYPE_CHECKING:
+    from rest_framework.test import APIClient, APIRequestFactory  # noqa: F401
+
+    from django.test import Client, RequestFactory
 
 
 @pytest.fixture
 def api_client() -> Any:
     """Create a DRF APIClient instance"""
-    from rest_framework.test import APIClient
+    from rest_framework.test import APIClient  # noqa: F811
 
     return APIClient()
 
