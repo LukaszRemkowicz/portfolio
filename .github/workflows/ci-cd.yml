@@ -36,7 +36,7 @@ jobs:
 
     - name: Run Prettier check
       working-directory: ./frontend
-      run: npm run format:check
+      run: npm run format:check || (npx prettier --list-different 'src/**/*.{ts,tsx,css}' && exit 1)
 
     - name: TypeScript type check
       working-directory: ./frontend
