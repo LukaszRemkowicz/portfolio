@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import LandingPageSettings
+from core.serializers import LandingPageSettingsSerializer
 
 
 class FeaturesEnabledView(APIView):
@@ -16,29 +17,12 @@ class FeaturesEnabledView(APIView):
     """
 
     permission_classes = [permissions.AllowAny]
+    serializer_class = LandingPageSettingsSerializer
 
     def get(self, request: Request) -> Response:
-        data: dict[str, bool] = {}
-
-        # Get global settings
-        settings = LandingPageSettings.objects.first()
-
-        # If settings exist, use them. Otherwise default purely to True (safe fallback)
-        if settings:
-            data["programming"] = settings.programming_enabled
-            data["contactForm"] = settings.contact_form_enabled
-            data["travelHighlights"] = settings.travel_highlights_enabled
-            data["lastimages"] = settings.lastimages_enabled
-            data["meteors"] = settings.meteors_enabled
-        else:
-            # Default state if no settings object exists yet
-            data["programming"] = True
-            data["contactForm"] = True
-            data["travelHighlights"] = True
-            data["lastimages"] = True
-            data["meteors"] = True
-
-        return Response(data)
+        settings = LandingPageSettings.load()
+        serializer = self.serializer_class(settings)
+        return Response(serializer.data)
 
 
 @api_view(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])

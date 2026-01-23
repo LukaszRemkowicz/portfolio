@@ -40,11 +40,12 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
 
 class MainPageBackgroundImageView(ViewSet):
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
+    serializer_class = MainPageBackgroundImageSerializer
 
     def list(self, request: Request) -> Response:
         instance = MainPageBackgroundImage.objects.order_by("-created_at").first()
         if instance:
-            serializer = MainPageBackgroundImageSerializer(instance, context={"request": request})
+            serializer = self.serializer_class(instance, context={"request": request})
             return Response(serializer.data)
         return Response({"url": None})
 
@@ -66,6 +67,7 @@ class TravelHighlightsBySlugView(APIView):
     """
 
     permission_classes = [AllowAny]  # Allow public access
+    serializer_class = TravelHighlightDetailSerializer
 
     def get(self, request, country_slug=None, place_slug=None):
         # Query the slider by slugs
@@ -80,7 +82,7 @@ class TravelHighlightsBySlugView(APIView):
             filter_kwargs["place_slug__isnull"] = True
 
         slider = get_object_or_404(MainPageLocation, is_active=True, **filter_kwargs)
-        serializer = TravelHighlightDetailSerializer(slider, context={"request": request})
+        serializer = self.serializer_class(slider, context={"request": request})
         return Response(serializer.data)
 
 
@@ -90,10 +92,11 @@ class TagsView(ViewSet):
     """
 
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
+    serializer_class = TagSerializer
 
     def list(self, request: Request) -> Response:
         category_filter = request.query_params.get("filter")
         tags = GalleryQueryService.get_tag_stats(category_filter)
-        serializer = TagSerializer(tags, many=True)
+        serializer = self.serializer_class(tags, many=True)
 
         return Response(serializer.data)

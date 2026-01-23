@@ -1,195 +1,161 @@
 # Portfolio Backend
 
-Django REST API backend for a personal portfolio showcasing astrophotography and programming projects. Built with Django 5.2+ and Django REST Framework, featuring custom user models, image management, and comprehensive API endpoints.
+Django REST API backend for a personal portfolio showcasing astrophotography and programming projects. Built with Django 6.0+ and Django REST Framework, featuring custom user models, image management, and comprehensive API endpoints.
 
 ## 🚀 Features
 
 ### Core Functionality
-- **Custom User Model** - Extended Django user with bio, avatar, social links, and about me images
-- **Image Management** - BaseImage abstract model for consistent image handling
-- **Astrophotography Gallery** - Complete image gallery with metadata and filtering
-- **Programming Projects** - Project showcase with images and technology stacks
-- **Background Management** - Dynamic main page background images
-- **Admin Interface** - Customized Django admin for content management
+- **Custom User Model** - Singleton admin user with bio, avatar, social links, and specific about me images.
+- **Image Management** - `BaseImage` abstract model with automatic **thumbnail generation** and consistent scaling.
+- **Persona Profiles** - Support for niche-specific content (Programming vs. Astrophotography) for the same user.
+- **Astrophotography Gallery** - Complete image gallery with metadata, tags, and category filtering.
+- **Contact System** - Secure contact form with bot protection (honeypot), duplicate detection, and email notifications.
+- **Background Management** - Dynamic main page background images.
 
-### Technical Features
-- **Django REST Framework** - RESTful API with ViewSets and serializers
-- **PostgreSQL Database** - Production-ready database with migrations
-- **Poetry Dependency Management** - Modern Python dependency management
-- **Environment Configuration** - django-environ for secure configuration
-- **CORS Support** - Configured for frontend integration
-- **Media File Serving** - Optimized static and media file handling
-- **Docker Integration** - Containerized deployment ready
+## 🛡️ Security Architecture
+
+We implement a **Defense in Depth** strategy using several specialized tools and libraries:
+
+### 1. Brute Force Protection (**Django Axes**)
+We use [Django Axes](https://github.com/jazzband/django-axes) to protect the admin portal and API from brute-force attacks.
+- Locked-out users are tracked by IP and username.
+- Configurable cool-off periods and failure limits.
+
+### 2. API Abuse Prevention (**DRF Throttling**)
+Granular rate limiting is enforced across all endpoints:
+- **Anonymous Throttling**: Limits unauthenticated users.
+- **Contact Form Throttling**: Specialized 5-per-hour limit to prevent spam.
+- **Method Restriction**: Critical ViewSets (like Contact/Users) explicitly restrict HTTP verbs to the bare minimum (e.g., POST-only or GET-only).
+
+### 3. Dependency Scanning (**Safety**)
+We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for known vulnerabilities.
+- Integrated into the CI/CD pipeline and available via `poetry run security`.
+
+### 4. Infrastructure Security
+- **Non-Root Execution**: Docker containers run under a restricted `appuser`.
+- **Environment Isolation**: Secure configuration via `django-environ`.
+- **Docker-Locked Environment**: Verified multi-stage builds and restricted `.dockerignore`.
+
+### Technical & Security Features
+- **Modern Stack** - Python 3.13, Django 6.0, and Poetry for dependency management.
+- **Caching** - **Redis-backed** caching for Django Select2 and internal performance.
+- **Security Hardening** - HSTS, secure cookies, and non-root execution in Docker.
+- **Defense in Depth** - Advanced API rate limiting (**Django Axes** + DRF Throttling), payload size limits, and restricted HTTP verbs.
+- **Internationalization (i18n)** - Multi-language support (EN/PL) with automatic message compilation.
+- **Docker Integration** - Optimized multi-stage builds with automated static collection.
 
 ## 🛠️ Development Setup
 
 ### Prerequisites
-- **Python 3.13** (specified in pyproject.toml)
-- **Poetry** for dependency management
-- **PostgreSQL** (or Docker for containerized setup)
-- **Docker** (for containerized development)
+- **Python 3.13**
+- **Poetry**
+- **Docker & Docker Compose**
 
-> **Docker Compose Version**: Check your Docker version with `docker --version`. Use `docker compose` (V2) or `docker-compose` (V1) accordingly.
+### Local Quick Start (on host)
 
-### Quick Start
+1. **Install Dependencies**
+   ```bash
+   poetry install
+   ```
 
-#### 1. Install Poetry
-```bash
-curl -sSL https://install.python-poetry.org | python3 -
-# Add to PATH: export PATH="$HOME/.local/bin:$PATH"
-```
+2. **Environment Configuration**
+   ```bash
+   # Copy the default template
+   cp DEFAULT.env .env
+   # Edit .env with your secure credentials
+   ```
 
-#### 2. Install Dependencies
-```bash
-cd backend
-poetry install
-```
+3. **Database & Translations**
+   ```bash
+   # Run from the backend directory
+   poetry run python manage.py migrate
+   poetry run python manage.py compilemessages
+   poetry run python manage.py collectstatic --noinput
+   ```
 
-#### 3. Environment Configuration
-Copy the default environment template:
-```bash
-cp DEFAULT.env .env
-```
-Then edit `.env` with your secure credentials.
-
-#### 4. Database Setup
-```bash
-# Run migrations
-poetry run python manage.py migrate
-
-# Create superuser (optional)
-poetry run python manage.py createsuperuser
-```
-
-#### 5. Development Server
-```bash
-poetry run python manage.py runserver 0.0.0.0:8000
-```
+4. **Run Server**
+   ```bash
+   poetry run python manage.py runserver
+   ```
 
 ## 🧪 Testing & Quality
 
-### Helper Scripts
-We use custom Poetry scripts to run tasks. Tests run directly in the Docker environment, while security scans run on your host:
+We provide several **Poetry scripts** to streamline testing and security audits.
+
+### Automated Scripts
+These wrappers handle the complex Docker commands for you:
 
 ```bash
-# Run all tests in Docker
+# Run all tests (automatically starts/stops portfolio-test container)
 poetry run test
 
-# Run tests with coverage in Docker
+# Run tests with coverage report
 poetry run test-cov
 
-# Run security scan on the host (Local)
+# Run security scan on local dependencies
 poetry run security
 ```
 
-To manually run linters and formatters (equivalent to what runs on commit):
+### Manual Commands
+If you need more control or want to run tools individually on your host:
+
 ```bash
+# Run pytest with specific arguments
+poetry run pytest -v
+
+# Run linters and formatters (pre-commit)
 pre-commit run --all-files
 ```
 
-### Manual Testing & Quality Tools
-If you prefer running tools individually:
+## 🐳 Docker Integration (Recommended)
 
+### Standard Deployment
 ```bash
-# Run all tests with pytest
-poetry run pytest
-
-# Run with coverage (manual)
-poetry run pytest --cov=. --cov-report=term-missing
-
-# Run individual quality tools
-poetry run flake8 .
-poetry run mypy .
-poetry run black .
-poetry run isort .
-
-# Run security scan
-poetry run safety scan
-```
-
-## 🐳 Docker Integration
-
-### With Docker Compose (Recommended)
-```bash
-# From project root
+# Run from the project root
 docker compose up --build
 ```
+
+#### Host File Configuration (Required for Docker)
+To access the project via custom domains, add the following to your `/etc/hosts` (Mac/Linux) or `C:\Windows\System32\drivers\etc\hosts` (Windows):
+```text
+127.0.0.1 portfolio.local
+127.0.0.1 admin.portfolio.local
+```
+
 - **Backend API**: `https://admin.portfolio.local/api/v1/`
 - **Django Admin**: `https://admin.portfolio.local/admin/`
 - **Media Files**: `https://portfolio.local/media/`
 
 ### Run Tests in Docker
-Dedicated test service (recommended):
 ```bash
 # Isolated test execution
 docker compose run --rm portfolio-test
-```
 
-Standard execution (if service already running):
-```bash
+# Fast check if already running
 docker compose exec portfolio-be pytest
 ```
 
-## 🚀 Production Considerations
+## � TODO - Backend Improvements
 
-### Security
-- Environment-based SECRET_KEY
-- CORS properly configured
-- Media file serving through nginx
-- Database connection security
-- Non-root user execution in Docker
-
-### Performance
-- Gunicorn WSGI server for production
-- Database query optimization
-- Media file CDN ready
-- Static file serving optimization
-
-## 📋 TODO - Backend Improvements
-
-- [ ] Implement image optimization pipeline
-- [ ] Implement caching for frequently accessed data
+### 📸 Features & Processing
+- [ ] Implement image optimization pipeline (WebP conversion)
 - [ ] Prettify email messages (add HTML template)
-- [x] Think about changing (uuid) and saving in db - UUID migration completed for BaseImage models
-- [x] Contact message - Contact form with email field implemented
-- [ ] Add language translation
+- [x] Singleton User & UUID migration for all models
+- [x] Contact form with throttling and honeypot
+- [x] Automatic thumbnail generation
 
-### 🚀 API & Documentation
-- [ ] **API Documentation** - Add OpenAPI/Swagger documentation with interactive docs
-- [ ] **API Versioning** - Implement proper API versioning strategy
-- [ ] **Response Standardization** - Standardize API response formats
-- [x] **API Testing** - Add comprehensive API endpoint tests
+### 🚀 API & Reliability
+- [ ] **API Documentation** - Add OpenAPI/Swagger documentation
+- [ ] **Structured Logging** - Implement JSON structured logs for production
+- [x] **Rate Limiting** - Multi-layer DDoS protection implemented
+- [x] **Health Checks** - Django health endpoint configured
 
 ### 🗄️ Database & Performance
-- [ ] **Database Optimization** - Query optimization, indexing, connection pooling
-- [ ] **Caching Strategy** - Implement Redis caching for better performance
-- [x] **Database Migrations** - Automated production-ready migrations in Docker
-- [ ] **Performance Monitoring** - Add database query monitoring
-- [ ] **Backup** - Add backup and restore functionality
+- [ ] **Backup** - Add automated DB backup and restore scripts
+- [x] **Redis Caching** - Configured for Select2 and select views
+- [x] **Automated Migrations** - Integrated into Docker startup
 
-### 🔒 Security & Authentication
-- [x] **Rate Limiting** - Implement API rate limiting and DDoS protection
-- [ ] **Input Validation** - Enhanced input validation and sanitization
-- [x] **Security Headers** - Add security headers and CSRF protection
-- [x] **Security Hardening** - Container hardening (non-root) and HSTS implementation
-- [x] **Dependency Scanning** - Automated vulnerability checks (Dependabot, Safety)
-
-### 📸 Image Processing
-- [ ] **Image Processing** - Add image compression, resizing, and optimization
-- [ ] **Thumbnail Generation** - Automatic thumbnail generation
-
-### 🧪 Testing & Quality
-- [x] **Test Coverage** - High coverage for Core, Users, Astrophotography, and Inbox apps
-- [ ] **Integration Tests** - Add integration tests for API endpoints
-- [ ] **Performance Tests** - Add load testing for API endpoints
-- [x] **Code Quality** - ✅ Pre-commit hooks, Black, isort, Flake8 configured with 100-character line length
-
-### 📊 Monitoring & Logging
-- [ ] **Structured Logging** - Implement structured logging with JSON format
-- [ ] **Error Tracking** - Add error tracking and monitoring (sentry)
-- [x] **Health Checks** - Add health check endpoints
-- [ ] **Metrics Collection** - Add application metrics collection
-
-### Devops
-- [x] **Production Server** - Gunicorn WSGI server implementation
-- [ ] ***Container orchestration*** - Docker Swarm or Kubernetes
+### 🔒 Security
+- [x] **Harden Container** - Non-root user with minimal permissions
+- [x] **Dependency Scanning** - GitHub Actions with Safety & Dependabot
+- [x] **ViewSet Hardening** - Minimalist ViewSets with strict method enforcement

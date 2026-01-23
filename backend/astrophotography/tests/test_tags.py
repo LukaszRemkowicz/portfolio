@@ -1,5 +1,7 @@
 import pytest
 
+from django.urls import reverse
+
 from astrophotography.serializers import AstroImageSerializerList
 from astrophotography.tests.factories import AstroImageFactory
 
@@ -27,8 +29,6 @@ def test_tags_creation_and_retrieval():
 
 @pytest.mark.django_db
 def test_tags_view_category_filtering(api_client):
-    from django.urls import reverse
-
     # Setup: 2 images in different categories sharing the same tag
     # Image 1: Landscape category, tag 'night'
     img1 = AstroImageFactory(celestial_object="Landscape")

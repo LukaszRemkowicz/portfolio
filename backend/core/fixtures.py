@@ -1,26 +1,25 @@
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Generator
 
 import pytest
+from rest_framework.test import APIClient, APIRequestFactory
+
+from django.core.cache import cache as django_cache
+from django.test import Client, RequestFactory
 
 if TYPE_CHECKING:
-    from rest_framework.test import APIRequestFactory  # noqa: F401
-
-    from django.test import Client, RequestFactory
+    # Removed redundant imports as they are now available globally
+    pass
 
 
 @pytest.fixture
-def api_client() -> Any:
+def api_client() -> APIClient:
     """Create a DRF APIClient instance"""
-    from rest_framework.test import APIClient  # noqa: F811
-
     return APIClient()
 
 
 @pytest.fixture
-def client() -> "Client":  # noqa: F821
+def client() -> Client:
     """Django test client fixture"""
-    from django.test import Client
-
     return Client()
 
 
@@ -29,24 +28,18 @@ def clear_django_cache() -> Generator[None, None, None]:
     """
     Automatically clear cache for all tests to ensure isolation.
     """
-    from django.core.cache import cache as django_cache
-
     django_cache.clear()
     yield
     django_cache.clear()
 
 
 @pytest.fixture
-def request_factory() -> "RequestFactory":  # noqa: F821
+def request_factory() -> RequestFactory:
     """Create RequestFactory instance for testing"""
-    from django.test import RequestFactory
-
     return RequestFactory()
 
 
 @pytest.fixture
-def api_request_factory() -> "APIRequestFactory":  # noqa: F821
+def api_request_factory() -> APIRequestFactory:
     """DRF API Request Factory fixture"""
-    from rest_framework.test import APIRequestFactory
-
     return APIRequestFactory()

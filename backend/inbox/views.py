@@ -2,7 +2,7 @@
 import logging
 from typing import Any, NoReturn, Optional
 
-from rest_framework import mixins, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.exceptions import Throttled
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -10,26 +10,25 @@ from rest_framework.response import Response
 
 from core.throttling import ContactFormThrottle
 
-from .models import ContactMessage
 from .serializers import ContactMessageSerializer
 from .services import ContactSubmissionService, PayloadTooLarge
 
 logger = logging.getLogger(__name__)
 
-# Throttling handled by custom ContactFormThrottle with IP + email tracking (via DRF library)
 
-
-class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+class ContactMessageViewSet(viewsets.ViewSet):
     """
-    ViewSet for handling contact messages with enhanced bot/DDoS protection.
-    Throttling is applied by DRF library BEFORE validation (better for bot filtering).
-    Frontend validation prevents valid users from being throttled on invalid submissions.
+    ViewSet for receiving public contact messages.
+    Security:
+    - Restricted to 'POST' only (create) to prevent data leakage.
+    - Plain ViewSet used to remove generic 'magic' and remain minimalist.
+    - Public access is allowed for submissions, while management is restricted to Django Admin.
+    - Enhanced bot/DDoS protection via throttling and payload size checks.
     """
 
-    queryset = ContactMessage.objects.all()
-    serializer_class = ContactMessageSerializer
-    permission_classes = [AllowAny]  # Publicly accessible for contact form submissions
-    throttle_classes = [ContactFormThrottle]  # DRF handles throttling before validation
+    permission_classes = [AllowAny]
+    throttle_classes = [ContactFormThrottle]
+    http_method_names = ["post", "head", "options"]
 
     def throttled(self, request: Request, wait: float) -> NoReturn:
         """Custom throttled response with user-friendly message"""
@@ -75,7 +74,7 @@ class ContactMessageViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         self._check_payload_size(request, client_ip)
 
         # 2. Validate data using serializer
-        serializer = self.get_serializer(data=request.data)
+        serializer = ContactMessageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         # 3. Log sanitized incoming data

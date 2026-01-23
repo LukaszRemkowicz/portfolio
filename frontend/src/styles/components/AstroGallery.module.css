@@ -61,6 +61,18 @@
   font-size: 1.2rem;
 }
 
+.gridSection {
+  grid-column: 2;
+  grid-row: 2;
+  position: relative;
+}
+
+.scrollAnchor {
+  position: absolute;
+  top: -100px;
+  visibility: hidden;
+}
+
 .hero {
   width: 100vw;
   height: 33vh;
@@ -138,6 +150,53 @@
   box-shadow: 0 4px 16px rgba(255, 184, 0, 0.12);
 }
 
+.gridSection {
+  width: 100%;
+}
+
+.mobileFilterToggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--portfolio-bg-light);
+  color: var(--celestial-white);
+  border: 1px solid var(--glass-border);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  width: fit-content;
+  margin: 0 auto;
+  transition: all var(--transition-fast);
+  z-index: 10;
+}
+
+.mobileFilterToggle:hover {
+  background: var(--glass-border);
+  border-color: var(--celestial-blue);
+}
+
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: calc(var(--z-modal) - 1);
+  transition: opacity var(--transition-normal);
+}
+
+.overlay.visible {
+  display: block;
+}
+
 .noResults {
   grid-column: 1 / -1;
   text-align: center;
@@ -175,11 +234,20 @@
 
   .sidebarContainer {
     position: static;
-    width: 100%;
+    width: auto;
+    margin: 0;
+  }
+
+  .mobileFilterToggle {
+    display: flex;
+  }
+
+  .filtersSection {
+    justify-content: center;
   }
 
   .sidebarLabel {
-    padding-left: 0;
+    display: none;
   }
 
   .grid {
