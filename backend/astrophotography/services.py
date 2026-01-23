@@ -94,12 +94,25 @@ class GalleryQueryService:
     def _apply_travel_filter(
         queryset: QuerySet[AstroImage], search_term: str
     ) -> QuerySet[AstroImage]:
-        """Internal helper for fuzzy travel filtering"""
+        """
+        Applies a smart fuzzy filter to images based on location and place.
+
+        Matches the search term against:
+        1. Country Names: Uses a lookup to convert terms like 'Poland' to their ISO code ('PL').
+        2. Country Codes: Matches direct Alpha-2 codes (e.g., 'PL').
+        3. Place Names: Matches specific cities/regions (e.g., 'Tenerife')
+           via case-insensitive lookup.
+
+        This allows the frontend to send a single search string while the backend handles
+        mapping it to the appropriate database fields (location code vs. place name).
+        """
         search_term_lower = search_term.lower()
         found_code: Optional[str] = None
         # Fuzzy country match
         for code, name in dict(countries).items():
-            if search_term_lower == code.lower() or search_term_lower in name.lower():
+            matches_code = search_term_lower == code.lower()
+            matches_name = search_term_lower in name.lower()
+            if matches_code or matches_name:
                 found_code = code
                 break
         filter_q = Q(place__name__icontains=search_term)
