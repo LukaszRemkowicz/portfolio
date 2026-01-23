@@ -15,6 +15,7 @@ from .serializers import (
     AstroImageSerializerList,
     MainPageBackgroundImageSerializer,
     MainPageLocationSerializer,
+    TagSerializer,
     TravelHighlightDetailSerializer,
 )
 from .services import GalleryQueryService
@@ -93,7 +94,6 @@ class TagsView(ViewSet):
     def list(self, request: Request) -> Response:
         category_filter = request.query_params.get("filter")
         tags = GalleryQueryService.get_tag_stats(category_filter)
+        serializer = TagSerializer(tags, many=True)
 
-        return Response(
-            [{"name": tag.name, "slug": tag.slug, "count": tag.num_times} for tag in tags]
-        )
+        return Response(serializer.data)

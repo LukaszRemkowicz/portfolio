@@ -3,6 +3,7 @@ from typing import Optional
 
 from rest_framework import serializers
 from rest_framework.serializers import CharField, ImageField, StringRelatedField
+from taggit.models import Tag
 
 from .models import (
     AstroImage,
@@ -16,6 +17,14 @@ from .models import (
     Tripod,
 )
 from .services import GalleryQueryService
+
+
+class TagSerializer(serializers.ModelSerializer):
+    count = serializers.IntegerField(source="num_times", read_only=True)
+
+    class Meta:
+        model = Tag
+        fields = ["name", "slug", "count"]
 
 
 class PlaceSerializer(serializers.ModelSerializer):
