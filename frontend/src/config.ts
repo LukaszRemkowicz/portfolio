@@ -12,7 +12,7 @@ export const CONFIG = {
    * Master switch to enable/disable shooting stars animation.
    * Controlled via ENABLE_SHOOTING_STARS env var (default: true).
    */
-  enableShootingStars: process.env.ENABLE_SHOOTING_STARS !== "false",
+  enableShootingStars: process.env.ENABLE_SHOOTING_STARS !== 'false',
   /**
    * Chance of a shooting star being a bolid (fireball).
    * 0.05 = 5% chance.

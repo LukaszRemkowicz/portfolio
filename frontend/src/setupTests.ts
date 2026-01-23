@@ -1,7 +1,7 @@
-import "@testing-library/jest-dom";
+import '@testing-library/jest-dom';
 
 // Mock window.matchMedia for components that use it (e.g., animations, responsive hooks)
-Object.defineProperty(window, "matchMedia", {
+Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: (query: string) => ({
     matches: false,
@@ -16,9 +16,9 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 // Mock crypto.randomUUID for JSDOM
-Object.defineProperty(window, "crypto", {
+Object.defineProperty(window, 'crypto', {
   value: {
-    randomUUID: () => "test-uuid-" + Math.random().toString(36).substring(2, 9),
+    randomUUID: () => 'test-uuid-' + Math.random().toString(36).substring(2, 9),
   },
 });
 
@@ -28,11 +28,11 @@ Object.defineProperty(window, "crypto", {
 // Actually, the most reliable way in v6 is to mock the console or (better) ignore these specific warnings.
 const originalWarn = console.warn;
 console.warn = (...args) => {
-  if (args[0] && typeof args[0] === "string") {
+  if (args[0] && typeof args[0] === 'string') {
     if (
-      args[0].includes("React Router Future Flag Warning") ||
-      args[0].includes("Profile not found, using fallbacks") ||
-      args[0].includes("Background image not found")
+      args[0].includes('React Router Future Flag Warning') ||
+      args[0].includes('Profile not found, using fallbacks') ||
+      args[0].includes('Background image not found')
     ) {
       return;
     }
