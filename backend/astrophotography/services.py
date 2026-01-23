@@ -2,8 +2,9 @@
 from typing import Any, Dict, Optional, cast
 
 from django_countries import countries
+from taggit.models import Tag
 
-from django.db.models import Q, QuerySet
+from django.db.models import Count, Q, QuerySet
 
 from .models import AstroImage
 
@@ -76,10 +77,6 @@ class GalleryQueryService:
         """
         Aggregate tag counts, optionally filtered by gallery category.
         """
-        from taggit.models import Tag
-
-        from django.db.models import Count, Q
-
         annotation_filter = Q(astroimage__isnull=False)
         if category_filter:
             annotation_filter &= Q(astroimage__celestial_object=category_filter)
