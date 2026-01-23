@@ -1,3 +1,5 @@
+from django_countries import countries
+
 from django import forms
 from django.contrib import admin
 from django.contrib.postgres.forms import RangeWidget
@@ -176,8 +178,13 @@ class MainPageLocationForm(forms.ModelForm):
         self._apply_dynamic_filtering()
 
     def _enhance_country_labels(self):
-        from django_countries import countries
+        """
+        Enhance the country choice labels in the form with ISO Alpha-3 codes.
 
+        Transforms default country names (e.g., 'Poland') into a more detailed
+        format including Alpha-2 and Alpha-3 codes (e.g., 'Poland (PL, POL)')
+        to improve administrative scanning and data verification.
+        """
         country_field = self.fields.get("country")
         if isinstance(country_field, forms.ChoiceField):
             enhanced_choices = [("", "---------")]
