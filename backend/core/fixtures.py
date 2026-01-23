@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, Generator
 import pytest
 
 if TYPE_CHECKING:
-    from rest_framework.test import APIClient, APIRequestFactory  # noqa: F401
+    from rest_framework.test import APIRequestFactory  # noqa: F401
 
     from django.test import Client, RequestFactory
 

@@ -140,8 +140,13 @@ class AstroImageAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at", "thumbnail")
 
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        """
+        Customizes the change form view to hide certain buttons.
+
+        Specifically, hides the 'Save and add another' button when editing
+        an existing object to streamline the UI.
+        """
         extra_context = extra_context or {}
-        # Hide "Save and add another" button when editing (only show when adding)
         if object_id:
             extra_context["show_save_and_add_another"] = False
         return super().changeform_view(request, object_id, form_url, extra_context)
