@@ -274,6 +274,13 @@ class MainPageLocationForm(forms.ModelForm):
         }
 
     def clean(self):
+        """
+        Perform cross-field validation for the Travel Highlight slider.
+
+        Specifically, ensures that all selected images are captured in the same
+        country as the slider itself. This prevents geographic data inconsistency
+        in the gallery view.
+        """
         cleaned_data = super().clean()
         if cleaned_data is None:
             return None
