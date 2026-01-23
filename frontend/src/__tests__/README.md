@@ -115,7 +115,7 @@ All API calls are mocked using Jest mocks:
 Components using React Router are wrapped in `BrowserRouter` for testing:
 
 ```javascript
-const renderWithRouter = (component) => {
+const renderWithRouter = component => {
   return render(<BrowserRouter>{component}</BrowserRouter>);
 };
 ```
@@ -181,7 +181,7 @@ When adding new tests:
     * - [Specific behavior 2]
     * - [Specific behavior 3]
     */
-   it("[test description]", async () => {
+   it('[test description]', async () => {
      // Test implementation
    });
    ```
@@ -199,12 +199,15 @@ When adding new tests:
 ### Common Issues
 
 1. **"toBeInTheDocument is not a function"**
+
    - Ensure `@testing-library/jest-dom` is imported in each test file
 
 2. **"useLocation() may be used only in the context of a <Router>"**
+
    - Wrap components in `BrowserRouter` for testing
 
 3. **React act() warnings**
+
    - Wrap async operations in `act()` when needed
    - Use `waitFor()` for assertions on async state changes
 

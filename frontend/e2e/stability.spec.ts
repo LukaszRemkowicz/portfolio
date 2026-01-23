@@ -1,39 +1,39 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from '@playwright/test';
 
-test.describe("Stability Check", () => {
-  test("should load the main page and NOT reload (checking for infinite loop)", async ({
+test.describe('Stability Check', () => {
+  test('should load the main page and NOT reload (checking for infinite loop)', async ({
     page,
   }) => {
     // Catch-all mock for API v1
-    await page.route("**/api/v1/**", async (route) => {
+    await page.route('**/api/v1/**', async route => {
       const url = route.request().url();
 
-      if (url.includes("/profile/")) {
+      if (url.includes('/profile/')) {
         return route.fulfill({
           status: 200,
-          contentType: "application/json",
+          contentType: 'application/json',
           body: JSON.stringify({
-            first_name: "Test",
-            last_name: "User",
-            short_description: "Sky Hunter",
+            first_name: 'Test',
+            last_name: 'User',
+            short_description: 'Sky Hunter',
           }),
         });
       }
 
-      if (url.includes("/background/")) {
+      if (url.includes('/background/')) {
         return route.fulfill({
           status: 200,
-          contentType: "application/json",
+          contentType: 'application/json',
           body: JSON.stringify({
-            url: "https://via.placeholder.com/1920x1080",
+            url: 'https://via.placeholder.com/1920x1080',
           }),
         });
       }
 
-      if (url.includes("/whats-enabled/")) {
+      if (url.includes('/whats-enabled/')) {
         return route.fulfill({
           status: 200,
-          contentType: "application/json",
+          contentType: 'application/json',
           body: JSON.stringify({
             travelHighlights: true,
             gallery: true,
@@ -43,10 +43,10 @@ test.describe("Stability Check", () => {
         });
       }
 
-      if (url.includes("/image/")) {
+      if (url.includes('/image/')) {
         return route.fulfill({
           status: 200,
-          contentType: "application/json",
+          contentType: 'application/json',
           body: JSON.stringify([]),
         });
       }
@@ -54,22 +54,22 @@ test.describe("Stability Check", () => {
       // Default fallback
       return route.fulfill({
         status: 200,
-        contentType: "application/json",
+        contentType: 'application/json',
         body: JSON.stringify([]),
       });
     });
 
     // 1. Navigate to the home page
-    await page.goto("/");
+    await page.goto('/');
 
     // 2. Wait for the Hero title to ensure initial load is complete
-    const heroTitle = page.locator("h1").first();
+    const heroTitle = page.locator('h1').first();
     await expect(heroTitle).toBeVisible();
 
     // 3. Set a marker in the window object.
     // If the page reloads, this property will be lost (undefined).
     const markerValue = Date.now();
-    await page.evaluate((val) => {
+    await page.evaluate(val => {
       (window as any).__stability_marker = val;
     }, markerValue);
 
@@ -86,7 +86,7 @@ test.describe("Stability Check", () => {
     // If retrievedValue is undefined or different, the page reloaded!
     expect(
       retrievedValue,
-      "Page reloaded unexpectedly! The window variable was lost.",
+      'Page reloaded unexpectedly! The window variable was lost.'
     ).toBe(markerValue);
 
     // 6. Final assertion: Helper elements should still be visible
