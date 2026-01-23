@@ -13,11 +13,16 @@ x-backend-common: &backend-common
     - portfolio_network
   volumes:
     - ./backend:/app
-  env_file:
-    - ./backend/.env
   environment:
-    DOCKER_ENV: true
+    DOCKER_ENV: "true"
     PYTHONPATH: "."
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+    DEBUG: ${DEBUG:-False}
+    DB_NAME: ${DB_NAME:-portfolio}
+    DB_USER: ${DB_USER:-postgres}
+    DB_PASSWORD: ${DB_PASSWORD:-postgres}
+    DB_HOST: ${DB_HOST:-db}
+    DB_PORT: ${DB_PORT:-5432}
   depends_on:
     - db
     - redis
@@ -62,8 +67,6 @@ services:
     networks:
       portfolio_network:
         ipv4_address: 172.10.0.4
-    env_file:
-      - ./backend/.env
     environment:
       POSTGRES_DB: ${DB_NAME:-portfolio}
       POSTGRES_USER: ${DB_USER:-postgres}
