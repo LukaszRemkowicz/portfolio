@@ -192,6 +192,17 @@ class MainPageLocationForm(forms.ModelForm):
             country_field.choices = enhanced_choices
 
     def _apply_dynamic_filtering(self):  # noqa: C901
+        """
+        Dynamically filter the available images based on the selected country and place.
+
+        Ensures that 'images' and 'background_image' querysets only contain images
+        matching the specific location of this Travel Highlight.
+
+        Logic:
+        - Edit mode: Filters by instance country/place.
+        - Creation mode: Disables selection (queryset.none()) until the record is saved,
+          as the filtering context depends on persisted location data.
+        """
         # Dynamic filtering for images field
         if self.instance.pk:
             # Edit mode
