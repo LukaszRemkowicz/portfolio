@@ -51,31 +51,32 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
 - **Poetry**
 - **Docker & Docker Compose**
 
-### Local Quick Start (on host)
+### Local Quick Start
 
 1. **Install Dependencies**
    ```bash
    poetry install
    ```
 
-2. **Environment Configuration**
+2. **Environment Configuration (Recommended: Doppler)**
+   We use **Doppler** for secure secret management.
    ```bash
-   # Copy the default template
-   cp DEFAULT.env .env
-   # Edit .env with your secure credentials
+   doppler login
+   doppler setup
+   # No manual .env files needed!
    ```
+   *Note: For legacy setups, you can still copy `DEFAULT.env` to `.env`.*
 
 3. **Database & Translations**
    ```bash
-   # Run from the backend directory
-   poetry run python manage.py migrate
-   poetry run python manage.py compilemessages
-   poetry run python manage.py collectstatic --noinput
+   # Using Doppler to inject secrets
+   doppler run -- poetry run python manage.py migrate
+   doppler run -- poetry run python manage.py compilemessages
    ```
 
 4. **Run Server**
    ```bash
-   poetry run python manage.py runserver
+   doppler run -- poetry run python manage.py runserver
    ```
 
 ## 🧪 Testing & Quality
@@ -109,9 +110,15 @@ pre-commit run --all-files
 
 ## 🐳 Docker Integration (Recommended)
 
+### Pro Deployment (Recommended: Doppler)
+```bash
+# Run from the project root with centralized secrets
+doppler run -- docker compose up --build
+```
+
 ### Standard Deployment
 ```bash
-# Run from the project root
+# Legacy method using local .env files
 docker compose up --build
 ```
 
@@ -135,6 +142,18 @@ docker compose run --rm portfolio-test
 docker compose exec portfolio-be pytest
 ```
 
+## 🗄️ Database Maintenance
+
+We provide specialized "God-Tier" scripts for automated database backups and restore verification.
+
+- **Atomic Backups**: `scripts/db_backup/backup_db.sh` creates validated, timestamped dumps with overlap protection.
+- **Restore Verification**: `scripts/db_backup/test_restore.sh` automatically verifies that backups are healthy by performing a full restore in a temporary container.
+
+> [!TIP]
+> For detailed instructions on configuration (Doppler/Env), retention policies, and restore procedures, see the [Database Maintenance Guide](../scripts/db_backup/MAINTENANCE.md).
+
+## 📅 TODO - Backend Improvements
+
 ## � TODO - Backend Improvements
 
 ### 📸 Features & Processing
@@ -151,7 +170,7 @@ docker compose exec portfolio-be pytest
 - [x] **Health Checks** - Django health endpoint configured
 
 ### 🗄️ Database & Performance
-- [ ] **Backup** - Add automated DB backup and restore scripts
+- [x] **Backup** - Atomic DB backup and "God-Tier" restore verification scripts
 - [x] **Redis Caching** - Configured for Select2 and select views
 - [x] **Automated Migrations** - Integrated into Docker startup
 

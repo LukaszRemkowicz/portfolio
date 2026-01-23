@@ -138,3 +138,4 @@ nginx/logs/
 /backend/core/local.py
 frontend/playwright-report/
 frontend/test-results/
+database_data/
