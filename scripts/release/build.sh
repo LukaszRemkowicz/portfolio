@@ -92,7 +92,6 @@
 #
 # =============================================================================
 
-
 set -euo pipefail
 
 # -------- Paths / defaults --------
@@ -236,7 +235,10 @@ TAG="${TAG:-$(git rev-parse --short HEAD)}"
 export TAG
 log "📌 TAG (commit): $TAG"
 
-COMPOSE="docker compose -f \"$COMPOSE_BASE\" -f \"$COMPOSE_PROD\""
+# Compose command as an array (safe with spaces, no eval)
+COMPOSE=(docker compose -f "$COMPOSE_BASE" -f "$COMPOSE_PROD")
+
+# Build args as an array (safe with set -u)
 BUILD_ARGS=()
 if [[ "$NO_CACHE" == true ]]; then
   BUILD_ARGS+=(--no-cache)
@@ -247,12 +249,12 @@ log "🔨 Building images..."
 
 if [[ "$FRONTEND_ONLY" == true ]]; then
   log "➡️  Building frontend only (portfolio-fe)"
-  eval $COMPOSE build "${BUILD_ARGS[@]}" portfolio-fe
+  "${COMPOSE[@]}" build "${BUILD_ARGS[@]}" portfolio-fe
 elif [[ "$BACKEND_ONLY" == true ]]; then
   log "➡️  Building backend only (portfolio-be)"
-  eval $COMPOSE build "${BUILD_ARGS[@]}" portfolio-be
+  "${COMPOSE[@]}" build "${BUILD_ARGS[@]}" portfolio-be
 else
-  eval $COMPOSE build "${BUILD_ARGS[@]}"
+  "${COMPOSE[@]}" build "${BUILD_ARGS[@]}"
 fi
 
 success "✅ Build complete"
