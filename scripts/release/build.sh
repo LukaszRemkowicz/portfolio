@@ -1,127 +1,65 @@
 #!/usr/bin/env bash
 # =============================================================================
-# BUILD.SH — PRODUCTION IMAGE BUILD SCRIPT
+# build.sh — build-only (prod targets) for frontend + backend
 # =============================================================================
+# Builds Docker images using:
+#   docker-compose.yml + docker-compose.prod.yml
 #
-# PURPOSE
-# -------
-# This script builds Docker images for the project (frontend + backend)
-# in a safe and repeatable way.
+# It ONLY builds images (no migrations, no container restarts).
 #
-# It ONLY builds images.
-# It does NOT:
-#   - run migrations
-#   - start or stop containers
-#   - deploy anything
+# Default behavior is SAFE:
+# - It will NOT switch branches.
+# - It will only pull if you explicitly pass --pull.
 #
-# The goal is to always produce tagged images that can later be deployed
-# without downtime.
+# Usage:
+#   ./build.sh                 # build both (no git pull)
+#   ./build.sh --pull          # pull current branch, then build
+#   ./build.sh --no-cache      # build without cache
+#   ./build.sh --frontend-only # build FE only
+#   ./build.sh --backend-only  # build BE only
 #
-#
-# HOW IT WORKS
-# ------------
-# - Uses docker-compose.yml + docker-compose.prod.yml
-# - Builds images from production targets:
-#     * frontend  -> target: prod
-#     * backend   -> target: production
-# - Images are tagged with the current git commit hash (TAG)
-#
-# Example produced images:
-#   - portfolio-frontend:<git_sha>
-#   - portfolio-backend:<git_sha>
-#
-#
-# DEFAULT FLOW
-# ------------
-# 1. Ensure working tree is clean
-# 2. (Optional) Pull latest code from the main branch
-# 3. Build Docker images using docker compose
-# 4. Exit (no containers are started or restarted)
-#
-#
-# USAGE
-# -----
-# Full build (frontend + backend):
-#   ./build.sh
-#
-# Build without pulling code:
-#   ./build.sh --no-pull
-#
-# Build only frontend:
-#   ./build.sh --frontend-only
-#
-# Build only backend:
-#   ./build.sh --backend-only
-#
-# Build without Docker cache:
-#   ./build.sh --no-cache
-#
-#
-# ENVIRONMENT VARIABLES
-# ---------------------
-# TAG
-#   Override image tag manually.
-#   Default: short git commit hash.
-#
-# PROJECT_DIR
-#   Root directory of the project.
-#   Default: auto-detected.
-#
-# BRANCH
-#   Git branch used for pulling code.
-#   Default: "main".
-#
-#
-# RELATION TO DEPLOY
-# ------------------
-# Typical production flow:
-#
-#   ./build.sh
-#   ./deploy.sh
-#
-# Where:
-#   - build.sh  -> builds images only
-#   - deploy.sh -> runs release tasks and switches containers
-#
-#
-# SAFETY NOTES
-# ------------
-# - The script refuses to pull if the git working tree is dirty.
-# - This prevents accidental builds from uncommitted changes.
-# - Images from previous builds are NOT deleted (rollback-friendly).
-#
+# Env:
+#   TAG=<tag>                  # override tag (default: git short sha)
+#   PROJECT_DIR=<path>         # repo root (auto-detected via git)
+#   LOG_FILE=<path>            # log path (auto)
+#   COMPOSE_BASE, COMPOSE_PROD # compose file overrides
 # =============================================================================
 
 set -euo pipefail
 
-# --- Make script execution stable even if git checkout/pull modifies this file ---
-if [[ -z "${_BUILD_SH_STABLE_RUN:-}" ]]; then
-  export _BUILD_SH_STABLE_RUN=1
-  tmp="$(mktemp -t build.sh.XXXXXX)"
-  cp "$0" "$tmp"
-  chmod +x "$tmp"
-  exec "$tmp" "$@"
-fi
-
 # -------- Paths / defaults --------
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_DIR="${PROJECT_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Robust project root detection:
+# Prefer user override, else ask git for repo root (works no matter where the script lives).
+if [[ -z "${PROJECT_DIR:-}" ]]; then
+  if git -C "$SCRIPT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    PROJECT_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
+  else
+    echo "[ERROR] PROJECT_DIR not set and script is not inside a git repo."
+    echo "Set PROJECT_DIR explicitly, e.g.:"
+    echo "  PROJECT_DIR=/path/to/repo ./build.sh"
+    exit 1
+  fi
+fi
 
 COMPOSE_BASE="${COMPOSE_BASE:-$PROJECT_DIR/docker-compose.yml}"
 COMPOSE_PROD="${COMPOSE_PROD:-$PROJECT_DIR/docker-compose.prod.yml}"
 
-BRANCH="${BRANCH:-main}"
-
-# Prefer /var/log if writable, else fallback to project-local
+# Prefer /var/log if writable, else fallback to project-local, else /tmp
 DEFAULT_LOG_FILE="/var/log/portfolio-build.log"
 LOG_FILE="${LOG_FILE:-$DEFAULT_LOG_FILE}"
+
 if ! (touch "$LOG_FILE" >/dev/null 2>&1); then
   LOG_FILE="$PROJECT_DIR/portfolio-build.log"
-  touch "$LOG_FILE" >/dev/null 2>&1 || true
+  if ! (touch "$LOG_FILE" >/dev/null 2>&1); then
+    LOG_FILE="/tmp/portfolio-build.log"
+    touch "$LOG_FILE" >/dev/null 2>&1 || true
+  fi
 fi
 
 # -------- Flags --------
-NO_PULL=false
+DO_PULL=false
 FRONTEND_ONLY=false
 BACKEND_ONLY=false
 NO_CACHE=false
@@ -135,33 +73,35 @@ PURPLE='\033[0;35m'
 NC='\033[0m'
 
 # -------- Logging --------
-log()     { echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE"; }
-info()    { echo -e "${PURPLE}[$(date '+%Y-%m-%d %H:%M:%S')] INFO:${NC} $1" | tee -a "$LOG_FILE"; }
-success() { echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS:${NC} $1" | tee -a "$LOG_FILE"; }
-warning() { echo -e "${YELLOW}[$(date '+%Y-%m-%d %H:%M:%S')] WARNING:${NC} $1" | tee -a "$LOG_FILE"; }
-error()   { echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1" | tee -a "$LOG_FILE" >&2; }
+log()     { echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE" >/dev/null; echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $1"; }
+info()    { echo -e "${PURPLE}[$(date '+%Y-%m-%d %H:%M:%S')] INFO:${NC} $1" | tee -a "$LOG_FILE" >/dev/null; echo -e "${PURPLE}[$(date '+%Y-%m-%d %H:%M:%S')] INFO:${NC} $1"; }
+success() { echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS:${NC} $1" | tee -a "$LOG_FILE" >/dev/null; echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS:${NC} $1"; }
+warning() { echo -e "${YELLOW}[$(date '+%Y-%m-%d %H:%M:%S')] WARNING:${NC} $1" | tee -a "$LOG_FILE" >/dev/null; echo -e "${YELLOW}[$(date '+%Y-%m-%d %H:%M:%S')] WARNING:${NC} $1"; }
+error()   { echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1" | tee -a "$LOG_FILE" >/dev/null; echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1" >&2; }
 
 usage() {
   cat <<EOF
-Portfolio build.sh (build-only)
+build.sh (build-only)
 
 Usage:
   $0 [options]
 
 Options:
-  --no-pull           Skip git pull
-  --frontend-only     Build only frontend image
-  --backend-only      Build only backend image
-  --no-cache          Disable Docker build cache
-  -h, --help          Show help
+  --pull              git pull --ff-only on current branch, then build
+  --frontend-only     build only portfolio-fe
+  --backend-only      build only portfolio-be
+  --no-cache          pass --no-cache to docker build
+  -h, --help          show help
 
-Environment overrides:
-  PROJECT_DIR, BRANCH, LOG_FILE
+Env:
+  TAG=<tag>           override image tag (default: git short sha)
+  PROJECT_DIR         repo root (auto via git if possible)
+  LOG_FILE            optional log path
   COMPOSE_BASE, COMPOSE_PROD
 
 Notes:
+- Does NOT switch branches.
 - Uses: docker compose -f docker-compose.yml -f docker-compose.prod.yml build
-- Tags images using TAG=<git short sha> (exported for compose)
 EOF
 }
 
@@ -173,7 +113,7 @@ fi
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --no-pull) NO_PULL=true; shift ;;
+    --pull) DO_PULL=true; shift ;;
     --frontend-only) FRONTEND_ONLY=true; shift ;;
     --backend-only) BACKEND_ONLY=true; shift ;;
     --no-cache) NO_CACHE=true; shift ;;
@@ -190,26 +130,12 @@ fi
 # -------- Preconditions --------
 cd "$PROJECT_DIR" || { error "Cannot cd to PROJECT_DIR=$PROJECT_DIR"; exit 1; }
 
-if [[ ! -f "$COMPOSE_BASE" ]]; then
-  error "Missing compose file: $COMPOSE_BASE"
-  exit 1
-fi
-if [[ ! -f "$COMPOSE_PROD" ]]; then
-  error "Missing compose file: $COMPOSE_PROD"
-  exit 1
-fi
+[[ -f "$COMPOSE_BASE" ]] || { error "Missing compose file: $COMPOSE_BASE"; exit 1; }
+[[ -f "$COMPOSE_PROD" ]] || { error "Missing compose file: $COMPOSE_PROD"; exit 1; }
+[[ -d ".git" ]] || { error "Not a git repository: $PROJECT_DIR"; exit 1; }
 
-if [[ ! -d ".git" ]]; then
-  error "Not a git repository: $PROJECT_DIR"
-  exit 1
-fi
+command -v docker >/dev/null 2>&1 || { error "Docker is not installed/available"; exit 1; }
 
-if ! command -v docker >/dev/null 2>&1; then
-  error "Docker is not installed/available"
-  exit 1
-fi
-
-# Use BuildKit if available
 export DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"
 
 log "🏗️  Starting build-only..."
@@ -220,56 +146,44 @@ info "Log: $LOG_FILE"
 CURRENT_BRANCH="$(git branch --show-current || true)"
 log "📋 Current branch: ${CURRENT_BRANCH:-unknown}"
 
-# Refuse to pull if working tree dirty (prevents mystery builds)
-if [[ "$NO_PULL" == false ]]; then
+if [[ "$DO_PULL" == true ]]; then
   if [[ -n "$(git status --porcelain)" ]]; then
-    error "Working tree is not clean. Commit/stash changes or run with --no-pull intentionally."
-    git status --porcelain | tee -a "$LOG_FILE"
+    error "Working tree is not clean. Commit/stash changes before pulling."
+    git status --porcelain | tee -a "$LOG_FILE" >/dev/null || true
     exit 1
   fi
-
-  log "📥 Pulling latest code from branch $BRANCH..."
-  if [[ "$CURRENT_BRANCH" != "$BRANCH" ]]; then
-    log "🔄 Switching to branch $BRANCH..."
-    git checkout "$BRANCH"
-  fi
-
-  git pull --ff-only origin "$BRANCH"
+  log "📥 Pulling latest code (current branch)..."
+  git pull --ff-only
   success "✅ Code updated"
 else
-  info "⏭️  Skipping git pull (--no-pull)"
+  info "⏭️  Skipping git pull (use --pull to enable)"
 fi
 
 TAG="${TAG:-$(git rev-parse --short HEAD)}"
 export TAG
 log "📌 TAG (commit): $TAG"
 
-# Compose command as an array (safe with spaces, no eval)
-COMPOSE=(docker compose -f "$COMPOSE_BASE" -f "$COMPOSE_PROD")
-
-# Build args as an array (safe with set -u)
-BUILD_ARGS=()
+CACHE_FLAG=""
 if [[ "$NO_CACHE" == true ]]; then
-  BUILD_ARGS+=(--no-cache)
+  CACHE_FLAG="--no-cache"
 fi
 
-# -------- Build --------
 log "🔨 Building images..."
 
 if [[ "$FRONTEND_ONLY" == true ]]; then
   log "➡️  Building frontend only (portfolio-fe)"
-  "${COMPOSE[@]}" build "${BUILD_ARGS[@]}" portfolio-fe
+  docker compose -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" build $CACHE_FLAG portfolio-fe
 elif [[ "$BACKEND_ONLY" == true ]]; then
   log "➡️  Building backend only (portfolio-be)"
-  "${COMPOSE[@]}" build "${BUILD_ARGS[@]}" portfolio-be
+  docker compose -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" build $CACHE_FLAG portfolio-be
 else
-  "${COMPOSE[@]}" build "${BUILD_ARGS[@]}"
+  docker compose -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" build $CACHE_FLAG
 fi
 
 success "✅ Build complete"
 
-# Optional: show built images
 log "📋 Built images (filtered):"
-docker images | awk 'NR==1 || $1 ~ /^portfolio-(frontend|backend)$/ {print}' | tee -a "$LOG_FILE" || true
+docker images | awk 'NR==1 || $1 ~ /^portfolio-(frontend|backend)$/ {print}' | tee -a "$LOG_FILE" >/dev/null || true
+docker images | awk 'NR==1 || $1 ~ /^portfolio-(frontend|backend)$/ {print}' || true
 
 log "✅ Done. Images tagged with: $TAG"
