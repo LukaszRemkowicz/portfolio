@@ -33,6 +33,8 @@ services:
     build:
       context: ./frontend
       target: prod
+      args:
+        SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}
     image: portfolio-frontend:${TAG}
     restart: always
     # No bind mounts here to avoid overwriting built assets
