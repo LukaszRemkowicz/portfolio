@@ -19,7 +19,7 @@ module.exports = (env, argv) => {
   }
 
   const apiUrl =
-    env.API_URL || process.env.API_URL || 'https://admin.portfolio.local';
+    env.API_URL || process.env.API_URL || 'https://api.portfolio.local';
 
   const enableShootingStars =
     env.ENABLE_SHOOTING_STARS || process.env.ENABLE_SHOOTING_STARS || 'true';

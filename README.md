@@ -21,12 +21,13 @@ docker-compose up --build
 
 > **Note**: Docker Compose V2 uses `docker compose` (space), while V1 uses `docker-compose` (hyphen). Check your Docker version with `docker --version`.
 - Frontend: https://portfolio.local/
-- Backend: https://admin.portfolio.local/
-- Media files: https://portfolio.local/media/
+- API: https://api.portfolio.local/
+- Backend Admin: https://admin.portfolio.local/
+- Media files: https://api.portfolio.local/media/
 
-> **Note:** You may need to add `portfolio.local` and `admin.portfolio.local` to your `/etc/hosts` file:
+> **Note:** You may need to add `portfolio.local`, `api.portfolio.local`, and `admin.portfolio.local` to your `/etc/hosts` file:
 > ```
-> 127.0.0.1 portfolio.local admin.portfolio.local
+> 127.0.0.1 portfolio.local api.portfolio.local admin.portfolio.local
 > ```
 
 ### 3. Access Django Admin

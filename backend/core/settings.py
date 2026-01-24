@@ -36,11 +36,12 @@ SECURE_CONTENT_TYPE_NOSNIFF = env.bool("SECURE_CONTENT_TYPE_NOSNIFF", default=Tr
 SECURE_BROWSER_XSS_FILTER = env.bool("SECURE_BROWSER_XSS_FILTER", default=True)
 
 # Domain settings
+SITE_DOMAIN = env.str("SITE_DOMAIN", default="portfolio.local")
 ADMIN_DOMAIN = env.str("ADMIN_DOMAIN", default="admin.portfolio.local")
 API_DOMAIN = env.str("API_DOMAIN", default="api.portfolio.local")
 
-# Filter out empty values to prevent "https://" or empty host entries
-_base_hosts = [ADMIN_DOMAIN, API_DOMAIN]
+# Filter out empty values and consolidate hosts
+_base_hosts = [SITE_DOMAIN, ADMIN_DOMAIN, API_DOMAIN]
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + [h for h in _base_hosts if h]
 
 if DEBUG:
@@ -52,30 +53,42 @@ if DEBUG:
 
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
-if ADMIN_DOMAIN:
-    CORS_ALLOWED_ORIGINS.append(f"https://{ADMIN_DOMAIN}")
-if API_DOMAIN:
-    CORS_ALLOWED_ORIGINS.append(f"https://{API_DOMAIN}")
+# Handle empty string from env to avoid [''] in the list
+_cors_env = env.list("CORS_ALLOWED_ORIGINS", default=[])
+CORS_ALLOWED_ORIGINS = [o for o in _cors_env if o]
 
-if DEBUG:
-    if API_DOMAIN:
-        CORS_ALLOWED_ORIGINS.append(f"http://{API_DOMAIN}")
-        CORS_ALLOWED_ORIGINS.append(f"http://{API_DOMAIN}:3000")
+# Automatically add our domains to CORS and CSRF trusted lists
+for h in _base_hosts:
+    if h:
+        CORS_ALLOWED_ORIGINS.append(f"https://{h}")
+        if DEBUG:
+            CORS_ALLOWED_ORIGINS.append(f"http://{h}")
+            CORS_ALLOWED_ORIGINS.append(f"http://{h}:3000")
 
+# Remove duplicates
+CORS_ALLOWED_ORIGINS = list(set(CORS_ALLOWED_ORIGINS))
 CORS_ALLOW_CREDENTIALS = True
 
 # Custom user model - this needs to be set before INSTALLED_APPS
 AUTH_USER_MODEL = "users.User"
 
-# CSRF Settings
-CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
-if ADMIN_DOMAIN:
-    CSRF_TRUSTED_ORIGINS.append(f"https://{ADMIN_DOMAIN}")
-if API_DOMAIN:
-    CSRF_TRUSTED_ORIGINS.append(f"https://{API_DOMAIN}")
+# CSRF & Session Settings
+# Sharing cookies across subdomains
+CSRF_COOKIE_DOMAIN = env.str("CSRF_COOKIE_DOMAIN", default=".portfolio.local")
+SESSION_COOKIE_DOMAIN = env.str("SESSION_COOKIE_DOMAIN", default=".portfolio.local")
 
-CSRF_COOKIE_DOMAIN = env.str("CSRF_COOKIE_DOMAIN", default=None)
+# CSRF Trusted Origins
+_csrf_env = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+CSRF_TRUSTED_ORIGINS = [o for o in _csrf_env if o]
+for h in _base_hosts:
+    if h:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{h}")
+        if DEBUG:
+            CSRF_TRUSTED_ORIGINS.append(f"http://{h}")
+
+# Remove duplicates
+CSRF_TRUSTED_ORIGINS = list(set(CSRF_TRUSTED_ORIGINS))
+
 CSRF_USE_SESSIONS = True
 CSRF_COOKIE_SECURE = True
 
@@ -148,12 +161,12 @@ WSGI_APPLICATION = "core.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": env.str("DB_ENGINE") or "django.db.backends.postgresql",
-        "NAME": env.str("DB_NAME") or "portfolio",
-        "USER": env.str("DB_USER") or "postgres",
-        "PASSWORD": env.str("DB_PASSWORD") or "postgres",
-        "HOST": env.str("DB_HOST") or "db",
-        "PORT": env.str("DB_PORT") or "5432",
+        "ENGINE": env.str("DB_ENGINE", default="django.db.backends.postgresql"),
+        "NAME": env.str("DB_NAME", default="portfolio"),
+        "USER": env.str("DB_USER", default="postgres"),
+        "PASSWORD": env.str("DB_PASSWORD", default="postgres"),
+        "HOST": env.str("DB_HOST", default="db"),
+        "PORT": env.str("DB_PORT", default="5432"),
     }
 }
 

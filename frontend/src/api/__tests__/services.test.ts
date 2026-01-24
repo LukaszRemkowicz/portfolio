@@ -39,7 +39,7 @@ describe('API Services', () => {
       expect(api.get).toHaveBeenCalledWith(API_ROUTES.profile);
       expect(result.first_name).toBe('John');
       expect(result.avatar).toContain(
-        'https://admin.portfolio.local/media/avatars/avatar.jpg'
+        'https://api.portfolio.local/media/avatars/avatar.jpg'
       );
     });
 

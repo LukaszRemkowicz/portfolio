@@ -25,9 +25,9 @@ describe('API Configuration', () => {
     jest.isolateModules(() => {
       const { API_BASE_URL: resolvedUrl } = require('../api/routes');
       // In Jest, process.env.API_URL might be undefined or set to a mock
-      // Our default is 'https://admin.portfolio.local'
+      // Our default is 'https://api.portfolio.local'
       if (!process.env.API_URL) {
-        expect(resolvedUrl).toBe('https://admin.portfolio.local');
+        expect(resolvedUrl).toBe('https://api.portfolio.local');
       }
     });
   });
@@ -42,7 +42,7 @@ describe('API Configuration', () => {
 
       try {
         const { API_BASE_URL: resolvedUrl } = require('../api/routes');
-        expect(resolvedUrl).toBe('https://admin.portfolio.local');
+        expect(resolvedUrl).toBe('https://api.portfolio.local');
       } finally {
         global.process = actualProcess;
       }
