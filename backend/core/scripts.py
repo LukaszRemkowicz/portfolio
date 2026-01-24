@@ -14,7 +14,7 @@ def run_in_docker(command):
     if use_doppler:
         full_cmd.extend(["doppler", "run", "--"])
 
-    full_cmd.extend(["docker", "compose", "run", "--rm", "portfolio-test"])
+    full_cmd.extend(["docker", "compose", "run", "--rm", "--remove-orphans", "portfolio-test"])
     full_cmd.extend(command)
 
     result = subprocess.run(full_cmd)

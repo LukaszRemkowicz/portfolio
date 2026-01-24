@@ -99,6 +99,12 @@ Before your first deployment, you **must** configure [nginx/prod/nginx.conf](ngi
 - **SSL Certificates**: Point `ssl_certificate` paths to your actual Certbot/LetsEncrypt certificates (usually mounted to `/etc/nginx/ssl/`).
 - **CORS/CSRF**: Ensure the domains in Nginx match your `CORS_ALLOWED_ORIGINS` in Doppler/Env.
 
+### 5. Nginx Enviroment Variables
+The `docker-compose.prod.yml` uses the following environment variables to map Nginx paths locally on the host. These must be set in your `.env` or Doppler config:
+- `NGINX_CONF_PATH`: Path to the production `nginx.conf` file (e.g., `./nginx/prod/nginx.conf`).
+- `NGINX_SSL_DIR`: Directory containing your SSL certificates (e.g., `./nginx/ssl/certs`).
+- `NGINX_LOG_DIR`: Directory for Nginx logs (e.g., `./nginx/logs`).
+
 ---
 
 ## 💾 Database Backup & Maintenance

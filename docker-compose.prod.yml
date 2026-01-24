@@ -115,9 +115,9 @@ services:
       - portfolio-fe
       - portfolio-be
     volumes:
-      - ./nginx/prod/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl/certs:/etc/nginx/ssl:ro
-      - ./nginx/logs:/var/log/nginx
+      - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
+      - ${NGINX_SSL_DIR}:/etc/nginx/ssl:ro
+      - ${NGINX_LOG_DIR}:/var/log/nginx
       - prod_media_data:/app/media:ro
       - prod_static_data:/app/staticfiles:ro
     ports:
