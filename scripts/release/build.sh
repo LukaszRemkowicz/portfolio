@@ -47,6 +47,13 @@ fi
 COMPOSE_BASE="${COMPOSE_BASE:-$PROJECT_DIR/docker-compose.yml}"
 COMPOSE_PROD="${COMPOSE_PROD:-$PROJECT_DIR/docker-compose.prod.yml}"
 
+ORIGINAL_COMPOSE_PROD="$COMPOSE_PROD"
+
+ORIGINAL_COMPOSE_PROD_CONTENT=""
+if [[ -f "$COMPOSE_PROD" ]]; then
+  ORIGINAL_COMPOSE_PROD_CONTENT="$(cat "$COMPOSE_PROD")"
+fi
+
 # Prefer /var/log if writable, else fallback to project-local, else /tmp
 DEFAULT_LOG_FILE="/var/log/portfolio-build.log"
 LOG_FILE="${LOG_FILE:-$DEFAULT_LOG_FILE}"
@@ -135,7 +142,14 @@ fi
 cd "$PROJECT_DIR" || { error "Cannot cd to PROJECT_DIR=$PROJECT_DIR"; exit 1; }
 
 [[ -f "$COMPOSE_BASE" ]] || { error "Missing compose file: $COMPOSE_BASE"; exit 1; }
-[[ -f "$COMPOSE_PROD" ]] || { error "Missing compose file: $COMPOSE_PROD"; exit 1; }
+if [[ ! -f "$COMPOSE_PROD" ]]; then
+  if [[ "$FORCE_MAIN" == true ]]; then
+    warning "Missing compose prod file at: $COMPOSE_PROD (will try fallback after switching to main)"
+  else
+    error "Missing compose file: $COMPOSE_PROD"
+    exit 1
+  fi
+fi
 [[ -d ".git" ]] || { error "Not a git repository: $PROJECT_DIR"; exit 1; }
 
 command -v docker >/dev/null 2>&1 || { error "Docker is not installed/available"; exit 1; }
@@ -166,6 +180,24 @@ if [[ "$FORCE_MAIN" == true ]]; then
     log "📋 Current branch: $CURRENT_BRANCH"
   fi
 fi
+
+TMP_COMPOSE_PROD=""
+if [[ "$FORCE_MAIN" == true && ! -f "$COMPOSE_PROD" ]]; then
+  warning "docker-compose.prod.yml not found on branch '$MAIN_BRANCH'"
+  warning "Using temporary compose file from starting branch (TEST MODE)"
+  if [[ -z "$ORIGINAL_COMPOSE_PROD_CONTENT" ]]; then
+    error "Cannot fallback: starting branch did not have docker-compose.prod.yml to copy from."
+    error "Run build.sh from the branch that contains docker-compose.prod.yml, then use --main."
+    exit 1
+  fi
+  TMP_COMPOSE_PROD="$(mktemp -t docker-compose.prod.XXXXXX.yml)"
+  printf "%s" "$ORIGINAL_COMPOSE_PROD_CONTENT" > "$TMP_COMPOSE_PROD"
+  COMPOSE_PROD="$TMP_COMPOSE_PROD"
+
+  info "Using compose: $COMPOSE_PROD"
+fi
+
+trap '[[ -n "${TMP_COMPOSE_PROD:-}" && -f "$TMP_COMPOSE_PROD" ]] && rm -f "$TMP_COMPOSE_PROD"' EXIT
 
 if [[ "$DO_PULL" == true ]]; then
   if [[ -n "$(git status --porcelain)" ]]; then
