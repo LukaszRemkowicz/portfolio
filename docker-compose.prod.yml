@@ -31,7 +31,8 @@ services:
   # ---------- Frontend ----------
   portfolio-fe:
     build:
-      context: ./frontend
+      context: .
+      dockerfile: frontend/Dockerfile
       target: prod
       args:
         SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}

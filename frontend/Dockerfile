@@ -1,12 +1,12 @@
 # --- Base deps ---
 FROM node:20-alpine AS base
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
 # --- Development ---
 FROM base AS dev
-COPY . .
+COPY frontend/ .
 RUN chown -R node:node /app
 USER node
 EXPOSE 3000
@@ -16,7 +16,8 @@ CMD ["npm", "start"]
 FROM base AS build
 ARG SITE_DOMAIN=portfolio.local
 ENV SITE_DOMAIN=$SITE_DOMAIN
-COPY . .
+COPY frontend/ .
+COPY scripts/frontend/inject-metadata.sh ./scripts/
 RUN npm run build && ./scripts/inject-metadata.sh
 
 # --- Production runtime ---
