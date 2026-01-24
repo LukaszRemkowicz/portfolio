@@ -186,6 +186,7 @@ class AstroImage(BaseImage):
         help_text=_("Software and techniques used for post-processing."),
     )
     celestial_object = models.CharField(
+        max_length=50,
         choices=CelestialObjectChoices,
         verbose_name=_("Celestial Object"),
         help_text=_("The type of celestial object captured."),

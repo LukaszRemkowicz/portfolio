@@ -36,13 +36,12 @@ SECURE_CONTENT_TYPE_NOSNIFF = env.bool("SECURE_CONTENT_TYPE_NOSNIFF", default=Tr
 SECURE_BROWSER_XSS_FILTER = env.bool("SECURE_BROWSER_XSS_FILTER", default=True)
 
 # Domain settings
-ADMIN_DOMAIN = env("ADMIN_DOMAIN")
-API_DOMAIN = env("API_DOMAIN")
+ADMIN_DOMAIN = env.str("ADMIN_DOMAIN", default="admin.portfolio.local")
+API_DOMAIN = env.str("API_DOMAIN", default="api.portfolio.local")
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + [
-    ADMIN_DOMAIN,
-    API_DOMAIN,
-]
+# Filter out empty values to prevent "https://" or empty host entries
+_base_hosts = [ADMIN_DOMAIN, API_DOMAIN]
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + [h for h in _base_hosts if h]
 
 if DEBUG:
     ALLOWED_HOSTS += [
@@ -51,19 +50,18 @@ if DEBUG:
         "0.0.0.0",
     ]
 
-
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[]) + [
-    f"https://{ADMIN_DOMAIN}",
-    f"https://{API_DOMAIN}",
-]
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+if ADMIN_DOMAIN:
+    CORS_ALLOWED_ORIGINS.append(f"https://{ADMIN_DOMAIN}")
+if API_DOMAIN:
+    CORS_ALLOWED_ORIGINS.append(f"https://{API_DOMAIN}")
 
 if DEBUG:
-    CORS_ALLOWED_ORIGINS += [
-        f"http://{API_DOMAIN}",
-        f"http://{API_DOMAIN}:3000",
-    ]
+    if API_DOMAIN:
+        CORS_ALLOWED_ORIGINS.append(f"http://{API_DOMAIN}")
+        CORS_ALLOWED_ORIGINS.append(f"http://{API_DOMAIN}:3000")
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -71,11 +69,13 @@ CORS_ALLOW_CREDENTIALS = True
 AUTH_USER_MODEL = "users.User"
 
 # CSRF Settings
-CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[]) + [
-    f"https://{ADMIN_DOMAIN}",
-    f"https://{API_DOMAIN}",
-]
-CSRF_COOKIE_DOMAIN = env("CSRF_COOKIE_DOMAIN")
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+if ADMIN_DOMAIN:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{ADMIN_DOMAIN}")
+if API_DOMAIN:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{API_DOMAIN}")
+
+CSRF_COOKIE_DOMAIN = env.str("CSRF_COOKIE_DOMAIN", default=None)
 CSRF_USE_SESSIONS = True
 CSRF_COOKIE_SECURE = True
 
