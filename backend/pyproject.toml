@@ -1,38 +1,31 @@
-[project]
-name = "portfolio-backend"
+[tool.poetry]
+name = "backend"
 version = "0.1.0"
 description = "Portfolio backend with Django REST Framework"
-authors = [
-    { name = "l.remkowicz@gmail.com", email = "l.remkowicz@gmail.com" }
-]
+authors = ["l.remkowicz@gmail.com <l.remkowicz@gmail.com>"]
 readme = "README.md"
-requires-python = ">=3.13,<4.0"
-dependencies = [
-    "django>=6.0.1",
-    "djangorestframework>=3.14.0",
-    "pillow>=10.0.0",
-    "django-environ>=0.11.2",
-    "django-cors-headers>=4.0.0",
-    "psycopg2-binary>=2.9.0",
-    "django-axes>=8.1.0",
-    "gunicorn>=23.0.0",
-    "django-taggit>=6.1.0",
-    "django-countries (>=8.2.0,<9.0.0)",
-    "django-select2 (>=8.4.8,<9.0.0)",
-    "django-ckeditor-5>=0.2.19",
-    "redis>=5.2.0",
-]
+package-mode = false
 
 [tool.poetry.scripts]
 test = "core.scripts:test"
 test-cov = "core.scripts:test_cov"
 security = "core.scripts:security"
 
-[tool.poetry]
-package-mode = false
-
 [tool.poetry.dependencies]
 python = ">=3.13,<4.0"
+django = ">=6.0.1"
+djangorestframework = ">=3.14.0"
+pillow = ">=10.0.0"
+django-environ = ">=0.11.2"
+django-cors-headers = ">=4.0.0"
+psycopg2-binary = ">=2.9.0"
+django-axes = ">=8.1.0"
+gunicorn = ">=23.0.0"
+django-taggit = ">=6.1.0"
+django-countries = ">=8.2.0,<9.0.0"
+django-select2 = ">=8.4.8,<9.0.0"
+django-ckeditor-5 = ">=0.2.19"
+redis = ">=5.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
