@@ -148,16 +148,12 @@ WSGI_APPLICATION = "core.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": env.str("DB_ENGINE", default=cast(Any, "django.db.backends.postgresql")),
-        "NAME": env.str("DB_NAME", default=cast(Any, "portfolio")),
-        "USER": env.str("DB_USER", default=cast(Any, "postgres")),
-        "PASSWORD": env.str("DB_PASSWORD", default=cast(Any, "postgres")),
-        "HOST": env.str("DB_HOST", default=cast(Any, "db")),
-        "PORT": (
-            env.int("DB_PORT", default=cast(Any, 5432))
-            if env.str("DB_PORT", default="5432")
-            else 5432
-        ),
+        "ENGINE": env.str("DB_ENGINE") or "django.db.backends.postgresql",
+        "NAME": env.str("DB_NAME") or "portfolio",
+        "USER": env.str("DB_USER") or "postgres",
+        "PASSWORD": env.str("DB_PASSWORD") or "postgres",
+        "HOST": env.str("DB_HOST") or "db",
+        "PORT": env.str("DB_PORT") or "5432",
     }
 }
 
