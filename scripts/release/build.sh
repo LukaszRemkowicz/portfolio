@@ -227,9 +227,9 @@ log "🔗 Commit: $COMMIT_FULL"
 log "📝 Commit msg: $COMMIT_SUBJECT"
 log "🕒 Commit date: $COMMIT_DATE"
 
-TAG="${TAG:-$(git rev-parse --short HEAD)}"
+TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)}"
 export TAG
-log "📌 TAG (commit): $TAG"
+log "📌 TAG (detected): $TAG"
 
 CACHE_FLAG=""
 if [[ "$NO_CACHE" == true ]]; then
