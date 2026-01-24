@@ -1,62 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Navigation', () => {
   test.beforeEach(async ({ page }) => {
-    // Catch-all mock for API v1
-    await page.route('**/api/v1/**', async route => {
-      const url = route.request().url();
-
-      if (url.includes('/profile/')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            first_name: 'Test',
-            last_name: 'User',
-            short_description: 'Sky Hunter',
-          }),
-        });
-      }
-
-      if (url.includes('/background/')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            url: 'https://via.placeholder.com/1920x1080',
-          }),
-        });
-      }
-
-      if (url.includes('/whats-enabled/')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            contactForm: true,
-            gallery: true,
-            travelHighlights: true,
-            lastimages: true,
-          }),
-        });
-      }
-
-      if (url.includes('/image/')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([]),
-        });
-      }
-
-      // Default fallback for other API calls
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    });
-
     await page.goto('/');
   });
 

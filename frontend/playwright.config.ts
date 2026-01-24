@@ -40,7 +40,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run start -- --no-open',
+    command: 'API_URL=http://localhost:3000 npm run start -- --no-open',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
     timeout: 120 * 1000,

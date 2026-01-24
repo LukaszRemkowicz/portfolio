@@ -1,112 +1,68 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Gallery Page', () => {
   test.beforeEach(async ({ page }) => {
-    // Catch-all mock for API v1
-    await page.route('**/api/v1/**', async route => {
+    // Override default empty image list with mock data for Gallery tests
+    await page.route('**/api/v1/image/**', async route => {
       const url = route.request().url();
+      const images = [
+        {
+          pk: 1,
+          name: 'Milky Way Arch',
+          url: 'https://via.placeholder.com/800x600',
+          thumbnail_url: 'https://via.placeholder.com/200x150',
+          description: 'Milky Way over mountains',
+          tags: ['Milky Way', 'mountains'],
+          celestial_object: 'Milky Way',
+          created_at: '2023-01-01',
+        },
+        {
+          pk: 2,
+          name: 'Orion Nebula',
+          url: 'https://via.placeholder.com/800x600',
+          thumbnail_url: 'https://via.placeholder.com/200x150',
+          description: 'M42 Orion Nebula',
+          tags: ['Deep Sky', 'nebula'],
+          celestial_object: 'Deep Sky',
+          created_at: '2023-01-02',
+        },
+      ];
 
-      if (url.includes('/profile/')) {
+      // Check for detail view (e.g., /api/v1/image/1/)
+      const match = url.match(/\/image\/(\d+)\//);
+      if (match) {
+        const id = parseInt(match[1]);
+        const img = images.find(i => i.pk === id);
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({
-            first_name: 'Test',
-            last_name: 'User',
-            short_description: 'Sky Hunter',
-          }),
+          body: JSON.stringify(img || {}),
         });
       }
 
-      if (url.includes('/background/')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            url: 'https://via.placeholder.com/1920x1080',
-          }),
-        });
+      // Image list view with simple mock filtering
+      let filteredImages = [...images];
+      const searchParams = new URL(url).searchParams;
+      const tagFilter = searchParams.get('tag');
+      const catFilter = searchParams.get('filter');
+
+      if (tagFilter) {
+        filteredImages = filteredImages.filter(img =>
+          img.tags.some(t => t.toLowerCase() === tagFilter.toLowerCase())
+        );
+      }
+      if (catFilter) {
+        filteredImages = filteredImages.filter(
+          img =>
+            img.celestial_object?.toLowerCase() === catFilter.toLowerCase() ||
+            img.tags.some(t => t.toLowerCase() === catFilter.toLowerCase())
+        );
       }
 
-      if (url.includes('/whats-enabled/')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            travelHighlights: true,
-            gallery: true,
-            contactForm: true,
-          }),
-        });
-      }
-
-      if (url.includes('/image/')) {
-        const images = [
-          {
-            pk: 1,
-            name: 'Milky Way Arch',
-            url: 'https://via.placeholder.com/800x600',
-            thumbnail_url: 'https://via.placeholder.com/200x150',
-            description: 'Milky Way over mountains',
-            tags: ['Milky Way', 'mountains'],
-            celestial_object: 'Milky Way',
-            created_at: '2023-01-01',
-          },
-          {
-            pk: 2,
-            name: 'Orion Nebula',
-            url: 'https://via.placeholder.com/800x600',
-            thumbnail_url: 'https://via.placeholder.com/200x150',
-            description: 'M42 Orion Nebula',
-            tags: ['Deep Sky', 'nebula'],
-            celestial_object: 'Deep Sky',
-            created_at: '2023-01-02',
-          },
-        ];
-
-        // Check for detail view (e.g., /api/v1/image/1/)
-        const match = url.match(/\/image\/(\d+)\//);
-        if (match) {
-          const id = parseInt(match[1]);
-          const img = images.find(i => i.pk === id);
-          return route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify(img || {}),
-          });
-        }
-
-        // Image list view with simple mock filtering
-        let filteredImages = [...images];
-        const searchParams = new URL(url).searchParams;
-        const tagFilter = searchParams.get('tag');
-        const catFilter = searchParams.get('filter');
-
-        if (tagFilter) {
-          filteredImages = filteredImages.filter(img =>
-            img.tags.some(t => t.toLowerCase() === tagFilter.toLowerCase())
-          );
-        }
-        if (catFilter) {
-          filteredImages = filteredImages.filter(
-            img =>
-              img.celestial_object?.toLowerCase() === catFilter.toLowerCase() ||
-              img.tags.some(t => t.toLowerCase() === catFilter.toLowerCase())
-          );
-        }
-
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(filteredImages),
-        });
-      }
-
-      // Default fallback for other API calls
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([]),
+        body: JSON.stringify(filteredImages),
       });
     });
 
