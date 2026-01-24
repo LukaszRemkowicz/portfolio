@@ -153,7 +153,11 @@ DATABASES = {
         "USER": env.str("DB_USER", default=cast(Any, "postgres")),
         "PASSWORD": env.str("DB_PASSWORD", default=cast(Any, "postgres")),
         "HOST": env.str("DB_HOST", default=cast(Any, "db")),
-        "PORT": env.int("DB_PORT", default=cast(Any, 5432)),
+        "PORT": (
+            env.int("DB_PORT", default=cast(Any, 5432))
+            if env.str("DB_PORT", default="5432")
+            else 5432
+        ),
     }
 }
 
@@ -318,8 +322,11 @@ EMAIL_BACKEND = env.str(
     default=cast(Any, "django.core.mail.backends.smtp.EmailBackend"),
 )
 EMAIL_HOST = env.str("EMAIL_HOST", default=cast(Any, "smtp.gmail.com"))
-EMAIL_PORT = env.int("EMAIL_PORT", default=cast(Any, 587))
-EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=cast(Any, True))
+# Handle empty string from docker-compose
+_port_str = env.str("EMAIL_PORT", default="587")
+EMAIL_PORT = int(_port_str) if _port_str and _port_str.strip() else 587
+_tls_str = env.str("EMAIL_USE_TLS", default="True")
+EMAIL_USE_TLS = _tls_str.lower() == "true" if _tls_str else True
 EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default=cast(Any, ""))
 EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default=cast(Any, ""))
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="noreply@example.com")

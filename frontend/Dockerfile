@@ -15,7 +15,7 @@ CMD ["npm", "start"]
 # --- Production build ---
 FROM base AS build
 COPY . .
-RUN npm run build
+RUN npm run build && cp -r public/* dist/ || true
 
 # --- Production runtime ---
 FROM node:20-alpine AS prod
