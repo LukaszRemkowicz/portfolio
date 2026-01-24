@@ -18,7 +18,7 @@ ARG SITE_DOMAIN=portfolio.local
 ENV SITE_DOMAIN=$SITE_DOMAIN
 COPY frontend/ .
 COPY scripts/frontend/inject-metadata.sh ./scripts/
-RUN npm run build && ./scripts/inject-metadata.sh
+RUN npm run build && ./scripts/inject-metadata.sh && rm -rf ./scripts
 
 # --- Production runtime ---
 FROM node:20-alpine AS prod
