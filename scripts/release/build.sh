@@ -94,6 +94,15 @@
 
 set -euo pipefail
 
+# --- Make script execution stable even if git checkout/pull modifies this file ---
+if [[ -z "${_BUILD_SH_STABLE_RUN:-}" ]]; then
+  export _BUILD_SH_STABLE_RUN=1
+  tmp="$(mktemp -t build.sh.XXXXXX)"
+  cp "$0" "$tmp"
+  chmod +x "$tmp"
+  exec "$tmp" "$@"
+fi
+
 # -------- Paths / defaults --------
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_DIR="${PROJECT_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
