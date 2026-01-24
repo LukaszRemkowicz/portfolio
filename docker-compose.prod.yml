@@ -13,6 +13,11 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -25,19 +30,26 @@ services:
 
   # ---------- Frontend ----------
   portfolio-fe:
+    build:
+      context: ./frontend
+      target: prod
     image: portfolio-frontend:${TAG}
     restart: always
     # No bind mounts here to avoid overwriting built assets
     networks:
       - portfolio_network
 
-  # ---------- Backend ----------
-  portfolio-be:
+  # ---------- Backend Defaults ----------
+  x-backend-defaults: &backend-defaults
+    build:
+      context: ./backend
+      target: production
     image: portfolio-backend:${TAG}
-    restart: always
     volumes:
       - prod_media_data:/app/media
       - prod_static_data:/app/staticfiles
+    networks:
+      - portfolio_network
     environment:
       DEBUG: "False"
       DOCKER_ENV: "true"
@@ -64,40 +76,20 @@ services:
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
       CONTACT_EMAIL: ${CONTACT_EMAIL}
     depends_on:
-      - db
-      - redis
-    networks:
-      - portfolio_network
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # ---------- Backend ----------
+  portfolio-be:
+    <<: *backend-defaults
+    restart: always
 
   # ---------- Release Job ----------
   release:
-    image: portfolio-backend:${TAG}
+    <<: *backend-defaults
     restart: "no"
-    networks:
-      - portfolio_network
-    depends_on:
-      - db
-      - redis
-    volumes:
-      - prod_media_data:/app/media
-      - prod_static_data:/app/staticfiles
-    environment:
-      DEBUG: "False"
-      DOCKER_ENV: "true"
-      PYTHONPATH: "."
-      SECRET_KEY: ${SECRET_KEY}
-      DB_ENGINE: ${DB_ENGINE}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_HOST: db
-      DB_PORT: 5432
-      ADMIN_DOMAIN: ${ADMIN_DOMAIN}
-      API_DOMAIN: ${API_DOMAIN}
-      CSRF_COOKIE_DOMAIN: ${CSRF_COOKIE_DOMAIN}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
     command: >
       sh -c "
         python manage.py migrate --noinput &&

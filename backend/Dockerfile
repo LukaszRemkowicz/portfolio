@@ -46,4 +46,7 @@ USER appuser
 EXPOSE 8000
 
 # ✅ App container should only run the web server
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "4"]
+# Defaults: workers=2 (safe for 1 CPU), threads=2
+ENV WEB_CONCURRENCY=2 \
+    GUNICORN_THREADS=2
+CMD ["sh", "-c", "gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers ${WEB_CONCURRENCY} --threads ${GUNICORN_THREADS}"]

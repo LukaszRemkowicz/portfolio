@@ -43,3 +43,6 @@ echo "[3/3] Switch containers to new images (TAG=$TAG)"
 "${COMPOSE[@]}" up -d --remove-orphans
 
 echo "✅ Done. Deployed TAG=$TAG"
+
+echo "[4/4] Cleanup old images"
+docker image prune -f --filter "until=168h"

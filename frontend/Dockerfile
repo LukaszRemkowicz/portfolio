@@ -15,7 +15,7 @@ CMD ["npm", "start"]
 # --- Production build ---
 FROM base AS build
 COPY . .
-RUN npm run build && cp -r public/* dist/ || true
+RUN npm run build && mv dist/index.html dist/_index.html && cp -r public/* dist/ && mv dist/_index.html dist/index.html
 
 # --- Production runtime ---
 FROM node:20-alpine AS prod
