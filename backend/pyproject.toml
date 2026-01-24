@@ -4,7 +4,13 @@ version = "0.1.0"
 description = "Portfolio backend with Django REST Framework"
 authors = ["l.remkowicz@gmail.com <l.remkowicz@gmail.com>"]
 readme = "README.md"
-package-mode = false
+packages = [
+    { include = "core" },
+    { include = "users" },
+    { include = "astrophotography" },
+    { include = "programming" },
+    { include = "inbox" }
+]
 
 [tool.poetry.scripts]
 test = "core.scripts:test"
