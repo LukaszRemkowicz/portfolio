@@ -17,6 +17,7 @@
 #   ./build.sh --no-cache      # build without cache
 #   ./build.sh --frontend-only # build FE only
 #   ./build.sh --backend-only  # build BE only
+#   ./build.sh --main          # switch to main (refuse if dirty), then build
 #
 # Env:
 #   TAG=<tag>                  # override tag (default: git short sha)
@@ -63,6 +64,8 @@ DO_PULL=false
 FRONTEND_ONLY=false
 BACKEND_ONLY=false
 NO_CACHE=false
+FORCE_MAIN=false
+MAIN_BRANCH="${MAIN_BRANCH:-main}"
 
 # -------- Colors --------
 RED='\033[0;31m'
@@ -117,6 +120,7 @@ while [[ $# -gt 0 ]]; do
     --frontend-only) FRONTEND_ONLY=true; shift ;;
     --backend-only) BACKEND_ONLY=true; shift ;;
     --no-cache) NO_CACHE=true; shift ;;
+    --main) FORCE_MAIN=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) error "Unknown argument: $1"; echo "Use --help"; exit 1 ;;
   esac
@@ -146,6 +150,23 @@ info "Log: $LOG_FILE"
 CURRENT_BRANCH="$(git branch --show-current || true)"
 log "📋 Current branch: ${CURRENT_BRANCH:-unknown}"
 
+if [[ "$FORCE_MAIN" == true ]]; then
+  # refuse if dirty (protect your work)
+  if [[ -n "$(git status --porcelain)" ]]; then
+    error "Refusing to switch to '$MAIN_BRANCH': working tree is dirty."
+    error "Commit or stash changes, then retry."
+    git status --porcelain | tee -a "$LOG_FILE" >/dev/null || true
+    exit 1
+  fi
+
+  if [[ "$CURRENT_BRANCH" != "$MAIN_BRANCH" ]]; then
+    log "🔄 Switching to branch $MAIN_BRANCH (because --main)..."
+    git checkout "$MAIN_BRANCH"
+    CURRENT_BRANCH="$MAIN_BRANCH"
+    log "📋 Current branch: $CURRENT_BRANCH"
+  fi
+fi
+
 if [[ "$DO_PULL" == true ]]; then
   if [[ -n "$(git status --porcelain)" ]]; then
     error "Working tree is not clean. Commit/stash changes before pulling."
@@ -153,11 +174,26 @@ if [[ "$DO_PULL" == true ]]; then
     exit 1
   fi
   log "📥 Pulling latest code (current branch)..."
-  git pull --ff-only
+  if [[ "$FORCE_MAIN" == true ]]; then
+    git pull --ff-only origin "$MAIN_BRANCH"
+  else
+    git pull --ff-only
+  fi
   success "✅ Code updated"
 else
   info "⏭️  Skipping git pull (use --pull to enable)"
 fi
+
+
+BRANCH_NAME="$(git branch --show-current || echo detached)"
+COMMIT_FULL="$(git rev-parse HEAD)"
+COMMIT_SUBJECT="$(git log -1 --pretty=%s)"
+COMMIT_DATE="$(git log -1 --pretty=%ci)"
+
+log "🌿 Branch: $BRANCH_NAME"
+log "🔗 Commit: $COMMIT_FULL"
+log "📝 Commit msg: $COMMIT_SUBJECT"
+log "🕒 Commit date: $COMMIT_DATE"
 
 TAG="${TAG:-$(git rev-parse --short HEAD)}"
 export TAG
