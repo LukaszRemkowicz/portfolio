@@ -15,13 +15,9 @@ CMD ["npm", "start"]
 # --- Production build ---
 FROM base AS build
 ARG SITE_DOMAIN=portfolio.local
+ENV SITE_DOMAIN=$SITE_DOMAIN
 COPY . .
-RUN npm run build && \
-    mv dist/index.html dist/_index.html && \
-    cp -r public/* dist/ && \
-    mv dist/_index.html dist/index.html && \
-    echo "Sitemap: https://${SITE_DOMAIN}/sitemap.xml" >> dist/robots.txt && \
-    sed -i "s/__SITE_DOMAIN__/${SITE_DOMAIN}/g" dist/sitemap.xml
+RUN npm run build && ./scripts/inject-metadata.sh
 
 # --- Production runtime ---
 FROM node:20-alpine AS prod
