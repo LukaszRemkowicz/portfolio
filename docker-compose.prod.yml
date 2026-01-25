@@ -36,6 +36,9 @@ services:
       target: prod
       args:
         SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}
+        API_URL: https://${API_DOMAIN:-api.portfolio.local}
+        SSL_KEY_PATH: ${SSL_KEY_PATH:-/etc/nginx/ssl/portfolio.local.key}
+        SSL_CRT_PATH: ${SSL_CRT_PATH:-/etc/nginx/ssl/portfolio.local.crt}
     image: portfolio-frontend:${TAG}
     restart: always
     # No bind mounts here to avoid overwriting built assets
@@ -96,6 +99,7 @@ services:
     command: >
       sh -c "
         python manage.py migrate --noinput &&
+        python manage.py seed_settings &&
         python manage.py compilemessages &&
         python manage.py collectstatic --noinput
       "

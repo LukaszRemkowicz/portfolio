@@ -1,3 +1,4 @@
+import { API_BASE_URL as CONST_API_BASE_URL } from '../api/constants';
 import { API_BASE_URL } from '../api/routes';
 
 /**
@@ -25,9 +26,9 @@ describe('API Configuration', () => {
     jest.isolateModules(() => {
       const { API_BASE_URL: resolvedUrl } = require('../api/routes');
       // In Jest, process.env.API_URL might be undefined or set to a mock
-      // Our default is 'https://api.portfolio.local'
+      // Our default is DEFAULT_API_URL
       if (!process.env.API_URL) {
-        expect(resolvedUrl).toBe('https://api.portfolio.local');
+        expect(resolvedUrl).toBe(CONST_API_BASE_URL);
       }
     });
   });
@@ -42,7 +43,7 @@ describe('API Configuration', () => {
 
       try {
         const { API_BASE_URL: resolvedUrl } = require('../api/routes');
-        expect(resolvedUrl).toBe('https://api.portfolio.local');
+        expect(resolvedUrl).toBe(CONST_API_BASE_URL);
       } finally {
         global.process = actualProcess;
       }

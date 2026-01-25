@@ -6,6 +6,7 @@ from typing import Any
 from django_ckeditor_5.fields import CKEditor5Field
 from PIL import Image
 
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -74,23 +75,18 @@ class SingletonModel(models.Model):
         abstract = True
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        if not self.pk and type(self).objects.exists():  # type: ignore[attr-defined]
-            # If creating a new one but instance already exists, stop or update existing.
-            # Default behavior for settings: update fields of the existing instance.
-            existing = type(self).objects.first()  # type: ignore[attr-defined]
-            if existing:
-                for field in self._meta.fields:
-                    if field.name not in ["id", "pk"]:
-                        setattr(existing, field.name, getattr(self, field.name))
-                existing.save(*args, **kwargs)
-                return
+        """Prevent saving more than one instance."""
+        if not self.pk and self.__class__.objects.exists():
+            raise ValidationError(
+                _("A singleton instance of %s already exists.") % self._meta.verbose_name
+            )
         super().save(*args, **kwargs)
+        # Cleanup: Delete all other instances except the one just saved
+        self.__class__.objects.exclude(pk=self.pk).delete()
 
-    @classmethod
-    def load(cls) -> Any:
-        """Load the singleton instance, creating it with defaults if it doesn't exist."""
-        obj, _ = cls.objects.get_or_create(pk=1)  # type: ignore[attr-defined]
-        return obj
+    def delete(self, *args: Any, **kwargs: Any) -> None:
+        """Prevent deletion of the singleton instance via standard delete."""
+        pass
 
 
 class LandingPageSettings(SingletonModel):
@@ -106,7 +102,14 @@ class LandingPageSettings(SingletonModel):
     lastimages_enabled = models.BooleanField(
         default=True, verbose_name=_("Last Images Section Enabled")
     )
-    meteors_enabled = models.BooleanField(default=True, verbose_name=_("Meteors Enabled"))
+    meteors = models.ForeignKey(
+        "astrophotography.MeteorsMainPageConfig",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Meteors Configuration"),
+        help_text=_("Select the configuration to enable meteors. Leave empty to disable."),
+    )
 
     class Meta:
         verbose_name = _("Landing Page Settings")

@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.static import serve
 
-from .views import FeaturesEnabledView, api_404_view
+from .views import SettingsView, api_404_view
 
 # Admin site customization
 admin.site.site_header = "Portfolio Administration"
@@ -17,7 +17,7 @@ urlpatterns = [
     path("v1/", include("users.urls")),
     path("v1/", include("astrophotography.urls")),
     path("v1/", include("inbox.urls")),
-    path("v1/whats-enabled/", FeaturesEnabledView.as_view(), name="whats-enabled"),
+    path("v1/settings/", SettingsView.as_view(), name="settings"),
     path("v1/<path:path>", api_404_view),
     path("select2/", include("django_select2.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),

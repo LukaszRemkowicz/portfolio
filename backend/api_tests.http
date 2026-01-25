@@ -2,7 +2,7 @@
 ### This file can be used in PyCharm/IntelliJ HTTP Client to test the API endpoints
 
 ### Variables
-@baseUrl = http://localhost:8000/api/v1
+@baseUrl = http://localhost:8000/v1
 @contentType = application/json
 
 ### ============================================================
@@ -171,7 +171,7 @@ Content-Type: {{contentType}}
 ### ============================================================
 
 ### Test 21: Check Enabled Features
-GET {{baseUrl}}/whats-enabled/
+GET {{baseUrl}}/settings/
 Content-Type: {{contentType}}
 
 ### ============================================================

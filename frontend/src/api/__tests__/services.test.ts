@@ -4,9 +4,10 @@ import {
   fetchBackground,
   fetchAstroImages,
   fetchContact,
-  fetchEnabledFeatures,
+  fetchSettings,
 } from '../services';
 import { API_ROUTES } from '../routes';
+import { API_BASE_URL } from '../constants';
 import { NotFoundError } from '../errors';
 
 // Mock the axios instance from api.ts
@@ -39,7 +40,7 @@ describe('API Services', () => {
       expect(api.get).toHaveBeenCalledWith(API_ROUTES.profile);
       expect(result.first_name).toBe('John');
       expect(result.avatar).toContain(
-        'https://api.portfolio.local/media/avatars/avatar.jpg'
+        `${API_BASE_URL}/media/avatars/avatar.jpg`
       );
     });
 
@@ -131,26 +132,29 @@ describe('API Services', () => {
     });
   });
 
-  describe('fetchEnabledFeatures', () => {
-    it('should fetch enabled features successfully', async () => {
-      const mockFeatures = { contactForm: true, programming: false };
-      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockFeatures });
+  describe('fetchSettings', () => {
+    it('should fetch settings successfully', async () => {
+      const mockSettings = {
+        contactForm: true,
+        programming: false,
+        meteors: { randomShootingStars: true },
+      };
+      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockSettings });
 
-      const result = await fetchEnabledFeatures();
+      const result = await fetchSettings();
 
-      expect(api.get).toHaveBeenCalledWith(API_ROUTES.whatsEnabled);
+      expect(api.get).toHaveBeenCalledWith(API_ROUTES.settings);
       expect(result.contactForm).toBe(true);
-      expect(result.programming).toBe(false);
+      expect(result.meteors?.randomShootingStars).toBe(true);
     });
 
-    it('should return empty object on error', async () => {
+    it('should throw on error', async () => {
       const consoleSpy = jest
         .spyOn(console, 'error')
         .mockImplementation(() => {});
       (api.get as jest.Mock).mockRejectedValueOnce(new Error('API error'));
 
-      const result = await fetchEnabledFeatures();
-      expect(result).toEqual({});
+      await expect(fetchSettings()).rejects.toThrow('API error');
       consoleSpy.mockRestore();
     });
   });

@@ -7,7 +7,37 @@ from django.utils.translation import gettext_lazy as _
 
 from core.widgets import ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
-from .models import AstroImage, Place
+from .models import AstroImage, MeteorsMainPageConfig, Place
+
+
+class RangeWidget(forms.MultiWidget):
+    def __init__(self, attrs=None, placeholder_min="", placeholder_max=""):
+        widgets = [
+            forms.NumberInput(attrs={"placeholder": placeholder_min}),
+            forms.NumberInput(attrs={"placeholder": placeholder_max}),
+        ]
+        super().__init__(widgets, attrs)
+
+    def decompress(self, value):
+        if value and isinstance(value, list) and len(value) == 2:
+            return value
+        return [None, None]
+
+
+class RangeField(forms.MultiValueField):
+    def __init__(self, field_class, placeholder_min, placeholder_max, *args, **kwargs):
+        self.widget = RangeWidget(placeholder_min=placeholder_min, placeholder_max=placeholder_max)
+        fields = (
+            field_class(),
+            field_class(),
+        )
+        super().__init__(fields, *args, **kwargs)
+
+    def compress(self, data_list):
+        if data_list:
+            # Sort to ensure [min, max]
+            return sorted(data_list)
+        return list()
 
 
 class AstroImageForm(forms.ModelForm):
@@ -122,3 +152,152 @@ class AstroImageForm(forms.ModelForm):
             self.save_m2m()
 
         return instance
+
+
+class MeteorsMainPageConfigForm(forms.ModelForm):
+    """
+    Custom form using MultiWidget to render min/max inputs in a single row
+    with the description at the bottom.
+    """
+
+    star_path_range = RangeField(
+        field_class=forms.IntegerField,
+        placeholder_min=_("min in pixels"),
+        placeholder_max=_("max in pixels"),
+        label=_("Star Path"),
+        help_text=_(
+            "A list of two integers [min, max] representing the travel distance of a "
+            "regular star in pixels. Example: [50, 500]"
+        ),
+        required=False,
+    )
+
+    bolid_path_range = RangeField(
+        field_class=forms.IntegerField,
+        placeholder_min=_("min in pixels"),
+        placeholder_max=_("max in pixels"),
+        label=_("Bolid Path"),
+        help_text=_(
+            "A list of two integers [min, max] representing the travel distance of a "
+            "bolid in pixels. Example: [50, 500]"
+        ),
+        required=False,
+    )
+
+    star_streak_range = RangeField(
+        field_class=forms.IntegerField,
+        placeholder_min=_("min in pixels"),
+        placeholder_max=_("max in pixels"),
+        label=_("Star Streak"),
+        help_text=_(
+            "A list of two integers [min, max] representing the visual length (streak) of "
+            "a regular star. Example: [100, 200]"
+        ),
+        required=False,
+    )
+
+    bolid_streak_range = RangeField(
+        field_class=forms.IntegerField,
+        placeholder_min=_("min in pixels"),
+        placeholder_max=_("max in pixels"),
+        label=_("Bolid Streak"),
+        help_text=_(
+            "A list of two integers [min, max] representing the visual length (streak) of a bolid. "
+            "Example: [20, 100]"
+        ),
+        required=False,
+    )
+
+    star_duration_range = RangeField(
+        field_class=forms.FloatField,
+        placeholder_min=_("min (s)"),
+        placeholder_max=_("max (s)"),
+        label=_("Star Duration"),
+        help_text=_(
+            "A list of two floats [min, max] representing the duration (speed) of a regular star. "
+            "Example: [0.4, 1.2]"
+        ),
+        required=False,
+    )
+
+    bolid_duration_range = RangeField(
+        field_class=forms.FloatField,
+        placeholder_min=_("min (s)"),
+        placeholder_max=_("max (s)"),
+        label=_("Bolid Duration"),
+        help_text=_(
+            "A list of two floats [min, max] representing the duration (speed) of a bolid. "
+            "Example: [0.4, 0.9]"
+        ),
+        required=False,
+    )
+
+    star_opacity_range = RangeField(
+        field_class=forms.FloatField,
+        placeholder_min=_("min (0.0-1.0)"),
+        placeholder_max=_("max (0.0-1.0)"),
+        label=_("Star Opacity"),
+        help_text=_(
+            "A list of two floats [min, max] between 0.0 and 1.0 for regular star brightness. "
+            "Example: [0.4, 0.8]"
+        ),
+        required=False,
+    )
+
+    bolid_opacity_range = RangeField(
+        field_class=forms.FloatField,
+        placeholder_min=_("min (0.0-1.0)"),
+        placeholder_max=_("max (0.0-1.0)"),
+        label=_("Bolid Opacity"),
+        help_text=_(
+            "A list of two floats [min, max] between 0.0 and 1.0 for bolid brightness. "
+            "Example: [0.7, 1.0]"
+        ),
+        required=False,
+    )
+
+    smoke_opacity_range = RangeField(
+        field_class=forms.FloatField,
+        placeholder_min=_("min (0.0-1.0)"),
+        placeholder_max=_("max (0.0-1.0)"),
+        label=_("Smoke Opacity"),
+        help_text=_(
+            "A list of two floats [min, max] between 0.0 and 1.0 for the smoke trail of a bolid. "
+            "Example: [0.5, 0.8]"
+        ),
+        required=False,
+    )
+
+    class Meta:
+        model = MeteorsMainPageConfig
+        fields = "__all__"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not cleaned_data:
+            return None
+
+        json_fields = [
+            "star_path_range",
+            "bolid_path_range",
+            "star_streak_range",
+            "bolid_streak_range",
+            "star_opacity_range",
+            "bolid_opacity_range",
+            "smoke_opacity_range",
+            "star_duration_range",
+            "bolid_duration_range",
+        ]
+
+        for field in json_fields:
+            val = cleaned_data.get(field)
+            # If value is empty list or None, apply model default
+            if not val:
+                model_field = self._meta.model._meta.get_field(field)
+                default = model_field.default
+                if callable(default):
+                    cleaned_data[field] = default()
+                else:
+                    cleaned_data[field] = default
+
+        return cleaned_data

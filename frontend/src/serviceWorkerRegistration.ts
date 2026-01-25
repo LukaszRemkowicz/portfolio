@@ -1,3 +1,14 @@
+/**
+ * Registers the service worker for the application.
+ *
+ * This function handles the service worker lifecycle:
+ * 1. Only runs in production environments to avoid HMR interference.
+ * 2. Checks browser support for Service Workers.
+ * 3. Registers /service-worker.js after the window has fully loaded.
+ * 4. Monitors for background updates and handles precaching states.
+ *    - Logs when content is first cached for offline use.
+ *    - Logs when new content is available but waiting for a refresh.
+ */
 export function register() {
   if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -34,6 +45,13 @@ export function register() {
   }
 }
 
+/**
+ * Unregisters any active service worker registration.
+ *
+ * Useful for cleanup or forcing the browser to stop using a previously
+ * installed service worker for the current domain.
+ * Waits for the service worker to be 'ready' before calling unregister().
+ */
 export function unregister() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready

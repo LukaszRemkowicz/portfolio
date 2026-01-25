@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+// frontend/src/components/common/ImageModal.tsx
+import { type FC, useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, Calendar, MapPin } from 'lucide-react';
@@ -6,13 +7,14 @@ import styles from '../../styles/components/ImageModal.module.css';
 import { AstroImage, EquipmentItem } from '../../types';
 import { fetchAstroImage } from '../../api/services';
 import { sanitizeHtml, slugify } from '../../utils/html';
+import { APP_ROUTES } from '../../api/constants';
 
 interface ImageModalProps {
   image: AstroImage | null;
   onClose: () => void;
 }
 
-const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
+const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   const navigate = useNavigate();
   const [detailedImage, setDetailedImage] = useState<AstroImage | null>(null);
   const [description, setDescription] = useState<string>('');
@@ -59,7 +61,9 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose }) => {
       // and the parent component's useEffect will close the modal since the 'img' param will be gone.
       // This allows the browser's back button to return to the modal!
       const tagSlug = slugify(tag);
-      navigate(`/astrophotography?tag=${encodeURIComponent(tagSlug)}`);
+      navigate(
+        `${APP_ROUTES.ASTROPHOTOGRAPHY}?tag=${encodeURIComponent(tagSlug)}`
+      );
     },
     [navigate]
   );

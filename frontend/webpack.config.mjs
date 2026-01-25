@@ -1,28 +1,54 @@
-const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const fs = require('fs');
-const webpack = require('webpack');
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import webpack from 'webpack';
+import HtmlWebpackPlugin from 'html-webpack-plugin';
+import { InjectManifest } from 'workbox-webpack-plugin';
 
-const { InjectManifest } = require('workbox-webpack-plugin');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-module.exports = (env, argv) => {
-  // Check if SSL certificates exist for devServer (both dev and prod can use HTTPS)
+export default (env, argv) => {
+  // Check for SSL certificates via environment variables
+  const sslKeyPath = env.SSL_KEY_PATH || process.env.SSL_KEY_PATH;
+  const sslCertPath = env.SSL_CRT_PATH || process.env.SSL_CRT_PATH;
+
   let httpsConfig = false;
-  try {
-    httpsConfig = {
-      key: fs.readFileSync('/etc/ssl/certs/portfolio.local.key'),
-      cert: fs.readFileSync('/etc/ssl/certs/portfolio.local.crt'),
-    };
-  } catch (error) {
-    console.warn('SSL certificates not found, running without HTTPS');
-    httpsConfig = false;
+  if (
+    sslKeyPath &&
+    sslCertPath &&
+    fs.existsSync(sslKeyPath) &&
+    fs.existsSync(sslCertPath)
+  ) {
+    try {
+      httpsConfig = {
+        key: fs.readFileSync(sslKeyPath),
+        cert: fs.readFileSync(sslCertPath),
+      };
+    } catch (error) {
+      console.warn('Error reading SSL certificates:', error.message);
+      httpsConfig = false;
+    }
+  } else {
+    // Only warn in dev mode to avoid cluttering prod build logs
+    if (argv.mode === 'development') {
+      console.warn('SSL certificates not found, running without HTTPS');
+    }
   }
 
-  const apiUrl =
-    env.API_URL || process.env.API_URL || 'https://api.portfolio.local';
+  const isDev = argv.mode === 'development';
 
-  const enableShootingStars =
-    env.ENABLE_SHOOTING_STARS || process.env.ENABLE_SHOOTING_STARS || 'true';
+  const apiUrl =
+    env.API_URL ||
+    process.env.API_URL ||
+    (isDev ? 'https://api.portfolio.local' : '');
+
+  if (!apiUrl && !isDev) {
+    console.error(
+      '\x1b[31m%s\x1b[0m',
+      'BUILD ERROR: API_URL environment variable is required for production builds.'
+    );
+  }
 
   return {
     entry: './src/index.tsx',
@@ -81,8 +107,6 @@ module.exports = (env, argv) => {
       }),
       new webpack.DefinePlugin({
         'process.env.API_URL': JSON.stringify(apiUrl),
-        'process.env.ENABLE_SHOOTING_STARS':
-          JSON.stringify(enableShootingStars),
       }),
       // Only include the service worker plugin in production to avoid HMR issues
       ...(argv.mode !== 'development'

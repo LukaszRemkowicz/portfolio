@@ -1,11 +1,5 @@
-import React from 'react';
-import {
-  render,
-  screen,
-  fireEvent,
-  act,
-  waitFor,
-} from '@testing-library/react';
+import { act } from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import TravelHighlightsPage from '../components/TravelHighlightsPage';
 import { api } from '../api/api';
@@ -13,7 +7,7 @@ import { useAppStore } from '../store/useStore';
 import {
   fetchProfile,
   fetchBackground,
-  fetchEnabledFeatures,
+  fetchSettings,
   fetchAstroImage,
 } from '../api/services';
 
@@ -25,7 +19,7 @@ const mockedApi = api as jest.Mocked<typeof api>;
 jest.mock('../api/services', () => ({
   fetchProfile: jest.fn(),
   fetchBackground: jest.fn(),
-  fetchEnabledFeatures: jest.fn(),
+  fetchSettings: jest.fn(),
   fetchAstroImage: jest.fn(),
 }));
 
@@ -36,20 +30,36 @@ describe('TravelHighlightsPage', () => {
     // Re-set mock implementations because resetAllMocks clears them
     (fetchProfile as jest.Mock).mockResolvedValue({});
     (fetchBackground as jest.Mock).mockResolvedValue(null);
-    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
+    (fetchSettings as jest.Mock).mockResolvedValue({
       programming: true,
       contactForm: true,
       lastimages: true,
+      meteors: {
+        randomShootingStars: true,
+        bolidChance: 0.1,
+        bolidMinInterval: 60,
+        starPathRange: [50, 500],
+        bolidPathRange: [50, 500],
+        starStreakRange: [100, 200],
+        bolidStreakRange: [20, 100],
+        starDurationRange: [0.4, 1.2],
+        bolidDurationRange: [0.4, 0.9],
+        starOpacityRange: [0.4, 0.8],
+        bolidOpacityRange: [0.7, 1.0],
+        smokeOpacityRange: [0.5, 0.8],
+      },
     });
+
     (fetchAstroImage as jest.Mock).mockResolvedValue({
       pk: 1,
-      name: 'Mock Image',
-      url: '/mock.jpg',
-      description: 'Mock Description',
+      name: 'Test Image',
+      url: '/test.jpg',
+      description: 'Test description',
     });
 
     useAppStore.setState({
       backgroundUrl: null,
+      meteorConfig: null,
       isInitialLoading: false,
       error: null,
     });

@@ -1,28 +1,33 @@
 from typing import Any
 
-from rest_framework import permissions, status
+from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from core.models import LandingPageSettings
 from core.serializers import LandingPageSettingsSerializer
 
 
-class FeaturesEnabledView(APIView):
+class SettingsView(generics.RetrieveAPIView):
     """
-    Endpoint to check which features are currently enabled in the system.
-    Returns a dictionary of enabled features.
+    Endpoint to fetch global application settings.
+    - 'features': Boolean flags for enabled system modules.
+    - 'meteors': Configuration for the shooting stars effect.
     """
 
     permission_classes = [permissions.AllowAny]
     serializer_class = LandingPageSettingsSerializer
+    queryset = LandingPageSettings.objects.all()
 
-    def get(self, request: Request) -> Response:
-        settings = LandingPageSettings.load()
-        serializer = self.serializer_class(settings)
-        return Response(serializer.data)
+    def get_object(self) -> LandingPageSettings:
+        # Override get_object to return the singleton or raise 404
+        obj = self.get_queryset().last()
+        if not obj:
+            from django.http import Http404
+
+            raise Http404("Landing Page Settings not initialized.")
+        return obj
 
 
 @api_view(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])

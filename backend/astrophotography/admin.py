@@ -1,19 +1,22 @@
 from django_countries import countries
 
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.postgres.forms import RangeWidget
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
-from .forms import AstroImageForm
+from .forms import AstroImageForm, MeteorsMainPageConfigForm
 from .models import (
     AstroImage,
     Camera,
     Lens,
     MainPageBackgroundImage,
     MainPageLocation,
+    MeteorsMainPageConfig,
     Place,
     Telescope,
     Tracker,
@@ -352,3 +355,116 @@ class MainPageLocationAdmin(admin.ModelAdmin):
         if object_id:
             extra_context["show_save_and_add_another"] = False
         return super().changeform_view(request, object_id, form_url, extra_context)
+
+
+@admin.register(MeteorsMainPageConfig)
+class MeteorsMainPageConfigAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for the shooting stars (meteors) effect.
+    Ensures that only one configuration instance can exist.
+    """
+
+    form = MeteorsMainPageConfigForm
+    list_display = ("__str__", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    fieldsets = (
+        (
+            _("General Settings"),
+            {
+                "fields": ("random_stars_shooting", "bolid_chance", "bolid_interval"),
+                "description": _(
+                    "Control the basic behavior of shooting stars and "
+                    "their special 'bolid' variants."
+                ),
+            },
+        ),
+        (
+            _("Standard Star Appearance"),
+            {
+                "fields": (
+                    "star_path_range",
+                    "star_streak_range",
+                    "star_duration_range",
+                    "star_opacity_range",
+                ),
+                "description": _(
+                    "Define the visual properties of regular (non-bolid) shooting stars. "
+                ),
+            },
+        ),
+        (
+            _("Bolid (Fireball) Appearance"),
+            {
+                "fields": (
+                    "bolid_path_range",
+                    "bolid_streak_range",
+                    "bolid_duration_range",
+                    "bolid_opacity_range",
+                    "smoke_opacity_range",
+                ),
+                "description": _(
+                    "Configure the more dramatic bolid effects, including their smoke trails."
+                ),
+            },
+        ),
+        (
+            _("Metadata"),
+            {
+                "fields": ("updated_at",),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    def has_add_permission(self, request):
+        # Only allow adding if no instance exists
+        if self.model.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of the last configuration
+        if self.model.objects.count() <= 1:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["show_save_and_add_another"] = False
+        extra_context["show_save_and_continue"] = False
+        return super().changeform_view(request, object_id, form_url, extra_context)
+
+    def response_change(self, request, obj):
+        opts = self.model._meta
+        msg = _('The %(name)s "%(obj)s" was changed successfully.') % {
+            "name": opts.verbose_name,
+            "obj": obj,
+        }
+        self.message_user(request, msg, messages.SUCCESS)  # type: ignore[attr-defined]
+        return HttpResponseRedirect(
+            reverse("admin:astrophotography_meteorsmainpageconfig_change", args=[obj.pk])
+        )
+
+    def response_add(self, request, obj, post_url_continue=None):
+        opts = self.model._meta
+        msg = _('The %(name)s "%(obj)s" was added successfully.') % {
+            "name": opts.verbose_name,
+            "obj": obj,
+        }
+        self.message_user(request, msg, messages.SUCCESS)  # type: ignore[attr-defined]
+        return HttpResponseRedirect(
+            reverse("admin:astrophotography_meteorsmainpageconfig_change", args=[obj.pk])
+        )
+
+    def changelist_view(self, request, extra_context=None):
+        """
+        Redirects the changelist view directly to the singleton instance's change view
+        (or add view if none exists), enforcing the singleton UX.
+        """
+        obj = self.model.objects.first()
+        if obj:
+            return HttpResponseRedirect(
+                reverse("admin:astrophotography_meteorsmainpageconfig_change", args=[obj.pk])
+            )
+        return HttpResponseRedirect(reverse("admin:astrophotography_meteorsmainpageconfig_add"))

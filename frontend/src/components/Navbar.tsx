@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+// frontend/src/components/Navbar.tsx
+import { type FC, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import Logo from './common/Logo';
 import styles from '../styles/components/Navbar.module.css';
 import { Menu, X } from 'lucide-react';
 import { NavbarProps } from '../types';
 import { useAppStore } from '../store/useStore';
+import { APP_ROUTES } from '../api/constants';
 
-const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
+const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const { features } = useAppStore();
@@ -21,7 +23,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
 
         <div className={styles.links}>
           <NavLink
-            to='/'
+            to={APP_ROUTES.HOME}
             end
             className={({ isActive }) =>
               `${styles.link} ${isActive ? styles.active : ''}`
@@ -30,7 +32,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
             Home
           </NavLink>
           <NavLink
-            to='/astrophotography'
+            to={APP_ROUTES.ASTROPHOTOGRAPHY}
             className={({ isActive }) =>
               `${styles.link} ${isActive ? styles.active : ''}`
             }
@@ -39,7 +41,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
           </NavLink>
           {isProgrammingEnabled && (
             <NavLink
-              to='/programming'
+              to={APP_ROUTES.PROGRAMMING}
               className={({ isActive }) =>
                 `${styles.link} ${isActive ? styles.active : ''}`
               }
@@ -47,10 +49,10 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
               Programming
             </NavLink>
           )}
-          <Link to='/#about' className={styles.link}>
+          <Link to={`${APP_ROUTES.HOME}#about`} className={styles.link}>
             About
           </Link>
-          <Link to='/#contact' className={styles.link}>
+          <Link to={`${APP_ROUTES.HOME}#contact`} className={styles.link}>
             Contact
           </Link>
         </div>
@@ -73,7 +75,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
             </button>
             <div className={styles.drawerLinks}>
               <NavLink
-                to='/'
+                to={APP_ROUTES.HOME}
                 onClick={toggleMenu}
                 end
                 className={({ isActive }) => (isActive ? styles.active : '')}
@@ -81,7 +83,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
                 Home
               </NavLink>
               <NavLink
-                to='/astrophotography'
+                to={APP_ROUTES.ASTROPHOTOGRAPHY}
                 onClick={toggleMenu}
                 className={({ isActive }) => (isActive ? styles.active : '')}
               >
@@ -89,7 +91,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
               </NavLink>
               {isProgrammingEnabled && (
                 <NavLink
-                  to='/programming'
+                  to={APP_ROUTES.PROGRAMMING}
                   onClick={toggleMenu}
                   className={({ isActive }) => (isActive ? styles.active : '')}
                 >
@@ -97,14 +99,14 @@ const Navbar: React.FC<NavbarProps> = ({ transparent: _transparent }) => {
                 </NavLink>
               )}
               <Link
-                to='/#about'
+                to={`${APP_ROUTES.HOME}#about`}
                 onClick={toggleMenu}
                 className={location.hash === '#about' ? styles.active : ''}
               >
                 About
               </Link>
               <Link
-                to='/#contact'
+                to={`${APP_ROUTES.HOME}#contact`}
                 onClick={toggleMenu}
                 className={location.hash === '#contact' ? styles.active : ''}
               >

@@ -9,7 +9,11 @@ from django.shortcuts import get_object_or_404
 
 from core.throttling import GalleryRateThrottle
 
-from .models import MainPageBackgroundImage, MainPageLocation
+from .models import (
+    CelestialObjectChoices,
+    MainPageBackgroundImage,
+    MainPageLocation,
+)
 from .serializers import (
     AstroImageSerializer,
     AstroImageSerializerList,
@@ -100,3 +104,16 @@ class TagsView(ViewSet):
         serializer = self.serializer_class(tags, many=True)
 
         return Response(serializer.data)
+
+
+class CelestialObjectCategoriesView(APIView):
+    """
+    View to return the list of available celestial object categories (choices).
+    """
+
+    permission_classes = [AllowAny]
+    throttle_classes = [GalleryRateThrottle, UserRateThrottle]
+
+    def get(self, request: Request) -> Response:
+        categories = [choice[0] for choice in CelestialObjectChoices]
+        return Response(categories)

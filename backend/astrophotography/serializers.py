@@ -11,6 +11,7 @@ from .models import (
     Lens,
     MainPageBackgroundImage,
     MainPageLocation,
+    MeteorsMainPageConfig,
     Place,
     Telescope,
     Tracker,
@@ -229,3 +230,35 @@ class TravelHighlightDetailSerializer(MainPageLocationSerializer):
 
     class Meta(MainPageLocationSerializer.Meta):
         fields = MainPageLocationSerializer.Meta.fields + ["country_code", "place"]
+
+
+class MeteorsMainPageConfigSerializer(serializers.ModelSerializer):
+    randomShootingStars = serializers.BooleanField(source="random_stars_shooting")
+    bolidChance = serializers.FloatField(source="bolid_chance")
+    bolidMinInterval = serializers.IntegerField(source="bolid_interval")
+    starPathRange = serializers.ListField(source="star_path_range")
+    bolidPathRange = serializers.ListField(source="bolid_path_range")
+    starStreakRange = serializers.ListField(source="star_streak_range")
+    bolidStreakRange = serializers.ListField(source="bolid_streak_range")
+    starDurationRange = serializers.ListField(source="star_duration_range")
+    bolidDurationRange = serializers.ListField(source="bolid_duration_range")
+    starOpacityRange = serializers.ListField(source="star_opacity_range")
+    bolidOpacityRange = serializers.ListField(source="bolid_opacity_range")
+    smokeOpacityRange = serializers.ListField(source="smoke_opacity_range")
+
+    class Meta:
+        model = MeteorsMainPageConfig
+        fields = [
+            "randomShootingStars",
+            "bolidChance",
+            "bolidMinInterval",
+            "starPathRange",
+            "bolidPathRange",
+            "starStreakRange",
+            "bolidStreakRange",
+            "starDurationRange",
+            "bolidDurationRange",
+            "starOpacityRange",
+            "bolidOpacityRange",
+            "smokeOpacityRange",
+        ]

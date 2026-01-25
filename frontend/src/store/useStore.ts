@@ -6,14 +6,16 @@ import {
   EnabledFeatures,
   Project,
   Tag,
+  MeteorConfig,
 } from '../types';
 import {
   fetchProfile,
   fetchBackground,
   fetchAstroImages,
-  fetchEnabledFeatures,
+  fetchSettings,
   fetchProjects,
   fetchTags,
+  fetchCategories,
 } from '../api/services';
 import { NetworkError, ServerError } from '../api/errors';
 
@@ -22,6 +24,7 @@ interface AppState {
   backgroundUrl: string | null;
   images: AstroImage[];
   projects: Project[];
+  categories: string[];
   tags: Tag[];
   features: EnabledFeatures | null;
   isInitialLoading: boolean;
@@ -37,8 +40,11 @@ interface AppState {
   loadInitialData: () => Promise<void>;
   loadImages: (params?: FilterParams) => Promise<void>;
   loadProjects: () => Promise<void>;
+  loadCategories: () => Promise<void>;
   loadTags: (category?: string) => Promise<void>;
+  loadMeteorConfig: () => Promise<void>;
   clearError: () => void;
+  meteorConfig: MeteorConfig | null;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -46,6 +52,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   backgroundUrl: null,
   images: [],
   projects: [],
+  categories: [],
   tags: [],
   features: null,
   isInitialLoading: false,
@@ -56,6 +63,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   imagesSessionId: '',
   projectsSessionId: '',
   tagsSessionId: '',
+  meteorConfig: null,
 
   clearError: () => set({ error: null }),
 
@@ -66,17 +74,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     const sessionId = crypto.randomUUID();
     set({ isInitialLoading: true, error: null, initialSessionId: sessionId });
     try {
-      const [profileData, bgUrl, featuresData] = await Promise.all([
+      const [profileData, bgUrl, settingsData] = await Promise.all([
         fetchProfile(),
         fetchBackground(),
-        fetchEnabledFeatures(),
+        fetchSettings(),
       ]);
 
       if (get().initialSessionId === sessionId) {
         set({
           profile: profileData,
           backgroundUrl: bgUrl,
-          features: featuresData,
+          features: settingsData,
+          meteorConfig: settingsData.meteors || null,
           isInitialLoading: false,
         });
       }
@@ -153,6 +162,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     } catch (e: unknown) {
       console.error('Store tags load failure:', e);
+    }
+  },
+  loadCategories: async () => {
+    // Avoid double loading if already have data
+    if (get().categories.length > 0) return;
+
+    try {
+      const data = await fetchCategories();
+      set({ categories: data });
+    } catch (e: unknown) {
+      console.error('Store categories load failure:', e);
+    }
+  },
+
+  loadMeteorConfig: async () => {
+    try {
+      const data = await fetchSettings();
+      set({ meteorConfig: data.meteors || null });
+    } catch (e: unknown) {
+      console.error('Store meteor config load failure:', e);
     }
   },
 }));

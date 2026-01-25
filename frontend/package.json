@@ -1,5 +1,5 @@
 {
-  "name": "landingpage",
+  "name": "portfolio",
   "version": "1.0.0",
   "description": "Portfolio landing page with astrophotography gallery, built with React, TypeScript, and Zustand. Features PWA support, advanced caching, and SEO optimization. High-fidelity cosmic aesthetics and professional software engineering showcase.",
   "private": true,

@@ -4,7 +4,7 @@ from rest_framework import status
 
 from django.urls import reverse
 
-from astrophotography.models import MainPageBackgroundImage
+from astrophotography.models import CelestialObjectChoices, MainPageBackgroundImage
 from astrophotography.tests.factories import (
     AstroImageFactory,
     MainPageBackgroundImageFactory,
@@ -143,3 +143,18 @@ class TestTravelHighlightsBySlugView:
         assert response.data["story"] == slider.story
         assert response.data["country"] == slider.country.name
         assert response.data["place"] == slider.place.name
+
+
+@pytest.mark.django_db
+class TestCelestialObjectCategoriesView:
+    def test_list_categories(self, api_client):
+        """Test retrieving the list of celestial object categories"""
+
+        url = reverse("astroimages:celestial-object-categories")
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert isinstance(response.data, list)
+
+        expected_categories = [choice[0] for choice in CelestialObjectChoices]
+        assert response.data == expected_categories

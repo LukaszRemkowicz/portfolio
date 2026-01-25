@@ -37,8 +37,8 @@ class ContactFormKillSwitchMiddleware(MiddlewareMixin):
             return None
 
         # Check if contact form is enabled
-        settings = LandingPageSettings.load()
-        if not settings.contact_form_enabled:
+        settings = LandingPageSettings.objects.last()
+        if not settings or not settings.contact_form_enabled:
             logger.warning(f"Contact form request blocked - form disabled. Path: {request.path}")
 
             # Return HTTP 400 Bad Request as requested

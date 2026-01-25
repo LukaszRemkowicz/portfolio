@@ -8,6 +8,7 @@ from astrophotography.models import (
     Camera,
     Lens,
     MainPageBackgroundImage,
+    MeteorsMainPageConfig,
     Telescope,
     Tracker,
     Tripod,
@@ -137,3 +138,18 @@ class MainPageLocationFactory(DjangoModelFactory):
         if extracted:
             for image in extracted:
                 self.images.add(image)
+
+
+class MeteorsMainPageConfigFactory(DjangoModelFactory):
+    class Meta:
+        model = MeteorsMainPageConfig
+
+    random_stars_shooting = True
+    bolid_chance = 0.1
+    bolid_interval = 60.0
+    star_path_range = [50, 500]
+    bolid_path_range = [50, 500]
+    star_streak_range = [100, 200]
+    star_opacity_range = [0.4, 0.8]
+    bolid_opacity_range = [0.7, 1.0]
+    smoke_opacity_range = [0.5, 0.8]

@@ -141,17 +141,18 @@ export const fetchTags = async (category_filter?: string): Promise<Tag[]> => {
   return handleResponse<Tag[]>(response);
 };
 
-export const fetchEnabledFeatures = async (): Promise<EnabledFeatures> => {
+export const fetchSettings = async (): Promise<EnabledFeatures> => {
   try {
     const response: AxiosResponse<EnabledFeatures> = await api.get(
-      API_ROUTES.whatsEnabled
+      API_ROUTES.settings
     );
     return handleResponse<EnabledFeatures>(response);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    console.error('Error fetching enabled features:', error);
-    // Return empty object on error - safer than crashing
-    return {};
+  } catch (error: unknown) {
+    console.error('Error fetching settings:', error);
+    // Return empty features and empty meteors on error (or handle appropriately)
+    // For now throwing to let callers handle or defaulting might be safer?
+    // Given the previous code returned {}, I'll return a partial mock or throw.
+    throw error;
   }
 };
 export const fetchProjects = async (): Promise<Project[]> => {
@@ -187,4 +188,11 @@ export const fetchTravelHighlights = async (): Promise<MainPageLocation[]> => {
     }));
   }
   return [];
+};
+
+export const fetchCategories = async (): Promise<string[]> => {
+  const response: AxiosResponse<string[]> = await api.get(
+    API_ROUTES.categories
+  );
+  return handleResponse<string[]>(response);
 };

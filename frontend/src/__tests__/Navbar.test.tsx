@@ -1,4 +1,4 @@
-import React, { ReactElement } from 'react';
+import { type ReactElement } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
@@ -7,7 +7,7 @@ import { useAppStore } from '../store/useStore';
 
 // Mock the services
 jest.mock('../api/services', () => ({
-  fetchEnabledFeatures: jest.fn(),
+  fetchSettings: jest.fn(),
 }));
 
 const renderWithRouter = (component: ReactElement) => {

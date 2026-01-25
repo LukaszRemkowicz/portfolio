@@ -1,6 +1,7 @@
 networks:
   portfolio_network:
 
+
 x-backend-common: &backend-common
   build:
     context: ./backend
@@ -22,18 +23,21 @@ x-backend-common: &backend-common
 services:
   portfolio-fe:
     build:
-      context: ./frontend
+      context: .
+      dockerfile: frontend/Dockerfile
       target: dev
     networks:
       - portfolio_network
+    environment:
+      API_URL: https://${API_DOMAIN:-api.portfolio.local}
+      SSL_KEY_PATH: /etc/nginx/ssl/portfolio.local.key
+      SSL_CRT_PATH: /etc/nginx/ssl/portfolio.local.crt
     ports:
       - "3000:3000"
     restart: unless-stopped
     volumes:
       - ./frontend:/app
       - fe_node_modules:/app/node_modules
-    # jeśli potrzebujesz certów lokalnie:
-    # - ./nginx/ssl/certs:/etc/ssl/certs:ro
 
   portfolio-be:
     <<: *backend-common
@@ -42,7 +46,7 @@ services:
 
   portfolio-test:
     <<: *backend-common
-    profiles: ["test"]
+    profiles: [ "test" ]
     command: pytest
 
   db:

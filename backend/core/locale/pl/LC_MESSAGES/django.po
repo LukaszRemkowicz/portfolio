@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-21 13:30+0000\n"
+"POT-Creation-Date: 2026-01-25 01:02+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,89 +20,120 @@ msgstr ""
 "(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
 "n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
 
+#: core/models.py:18
 msgid "ID"
 msgstr "ID"
 
+#: core/models.py:20
 msgid "Created At"
 msgstr "Utworzono"
 
+#: core/models.py:21
 msgid "Updated At"
 msgstr "Zaktualizowano"
 
+#: core/models.py:24
 msgid "Image File"
 msgstr "Plik zdjęcia"
 
+#: core/models.py:25
 msgid "The actual image file to be displayed."
 msgstr "Faktyczny plik zdjęcia do wyświetlenia."
 
+#: core/models.py:28
 msgid "Name"
 msgstr "Nazwa"
 
+#: core/models.py:28
 msgid "A descriptive name for this image."
 msgstr "Opisowa nazwa tego zdjęcia."
 
+#: core/models.py:32
 msgid "Description"
 msgstr "Opis"
 
+#: core/models.py:33
 msgid "Optional detailed description of the image."
 msgstr "Opcjonalny szczegółowy opis zdjęcia."
 
+#: core/models.py:37
+msgid "Thumbnail"
+msgstr ""
+
+#: core/models.py:103
 msgid "Contact Form Enabled"
 msgstr "Formularz Kontaktowy Włączony"
 
+#: core/models.py:105
 msgid "Travel Highlights Enabled"
 msgstr ""
 
+#: core/models.py:108
 msgid "Programming Section Enabled"
 msgstr "Sekcja Programowania Włączona"
 
+#: core/models.py:111
 #, fuzzy
 #| msgid "Programming Section Enabled"
 msgid "Last Images Section Enabled"
 msgstr "Sekcja Programowania Włączona"
 
+#: core/models.py:113
 #, fuzzy
 #| msgid "Contact Form Enabled"
 msgid "Meteors Enabled"
 msgstr "Formularz Kontaktowy Włączony"
 
+#: core/models.py:116 core/models.py:117 core/models.py:120
 msgid "Landing Page Settings"
 msgstr "Ustawienia Strony Lądowania"
 
+#: core/settings.py:201
 msgid "English"
 msgstr "Angielski"
 
+#: core/settings.py:202
 msgid "Polish"
 msgstr "Polski"
 
+#: core/widgets.py:18
 msgid "Select..."
 msgstr "Wybierz..."
 
+#: core/widgets.py:43
 msgid "Select images..."
 msgstr "Wybierz zdjęcia..."
 
+#: users/admin.py:22
 msgid "Personal info"
 msgstr ""
 
+#: users/admin.py:37
 msgid "Permissions"
 msgstr ""
 
+#: users/admin.py:49
 msgid "Important dates"
 msgstr ""
 
+#: users/models.py:41
 msgid "email address"
 msgstr ""
 
+#: users/models.py:49
 msgid ""
 "Hero section text. Split by the first period ('.'): the first segment will "
 "be large/bold, following text will be smaller."
 msgstr ""
 
+#: users/models.py:53
 msgid "Bio"
 msgstr ""
 
+#: users/models.py:115
 msgid "Programming"
 msgstr ""
 
+#: users/models.py:116
 msgid "Astrophotography"
 msgstr ""

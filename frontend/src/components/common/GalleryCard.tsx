@@ -1,4 +1,4 @@
-import React, { useState, memo, useMemo } from 'react';
+import { useState, memo, useMemo } from 'react';
 import styles from '../../styles/components/GalleryCard.module.css';
 import { MapPin } from 'lucide-react';
 import { AstroImage } from '../../types';

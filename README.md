@@ -142,10 +142,6 @@ docker compose exec portfolio-fe npm test    # Local development (fastest)
 docker compose run --rm portfolio-fe npm test -- --watchAll=false  # Isolated
 ```
 
-## TODO - Project Improvements
-
----
-
 ## 🔄 Release Lifecycle
 
 To ensure version traceability and zero-downtime, follow this mandatory flow for all new features and fixes:

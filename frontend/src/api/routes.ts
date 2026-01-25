@@ -1,26 +1,20 @@
 import { ApiRoutes } from '../types';
+import { API_BASE_URL, API_V1 } from './constants';
 
-// API Base URLs - Injected via Webpack
-export const API_BASE_URL =
-  (typeof window !== 'undefined' &&
-    (window as unknown as { env?: { API_URL?: string } }).env?.API_URL) ||
-  (typeof process !== 'undefined' && process.env?.API_URL) ||
-  'https://api.portfolio.local';
-
-// Define API_V1 for use in API_ROUTES
-const API_V1 = '/v1';
+export { API_BASE_URL };
 
 export const API_ROUTES: ApiRoutes = {
-  profile: '/v1/profile/',
-  background: '/v1/background/',
-  astroImages: '/v1/image/',
-  astroImage: '/v1/image/:id/',
-  contact: '/v1/contact/',
-  whatsEnabled: `${API_V1}/whats-enabled/`,
-  projects: '/v1/projects/',
-  travelHighlights: '/v1/travel-highlights/',
+  profile: `${API_V1}/profile/`,
+  background: `${API_V1}/background/`,
+  astroImages: `${API_V1}/image/`,
+  astroImage: `${API_V1}/image/:id/`,
+  contact: `${API_V1}/contact/`,
+  settings: `${API_V1}/settings/`,
+  projects: `${API_V1}/projects/`,
+  travelHighlights: `${API_V1}/travel-highlights/`,
   travelBySlug: `${API_V1}/travel/`,
-  tags: '/v1/tags/',
+  tags: `${API_V1}/tags/`,
+  categories: `${API_V1}/categories/`,
 };
 
 // Centralized asset fallbacks

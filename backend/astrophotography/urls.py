@@ -4,6 +4,7 @@ from django.urls import include, path
 
 from .views import (
     AstroImageViewSet,
+    CelestialObjectCategoriesView,
     MainPageBackgroundImageView,
     MainPageLocationViewSet,
     TagsView,
@@ -30,6 +31,11 @@ urlpatterns = [
         "travel/<slug:country_slug>/",
         TravelHighlightsBySlugView.as_view(),
         name="travel-by-country",
+    ),
+    path(
+        "categories/",
+        CelestialObjectCategoriesView.as_view(),
+        name="celestial-object-categories",
     ),
     # ViewSet routes (general)
     path("", include(router.urls)),

@@ -21,54 +21,6 @@ Modern React + TypeScript frontend for a personal portfolio showcasing astrophot
 - **Webpack 5** - Modern build system with hot reloading
 - **Jest Testing** - Unit testing setup with React Testing Library + TypeScript
 
-## 📁 Project Structure
-
-```
-src/
-├── __tests__/                    # Comprehensive TypeScript test suite
-│   ├── About.test.tsx           # About component tests
-│   ├── AstroGallery.test.tsx    # Gallery component tests
-│   ├── Footer.test.tsx          # Footer component tests
-│   ├── Gallery.test.tsx         # Static gallery tests
-│   ├── HomePage.test.tsx        # Homepage component tests
-│   ├── Navbar.test.tsx          # Navigation tests
-│   └── README.md                # Test documentation
-├── api/                          # API configuration and services
-│   ├── api.ts                   # Axios instance configuration
-│   ├── routes.ts                # API endpoints and URL helpers
-│   └── services.ts              # API service functions
-├── data/                         # Static data
-│   └── galleryItems.ts          # Homepage gallery items
-├── styles/                       # Organized CSS architecture
-│   ├── global/                  # Global styles
-│   │   └── index.css           # Reset, typography, base styles
-│   ├── components/              # Component-specific styles
-│   │   ├── About.module.css    # About component styles
-│   │   ├── App.module.css      # Main application layout
-│   │   ├── AstroGallery.module.css # Dynamic gallery styles
-│   │   ├── Footer.module.css   # Footer component styles
-│   │   ├── Gallery.module.css  # Static gallery styles
-│   │   └── Navbar.module.css   # Navigation bar styles
-│   └── themes/                  # Design system
-│       ├── variables.css       # CSS custom properties
-│       └── mixins.css          # Utility classes and mixins
-├── About.tsx                    # About section component
-├── App.tsx                      # Main app with routing
-├── AstroGallery.tsx             # Astrophotography page
-├── Footer.tsx                   # Footer component
-├── Gallery.tsx                  # Homepage gallery
-├── Home.tsx                     # Hero section
-├── HomePage.tsx                 # Landing page container
-├── index.tsx                    # App entry point
-├── MainLayout.tsx               # Layout wrapper
-├── Navbar.tsx                   # Navigation component
-├── Programming.tsx              # Programming projects page
-├── Contact.tsx                  # Contact form component
-├── PrelectionsAndCourses.tsx    # Prelections section
-└── types/                       # TypeScript type definitions
-    └── index.ts                 # Centralized type definitions
-```
-
 ## 🔌 API Integration
 
 ### Endpoints Used
@@ -79,8 +31,9 @@ src/
 
 ### Fallback Behavior
 
-When API is unavailable, the app gracefully falls back to:
+When the API is unavailable or `API_URL` is not set, the app gracefully falls back to:
 
+- **Default API**: `https://api.portfolio.local` (Configured in `api/constants.ts`)
 - Static logo: `/logo.png`
 - Default portrait: `/portrait_default.png`
 - Static gallery items from `galleryItems.js`
@@ -106,19 +59,39 @@ When API is unavailable, the app gracefully falls back to:
 ### Installation
 
 ```bash
+# Clone the repository
 cd frontend
 npm install
 ```
 
 ### Development Server
 
+#### 🐳 Using Docker (Recommended)
+
 ```bash
-npm start
+# From root directory
+docker compose up
 ```
 
-- Runs on `https://portfolio.local:3000/`
-- Hot reloading enabled
-- Requires backend API at `https://admin.portfolio.local/`
+- Frontend: `https://portfolio.local/`
+- Backend: `https://admin.portfolio.local/`
+
+#### 💻 Native (Without Docker)
+
+You can run the frontend directly on your host machine for faster iteration:
+
+1.  **Environment Variables**: Point the frontend to your local backend (e.g., Running on port 8000):
+    ```bash
+    export API_URL="http://localhost:8000"
+    ```
+2.  **Start the App**:
+    ```bash
+    npm start
+    ```
+
+- URL: `http://localhost:3000`
+- **Note**: If you want to use the `portfolio.local` domain without Nginx, add `127.0.0.1 portfolio.local` to your `/etc/hosts` and access via `http://portfolio.local:3000`.
+- **Note**: Domain usage without port 80/443 requires an active Nginx proxy and SSL certificates.
 
 ### Production Build
 
@@ -126,8 +99,6 @@ npm start
 npm run build
 ```
 
-- Creates optimized build in `dist/` directory
-- Minified CSS and JavaScript
 - Creates optimized build in `dist/` directory
 - Minified CSS and JavaScript
 - Asset optimization
@@ -144,6 +115,7 @@ npm test
 
 - Jest test runner
 - React Testing Library for component tests
+- React 18 `act` support (imported from `react`)
 - CSS Modules mock setup included
 
 #### Docker Testing
@@ -176,7 +148,7 @@ docker-compose up --build
 ```
 
 - Frontend: `https://portfolio.local/`
-- Backend: `https://admin.portfolio.local/`
+- Backend: `https://api.portfolio.local/`
 - Shared network configuration
 - Volume mounting for development
 
@@ -189,32 +161,6 @@ docker run -p 3000:3000 portfolio-frontend
 ```
 
 ## 🎨 Styling Architecture
-
-### CSS Organization
-
-The project uses a well-organized CSS architecture with clear separation of concerns:
-
-```
-src/styles/
-├── global/                  # Global styles and base setup
-│   └── index.css           # Reset, typography, base styles, imports
-├── components/              # Component-specific CSS modules
-│   ├── About.module.css    # About component styles
-│   ├── App.module.css      # Main application layout
-│   ├── AstroGallery.module.css # Dynamic gallery styles
-│   ├── Footer.module.css   # Footer component styles
-│   ├── Gallery.module.css  # Static gallery styles
-│   └── Navbar.module.css   # Navigation bar styles
-└── themes/                  # Design system and utilities
-    ├── variables.css       # CSS custom properties (colors, spacing, etc.)
-    └── mixins.css          # Utility classes and mixins
-```
-
-### CSS Modules
-
-- **Scoped Styling**: Each component has its own CSS module
-- **No Global Conflicts**: Styles are automatically scoped to components
-- **Type Safety**: CSS class names are validated at build time
 
 ### Design System
 
@@ -264,9 +210,7 @@ All component styles are organized in `styles/components/` directory:
 
 ### Environment Variables
 
-- `API_BASE_URL` - Backend API endpoint (default: `https://admin.portfolio.local`)
-- `ENABLE_SHOOTING_STARS` - Toggle shooting stars animation ("true"/"false", default: "true")
-- Custom domains configured in nginx
+- `API_URL` - Backend API endpoint (default: `https://api.portfolio.local`)
 
 ### Build Configuration
 
@@ -286,21 +230,6 @@ All component styles are organized in `styles/components/` directory:
 - **User Interactions** - Click events and state changes tested
 - **CSS Modules Support** - Identity proxy configured for CSS Modules
 
-### Test Structure
-
-```bash
-src/
-├── __tests__/                    # Test module
-│   ├── AstroGallery.test.jsx     # Gallery component tests
-│   ├── HomePage.test.jsx         # Homepage component tests
-│   ├── About.test.jsx            # About section tests
-│   ├── Navbar.test.jsx           # Navigation tests
-│   ├── Gallery.test.jsx          # Static gallery tests
-│   ├── Footer.test.jsx           # Footer tests
-│   └── README.md                 # Test documentation and guide
-└── jest.config.js                # Jest configuration file
-```
-
 ### Test Configuration
 
 - **Jest Config** (`jest.config.js`) - Main Jest configuration with proper setup
@@ -313,7 +242,6 @@ src/
 ### Test Documentation
 
 - **Comprehensive JSDoc Comments** - Every test file and individual test is documented
-- **Test Module README** (`src/__tests__/README.md`) - Detailed guide for running and understanding tests
 - **Mock Strategy** - Clear documentation of how API services are mocked
 - **Best Practices** - Guidelines for writing maintainable tests
 - **Troubleshooting Guide** - Common issues and solutions
@@ -366,7 +294,7 @@ src/
 ### 🎯 Priority 2 - Nice to Have
 
 - [ ] **Complete Programming Page** - Implement actual programming projects showcase
-- [ ] **Filtering by Tags** - Add tag-based filtering to astrophotography gallery for more granular search
+- [x] **Filtering by Tags** - Add tag-based filtering to astrophotography gallery
 - [ ] **React Admin Panel** - Create custom admin dashboard using React Admin or Refine framework
   - Alternative to Django Admin with premium design matching portfolio aesthetic
   - Connect to existing DRF API endpoints

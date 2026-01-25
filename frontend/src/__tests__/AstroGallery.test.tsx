@@ -1,9 +1,8 @@
-import React from 'react';
+import { act } from 'react';
 import {
   render,
   screen,
   waitFor,
-  act,
   within,
   fireEvent,
 } from '@testing-library/react';
@@ -17,16 +16,16 @@ jest.mock('../api/services', () => ({
   fetchAstroImages: jest.fn(),
   fetchBackground: jest.fn(),
   fetchAstroImage: jest.fn(),
-  fetchEnabledFeatures: jest.fn(),
+  fetchSettings: jest.fn(),
   fetchProfile: jest.fn(),
   fetchTags: jest.fn(),
+  fetchCategories: jest.fn(),
 }));
 
 import {
   fetchAstroImages,
-  fetchBackground,
   fetchAstroImage,
-  fetchEnabledFeatures,
+  fetchSettings,
   fetchProfile,
   fetchTags,
 } from '../api/services';
@@ -51,6 +50,14 @@ describe('AstroGallery Component', () => {
       backgroundUrl: null,
       images: [],
       projects: [],
+      categories: [
+        'Landscape',
+        'Deep Sky',
+        'Startrails',
+        'Solar System',
+        'Milky Way',
+        'Northern Lights',
+      ],
       tags: [],
       features: null,
       isInitialLoading: true,
@@ -61,28 +68,33 @@ describe('AstroGallery Component', () => {
       imagesSessionId: '',
       projectsSessionId: '',
       tagsSessionId: '',
+      meteorConfig: null,
     });
   };
 
   beforeEach(() => {
     jest.resetAllMocks();
-    (fetchEnabledFeatures as jest.Mock).mockResolvedValue({
+    (fetchSettings as jest.Mock).mockResolvedValue({
       programming: true,
       contactForm: true,
       lastimages: true,
-    });
-    (fetchProfile as jest.Mock).mockResolvedValue({
-      first_name: 'Test',
-      last_name: 'User',
-    });
-    (fetchBackground as jest.Mock).mockResolvedValue('/test-bg.jpg');
-    (fetchAstroImages as jest.Mock).mockResolvedValue([]);
-    (fetchAstroImage as jest.Mock).mockResolvedValue({
-      pk: 1,
-      name: 'Test',
-      description: 'Test',
+      meteors: {
+        randomShootingStars: true,
+        bolidChance: 0.1,
+        bolidMinInterval: 60,
+        starPathRange: [50, 500],
+        bolidPathRange: [50, 500],
+        starStreakRange: [100, 200],
+        bolidStreakRange: [20, 100],
+        starDurationRange: [0.4, 1.2],
+        bolidDurationRange: [0.4, 0.9],
+        starOpacityRange: [0.4, 0.8],
+        bolidOpacityRange: [0.7, 1.0],
+        smokeOpacityRange: [0.5, 0.8],
+      },
     });
     mockFetchTags.mockResolvedValue([]);
+    mockFetchAstroImages.mockResolvedValue([]);
     resetStore();
   });
 

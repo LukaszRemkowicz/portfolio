@@ -14,11 +14,13 @@ const AstroGallery: React.FC = () => {
   const images = useAppStore(state => state.images);
   const isInitialLoading = useAppStore(state => state.isInitialLoading);
   const isImagesLoading = useAppStore(state => state.isImagesLoading);
+  const categories = useAppStore(state => state.categories);
   const tags = useAppStore(state => state.tags);
   const background = useAppStore(state => state.backgroundUrl);
   const error = useAppStore(state => state.error);
   const loadInitialData = useAppStore(state => state.loadInitialData);
   const loadImages = useAppStore(state => state.loadImages);
+  const loadCategories = useAppStore(state => state.loadCategories);
   const loadTags = useAppStore(state => state.loadTags);
   const [searchParams, setSearchParams] = useSearchParams();
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
@@ -44,7 +46,8 @@ const AstroGallery: React.FC = () => {
 
   useEffect(() => {
     loadInitialData();
-  }, [loadInitialData]);
+    loadCategories();
+  }, [loadInitialData, loadCategories]);
 
   useEffect(() => {
     loadImages({
@@ -110,15 +113,6 @@ const AstroGallery: React.FC = () => {
   if (isInitialLoading) return <LoadingScreen />;
   if (error) return <div className={styles.error}>{error}</div>;
 
-  const FILTERS: FilterType[] = [
-    'Landscape',
-    'Deep Sky',
-    'Startrails',
-    'Solar System',
-    'Milky Way',
-    'Northern Lights',
-  ];
-
   return (
     <div className={styles.container}>
       <div
@@ -159,7 +153,7 @@ const AstroGallery: React.FC = () => {
         </div>
 
         <div className={styles.filtersSection}>
-          {FILTERS.map((filter: FilterType) => {
+          {categories.map((filter: FilterType) => {
             const isActive = selectedFilter === filter;
             return (
               <button

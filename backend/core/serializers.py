@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from astrophotography.serializers import MeteorsMainPageConfigSerializer
 from core.models import LandingPageSettings
 
 
@@ -8,7 +9,7 @@ class LandingPageSettingsSerializer(serializers.ModelSerializer):
     contactForm = serializers.BooleanField(source="contact_form_enabled", read_only=True)
     travelHighlights = serializers.BooleanField(source="travel_highlights_enabled", read_only=True)
     lastimages = serializers.BooleanField(source="lastimages_enabled", read_only=True)
-    meteors = serializers.BooleanField(source="meteors_enabled", read_only=True)
+    meteors = MeteorsMainPageConfigSerializer(read_only=True)
 
     class Meta:
         model = LandingPageSettings
