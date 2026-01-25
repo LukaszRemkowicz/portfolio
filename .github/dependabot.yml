@@ -3,6 +3,7 @@ updates:
   # Frontend dependencies
   - package-ecosystem: "npm"
     directory: "/frontend"
+    target-branch: "dev"
     schedule:
       interval: "monthly"
       day: "monday"
@@ -26,6 +27,7 @@ updates:
   # Backend dependencies (Poetry)
   - package-ecosystem: "pip"
     directory: "/backend"
+    target-branch: "dev"
     schedule:
       interval: "monthly"
       day: "monday"
@@ -49,6 +51,7 @@ updates:
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "dev"
     schedule:
       interval: "monthly"
       day: "monday"
@@ -69,6 +72,7 @@ updates:
   # Docker
   - package-ecosystem: "docker"
     directory: "/"
+    target-branch: "dev"
     schedule:
       interval: "monthly"
       day: "monday"
