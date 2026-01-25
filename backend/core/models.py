@@ -71,6 +71,8 @@ class BaseImage(models.Model):
 class SingletonModel(models.Model):
     """Abstract singleton model to ensure only one instance exists in the database."""
 
+    objects = models.Manager()
+
     class Meta:
         abstract = True
 
@@ -84,9 +86,9 @@ class SingletonModel(models.Model):
         # Cleanup: Delete all other instances except the one just saved
         self.__class__.objects.exclude(pk=self.pk).delete()
 
-    def delete(self, *args: Any, **kwargs: Any) -> None:
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         """Prevent deletion of the singleton instance via standard delete."""
-        pass
+        return 0, {}
 
 
 class LandingPageSettings(SingletonModel):

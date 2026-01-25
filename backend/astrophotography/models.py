@@ -66,9 +66,26 @@ class UUIDTaggedItem(GenericUUIDTaggedItemBase, TaggedItemBase):
         verbose_name_plural = _("Tags")
 
 
+class AbstractEquipmentModel(models.Model):
+    model = models.CharField(
+        max_length=255,
+        default="",
+        verbose_name=_("Model"),
+        help_text=_("The model identifiers or name of the equipment."),
+    )
+
+    def __str__(self) -> str:
+        return self.model
+
+    class Meta:
+        abstract = True
+        ordering = ["model"]
+
+
 class Place(models.Model):
     name = models.CharField(
         max_length=255,
+        default="",
         verbose_name=_("Name"),
         help_text=_("The name of the specific place or city."),
     )
@@ -82,84 +99,34 @@ class Place(models.Model):
         ordering = ["name"]
 
 
-class Telescope(models.Model):
-    model = models.CharField(
-        max_length=255,
-        verbose_name=_("Model"),
-        help_text=_("Telescope model and specifications"),
-    )
-
-    def __str__(self) -> str:
-        return self.model
-
+class Telescope(AbstractEquipmentModel):
     class Meta:
         verbose_name = _("Telescope")
         verbose_name_plural = _("Telescopes")
-        ordering = ["model"]
 
 
-class Camera(models.Model):
-    model = models.CharField(
-        max_length=255,
-        verbose_name=_("Model"),
-        help_text=_("Camera model and specifications"),
-    )
-
-    def __str__(self) -> str:
-        return self.model
-
+class Camera(AbstractEquipmentModel):
     class Meta:
         verbose_name = _("Camera")
         verbose_name_plural = _("Cameras")
-        ordering = ["model"]
 
 
-class Lens(models.Model):
-    model = models.CharField(
-        max_length=255,
-        verbose_name=_("Model"),
-        help_text=_("Lens model and focal length"),
-    )
-
-    def __str__(self) -> str:
-        return self.model
-
+class Lens(AbstractEquipmentModel):
     class Meta:
         verbose_name = _("Lens")
         verbose_name_plural = _("Lenses")
-        ordering = ["model"]
 
 
-class Tracker(models.Model):
-    name = models.CharField(
-        max_length=255,
-        verbose_name=_("Name"),
-        help_text=_("Star tracker or mount model"),
-    )
-
-    def __str__(self) -> str:
-        return self.name
-
+class Tracker(AbstractEquipmentModel):
     class Meta:
         verbose_name = _("Tracker")
         verbose_name_plural = _("Trackers")
-        ordering = ["name"]
 
 
-class Tripod(models.Model):
-    name = models.CharField(
-        max_length=255,
-        verbose_name=_("Name"),
-        help_text=_("Tripod model"),
-    )
-
-    def __str__(self) -> str:
-        return self.name
-
+class Tripod(AbstractEquipmentModel):
     class Meta:
         verbose_name = _("Tripod")
         verbose_name_plural = _("Tripods")
-        ordering = ["name"]
 
 
 class AstroImage(BaseImage):
