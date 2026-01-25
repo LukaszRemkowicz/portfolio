@@ -1,10 +1,12 @@
-import React, { useEffect } from "react";
-import { useAppStore } from "../store/useStore";
-import styles from "../styles/components/Programming.module.css";
-import { Github, ExternalLink, Code2 } from "lucide-react";
-import LoadingScreen from "./common/LoadingScreen";
+// frontend/src/components/Programming.tsx
+import { type FC, useEffect } from 'react';
+import { useAppStore } from '../store/useStore';
+import styles from '../styles/components/Programming.module.css';
+// @ts-ignore: Github icon is deprecated in lucide-react in favor of simple-icons
+import { Github, ExternalLink, Code2 } from 'lucide-react';
+import LoadingScreen from './common/LoadingScreen';
 
-const Programming: React.FC = () => {
+const Programming: FC = () => {
   const {
     projects,
     isProjectsLoading: loading,
@@ -17,7 +19,7 @@ const Programming: React.FC = () => {
   }, [loadProjects]);
 
   if (loading) {
-    return <LoadingScreen message="Compiling projects..." />;
+    return <LoadingScreen message='Compiling projects...' />;
   }
 
   if (error) {
@@ -40,9 +42,9 @@ const Programming: React.FC = () => {
 
       <div className={styles.grid}>
         {projects.length > 0 ? (
-          projects.map((project) => {
+          projects.map(project => {
             const coverImage =
-              project.images.find((img) => img.is_cover) || project.images[0];
+              project.images.find(img => img.is_cover) || project.images[0];
 
             return (
               <article key={project.pk} className={styles.projectCard}>
@@ -78,8 +80,8 @@ const Programming: React.FC = () => {
                     {project.github_url && (
                       <a
                         href={project.github_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        target='_blank'
+                        rel='noopener noreferrer'
                         className={styles.actionLink}
                       >
                         <Github className={styles.icon} /> Source
@@ -88,8 +90,8 @@ const Programming: React.FC = () => {
                     {project.live_url && (
                       <a
                         href={project.live_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        target='_blank'
+                        rel='noopener noreferrer'
                         className={styles.actionLink}
                       >
                         <ExternalLink className={styles.icon} /> Live Demo

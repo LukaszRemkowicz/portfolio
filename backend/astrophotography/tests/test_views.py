@@ -4,8 +4,12 @@ from rest_framework import status
 
 from django.urls import reverse
 
-from astrophotography.models import MainPageBackgroundImage
-from astrophotography.tests.factories import AstroImageFactory, MainPageBackgroundImageFactory
+from astrophotography.models import CelestialObjectChoices, MainPageBackgroundImage
+from astrophotography.tests.factories import (
+    AstroImageFactory,
+    MainPageBackgroundImageFactory,
+    MainPageLocationFactory,
+)
 
 
 @pytest.mark.django_db
@@ -83,10 +87,6 @@ class TestBackgroundMainPageView:
 class TestMainPageLocationViewSet:
     def test_list_active_sliders(self, api_client):
         """Test listing only active sliders ordered by country"""
-        from astrophotography.tests.factories import (
-            AstroImageFactory,
-            MainPageLocationFactory,
-        )
 
         # Create active slider for PL
         img_pl = AstroImageFactory(location="PL")
@@ -124,45 +124,37 @@ class TestMainPageLocationViewSet:
 class TestTravelHighlightsBySlugView:
     def test_get_highlights_with_story(self, api_client):
         """Test retrieving highlights with a story"""
-        from astrophotography.tests.factories import (
-            AstroImageFactory,
-            MainPageLocationFactory,
-        )
 
         # Create slider with story
         slider = MainPageLocationFactory(
-            country="PL",
-            # place is usually a Place object, but factory might handle string?
-            # In factory definition (not seen but typical), it might trigger creation.
-            # Safest is to let factory handle it or create place manually if needed.
-            # Assuming factory is smart enough or I will fix if it errors.
-            # Actually, looking at factory usage in other tests:
-            # MainPageLocationFactory(country="PL", is_active=True, images=[img_pl])
-            # It doesn't set place.
-            highlight_name="Tatras Mountains",
-            story="A beautiful mountain range.",
-            is_active=True,
+            place__name="Tatras",
         )
 
-        # Manually assign place if factory doesn't do it automatically or if I need it
-        # The view tests logic: if place_slug is provided, it filters by place.
-        # Let's add a place.
-        from astrophotography.models import Place
-
-        place, _ = Place.objects.get_or_create(name="Tatras")
-        slider.place = place
-        slider.save()  # This triggers slug generation: country_slug=poland, place_slug=tatras
-
         # Create matching image
-        AstroImageFactory(location="PL", place=place)
+        AstroImageFactory(location=slider.country, place=slider.place)
 
         url = reverse(
             "astroimages:travel-by-country-place",
-            kwargs={"country_slug": "poland", "place_slug": "tatras"},
+            kwargs={"country_slug": slider.country_slug, "place_slug": slider.place_slug},
         )
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["story"] == "A beautiful mountain range."
-        assert response.data["country"] == "Poland"
-        assert response.data["place"] == "Tatras"
+        assert response.data["story"] == slider.story
+        assert response.data["country"] == slider.country.name
+        assert response.data["place"] == slider.place.name
+
+
+@pytest.mark.django_db
+class TestCelestialObjectCategoriesView:
+    def test_list_categories(self, api_client):
+        """Test retrieving the list of celestial object categories"""
+
+        url = reverse("astroimages:celestial-object-categories")
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert isinstance(response.data, list)
+
+        expected_categories = [choice[0] for choice in CelestialObjectChoices]
+        assert response.data == expected_categories

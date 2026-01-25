@@ -1,7 +1,10 @@
+# backend/inbox/tests/test_services.py
 from typing import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+from django.conf import settings
 
 from inbox.models import ContactMessage
 from inbox.services import (
@@ -47,7 +50,6 @@ class TestContactMessageEmailService:
         self, mock_logger: MagicMock, mock_send_mail: MagicMock, contact_message: ContactMessage
     ) -> None:
         """Test that email is simulated (logged) but NOT sent when DEBUG=True"""
-        from django.conf import settings
 
         with patch.object(settings, "DEBUG", True):
             # Call the service method

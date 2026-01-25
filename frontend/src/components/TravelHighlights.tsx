@@ -1,33 +1,30 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import styles from "../styles/components/TravelHighlights.module.css";
-import { MapPin } from "lucide-react";
-import { fetchTravelHighlights } from "../api/services";
-import { MainPageLocation } from "../types";
-import { useAppStore } from "../store/useStore";
-import { stripHtml } from "../utils/html";
+// frontend/src/components/TravelHighlights.tsx
+import { type FC, useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import styles from '../styles/components/TravelHighlights.module.css';
+import { MapPin } from 'lucide-react';
+import { fetchTravelHighlights } from '../api/services';
+import { MainPageLocation } from '../types';
+import { useAppStore } from '../store/useStore';
+import { stripHtml } from '../utils/html';
+import { APP_ROUTES, DEFAULT_TRAVEL_IMAGE } from '../api/constants';
 
-const TravelCard: React.FC<{ location: MainPageLocation }> = ({ location }) => {
+const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
   const navigate = useNavigate();
-  const [currentIndex, setCurrentIndex] = React.useState(0);
-  const images = location.images.map((img) => img.thumbnail_url || img.url);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const images = location.images.map(img => img.thumbnail_url || img.url);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (images.length <= 1) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
+      setCurrentIndex(prev => (prev + 1) % images.length);
     }, 7000);
     return () => clearInterval(interval);
   }, [images.length]);
 
   // Fallback logic
-  const displayImages =
-    images.length > 0
-      ? images
-      : [
-          "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?q=80\u0026w=1000\u0026auto=format\u0026fit=crop",
-        ];
+  const displayImages = images.length > 0 ? images : [DEFAULT_TRAVEL_IMAGE];
 
   // Construct display location: "Place, Country" or just "Country"
   const displayLocation = location.place_name
@@ -35,7 +32,7 @@ const TravelCard: React.FC<{ location: MainPageLocation }> = ({ location }) => {
     : location.country_name;
 
   // Prioritize story from location model, fall back to first image description
-  const description = React.useMemo(() => {
+  const description = useMemo(() => {
     if (location.story && location.story.trim()) {
       return stripHtml(location.story);
     }
@@ -46,8 +43,8 @@ const TravelCard: React.FC<{ location: MainPageLocation }> = ({ location }) => {
 
   const handleCardClick = () => {
     const url = location.place_slug
-      ? `/travel-highlights/${location.country_slug}/${location.place_slug}`
-      : `/travel-highlights/${location.country_slug}`;
+      ? `${APP_ROUTES.TRAVEL_HIGHLIGHTS}/${location.country_slug}/${location.place_slug}`
+      : `${APP_ROUTES.TRAVEL_HIGHLIGHTS}/${location.country_slug}`;
 
     navigate(url);
   };
@@ -56,7 +53,7 @@ const TravelCard: React.FC<{ location: MainPageLocation }> = ({ location }) => {
     <article
       className={styles.card}
       onClick={handleCardClick}
-      style={{ cursor: "pointer" }}
+      style={{ cursor: 'pointer' }}
     >
       <div className={styles.imageWrapper}>
         {displayImages.map((img, index) => (
@@ -64,8 +61,10 @@ const TravelCard: React.FC<{ location: MainPageLocation }> = ({ location }) => {
             key={index}
             src={img}
             alt={`Travel highlight from ${location.country_name}`}
-            className={`${styles.cardImage} ${index === currentIndex ? styles.active : ""}`}
-            loading="lazy"
+            className={`${styles.cardImage} ${
+              index === currentIndex ? styles.active : ''
+            }`}
+            loading='lazy'
           />
         ))}
       </div>
@@ -81,18 +80,18 @@ const TravelCard: React.FC<{ location: MainPageLocation }> = ({ location }) => {
           {displayLocation}
         </p>
         <p className={styles.cardDescription}>{description}</p>
-        <div className={styles.divider} aria-hidden="true" />
+        <div className={styles.divider} aria-hidden='true' />
       </div>
     </article>
   );
 };
 
-const TravelHighlights: React.FC = () => {
-  const [locations, setLocations] = React.useState<MainPageLocation[]>([]);
-  const [loading, setLoading] = React.useState(true);
+const TravelHighlights: FC = () => {
+  const [locations, setLocations] = useState<MainPageLocation[]>([]);
+  const [loading, setLoading] = useState(true);
   const { features } = useAppStore();
 
-  React.useEffect(() => {
+  useEffect(() => {
     const loadSliders = async () => {
       if (features?.travelHighlights === false) {
         setLoading(false);
@@ -102,7 +101,7 @@ const TravelHighlights: React.FC = () => {
         const data = await fetchTravelHighlights();
         setLocations(data);
       } catch (error) {
-        console.error("Failed to fetch travel highlights:", error);
+        console.error('Failed to fetch travel highlights:', error);
       } finally {
         setLoading(false);
       }
@@ -123,7 +122,7 @@ const TravelHighlights: React.FC = () => {
   }
 
   return (
-    <section id="travel" className={styles.section}>
+    <section id='travel' className={styles.section}>
       <header className={styles.header}>
         <h2 className={styles.title}>Travel Highlights</h2>
         <p className={styles.subtitle}>
@@ -133,7 +132,7 @@ const TravelHighlights: React.FC = () => {
       </header>
 
       <div className={styles.grid}>
-        {locations.map((location) => (
+        {locations.map(location => (
           <TravelCard key={location.pk} location={location} />
         ))}
       </div>

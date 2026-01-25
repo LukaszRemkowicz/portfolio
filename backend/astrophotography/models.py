@@ -1,4 +1,6 @@
 # backend/astrophotography/models.py
+from typing import Any
+
 from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
 from taggit.managers import TaggableManager
@@ -6,9 +8,47 @@ from taggit.models import GenericUUIDTaggedItemBase, TaggedItemBase
 
 from django.contrib.postgres.fields import DateRangeField
 from django.db import models
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from core.models import BaseImage
+from core.models import BaseImage, SingletonModel
+
+
+def default_star_path():
+    return [50, 500]
+
+
+def default_bolid_path():
+    return [50, 500]
+
+
+def default_star_streak():
+    return [100, 200]
+
+
+def default_bolid_streak():
+    return [20, 100]
+
+
+def default_star_opacity():
+    return [0.4, 0.8]
+
+
+def default_bolid_opacity():
+    return [0.7, 1.0]
+
+
+def default_smoke_opacity():
+    return [0.5, 0.8]
+
+
+def default_star_duration():
+    return [0.4, 1.2]
+
+
+def default_bolid_duration():
+    return [0.4, 0.9]
+
 
 CelestialObjectChoices = [
     ("Landscape", _("Landscape")),
@@ -183,6 +223,7 @@ class AstroImage(BaseImage):
         help_text=_("Software and techniques used for post-processing."),
     )
     celestial_object = models.CharField(
+        max_length=50,
         choices=CelestialObjectChoices,
         verbose_name=_("Celestial Object"),
         help_text=_("The type of celestial object captured."),
@@ -196,13 +237,6 @@ class AstroImage(BaseImage):
     tags = TaggableManager(
         through=UUIDTaggedItem, verbose_name=_("Tags"), help_text=_("Relevant tags for the image.")
     )
-
-    def clean(self) -> None:
-        super().clean()
-        # Note: M2M fields validation is primarily handled in the form
-
-    def save(self, *args: list, **kwargs: dict) -> None:
-        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.name} ({self.capture_date})" if self.capture_date else self.name
@@ -286,9 +320,7 @@ class MainPageLocation(models.Model):
         help_text=_("Optional specific background image for this location's page."),
     )
 
-    def save(self, *args: list, **kwargs: dict) -> None:
-        from django.utils.text import slugify
-
+    def save(self, *args: Any, **kwargs: Any) -> None:
         if self.country:
             self.country_slug = slugify(self.country.name)
 
@@ -334,3 +366,115 @@ class MainPageBackgroundImage(BaseImage):
         verbose_name = _("Main Page Background Image")
         verbose_name_plural = _("Main Page Background Images")
         ordering = ["-created_at"]
+
+
+class MeteorsMainPageConfig(SingletonModel):
+    """Global configuration for shooting stars (meteors) on the homepage"""
+
+    random_stars_shooting = models.BooleanField(
+        default=True,
+        verbose_name=_("Random Shooting Stars"),
+        help_text=_(
+            "If enabled, shooting stars will have randomized flight angles (0-360°). "
+            "If disabled, they will follow a fixed -45° diagonal path."
+        ),
+    )
+    bolid_chance = models.FloatField(
+        default=0.1,
+        verbose_name=_("Bolid Chance"),
+        help_text=_(
+            "The probability (0.0 to 1.0) of a regular shooting star being a 'bolid' (fireball). "
+            "0.1 means a 10% chance."
+        ),
+    )
+    bolid_interval = models.IntegerField(
+        default=60,
+        verbose_name=_("Bolid Minimum Interval"),
+        help_text=_(
+            "The minimum wait time (in seconds) between two bolid spawns to prevent cluster "
+            "sightings. Duration ranges (in seconds) on screen depends on path distance. "
+            "Speed = PathDistance / Duration. "
+            "- Smaller duration + Larger distance = High speed. "
+            "- Larger duration + Smaller distance = Low speed."
+        ),
+    )
+    star_path_range = models.JSONField(
+        default=default_star_path,
+        verbose_name=_("Star Path Range (px)"),
+        help_text=_(
+            "A list of two integers [min, max] representing the travel distance of a "
+            "regular star in pixels. Example: [50, 500]"
+        ),
+    )
+    bolid_path_range = models.JSONField(
+        default=default_bolid_path,
+        verbose_name=_("Bolid Path Range (px)"),
+        help_text=_(
+            "A list of two integers [min, max] representing the travel distance of a "
+            "bolid in pixels. Example: [50, 500]"
+        ),
+    )
+    star_streak_range = models.JSONField(
+        default=default_star_streak,
+        verbose_name=_("Star Streak Range (px)"),
+        help_text=_(
+            "A list of two integers [min, max] representing the visual length (streak) of a "
+            "regular star. Example: [100, 200]"
+        ),
+    )
+    bolid_streak_range = models.JSONField(
+        default=default_bolid_streak,
+        verbose_name=_("Bolid Streak Range (px)"),
+        help_text=_(
+            "A list of two integers [min, max] representing the visual length (streak) of "
+            "a bolid. Example: [20, 100]"
+        ),
+    )
+    star_duration_range = models.JSONField(
+        default=default_star_duration,
+        verbose_name=_("Star Duration Range (s)"),
+        help_text=_(
+            "A list of two floats [min, max] representing the duration (speed) of a regular star. "
+            "Example: [0.4, 1.2]"
+        ),
+    )
+    bolid_duration_range = models.JSONField(
+        default=default_bolid_duration,
+        verbose_name=_("Bolid Duration Range (s)"),
+        help_text=_(
+            "A list of two floats [min, max] representing the duration (speed) of a bolid. "
+            "Example: [0.4, 0.9]"
+        ),
+    )
+    star_opacity_range = models.JSONField(
+        default=default_star_opacity,
+        verbose_name=_("Star Opacity Range"),
+        help_text=_(
+            "A list of two floats [min, max] between 0.0 and 1.0 for regular star brightness. "
+            "Example: [0.4, 0.8]"
+        ),
+    )
+    bolid_opacity_range = models.JSONField(
+        default=default_bolid_opacity,
+        verbose_name=_("Bolid Opacity Range"),
+        help_text=_(
+            "A list of two floats [min, max] between 0.0 and 1.0 for bolid brightness. "
+            "Example: [0.7, 1.0]"
+        ),
+    )
+    smoke_opacity_range = models.JSONField(
+        default=default_smoke_opacity,
+        verbose_name=_("Smoke Opacity Range"),
+        help_text=_(
+            "A list of two floats [min, max] between 0.0 and 1.0 for the smoke trail of a bolid. "
+            "Example: [0.5, 0.8]"
+        ),
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
+
+    def __str__(self) -> str:
+        return f"Meteors Config (Updated: {self.updated_at.strftime('%Y-%m-%d %H:%M')})"
+
+    class Meta:
+        verbose_name = _("Meteors Main Page Configuration")
+        verbose_name_plural = _("Meteors Main Page Configuration")

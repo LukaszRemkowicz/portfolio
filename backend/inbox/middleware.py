@@ -2,7 +2,6 @@
 import logging
 from typing import Optional
 
-from django.db import DatabaseError
 from django.http import HttpRequest, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
@@ -38,27 +37,14 @@ class ContactFormKillSwitchMiddleware(MiddlewareMixin):
             return None
 
         # Check if contact form is enabled
-        try:
-            settings = LandingPageSettings.objects.first()
-            # If no settings exist yet, default to True (enabled)
-            is_enabled = settings.contact_form_enabled if settings else True
+        settings = LandingPageSettings.objects.last()
+        if not settings or not settings.contact_form_enabled:
+            logger.warning(f"Contact form request blocked - form disabled. Path: {request.path}")
 
-            if not is_enabled:
-                logger.warning(
-                    f"Contact form request blocked - form disabled. Path: {request.path}"
-                )
-
-                # Return HTTP 400 Bad Request as requested
-                return JsonResponse(
-                    {"message": "Contact form is currently disabled. Please try again later."},
-                    status=400,
-                )
-        except DatabaseError as error:
-            # If there's a database error accessing settings, fail closed (block request)
-            logger.error(f"Database error checking contact form settings in middleware: {error}")
+            # Return HTTP 400 Bad Request as requested
             return JsonResponse(
-                {"message": "Contact form is currently unavailable. Please try again later."},
-                status=500,
+                {"message": "Contact form is currently disabled. Please try again later."},
+                status=400,
             )
 
         # Form is enabled, continue processing

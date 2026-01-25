@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode } from 'react';
 
 // API Response Types
 export interface UserProfile {
@@ -15,7 +15,7 @@ export interface UserProfile {
 }
 
 export interface Profile {
-  type: "PROGRAMMING" | "ASTRO";
+  type: 'PROGRAMMING' | 'ASTRO';
   is_active: boolean;
   title: string;
   specific_bio: string;
@@ -101,10 +101,10 @@ export interface ValidationErrors {
   message?: string[];
 }
 export type SubmitStatus =
-  | "success"
-  | "validation_error"
-  | "rate_limited"
-  | "error"
+  | 'success'
+  | 'validation_error'
+  | 'rate_limited'
+  | 'error'
   | null;
 
 export interface ProjectImage {
@@ -159,13 +159,7 @@ export interface FilterParams {
   limit?: number;
 }
 
-export type FilterType =
-  | "Landscape"
-  | "Deep Sky"
-  | "Startrails"
-  | "Solar System"
-  | "Milky Way"
-  | "Northern Lights";
+export type FilterType = string;
 
 // API Types
 export interface ApiResponse<T = unknown> {
@@ -189,7 +183,7 @@ export interface EnabledFeatures {
   contactForm?: boolean;
   lastimages?: boolean;
   travelHighlights?: boolean;
-  meteors?: boolean;
+  meteors?: MeteorConfig | null;
 }
 
 export interface ApiRoutes {
@@ -198,16 +192,25 @@ export interface ApiRoutes {
   astroImages: string;
   astroImage: string;
   contact: string;
-  whatsEnabled: string;
+  settings: string;
   projects: string;
   travelHighlights: string;
   travelBySlug: string;
   tags: string;
+  categories: string;
 }
 
-// Legacy Gallery Item (for old gallery data structure)
-export interface GalleryItem {
-  id: number;
-  title: string;
-  imageUrl: string;
+export interface MeteorConfig {
+  randomShootingStars: boolean;
+  bolidChance: number;
+  bolidMinInterval: number;
+  starPathRange: [number, number];
+  bolidPathRange: [number, number];
+  starStreakRange: [number, number];
+  bolidStreakRange: [number, number];
+  starDurationRange: [number, number];
+  bolidDurationRange: [number, number];
+  starOpacityRange: [number, number];
+  bolidOpacityRange: [number, number];
+  smokeOpacityRange: [number, number];
 }

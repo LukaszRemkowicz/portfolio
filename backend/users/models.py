@@ -1,6 +1,6 @@
 # backend/users/models.py
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from django_ckeditor_5.fields import CKEditor5Field
 
@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 # Django limitation: AbstractUser's default manager expects 'username' parameter.
 # We MUST override create_superuser to accept 'email' for createsuperuser command to work.
-class UserManager(BaseUserManager):
+class UserManager(BaseUserManager["User"]):
     def create_superuser(
-        self, email: str, password: Optional[str] = None, **extra_fields: dict
+        self, email: str, password: Optional[str] = None, **extra_fields: Any
     ) -> "User":
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
@@ -25,7 +25,8 @@ class UserManager(BaseUserManager):
             raise ValueError("Email must be set")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
-        user.set_password(password)
+        if password:
+            user.set_password(password)
         user.save(using=self._db)
         return user
 
@@ -36,7 +37,7 @@ class User(AbstractUser, SingletonModel):
     Singleton pattern: Only one user instance is allowed in the database.
     """
 
-    username = None  # Remove username field - use email instead
+    username: Any = None  # Remove username field - use email instead
     email = models.EmailField(_("email address"), unique=True)
 
     USERNAME_FIELD = "email"
@@ -60,7 +61,8 @@ class User(AbstractUser, SingletonModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    objects = UserManager()  # Required for createsuperuser command to work with email
+    # Required for createsuperuser command to work with email
+    objects: UserManager = UserManager()  # type: ignore[assignment, misc]
 
     class Meta:
         verbose_name = "User"
@@ -75,13 +77,13 @@ class User(AbstractUser, SingletonModel):
         # Usingload() from SingletonModel or first() is fine, we want explicit check here
         return cls.objects.first()
 
-    def save(self, *args: tuple, **kwargs: dict) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """
         Override save to enforce singleton pattern.
         Only one user is allowed - if creating, ensure no other user exists.
         """
         # If this is a new user (no pk) and another user already exists, raise error
-        if self.pk is None and type(self).objects.exists():
+        if not self.pk and type(self).objects.exists():
             existing_user = type(self).objects.first()
             if existing_user:
                 raise ValueError(

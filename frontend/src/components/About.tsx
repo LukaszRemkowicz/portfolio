@@ -1,13 +1,13 @@
-import React from "react";
-import styles from "../styles/components/About.module.css";
-import { Camera } from "lucide-react";
-import { AboutProps } from "../types";
+import React from 'react';
+import styles from '../styles/components/About.module.css';
+import { Camera } from 'lucide-react';
+import { AboutProps } from '../types';
 
 const About: React.FC<AboutProps> = ({ profile }) => {
   if (!profile) return null;
 
   return (
-    <section id="about" className={styles.section}>
+    <section id='about' className={styles.section}>
       <div className={styles.container}>
         <div className={styles.info}>
           <h2 className={styles.title}>
@@ -20,7 +20,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
             dangerouslySetInnerHTML={{
               __html:
                 profile.bio ||
-                "Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye.",
+                'Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye.',
             }}
           />
           <div className={styles.stats}>
@@ -40,7 +40,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
             {profile.about_me_image ? (
               <img
                 src={profile.about_me_image}
-                alt="About me"
+                alt='About me'
                 className={styles.aboutImage}
               />
             ) : (

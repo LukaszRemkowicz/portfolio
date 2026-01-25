@@ -36,13 +36,13 @@ SECURE_CONTENT_TYPE_NOSNIFF = env.bool("SECURE_CONTENT_TYPE_NOSNIFF", default=Tr
 SECURE_BROWSER_XSS_FILTER = env.bool("SECURE_BROWSER_XSS_FILTER", default=True)
 
 # Domain settings
-ADMIN_DOMAIN = env("ADMIN_DOMAIN")
-API_DOMAIN = env("API_DOMAIN")
+SITE_DOMAIN = env.str("SITE_DOMAIN", default="portfolio.local")
+ADMIN_DOMAIN = env.str("ADMIN_DOMAIN", default="admin.portfolio.local")
+API_DOMAIN = env.str("API_DOMAIN", default="api.portfolio.local")
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + [
-    ADMIN_DOMAIN,
-    API_DOMAIN,
-]
+# Filter out empty values and consolidate hosts
+_base_hosts = [SITE_DOMAIN, ADMIN_DOMAIN, API_DOMAIN]
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + [h for h in _base_hosts if h]
 
 if DEBUG:
     ALLOWED_HOSTS += [
@@ -51,31 +51,44 @@ if DEBUG:
         "0.0.0.0",
     ]
 
-
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[]) + [
-    f"https://{ADMIN_DOMAIN}",
-    f"https://{API_DOMAIN}",
-]
+# Handle empty string from env to avoid [''] in the list
+_cors_env = env.list("CORS_ALLOWED_ORIGINS", default=[])
+CORS_ALLOWED_ORIGINS = [o for o in _cors_env if o]
 
-if DEBUG:
-    CORS_ALLOWED_ORIGINS += [
-        f"http://{API_DOMAIN}",
-        f"http://{API_DOMAIN}:3000",
-    ]
+# Automatically add our domains to CORS and CSRF trusted lists
+for h in _base_hosts:
+    if h:
+        CORS_ALLOWED_ORIGINS.append(f"https://{h}")
+        if DEBUG:
+            CORS_ALLOWED_ORIGINS.append(f"http://{h}")
+            CORS_ALLOWED_ORIGINS.append(f"http://{h}:3000")
 
+# Remove duplicates
+CORS_ALLOWED_ORIGINS = list(set(CORS_ALLOWED_ORIGINS))
 CORS_ALLOW_CREDENTIALS = True
 
 # Custom user model - this needs to be set before INSTALLED_APPS
 AUTH_USER_MODEL = "users.User"
 
-# CSRF Settings
-CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[]) + [
-    f"https://{ADMIN_DOMAIN}",
-    f"https://{API_DOMAIN}",
-]
-CSRF_COOKIE_DOMAIN = env("CSRF_COOKIE_DOMAIN")
+# CSRF & Session Settings
+# Sharing cookies across subdomains
+CSRF_COOKIE_DOMAIN = env.str("CSRF_COOKIE_DOMAIN", default=".portfolio.local")
+SESSION_COOKIE_DOMAIN = env.str("SESSION_COOKIE_DOMAIN", default=".portfolio.local")
+
+# CSRF Trusted Origins
+_csrf_env = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+CSRF_TRUSTED_ORIGINS = [o for o in _csrf_env if o]
+for h in _base_hosts:
+    if h:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{h}")
+        if DEBUG:
+            CSRF_TRUSTED_ORIGINS.append(f"http://{h}")
+
+# Remove duplicates
+CSRF_TRUSTED_ORIGINS = list(set(CSRF_TRUSTED_ORIGINS))
+
 CSRF_USE_SESSIONS = True
 CSRF_COOKIE_SECURE = True
 
@@ -148,12 +161,12 @@ WSGI_APPLICATION = "core.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": env.str("DB_ENGINE", default=cast(Any, "django.db.backends.postgresql")),
-        "NAME": env.str("DB_NAME", default=cast(Any, "portfolio")),
-        "USER": env.str("DB_USER", default=cast(Any, "postgres")),
-        "PASSWORD": env.str("DB_PASSWORD", default=cast(Any, "postgres")),
-        "HOST": env.str("DB_HOST", default=cast(Any, "db")),
-        "PORT": env.int("DB_PORT", default=cast(Any, 5432)),
+        "ENGINE": env.str("DB_ENGINE", default="django.db.backends.postgresql"),
+        "NAME": env.str("DB_NAME", default="portfolio"),
+        "USER": env.str("DB_USER", default="postgres"),
+        "PASSWORD": env.str("DB_PASSWORD", default="postgres"),
+        "HOST": env.str("DB_HOST", default="db"),
+        "PORT": env.str("DB_PORT", default="5432"),
     }
 }
 
@@ -258,23 +271,17 @@ LOGGING = {
         "console": {
             "level": "INFO" if not DEBUG else "DEBUG",
             "class": "logging.StreamHandler",
-            "formatter": "simple",
-        },
-        "file": {
-            "level": "ERROR",
-            "class": "logging.FileHandler",
-            "filename": os.path.join(BASE_DIR, "django_error.log"),
-            "formatter": "verbose",
+            "formatter": "simple" if not DEBUG else "verbose",
         },
     },
     "loggers": {
         "django": {
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
             "level": "INFO",
             "propagate": True,
         },
         "core": {
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
             "level": "DEBUG" if DEBUG else "INFO",
             "propagate": True,
         },
@@ -324,8 +331,11 @@ EMAIL_BACKEND = env.str(
     default=cast(Any, "django.core.mail.backends.smtp.EmailBackend"),
 )
 EMAIL_HOST = env.str("EMAIL_HOST", default=cast(Any, "smtp.gmail.com"))
-EMAIL_PORT = env.int("EMAIL_PORT", default=cast(Any, 587))
-EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=cast(Any, True))
+# Handle empty string from docker-compose
+_port_str = env.str("EMAIL_PORT", default="587")
+EMAIL_PORT = int(_port_str) if _port_str and _port_str.strip() else 587
+_tls_str = env.str("EMAIL_USE_TLS", default="True")
+EMAIL_USE_TLS = _tls_str.lower() == "true" if _tls_str else True
 EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default=cast(Any, ""))
 EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default=cast(Any, ""))
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="noreply@example.com")

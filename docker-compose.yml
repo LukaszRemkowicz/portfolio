@@ -1,9 +1,6 @@
 networks:
   portfolio_network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.10.0.0/16
+
 
 x-backend-common: &backend-common
   build:
@@ -14,9 +11,10 @@ x-backend-common: &backend-common
   volumes:
     - ./backend:/app
   env_file:
-    - ./backend/.env
+    - path: ./backend/.env
+      required: false
   environment:
-    DOCKER_ENV: true
+    DOCKER_ENV: "true"
     PYTHONPATH: "."
   depends_on:
     - db
@@ -25,45 +23,49 @@ x-backend-common: &backend-common
 services:
   portfolio-fe:
     build:
-      context: ./frontend
+      context: .
+      dockerfile: frontend/Dockerfile
       target: dev
     networks:
-      portfolio_network:
-        ipv4_address: 172.10.0.2
+      - portfolio_network
+    environment:
+      API_URL: https://${API_DOMAIN:-api.portfolio.local}
+      SSL_KEY_PATH: /etc/nginx/ssl/portfolio.local.key
+      SSL_CRT_PATH: /etc/nginx/ssl/portfolio.local.crt
     ports:
       - "3000:3000"
     restart: unless-stopped
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-      - ./frontend/package.json:/app/package.json
-      - ./frontend/webpack.config.js:/app/webpack.config.js
-      - ./frontend/.babelrc:/app/.babelrc
-      - ./frontend/node_modules/@types:/app/node_modules/@types
-      - ./nginx/ssl/certs:/etc/ssl/certs:ro
+      - ./frontend:/app
+      - fe_node_modules:/app/node_modules
+      - ./nginx/ssl/certs:/etc/nginx/ssl:ro
 
   portfolio-be:
     <<: *backend-common
-    networks:
-      portfolio_network:
-        ipv4_address: 172.10.0.3
     ports:
       - "8000:8000"
+    command: >
+      sh -c "
+        python manage.py migrate --noinput &&
+        python manage.py seed_settings &&
+        python manage.py compilemessages &&
+        python manage.py collectstatic --noinput &&
+        python manage.py runserver 0.0.0.0:8000
+      "
 
   portfolio-test:
     <<: *backend-common
-    profiles:
-      - test
+    profiles: [ "test" ]
     command: pytest
 
   db:
     image: postgres:15
     restart: unless-stopped
     networks:
-      portfolio_network:
-        ipv4_address: 172.10.0.4
+      - portfolio_network
     env_file:
-      - ./backend/.env
+      - path: ./backend/.env
+        required: false
     environment:
       POSTGRES_DB: ${DB_NAME:-portfolio}
       POSTGRES_USER: ${DB_USER:-postgres}
@@ -77,16 +79,14 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     networks:
-      portfolio_network:
-        ipv4_address: 172.10.0.6
+      - portfolio_network
     ports:
       - "6379:6379"
 
   portfolio-nginx:
     image: nginx:1.25
     networks:
-      portfolio_network:
-        ipv4_address: 172.10.0.5
+      - portfolio_network
     depends_on:
       - portfolio-fe
       - portfolio-be
@@ -101,3 +101,4 @@ services:
 
 volumes:
   postgres_data:
+  fe_node_modules:

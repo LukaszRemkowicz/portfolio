@@ -1,7 +1,31 @@
-import React, { useState, useEffect, memo, useRef } from "react";
-import styles from "../styles/components/ShootingStars.module.css";
-import { CONFIG } from "../config";
-import { useAppStore } from "../store/useStore";
+// frontend/src/components/ShootingStars.tsx
+import {
+  useState,
+  useEffect,
+  memo,
+  useRef,
+  useCallback,
+  type FC,
+  type CSSProperties,
+} from 'react';
+import styles from '../styles/components/ShootingStars.module.css';
+import { useAppStore } from '../store/useStore';
+import { MeteorConfig } from '../types';
+
+const DEFAULT_METEOR_CONFIG: MeteorConfig = {
+  randomShootingStars: true,
+  bolidChance: 0.1,
+  bolidMinInterval: 60,
+  starDurationRange: [0.4, 1.2],
+  bolidDurationRange: [0.4, 0.9],
+  starPathRange: [50, 500],
+  bolidPathRange: [50, 500],
+  starStreakRange: [100, 200],
+  bolidStreakRange: [20, 100],
+  starOpacityRange: [0.4, 0.8],
+  bolidOpacityRange: [0.7, 1.0],
+  smokeOpacityRange: [0.5, 0.8],
+};
 
 interface DustParticle {
   id: number;
@@ -41,16 +65,16 @@ interface ShootingStarsProps {
 
 const MemoizedStar = memo(({ star }: { star: ShootingStar }) => (
   <div
-    className={`${styles.shootingStar} ${star.isBolid ? styles.bolid : ""}`}
+    className={`${styles.shootingStar} ${star.isBolid ? styles.bolid : ''}`}
     style={
       {
         left: star.left,
         top: star.top,
         animation: `${styles.move} ${star.duration}s linear forwards`,
-        "--angle": `${star.angle}deg`,
-        "--distance": `${star.distance}px`,
-        "--width": `${star.width}px`,
-      } as React.CSSProperties
+        '--angle': `${star.angle}deg`,
+        '--distance': `${star.distance}px`,
+        '--width': `${star.width}px`,
+      } as CSSProperties
     }
   >
     <div
@@ -58,8 +82,8 @@ const MemoizedStar = memo(({ star }: { star: ShootingStar }) => (
       style={
         {
           animation: `${styles.streakFade} ${star.duration}s linear forwards`,
-          "--opacity": star.opacity,
-        } as React.CSSProperties
+          '--opacity': star.opacity,
+        } as CSSProperties
       }
     />
     {star.isBolid && (
@@ -67,28 +91,30 @@ const MemoizedStar = memo(({ star }: { star: ShootingStar }) => (
         <div
           className={styles.bolidFlash}
           style={{
-            animation: `${styles.explode} ${star.duration * 0.4}s ease-out forwards`,
+            animation: `${styles.explode} ${
+              star.duration * 0.4
+            }s ease-out forwards`,
             animationDelay: `${star.duration * 0.6}s`,
           }}
         />
-        {star.dustParticles?.map((particle) => (
+        {star.dustParticles?.map(particle => (
           <div
             key={particle.id}
             className={styles.bolidDust}
             style={
               {
-                "--p-size": `${particle.size}px`,
-                "--p-blur": `${particle.blur}px`,
-                "--p-opacity": particle.opacity,
-                "--p-rotate": particle.rotate,
-                "--p-skew": particle.skew,
-                "--p-x": `${particle.offsetX}px`,
-                "--p-y": `${particle.offsetY}px`,
-                "--p-drift-x": `${particle.driftX}px`,
-                "--p-drift-y": `${particle.driftY}px`,
+                '--p-size': `${particle.size}px`,
+                '--p-blur': `${particle.blur}px`,
+                '--p-opacity': particle.opacity,
+                '--p-rotate': particle.rotate,
+                '--p-skew': particle.skew,
+                '--p-x': `${particle.offsetX}px`,
+                '--p-y': `${particle.offsetY}px`,
+                '--p-drift-x': `${particle.driftX}px`,
+                '--p-drift-y': `${particle.driftY}px`,
                 animation: `${styles.driftAndFade} ${particle.duration}s ease-out forwards`,
                 animationDelay: `${particle.delay}s`,
-              } as React.CSSProperties
+              } as CSSProperties
             }
           />
         ))}
@@ -97,21 +123,32 @@ const MemoizedStar = memo(({ star }: { star: ShootingStar }) => (
   </div>
 ));
 
-MemoizedStar.displayName = "MemoizedStar";
+MemoizedStar.displayName = 'MemoizedStar';
 
-const ShootingStars: React.FC<ShootingStarsProps> = ({
+const ShootingStars: FC<ShootingStarsProps> = ({
   minDelay = 4000,
   maxDelay = 12000,
   initialDelay = 5000,
-  className = "",
-  random = CONFIG.randomShootingStars,
+  className = '',
+  random: randomProp,
 }) => {
-  const { features } = useAppStore();
+  const { features, meteorConfig: dynamicConfig } = useAppStore();
   const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
   const lastBolidTimeRef = useRef<number>(0);
 
+  // Helper to get value from dynamic config with fallback
+  const getVal = useCallback(
+    <K extends keyof MeteorConfig>(key: K): MeteorConfig[K] => {
+      if (dynamicConfig && dynamicConfig[key] !== undefined) {
+        return dynamicConfig[key];
+      }
+      return DEFAULT_METEOR_CONFIG[key];
+    },
+    [dynamicConfig]
+  );
+
   useEffect(() => {
-    if (!CONFIG.enableShootingStars || features?.meteors === false) return;
+    if (!features?.meteors) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
 
@@ -122,40 +159,50 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
       const top = `${Math.random() * window.innerHeight}px`;
       // Bolid logic
       const timeSinceLastBolid = now - lastBolidTimeRef.current;
-      const canSpawnBolid =
-        timeSinceLastBolid >= CONFIG.bolidMinInterval * 1000;
-      const isBolid = canSpawnBolid && Math.random() < CONFIG.bolidChance;
+      const bolidMinInterval = getVal('bolidMinInterval');
+      const bolidChance = getVal('bolidChance');
+
+      const canSpawnBolid = timeSinceLastBolid >= bolidMinInterval * 1000;
+      const isBolid = canSpawnBolid && Math.random() < bolidChance;
 
       if (isBolid) {
         lastBolidTimeRef.current = now;
       }
 
       // Duration (speed) randomization
-      const [minDur, maxDur] = isBolid
-        ? CONFIG.bolidDurationRange
-        : CONFIG.starDurationRange;
-      const duration = Math.random() * (maxDur - minDur) + minDur;
+      const durationRange = isBolid
+        ? getVal('bolidDurationRange')
+        : getVal('starDurationRange');
+      const duration =
+        Math.random() * (durationRange[1] - durationRange[0]) +
+        durationRange[0];
 
       // Streak length (visual thickness) randomization
-      const [minStreak, maxStreak] = isBolid
-        ? CONFIG.bolidStreakRange
-        : CONFIG.starStreakRange;
-      const width = Math.random() * (maxStreak - minStreak) + minStreak;
+      const streakRange = isBolid
+        ? getVal('bolidStreakRange')
+        : getVal('starStreakRange');
+      const width =
+        Math.random() * (streakRange[1] - streakRange[0]) + streakRange[0];
 
       // Opacity (lightness) randomization
-      const [minOp, maxOp] = isBolid
-        ? CONFIG.bolidOpacityRange
-        : CONFIG.starOpacityRange;
-      const opacity = Math.random() * (maxOp - minOp) + minOp;
+      const opacityRange = isBolid
+        ? getVal('bolidOpacityRange')
+        : getVal('starOpacityRange');
+      const opacity =
+        Math.random() * (opacityRange[1] - opacityRange[0]) + opacityRange[0];
 
       // Use fixed trajectory if random is false
-      const angle = random ? Math.random() * 360 : -45;
+      const randomStars = randomProp ?? getVal('randomShootingStars');
+      const angle = randomStars ? Math.random() * 360 : -45;
 
       // Path distance (length of travel) randomization
-      const [p1, p2] = isBolid ? CONFIG.bolidPathRange : CONFIG.starPathRange;
-      const minPath = Math.min(p1, p2);
-      const maxPath = Math.max(p1, p2);
-      const distance = random
+      const pathRange = isBolid
+        ? getVal('bolidPathRange')
+        : getVal('starPathRange');
+
+      const minPath = Math.min(pathRange[0], pathRange[1]);
+      const maxPath = Math.max(pathRange[0], pathRange[1]);
+      const distance = randomStars
         ? Math.random() * (maxPath - minPath) + minPath
         : 600;
 
@@ -163,29 +210,25 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
       const dustParticles: DustParticle[] = [];
       if (isBolid) {
         const segmentCount = 20 + Math.floor(Math.random() * 10); // 20-30 pieces for continuous look
+        const smokeOpacityRange = getVal('smokeOpacityRange');
         for (let i = 0; i < segmentCount; i++) {
           // Spread pieces along the flight path (roughly 30% to 90% of duration)
           const progress = 0.3 + (i / segmentCount) * 0.6;
 
           dustParticles.push({
             id: Math.random(),
-            // Zero initial jitter for perfect line alignment at spawn
             offsetX: (Math.random() - 0.5) * 2,
             offsetY: (Math.random() - 0.5) * 2,
-            // Thinner initial segments
             size: 40 + Math.random() * 40,
-            blur: 1, // Sharp start
-            // Relative to rotated parent: 0deg is parallel to path
+            blur: 1,
             rotate: `${(Math.random() - 0.5) * 10}deg`,
             skew: `0deg`,
             opacity:
-              Math.random() *
-                (CONFIG.smokeOpacityRange[1] - CONFIG.smokeOpacityRange[0]) +
-              CONFIG.smokeOpacityRange[0],
+              Math.random() * (smokeOpacityRange[1] - smokeOpacityRange[0]) +
+              smokeOpacityRange[0],
             driftX: (Math.random() - 0.5) * 20,
             driftY: (Math.random() - 0.5) * 20,
             duration: 2.0 + Math.random() * 1.5,
-            // Start appearing only after the bolid is gone
             delay: duration + duration * progress,
           });
         }
@@ -203,22 +246,20 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
         isBolid,
         dustParticles,
       };
-      setShootingStars((prev) => [...prev, newStar]);
+      setShootingStars(prev => [...prev, newStar]);
 
       // Calculate when to remove the star from state
-      // Bolids need to hang around longer for their dust to finish
       let totalLifetime = duration * 1000;
       if (isBolid && dustParticles.length > 0) {
         const maxDustTime = Math.max(
-          ...dustParticles.map((p) => p.delay + p.duration),
+          ...dustParticles.map(p => p.delay + p.duration)
         );
         totalLifetime = Math.max(totalLifetime, maxDustTime * 1000);
       }
 
-      // Remove the star after its animation (and dust) completes
       setTimeout(() => {
-        setShootingStars((prev) => prev.filter((star) => star.id !== id));
-      }, totalLifetime + 100); // Add small buffer
+        setShootingStars(prev => prev.filter(star => star.id !== id));
+      }, totalLifetime + 100);
 
       // Schedule next star
       const nextDelay = Math.random() * (maxDelay - minDelay) + minDelay;
@@ -228,13 +269,21 @@ const ShootingStars: React.FC<ShootingStarsProps> = ({
     timeoutId = setTimeout(createShootingStar, initialDelay);
 
     return () => clearTimeout(timeoutId);
-  }, [minDelay, maxDelay, initialDelay, random, features?.meteors]);
+  }, [
+    minDelay,
+    maxDelay,
+    initialDelay,
+    randomProp,
+    features?.meteors,
+    dynamicConfig,
+    getVal,
+  ]);
 
-  if (!CONFIG.enableShootingStars || features?.meteors === false) return null;
+  if (!features?.meteors) return null;
 
   return (
     <div className={`${styles.starContainer} ${className}`}>
-      {shootingStars.map((star) => (
+      {shootingStars.map(star => (
         <MemoizedStar key={star.id} star={star} />
       ))}
     </div>

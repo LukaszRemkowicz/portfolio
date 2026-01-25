@@ -1,3 +1,4 @@
+# backend/inbox/tests/test_views.py
 from unittest.mock import MagicMock
 
 import pytest
@@ -6,18 +7,13 @@ from rest_framework.test import APIClient
 
 from django.urls import reverse
 
-from core.models import LandingPageSettings
-
-# Email sending and contact form setup are automatically handled by conftest.py fixtures
+from core.tests.factories import LandingPageSettingsFactory
 
 
 @pytest.mark.django_db
-def test_contact_throttling_success(
-    mock_email_service: MagicMock, landing_page_settings: LandingPageSettings, api_client: APIClient
-) -> None:
+def test_contact_throttling_success(mock_email_service: MagicMock, api_client: APIClient) -> None:
     """Test that first 5 contact form submissions succeed"""
-    landing_page_settings.contact_form_enabled = True
-    landing_page_settings.save()
+    LandingPageSettingsFactory(contact_form_enabled=True)
 
     url = reverse("inbox:contact-message-list")
 
@@ -47,11 +43,10 @@ def test_contact_throttling_success(
 
 @pytest.mark.django_db
 def test_contact_throttling_limit_exceeded(
-    mock_email_service: MagicMock, landing_page_settings: LandingPageSettings, api_client: APIClient
+    mock_email_service: MagicMock, api_client: APIClient
 ) -> None:
     """Test that contact form submission is throttled after limit"""
-    landing_page_settings.contact_form_enabled = True
-    landing_page_settings.save()
+    LandingPageSettingsFactory(contact_form_enabled=True)
 
     url = reverse("inbox:contact-message-list")
 
@@ -92,12 +87,9 @@ def test_contact_throttling_limit_exceeded(
 
 
 @pytest.mark.django_db
-def test_contact_throttling_headers(
-    mock_email_service: MagicMock, landing_page_settings: LandingPageSettings, api_client: APIClient
-) -> None:
+def test_contact_throttling_headers(mock_email_service: MagicMock, api_client: APIClient) -> None:
     """Test that throttling response includes proper headers"""
-    landing_page_settings.contact_form_enabled = True
-    landing_page_settings.save()
+    LandingPageSettingsFactory(contact_form_enabled=True)
 
     url = reverse("inbox:contact-message-list")
 
@@ -133,21 +125,23 @@ def test_contact_throttling_headers(
 
 
 @pytest.mark.django_db
-def test_contact_endpoint_disallows_get(api_client: APIClient) -> None:
-    """Test that GET requests to the contact endpoint return 405 Method Not Allowed"""
+def test_contact_endpoint_disallows_unsupported_methods(api_client: APIClient) -> None:
+    """Test that GET, PUT, PATCH, and DELETE requests return 405 Method Not Allowed"""
     url = reverse("inbox:contact-message-list")
+    unsupported_methods = ["get", "put", "patch", "delete"]
 
-    response = api_client.get(url)
-    assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+    for method in unsupported_methods:
+        client_method = getattr(api_client, method)
+        response = client_method(url)
+        assert (
+            response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+        ), f"Method {method.upper()} should be disallowed"
 
 
 @pytest.mark.django_db
-def test_contact_payload_too_large(
-    landing_page_settings: LandingPageSettings, api_client: APIClient
-) -> None:
+def test_contact_payload_too_large(api_client: APIClient) -> None:
     """Test that large payloads are rejected with 413"""
-    landing_page_settings.contact_form_enabled = True
-    landing_page_settings.save()
+    LandingPageSettingsFactory(contact_form_enabled=True)
 
     url = reverse("inbox:contact-message-list")
     data = {
@@ -164,12 +158,9 @@ def test_contact_payload_too_large(
 
 
 @pytest.mark.django_db
-def test_contact_invalid_data(
-    landing_page_settings: LandingPageSettings, api_client: APIClient
-) -> None:
+def test_contact_invalid_data(api_client: APIClient) -> None:
     """Test that invalid data is rejected by the view before service call"""
-    landing_page_settings.contact_form_enabled = True
-    landing_page_settings.save()
+    LandingPageSettingsFactory(contact_form_enabled=True)
 
     url = reverse("inbox:contact-message-list")
     data = {

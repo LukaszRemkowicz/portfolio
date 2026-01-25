@@ -21,26 +21,22 @@ logger = logging.getLogger(__name__)
 
 
 class UserViewSet(viewsets.ViewSet):
-    """ViewSet for retrieving the user profile"""
+    """ViewSet for retrieving the singleton user profile"""
 
     permission_classes = [permissions.AllowAny]
     throttle_classes = [APIRateThrottle, UserRateThrottle]
+    http_method_names = ["get", "head", "options"]
 
     @action(detail=False, methods=["get"])
     def profile(self, request: Request) -> Response:
         """Get the user profile (singleton pattern: only one user exists)"""
-        try:
-            user = User.get_user()
-            if not user:
-                return Response({"detail": "No user found."}, status=status.HTTP_404_NOT_FOUND)
-            if not user.is_active:
-                return Response({"detail": "User is not active."}, status=status.HTTP_404_NOT_FOUND)
+        user = User.get_user()
 
-            serializer = UserSerializer(user, context={"request": request})
-            return Response(serializer.data)
-        except Exception:
-            logger.exception("Error retrieving user profile")
-            return Response(
-                {"detail": "An internal error occurred while retrieving the profile."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        if not user:
+            return Response({"detail": "No user found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not user.is_active:
+            return Response({"detail": "User is not active."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UserSerializer(user, context={"request": request})
+        return Response(serializer.data)

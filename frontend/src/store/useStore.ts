@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 import {
   UserProfile,
   AstroImage,
@@ -6,22 +6,25 @@ import {
   EnabledFeatures,
   Project,
   Tag,
-} from "../types";
+  MeteorConfig,
+} from '../types';
 import {
   fetchProfile,
   fetchBackground,
   fetchAstroImages,
-  fetchEnabledFeatures,
+  fetchSettings,
   fetchProjects,
   fetchTags,
-} from "../api/services";
-import { NetworkError, ServerError } from "../api/errors";
+  fetchCategories,
+} from '../api/services';
+import { NetworkError, ServerError } from '../api/errors';
 
 interface AppState {
   profile: UserProfile | null;
   backgroundUrl: string | null;
   images: AstroImage[];
   projects: Project[];
+  categories: string[];
   tags: Tag[];
   features: EnabledFeatures | null;
   isInitialLoading: boolean;
@@ -37,8 +40,11 @@ interface AppState {
   loadInitialData: () => Promise<void>;
   loadImages: (params?: FilterParams) => Promise<void>;
   loadProjects: () => Promise<void>;
+  loadCategories: () => Promise<void>;
   loadTags: (category?: string) => Promise<void>;
+  loadMeteorConfig: () => Promise<void>;
   clearError: () => void;
+  meteorConfig: MeteorConfig | null;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -46,16 +52,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   backgroundUrl: null,
   images: [],
   projects: [],
+  categories: [],
   tags: [],
   features: null,
   isInitialLoading: false,
   isImagesLoading: false,
   isProjectsLoading: false,
   error: null,
-  initialSessionId: "",
-  imagesSessionId: "",
-  projectsSessionId: "",
-  tagsSessionId: "",
+  initialSessionId: '',
+  imagesSessionId: '',
+  projectsSessionId: '',
+  tagsSessionId: '',
+  meteorConfig: null,
 
   clearError: () => set({ error: null }),
 
@@ -66,31 +74,32 @@ export const useAppStore = create<AppState>((set, get) => ({
     const sessionId = crypto.randomUUID();
     set({ isInitialLoading: true, error: null, initialSessionId: sessionId });
     try {
-      const [profileData, bgUrl, featuresData] = await Promise.all([
+      const [profileData, bgUrl, settingsData] = await Promise.all([
         fetchProfile(),
         fetchBackground(),
-        fetchEnabledFeatures(),
+        fetchSettings(),
       ]);
 
       if (get().initialSessionId === sessionId) {
         set({
           profile: profileData,
           backgroundUrl: bgUrl,
-          features: featuresData,
+          features: settingsData,
+          meteorConfig: settingsData.meteors || null,
           isInitialLoading: false,
         });
       }
     } catch (e: unknown) {
       if (get().initialSessionId === sessionId) {
-        let message = "An unexpected anomaly occurred.";
+        let message = 'An unexpected anomaly occurred.';
         if (e instanceof NetworkError) {
-          message = "Signal lost. Please check your network connection.";
+          message = 'Signal lost. Please check your network connection.';
         } else if (e instanceof ServerError) {
-          message = "The cosmic archives are temporarily unreachable.";
+          message = 'The cosmic archives are temporarily unreachable.';
         }
         set({ error: message, isInitialLoading: false });
       }
-      console.error("Store initial load failure:", e);
+      console.error('Store initial load failure:', e);
     }
   },
 
@@ -109,15 +118,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     } catch (e: unknown) {
       if (get().imagesSessionId === sessionId) {
-        let message = "Failed to fetch gallery images.";
+        let message = 'Failed to fetch gallery images.';
         if (e instanceof NetworkError) {
-          message = "Connection failed. The cosmic relay is offline.";
+          message = 'Connection failed. The cosmic relay is offline.';
         } else if (e instanceof ServerError) {
-          message = "Server collision detected. Please try again later.";
+          message = 'Server collision detected. Please try again later.';
         }
         set({ error: message, isImagesLoading: false });
       }
-      console.error("Store image load failure:", e);
+      console.error('Store image load failure:', e);
     }
   },
 
@@ -132,15 +141,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     } catch (e: unknown) {
       if (get().projectsSessionId === sessionId) {
-        let message = "Failed to fetch programming projects.";
+        let message = 'Failed to fetch programming projects.';
         if (e instanceof NetworkError) {
-          message = "Connection failure while accessing project archives.";
+          message = 'Connection failure while accessing project archives.';
         } else if (e instanceof ServerError) {
-          message = "Project database is temporarily unavailable.";
+          message = 'Project database is temporarily unavailable.';
         }
         set({ error: message, isProjectsLoading: false });
       }
-      console.error("Store projects load failure:", e);
+      console.error('Store projects load failure:', e);
     }
   },
   loadTags: async (category?: string) => {
@@ -152,7 +161,27 @@ export const useAppStore = create<AppState>((set, get) => ({
         set({ tags: data });
       }
     } catch (e: unknown) {
-      console.error("Store tags load failure:", e);
+      console.error('Store tags load failure:', e);
+    }
+  },
+  loadCategories: async () => {
+    // Avoid double loading if already have data
+    if (get().categories.length > 0) return;
+
+    try {
+      const data = await fetchCategories();
+      set({ categories: data });
+    } catch (e: unknown) {
+      console.error('Store categories load failure:', e);
+    }
+  },
+
+  loadMeteorConfig: async () => {
+    try {
+      const data = await fetchSettings();
+      set({ meteorConfig: data.meteors || null });
+    } catch (e: unknown) {
+      console.error('Store meteor config load failure:', e);
     }
   },
 }));

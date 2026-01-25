@@ -1,29 +1,31 @@
-import React, { Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import HomePage from "./HomePage";
+// frontend/src/App.tsx
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import HomePage from './HomePage';
 
 // Lazy load larger components
-const AstroGallery = lazy(() => import("./components/AstroGallery"));
-const Programming = lazy(() => import("./components/Programming"));
+const AstroGallery = lazy(() => import('./components/AstroGallery'));
+const Programming = lazy(() => import('./components/Programming'));
 const TravelHighlightsPage = lazy(
-  () => import("./components/TravelHighlightsPage"),
+  () => import('./components/TravelHighlightsPage')
 );
-import MainLayout from "./components/MainLayout";
-import LoadingScreen from "./components/common/LoadingScreen";
-import ScrollToHash from "./components/common/ScrollToHash";
-import ErrorBoundary from "./components/common/ErrorBoundary";
-import "./styles/components/App.module.css";
+import MainLayout from './components/MainLayout';
+import LoadingScreen from './components/common/LoadingScreen';
+import ScrollToHash from './components/common/ScrollToHash';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import { APP_ROUTES } from './api/constants';
+import './styles/components/App.module.css';
 
 const App: React.FC = () => {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ScrollToHash />
       <Suspense fallback={<LoadingScreen />}>
         <ErrorBoundary>
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route path={APP_ROUTES.HOME} element={<HomePage />} />
             <Route
-              path="/astrophotography"
+              path={APP_ROUTES.ASTROPHOTOGRAPHY}
               element={
                 <MainLayout>
                   <AstroGallery />
@@ -31,7 +33,7 @@ const App: React.FC = () => {
               }
             />
             <Route
-              path="/programming"
+              path={APP_ROUTES.PROGRAMMING}
               element={
                 <MainLayout>
                   <Programming />
@@ -39,7 +41,7 @@ const App: React.FC = () => {
               }
             />
             <Route
-              path="/travel-highlights/:countrySlug/:placeSlug?"
+              path={`${APP_ROUTES.TRAVEL_HIGHLIGHTS}/:countrySlug/:placeSlug?`}
               element={
                 <MainLayout>
                   <TravelHighlightsPage />

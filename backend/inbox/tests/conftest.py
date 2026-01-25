@@ -1,12 +1,15 @@
+# backend/inbox/tests/conftest.py
 from typing import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from core.models import LandingPageSettings
+from core.tests.factories import LandingPageSettingsFactory
 from inbox.middleware import ContactFormKillSwitchMiddleware
 from inbox.models import ContactMessage
 from inbox.serializers import ContactMessageSerializer
+from inbox.tests.factories import ContactMessageFactory
 
 
 @pytest.fixture
@@ -14,8 +17,6 @@ def landing_page_settings() -> LandingPageSettings:
     """
     Get landing page settings fixture.
     """
-    from core.tests.factories import LandingPageSettingsFactory
-
     # Ensure single instance
     LandingPageSettings.objects.all().delete()
     return LandingPageSettingsFactory()
@@ -47,8 +48,6 @@ def mock_email_service() -> Generator[MagicMock, None, None]:
 @pytest.fixture
 def contact_message() -> ContactMessage:
     """Create a unsaved ContactMessage instance for testing"""
-    from inbox.tests.factories import ContactMessageFactory
-
     return ContactMessageFactory.build()
 
 

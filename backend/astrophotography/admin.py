@@ -1,17 +1,22 @@
+from django_countries import countries
+
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.postgres.forms import RangeWidget
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
-from .forms import AstroImageForm
+from .forms import AstroImageForm, MeteorsMainPageConfigForm
 from .models import (
     AstroImage,
     Camera,
     Lens,
     MainPageBackgroundImage,
     MainPageLocation,
+    MeteorsMainPageConfig,
     Place,
     Telescope,
     Tracker,
@@ -138,8 +143,13 @@ class AstroImageAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at", "thumbnail")
 
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        """
+        Customizes the change form view to hide certain buttons.
+
+        Specifically, hides the 'Save and add another' button when editing
+        an existing object to streamline the UI.
+        """
         extra_context = extra_context or {}
-        # Hide "Save and add another" button when editing (only show when adding)
         if object_id:
             extra_context["show_save_and_add_another"] = False
         return super().changeform_view(request, object_id, form_url, extra_context)
@@ -172,28 +182,55 @@ class MainPageLocationForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from django_countries import countries
+        self._enhance_country_labels()
+        self._apply_dynamic_filtering()
 
-        # Enhance country labels
-        enhanced_choices = [("", "---------")]
-        for code, name in self.fields["country"].choices:
-            if code:
-                alpha3 = countries.alpha3(code)
-                label = f"{name} ({code}"
-                if alpha3:
-                    label += f", {alpha3}"
-                label += ")"
-                enhanced_choices.append((code, label))
-        self.fields["country"].choices = enhanced_choices
+    def _enhance_country_labels(self):
+        """
+        Enhance the country choice labels in the form with ISO Alpha-3 codes.
 
+        Transforms default country names (e.g., 'Poland') into a more detailed
+        format including Alpha-2 and Alpha-3 codes (e.g., 'Poland (PL, POL)')
+        to improve administrative scanning and data verification.
+        """
+        country_field = self.fields.get("country")
+        if isinstance(country_field, forms.ChoiceField):
+            enhanced_choices = [("", "---------")]
+            for code, name in country_field.choices:  # type: ignore[misc, union-attr]
+                if code:
+                    alpha3 = countries.alpha3(code)
+                    label = f"{name} ({code}"
+                    if alpha3:
+                        label += f", {alpha3}"
+                    label += ")"
+                    enhanced_choices.append((code, label))
+            country_field.choices = enhanced_choices
+
+    def _apply_dynamic_filtering(self):  # noqa: C901
+        """
+        Dynamically filter the available images based on the selected country and place.
+
+        Ensures that 'images' and 'background_image' querysets only contain images
+        matching the specific location of this Travel Highlight.
+
+        Logic:
+        - Edit mode: Filters by instance country/place.
+        - Creation mode: Disables selection (queryset.none()) until the record is saved,
+          as the filtering context depends on persisted location data.
+        """
         # Dynamic filtering for images field
         if self.instance.pk:
             # Edit mode
             qs = AstroImage.objects.filter(
                 location=self.instance.country, place=self.instance.place
             )
-            self.fields["images"].queryset = qs
-            self.fields["background_image"].queryset = qs
+            images_field = self.fields.get("images")
+            if isinstance(images_field, forms.ModelChoiceField):
+                images_field.queryset = qs
+
+            bg_image_field = self.fields.get("background_image")
+            if isinstance(bg_image_field, forms.ModelChoiceField):
+                bg_image_field.queryset = qs
 
             if not qs.exists():
                 self.fields["images"].widget = ReadOnlyMessageWidget(
@@ -205,8 +242,13 @@ class MainPageLocationForm(forms.ModelForm):
                 )
         else:
             # Creation mode
-            self.fields["images"].queryset = AstroImage.objects.none()
-            self.fields["background_image"].queryset = AstroImage.objects.none()
+            images_field = self.fields.get("images")
+            if isinstance(images_field, forms.ModelChoiceField):
+                images_field.queryset = AstroImage.objects.none()
+
+            bg_image_field = self.fields.get("background_image")
+            if isinstance(bg_image_field, forms.ModelChoiceField):
+                bg_image_field.queryset = AstroImage.objects.none()
             self.fields["images"].widget = ReadOnlyMessageWidget(
                 message=_("Save the slider first to select images for this country.")
             )
@@ -235,7 +277,16 @@ class MainPageLocationForm(forms.ModelForm):
         }
 
     def clean(self):
+        """
+        Perform cross-field validation for the Travel Highlight slider.
+
+        Specifically, ensures that all selected images are captured in the same
+        country as the slider itself. This prevents geographic data inconsistency
+        in the gallery view.
+        """
         cleaned_data = super().clean()
+        if cleaned_data is None:
+            return None
         country = cleaned_data.get("country")
         images = cleaned_data.get("images")
 
@@ -298,12 +349,122 @@ class MainPageLocationAdmin(admin.ModelAdmin):
         "updated_at",
     )
 
-    def get_form(self, request, obj=None, **kwargs):
-        return super().get_form(request, obj, **kwargs)
-
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         extra_context = extra_context or {}
         # Hide "Save and add another" button when editing (only show when adding)
         if object_id:
             extra_context["show_save_and_add_another"] = False
         return super().changeform_view(request, object_id, form_url, extra_context)
+
+
+@admin.register(MeteorsMainPageConfig)
+class MeteorsMainPageConfigAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for the shooting stars (meteors) effect.
+    Ensures that only one configuration instance can exist.
+    """
+
+    form = MeteorsMainPageConfigForm
+    list_display = ("__str__", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    fieldsets = (
+        (
+            _("General Settings"),
+            {
+                "fields": ("random_stars_shooting", "bolid_chance", "bolid_interval"),
+                "description": _(
+                    "Control the basic behavior of shooting stars and "
+                    "their special 'bolid' variants."
+                ),
+            },
+        ),
+        (
+            _("Standard Star Appearance"),
+            {
+                "fields": (
+                    "star_path_range",
+                    "star_streak_range",
+                    "star_duration_range",
+                    "star_opacity_range",
+                ),
+                "description": _(
+                    "Define the visual properties of regular (non-bolid) shooting stars. "
+                ),
+            },
+        ),
+        (
+            _("Bolid (Fireball) Appearance"),
+            {
+                "fields": (
+                    "bolid_path_range",
+                    "bolid_streak_range",
+                    "bolid_duration_range",
+                    "bolid_opacity_range",
+                    "smoke_opacity_range",
+                ),
+                "description": _(
+                    "Configure the more dramatic bolid effects, including their smoke trails."
+                ),
+            },
+        ),
+        (
+            _("Metadata"),
+            {
+                "fields": ("updated_at",),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    def has_add_permission(self, request):
+        # Only allow adding if no instance exists
+        if self.model.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of the last configuration
+        if self.model.objects.count() <= 1:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["show_save_and_add_another"] = False
+        extra_context["show_save_and_continue"] = False
+        return super().changeform_view(request, object_id, form_url, extra_context)
+
+    def response_change(self, request, obj):
+        opts = self.model._meta
+        msg = _('The %(name)s "%(obj)s" was changed successfully.') % {
+            "name": opts.verbose_name,
+            "obj": obj,
+        }
+        self.message_user(request, msg, messages.SUCCESS)  # type: ignore[attr-defined]
+        return HttpResponseRedirect(
+            reverse("admin:astrophotography_meteorsmainpageconfig_change", args=[obj.pk])
+        )
+
+    def response_add(self, request, obj, post_url_continue=None):
+        opts = self.model._meta
+        msg = _('The %(name)s "%(obj)s" was added successfully.') % {
+            "name": opts.verbose_name,
+            "obj": obj,
+        }
+        self.message_user(request, msg, messages.SUCCESS)  # type: ignore[attr-defined]
+        return HttpResponseRedirect(
+            reverse("admin:astrophotography_meteorsmainpageconfig_change", args=[obj.pk])
+        )
+
+    def changelist_view(self, request, extra_context=None):
+        """
+        Redirects the changelist view directly to the singleton instance's change view
+        (or add view if none exists), enforcing the singleton UX.
+        """
+        obj = self.model.objects.first()
+        if obj:
+            return HttpResponseRedirect(
+                reverse("admin:astrophotography_meteorsmainpageconfig_change", args=[obj.pk])
+            )
+        return HttpResponseRedirect(reverse("admin:astrophotography_meteorsmainpageconfig_add"))

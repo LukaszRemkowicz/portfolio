@@ -1,10 +1,12 @@
 # backend/core/models.py
 import uuid
 from io import BytesIO
+from typing import Any
 
 from django_ckeditor_5.fields import CKEditor5Field
 from PIL import Image
 
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -40,7 +42,7 @@ class BaseImage(models.Model):
         abstract = True
         ordering = ["-created_at"]
 
-    def save(self, *args: list, **kwargs: dict) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:
         if self.path and not self.thumbnail:
             self.thumbnail = self.make_thumbnail(self.path)
         super().save(*args, **kwargs)
@@ -48,9 +50,9 @@ class BaseImage(models.Model):
     def __str__(self) -> str:
         return self.name
 
-    def make_thumbnail(self, image: models.ImageField, size: tuple = (400, 400)) -> ContentFile:
+    def make_thumbnail(self, image: Any, size: tuple[int, int] = (400, 400)) -> ContentFile:
         """Generates a thumbnail for the image."""
-        img = Image.open(image)
+        img: Any = Image.open(image)
         # Handle transparency: create a white background if image has alpha channel
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGBA")
@@ -62,7 +64,7 @@ class BaseImage(models.Model):
         img.thumbnail(size)
         thumb_io = BytesIO()
         img.save(thumb_io, "JPEG", quality=85)
-        thumbnail_name = f"thumb_{image.name.split('/')[-1]}"
+        thumbnail_name = f"thumb_{getattr(image, 'name', 'unknown').split('/')[-1]}"
         return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
 
 
@@ -72,24 +74,19 @@ class SingletonModel(models.Model):
     class Meta:
         abstract = True
 
-    def save(self, *args: list, **kwargs: dict) -> None:
-        if not self.pk and type(self).objects.exists():
-            # If creating a new one but instance already exists, stop or update existing.
-            # Default behavior for settings: update fields of the existing instance.
-            existing = type(self).objects.first()
-            if existing:
-                for field in self._meta.fields:
-                    if field.name not in ["id", "pk"]:
-                        setattr(existing, field.name, getattr(self, field.name))
-                existing.save(*args, **kwargs)
-                return
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Prevent saving more than one instance."""
+        if not self.pk and self.__class__.objects.exists():
+            raise ValidationError(
+                _("A singleton instance of %s already exists.") % self._meta.verbose_name
+            )
         super().save(*args, **kwargs)
+        # Cleanup: Delete all other instances except the one just saved
+        self.__class__.objects.exclude(pk=self.pk).delete()
 
-    @classmethod
-    def load(cls) -> "SingletonModel":
-        """Load the singleton instance, creating it with defaults if it doesn't exist."""
-        obj, _ = cls.objects.get_or_create(pk=1)
-        return obj
+    def delete(self, *args: Any, **kwargs: Any) -> None:
+        """Prevent deletion of the singleton instance via standard delete."""
+        pass
 
 
 class LandingPageSettings(SingletonModel):
@@ -105,7 +102,14 @@ class LandingPageSettings(SingletonModel):
     lastimages_enabled = models.BooleanField(
         default=True, verbose_name=_("Last Images Section Enabled")
     )
-    meteors_enabled = models.BooleanField(default=True, verbose_name=_("Meteors Enabled"))
+    meteors = models.ForeignKey(
+        "astrophotography.MeteorsMainPageConfig",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Meteors Configuration"),
+        help_text=_("Select the configuration to enable meteors. Leave empty to disable."),
+    )
 
     class Meta:
         verbose_name = _("Landing Page Settings")

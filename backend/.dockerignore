@@ -39,6 +39,7 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+.mypy_cache/
 
 # Environments
 .env
@@ -64,3 +65,9 @@ venv.bak/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Project specific generated files
+media/
+staticfiles/
+*.log
+database_data/

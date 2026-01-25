@@ -1,20 +1,20 @@
-import React, { ReactElement } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
-import "@testing-library/jest-dom";
-import Navbar from "../components/Navbar";
-import { useAppStore } from "../store/useStore";
+import { type ReactElement } from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import '@testing-library/jest-dom';
+import Navbar from '../components/Navbar';
+import { useAppStore } from '../store/useStore';
 
 // Mock the services
-jest.mock("../api/services", () => ({
-  fetchEnabledFeatures: jest.fn(),
+jest.mock('../api/services', () => ({
+  fetchSettings: jest.fn(),
 }));
 
 const renderWithRouter = (component: ReactElement) => {
   return render(<BrowserRouter>{component}</BrowserRouter>);
 };
 
-describe("Navbar Component", () => {
+describe('Navbar Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useAppStore.setState({
@@ -23,37 +23,37 @@ describe("Navbar Component", () => {
     });
   });
 
-  it("renders brand and navigation links", async () => {
+  it('renders brand and navigation links', async () => {
     useAppStore.setState({ features: { programming: true } });
     renderWithRouter(<Navbar />);
 
-    expect(screen.getByText("Łukasz Remkowicz")).toBeInTheDocument();
-    expect(screen.getAllByText("Home")[0]).toBeInTheDocument();
-    expect(screen.getAllByText("Astrophotography")[0]).toBeInTheDocument();
-    expect(screen.getByText("About")).toBeInTheDocument();
+    expect(screen.getByText('Łukasz Remkowicz')).toBeInTheDocument();
+    expect(screen.getAllByText('Home')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Astrophotography')[0]).toBeInTheDocument();
+    expect(screen.getByText('About')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText("Programming")).toBeInTheDocument();
+      expect(screen.getByText('Programming')).toBeInTheDocument();
     });
-    expect(screen.getByText("Contact")).toBeInTheDocument();
+    expect(screen.getByText('Contact')).toBeInTheDocument();
   });
 
-  it("hides Programming link when disabled", async () => {
+  it('hides Programming link when disabled', async () => {
     useAppStore.setState({ features: { programming: false } });
     renderWithRouter(<Navbar />);
 
-    expect(screen.getByText("Łukasz Remkowicz")).toBeInTheDocument();
-    expect(screen.getAllByText("Astrophotography")[0]).toBeInTheDocument();
+    expect(screen.getByText('Łukasz Remkowicz')).toBeInTheDocument();
+    expect(screen.getAllByText('Astrophotography')[0]).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.queryByText("Programming")).not.toBeInTheDocument();
+      expect(screen.queryByText('Programming')).not.toBeInTheDocument();
     });
-    expect(screen.getByText("Contact")).toBeInTheDocument();
+    expect(screen.getByText('Contact')).toBeInTheDocument();
   });
 
-  it("handles mobile menu toggle", () => {
+  it('handles mobile menu toggle', () => {
     renderWithRouter(<Navbar />);
-    const menuBtn = screen.getByRole("button");
+    const menuBtn = screen.getByRole('button');
     // Initially X (close) should not be there if closed
     // But since I used lucide icons, I'll check for the button click
     // This is a simplified test

@@ -1,26 +1,129 @@
-version: '3.8'
+networks:
+  portfolio_network:
+
 
 services:
+  # ---------- Database ----------
+  db:
+    image: postgres:15
+    restart: always
+    networks:
+      - portfolio_network
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # ---------- Redis ----------
+  redis:
+    image: redis:7-alpine
+    restart: always
+    networks:
+      - portfolio_network
+
+  # ---------- Frontend ----------
   portfolio-fe:
     build:
-      context: ./frontend
+      context: .
+      dockerfile: frontend/Dockerfile
       target: prod
+      args:
+        SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}
+        API_URL: https://${API_DOMAIN:-api.portfolio.local}
+        SSL_KEY_PATH: ${SSL_KEY_PATH:-/etc/nginx/ssl/portfolio.local.key}
+        SSL_CRT_PATH: ${SSL_CRT_PATH:-/etc/nginx/ssl/portfolio.local.crt}
+    image: portfolio-frontend:${TAG}
     restart: always
-    # Remove development volumes to use the optimized built artifacts
-    volumes:
-      - ./nginx/ssl/certs:/etc/ssl/certs:ro
+    # No bind mounts here to avoid overwriting built assets
+    networks:
+      - portfolio_network
 
-  portfolio-be:
+  # ---------- Backend Defaults ----------
+  x-backend-defaults: &backend-defaults
     build:
+      context: ./backend
       target: production
-    restart: always
+    image: portfolio-backend:${TAG}
+    volumes:
+      - prod_media_data:/app/media
+      - prod_static_data:/app/staticfiles
+    networks:
+      - portfolio_network
     environment:
       DEBUG: "False"
-      # Ensure these are set in your .env file for production
-      # DJANGO_ALLOWED_HOSTS: "portfolio.com"
+      DOCKER_ENV: "true"
+      PYTHONPATH: "."
+      SECRET_KEY: ${SECRET_KEY}
+      DB_ENGINE: ${DB_ENGINE}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: 5432
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      CSRF_COOKIE_DOMAIN: ${CSRF_COOKIE_DOMAIN}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
+      EMAIL_BACKEND: ${EMAIL_BACKEND}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
+      CONTACT_EMAIL: ${CONTACT_EMAIL}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
-  portfolio-nginx:
+  # ---------- Backend ----------
+  portfolio-be:
+    <<: *backend-defaults
     restart: always
+
+  # ---------- Release Job ----------
+  release:
+    <<: *backend-defaults
+    restart: "no"
+    command: >
+      sh -c "
+        python manage.py migrate --noinput &&
+        python manage.py seed_settings &&
+        python manage.py compilemessages &&
+        python manage.py collectstatic --noinput
+      "
+
+  # ---------- Nginx ----------
+  portfolio-nginx:
+    image: nginx:1.25
+    restart: always
+    networks:
+      - portfolio_network
+    depends_on:
+      - portfolio-fe
+      - portfolio-be
+    volumes:
+      - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
+      - ${NGINX_SSL_DIR}:/etc/nginx/ssl:ro
+      - ${NGINX_LOG_DIR}:/var/log/nginx
+      - prod_media_data:/app/media:ro
+      - prod_static_data:/app/staticfiles:ro
     ports:
       - "80:80"
       - "443:443"
+
+volumes:
+  postgres_data:
+  prod_media_data:
+  prod_static_data:
