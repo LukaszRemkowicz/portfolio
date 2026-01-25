@@ -38,11 +38,20 @@ services:
     volumes:
       - ./frontend:/app
       - fe_node_modules:/app/node_modules
+      - ./nginx/ssl/certs:/etc/nginx/ssl:ro
 
   portfolio-be:
     <<: *backend-common
     ports:
       - "8000:8000"
+    command: >
+      sh -c "
+        python manage.py migrate --noinput &&
+        python manage.py seed_settings &&
+        python manage.py compilemessages &&
+        python manage.py collectstatic --noinput &&
+        python manage.py runserver 0.0.0.0:8000
+      "
 
   portfolio-test:
     <<: *backend-common

@@ -19,9 +19,9 @@
     "ci": "npm run type-check && npm run lint && npm run format:check && npm run build && npm run test:coverage"
   },
   "dependencies": {
-    "axios": "^1.6.8",
+    "axios": "1.13.3",
     "dompurify": "^3.3.1",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "0.563.0",
     "react": "^18.0.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.3",
@@ -62,9 +62,9 @@
     "style-loader": "^3.0.0",
     "ts-loader": "^9.0.0",
     "typescript": "^5.0.0",
-    "webpack": "^5.0.0",
-    "webpack-cli": "^5.0.0",
-    "webpack-dev-server": "^5.2.2",
+    "webpack": "5.104.1",
+    "webpack-cli": "6.0.1",
+    "webpack-dev-server": "5.2.3",
     "workbox-webpack-plugin": "^7.4.0",
     "workbox-window": "^7.4.0"
   },
