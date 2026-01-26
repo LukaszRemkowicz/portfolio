@@ -30,8 +30,6 @@ services:
       - portfolio_network
     environment:
       API_URL: https://${API_DOMAIN:-api.portfolio.local}
-      SSL_KEY_PATH: /etc/nginx/ssl/portfolio.local.key
-      SSL_CRT_PATH: /etc/nginx/ssl/portfolio.local.crt
     ports:
       - "3000:3000"
     restart: unless-stopped

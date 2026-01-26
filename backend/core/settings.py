@@ -27,7 +27,7 @@ DEBUG = env.bool("DEBUG", default=cast(Any, False))
 # Security Hardening
 # https://docs.djangoproject.com/en/5.2/ref/settings/#security
 SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
-SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=False)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
 
 SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True)
@@ -50,6 +50,8 @@ if DEBUG:
         "127.0.0.1",
         "0.0.0.0",
     ]
+
+USE_X_FORWARDED_HOST = True
 
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = False
@@ -75,7 +77,7 @@ AUTH_USER_MODEL = "users.User"
 # CSRF & Session Settings
 # Sharing cookies across subdomains
 CSRF_COOKIE_DOMAIN = env.str("CSRF_COOKIE_DOMAIN", default=".portfolio.local")
-SESSION_COOKIE_DOMAIN = env.str("SESSION_COOKIE_DOMAIN", default=".portfolio.local")
+SESSION_COOKIE_DOMAIN = env.str("SESSION_COOKIE_DOMAIN")
 
 # CSRF Trusted Origins
 _csrf_env = env.list("CSRF_TRUSTED_ORIGINS", default=[])
@@ -89,7 +91,7 @@ for h in _base_hosts:
 # Remove duplicates
 CSRF_TRUSTED_ORIGINS = list(set(CSRF_TRUSTED_ORIGINS))
 
-CSRF_USE_SESSIONS = True
+CSRF_USE_SESSIONS = False
 CSRF_COOKIE_SECURE = True
 
 # Application definition

@@ -28,42 +28,40 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ["name", "slug", "count"]
 
 
+class BaseEquipmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ["id", "model"]
+
+
 class PlaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Place
         fields = ["id", "name"]
 
 
-class CameraSerializer(serializers.ModelSerializer):
-    class Meta:
+class CameraSerializer(BaseEquipmentSerializer):
+    class Meta(BaseEquipmentSerializer.Meta):
         model = Camera
-        fields = ["id", "model"]
 
 
-class LensSerializer(serializers.ModelSerializer):
-    class Meta:
+class LensSerializer(BaseEquipmentSerializer):
+    class Meta(BaseEquipmentSerializer.Meta):
         model = Lens
-        fields = ["id", "model"]
 
 
-class TelescopeSerializer(serializers.ModelSerializer):
-    class Meta:
+class TelescopeSerializer(BaseEquipmentSerializer):
+    class Meta(BaseEquipmentSerializer.Meta):
         model = Telescope
-        fields = ["id", "model"]
 
 
-class TrackerSerializer(serializers.ModelSerializer):
+class TrackerSerializer(BaseEquipmentSerializer):
     class Meta:
         model = Tracker
-        fields = ["id", "name"]
 
 
-class TripodSerializer(serializers.ModelSerializer):
+class TripodSerializer(BaseEquipmentSerializer):
     class Meta:
         model = Tripod
-        fields = [
-            "name",
-        ]
 
 
 class AstroImageSerializerList(serializers.ModelSerializer):
@@ -222,11 +220,12 @@ class TravelHighlightDetailSerializer(MainPageLocationSerializer):
     country = serializers.CharField(source="country.name", read_only=True)
     country_code = serializers.CharField(source="country.code", read_only=True)
     place = serializers.CharField(source="place.name", read_only=True, allow_null=True)
-    images = serializers.SerializerMethodField()
+    images = serializers.SerializerMethodField()  # type: ignore[assignment]
 
     def get_images(self, obj: MainPageLocation) -> list:
         queryset = GalleryQueryService.get_travel_highlight_images(obj)
-        return AstroImageSerializerList(queryset, many=True, context=self.context).data
+        # Cast ReturnList to list to satisfy MyPy
+        return list(AstroImageSerializerList(queryset, many=True, context=self.context).data)
 
     class Meta(MainPageLocationSerializer.Meta):
         fields = MainPageLocationSerializer.Meta.fields + ["country_code", "place"]

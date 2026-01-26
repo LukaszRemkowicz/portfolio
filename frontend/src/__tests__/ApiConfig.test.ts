@@ -42,8 +42,9 @@ describe('API Configuration', () => {
       delete (global as any).process;
 
       try {
-        const { API_BASE_URL: resolvedUrl } = require('../api/routes');
-        expect(resolvedUrl).toBe(CONST_API_BASE_URL);
+        expect(() => require('../api/routes')).toThrow(
+          'API_URL is not defined'
+        );
       } finally {
         global.process = actualProcess;
       }

@@ -2,9 +2,10 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main, dev, 'fix/**', 'feat/**' ]
   pull_request:
-    branches: [ main, dev ]
+    branches: [ main, dev, 'fix/**', 'feat/**' ]
+  workflow_dispatch:
 
 env:
   PYTHON_VERSION: '3.13'
@@ -45,6 +46,8 @@ jobs:
     - name: Run tests
       working-directory: ./frontend
       run: npm test -- --coverage --watchAll=false
+      env:
+        API_URL: http://localhost:8000
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
@@ -124,6 +127,7 @@ jobs:
         DB_PORT: 5432
         DEFAULT_FROM_EMAIL: test@example.com
         CONTACT_EMAIL: test@example.com
+        SESSION_COOKIE_DOMAIN: .example.com
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4

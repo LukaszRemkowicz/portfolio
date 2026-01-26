@@ -21,13 +21,15 @@ class SettingsView(generics.RetrieveAPIView):
     queryset = LandingPageSettings.objects.all()
 
     def get_object(self) -> LandingPageSettings:
+        from typing import cast
+
         # Override get_object to return the singleton or raise 404
         obj = self.get_queryset().last()
         if not obj:
             from django.http import Http404
 
             raise Http404("Landing Page Settings not initialized.")
-        return obj
+        return cast(LandingPageSettings, obj)
 
 
 @api_view(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
