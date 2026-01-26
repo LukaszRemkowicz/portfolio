@@ -2,6 +2,44 @@ networks:
   portfolio_network:
 
 
+# ---------- Backend Defaults ----------
+x-backend-defaults: &backend-defaults
+  volumes:
+    - prod_media_data:/app/media
+    - prod_static_data:/app/staticfiles
+  networks:
+    - portfolio_network
+  environment:
+    DEBUG: "False"
+    DOCKER_ENV: "true"
+    PYTHONPATH: "."
+    SECRET_KEY: ${SECRET_KEY}
+    DB_NAME: ${DB_NAME}
+    DB_USER: ${DB_USER}
+    DB_PASSWORD: ${DB_PASSWORD}
+    DB_HOST: db
+    DB_PORT: 5432
+    ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+    API_DOMAIN: ${API_DOMAIN}
+    CSRF_COOKIE_DOMAIN: ${CSRF_COOKIE_DOMAIN}
+    ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+    CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+    CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
+    EMAIL_HOST: ${EMAIL_HOST}
+    EMAIL_PORT: ${EMAIL_PORT}
+    EMAIL_USE_TLS: ${EMAIL_USE_TLS}
+    EMAIL_HOST_USER: ${EMAIL_HOST_USER}
+    EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
+    DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
+    CONTACT_EMAIL: ${CONTACT_EMAIL}
+    SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN}
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_started
+
+
 services:
   # ---------- Database ----------
   db:
@@ -30,60 +68,11 @@ services:
 
   # ---------- Frontend ----------
   portfolio-fe:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-      target: prod
-      args:
-        SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}
-        API_URL: https://${API_DOMAIN:-api.portfolio.local}
-        SSL_KEY_PATH: ${SSL_KEY_PATH:-/etc/nginx/ssl/portfolio.local.key}
-        SSL_CRT_PATH: ${SSL_CRT_PATH:-/etc/nginx/ssl/portfolio.local.crt}
     image: portfolio-frontend:${TAG}
     restart: always
     # No bind mounts here to avoid overwriting built assets
     networks:
       - portfolio_network
-
-  # ---------- Backend Defaults ----------
-  x-backend-defaults: &backend-defaults
-    build:
-      context: ./backend
-      target: production
-    volumes:
-      - prod_media_data:/app/media
-      - prod_static_data:/app/staticfiles
-    networks:
-      - portfolio_network
-    environment:
-      DEBUG: "False"
-      DOCKER_ENV: "true"
-      PYTHONPATH: "."
-      SECRET_KEY: ${SECRET_KEY}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_HOST: db
-      DB_PORT: 5432
-      ADMIN_DOMAIN: ${ADMIN_DOMAIN}
-      API_DOMAIN: ${API_DOMAIN}
-      CSRF_COOKIE_DOMAIN: ${CSRF_COOKIE_DOMAIN}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
-      EMAIL_HOST: ${EMAIL_HOST}
-      EMAIL_PORT: ${EMAIL_PORT}
-      EMAIL_USE_TLS: ${EMAIL_USE_TLS}
-      EMAIL_HOST_USER: ${EMAIL_HOST_USER}
-      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
-      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
-      CONTACT_EMAIL: ${CONTACT_EMAIL}
-      SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN}
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
 
   # ---------- Backend ----------
   portfolio-be:
@@ -94,6 +83,7 @@ services:
   # ---------- Release Job ----------
   release:
     <<: *backend-defaults
+    image: portfolio-backend:${TAG}
     restart: "no"
     command: >
       sh -c "
@@ -102,6 +92,7 @@ services:
         python manage.py compilemessages &&
         python manage.py collectstatic --noinput
       "
+
 
   # ---------- Nginx ----------
   portfolio-nginx:

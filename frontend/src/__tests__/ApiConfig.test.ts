@@ -50,4 +50,22 @@ describe('API Configuration', () => {
       }
     });
   });
+
+  it('should not crash if process is undefined', () => {
+    jest.isolateModules(() => {
+      // Mock global.process as undefined
+      const actualProcess = global.process;
+      // @ts-ignore - simulating environment without process
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (global as any).process;
+
+      try {
+        expect(() => require('../api/routes')).toThrow(
+          'API_URL is not defined'
+        );
+      } finally {
+        global.process = actualProcess;
+      }
+    });
+  });
 });
