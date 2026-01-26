@@ -112,7 +112,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Only update if this is still the current session
       if (get().imagesSessionId === sessionId) {
         set({
-          images: data,
+          images: data || [],
           isImagesLoading: false,
         });
       }

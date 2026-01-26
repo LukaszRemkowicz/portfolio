@@ -104,14 +104,14 @@ class TrackerFactory(DjangoModelFactory):
     class Meta:
         model = Tracker
 
-    name = factory.Faker("word")
+    model = factory.Faker("word")
 
 
 class TripodFactory(DjangoModelFactory):
     class Meta:
         model = Tripod
 
-    name = factory.Faker("word")
+    model = factory.Faker("word")
 
 
 class PlaceFactory(DjangoModelFactory):

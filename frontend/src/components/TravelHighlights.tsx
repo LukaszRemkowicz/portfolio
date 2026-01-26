@@ -99,7 +99,7 @@ const TravelHighlights: FC = () => {
       }
       try {
         const data = await fetchTravelHighlights();
-        setLocations(data);
+        if (data) setLocations(data);
       } catch (error) {
         console.error('Failed to fetch travel highlights:', error);
       } finally {
@@ -117,7 +117,7 @@ const TravelHighlights: FC = () => {
     return null;
   }
 
-  if (locations.length === 0) {
+  if (!locations || locations.length === 0) {
     return null; // Hide section if no content
   }
 

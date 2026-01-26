@@ -50,14 +50,14 @@ class TelescopeAdmin(admin.ModelAdmin):
 
 @admin.register(Tracker)
 class TrackerAdmin(admin.ModelAdmin):
-    list_display = ("name",)
-    search_fields = ("name",)
+    list_display = ("model",)
+    search_fields = ("model",)
 
 
 @admin.register(Tripod)
 class TripodAdmin(admin.ModelAdmin):
-    list_display = ("name",)
-    search_fields = ("name",)
+    list_display = ("model",)
+    search_fields = ("model",)
 
 
 @admin.register(AstroImage)
@@ -73,8 +73,8 @@ class AstroImageAdmin(admin.ModelAdmin):
         "camera__model",
         "lens__model",
         "telescope__model",
-        "tracker__name",
-        "tripod__name",
+        "tracker__model",
+        "tripod__model",
     )
 
     fieldsets = (
@@ -441,7 +441,7 @@ class MeteorsMainPageConfigAdmin(admin.ModelAdmin):
             "name": opts.verbose_name,
             "obj": obj,
         }
-        self.message_user(request, msg, messages.SUCCESS)  # type: ignore[attr-defined]
+        self.message_user(request, msg, messages.SUCCESS)
         return HttpResponseRedirect(
             reverse("admin:astrophotography_meteorsmainpageconfig_change", args=[obj.pk])
         )
@@ -452,7 +452,7 @@ class MeteorsMainPageConfigAdmin(admin.ModelAdmin):
             "name": opts.verbose_name,
             "obj": obj,
         }
-        self.message_user(request, msg, messages.SUCCESS)  # type: ignore[attr-defined]
+        self.message_user(request, msg, messages.SUCCESS)
         return HttpResponseRedirect(
             reverse("admin:astrophotography_meteorsmainpageconfig_change", args=[obj.pk])
         )

@@ -21,6 +21,11 @@ DB_PASSWORD="${DB_PASSWORD:-postgres}"
 # Anchor compose file to project root
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/docker-compose.yml}"
 
+# Validating COMPOSE_FILE: If it's a directory, look for docker-compose.yml inside
+if [ -d "$COMPOSE_FILE" ]; then
+    COMPOSE_FILE="${COMPOSE_FILE%/}/docker-compose.yml"
+fi
+
 # 3. Filename & Lock Setup
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="$BACKUP_DIR/backup_${TIMESTAMP}.dump"
