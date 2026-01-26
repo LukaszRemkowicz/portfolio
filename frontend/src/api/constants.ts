@@ -1,7 +1,7 @@
 export const API_BASE_URL =
   (typeof window !== 'undefined' &&
     (window as unknown as { env?: { API_URL?: string } }).env?.API_URL) ||
-  process.env.API_URL;
+  (typeof process !== 'undefined' ? process.env.API_URL : undefined);
 
 if (!API_BASE_URL) {
   throw new Error('API_URL is not defined');
