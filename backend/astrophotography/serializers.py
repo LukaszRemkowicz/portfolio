@@ -54,16 +54,14 @@ class TelescopeSerializer(BaseEquipmentSerializer):
         model = Telescope
 
 
-class TrackerSerializer(serializers.ModelSerializer):
+class TrackerSerializer(BaseEquipmentSerializer):
     class Meta:
         model = Tracker
-        fields = ["id", "name"]
 
 
-class TripodSerializer(serializers.ModelSerializer):
+class TripodSerializer(BaseEquipmentSerializer):
     class Meta:
         model = Tripod
-        fields = ["id", "name"]
 
 
 class AstroImageSerializerList(serializers.ModelSerializer):
