@@ -14,10 +14,14 @@ describe('HomePage Component', () => {
   const mockFetchProfile = services.fetchProfile as jest.Mock;
   const mockFetchBackground = services.fetchBackground as jest.Mock;
   const mockFetchSettings = services.fetchSettings as jest.Mock;
+  const mockFetchTravelHighlights = services.fetchTravelHighlights as jest.Mock;
+  const mockFetchAstroImages = services.fetchAstroImages as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockFetchBackground.mockResolvedValue('/test-bg.jpg');
+    mockFetchTravelHighlights.mockResolvedValue([]); // Prevent undefined crash
+    mockFetchAstroImages.mockResolvedValue([]); // Prevent undefined crash
     mockFetchSettings.mockResolvedValue({
       programming: true,
       meteors: {
