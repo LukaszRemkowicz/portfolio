@@ -50,7 +50,6 @@ services:
     build:
       context: ./backend
       target: production
-    image: portfolio-backend:${TAG}
     volumes:
       - prod_media_data:/app/media
       - prod_static_data:/app/staticfiles
@@ -61,7 +60,6 @@ services:
       DOCKER_ENV: "true"
       PYTHONPATH: "."
       SECRET_KEY: ${SECRET_KEY}
-      DB_ENGINE: ${DB_ENGINE}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -73,7 +71,6 @@ services:
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
-      EMAIL_BACKEND: ${EMAIL_BACKEND}
       EMAIL_HOST: ${EMAIL_HOST}
       EMAIL_PORT: ${EMAIL_PORT}
       EMAIL_USE_TLS: ${EMAIL_USE_TLS}
@@ -81,6 +78,7 @@ services:
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
       CONTACT_EMAIL: ${CONTACT_EMAIL}
+      SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN}
     depends_on:
       db:
         condition: service_healthy
@@ -90,6 +88,7 @@ services:
   # ---------- Backend ----------
   portfolio-be:
     <<: *backend-defaults
+    image: portfolio-backend:${TAG}
     restart: always
 
   # ---------- Release Job ----------
@@ -117,8 +116,8 @@ services:
       - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
       - ${NGINX_SSL_DIR}:/etc/nginx/ssl:ro
       - ${NGINX_LOG_DIR}:/var/log/nginx
-      - prod_media_data:/app/media:ro
-      - prod_static_data:/app/staticfiles:ro
+      - ./backend/media:/app/media:ro
+      - ./backend/staticfiles:/app/staticfiles:ro
     ports:
       - "80:80"
       - "443:443"
