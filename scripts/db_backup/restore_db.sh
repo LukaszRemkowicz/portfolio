@@ -70,12 +70,16 @@ restore_cmd() {
 
     if docker compose -f "$COMPOSE_FILE" exec -T db pg_restore -l "$CONTAINER_BACKUP_PATH" >/dev/null 2>&1; then
         echo "  - Format: Custom (.dump)"
-        # --clean: Drop existing objects before creating them
-        # --if-exists: Use IF EXISTS when dropping
-        # --no-owner/--no-privileges: Often needed when restoring between different environments/users
+
+        # WIPE existing data to avoid foreign key conflicts during drop
+        echo "  - 🧨 Wiping 'public' schema to ensure clean slate..."
+        docker compose -f "$COMPOSE_FILE" exec -T db \
+            psql -U "$DB_USER" -d "$DB_NAME" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+        # Restore without --clean (since we just wiped it)
         docker compose -f "$COMPOSE_FILE" exec -T db \
             pg_restore -U "$DB_USER" -d "$DB_NAME" \
-            --clean --if-exists --no-owner --no-privileges \
+            --no-owner --no-privileges \
             "$CONTAINER_BACKUP_PATH"
     else
         echo "  - Format: Plain SQL"
