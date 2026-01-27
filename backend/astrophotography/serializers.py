@@ -55,12 +55,12 @@ class TelescopeSerializer(BaseEquipmentSerializer):
 
 
 class TrackerSerializer(BaseEquipmentSerializer):
-    class Meta:
+    class Meta(BaseEquipmentSerializer.Meta):
         model = Tracker
 
 
 class TripodSerializer(BaseEquipmentSerializer):
-    class Meta:
+    class Meta(BaseEquipmentSerializer.Meta):
         model = Tripod
 
 

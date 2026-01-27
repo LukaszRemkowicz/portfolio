@@ -158,3 +158,15 @@ class TestCelestialObjectCategoriesView:
 
         expected_categories = [choice[0] for choice in CelestialObjectChoices]
         assert response.data == expected_categories
+
+
+@pytest.mark.django_db
+class TestTagsView:
+    def test_list_tags(self, api_client):
+        """Test retrieving tags list"""
+        url = reverse("astroimages:tags-list")
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        # Basic check that it returns list
+        assert isinstance(response.data, list)
