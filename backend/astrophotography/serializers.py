@@ -93,6 +93,9 @@ class AstroImageSerializerList(serializers.ModelSerializer):
             "capture_date",
             "location",
             "celestial_object",
+            "exposure_details",
+            "processing_details",
+            "astrobin_url",
             "created_at",
         ]
 

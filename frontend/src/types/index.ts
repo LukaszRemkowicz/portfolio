@@ -191,7 +191,6 @@ export interface ApiRoutes {
   profile: string;
   background: string;
   astroImages: string;
-  astroImage: string;
   contact: string;
   settings: string;
   projects: string;
