@@ -31,9 +31,12 @@ const AstroGallery: React.FC = () => {
   const selectedTag = searchParams.get('tag');
 
   useEffect(() => {
-    const imgId = searchParams.get('img');
-    if (imgId) {
-      const img = images.find(i => i.pk.toString() === imgId);
+    const imgParam = searchParams.get('img');
+    if (imgParam) {
+      // Lookup by slug (primary) or pk (fallback)
+      const img = images.find(
+        i => i.slug === imgParam || i.pk.toString() === imgParam
+      );
       if (img) {
         setModalImage(img);
       } else {
@@ -100,7 +103,7 @@ const AstroGallery: React.FC = () => {
 
   const handleImageClick = (image: AstroImage): void => {
     const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('img', image.pk.toString());
+    nextParams.set('img', image.slug || image.pk.toString());
     setSearchParams(nextParams);
   };
 

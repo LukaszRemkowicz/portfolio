@@ -105,7 +105,7 @@ export const fetchAstroImage = async (
 ): Promise<AstroImage> => {
   if (!id) throw new Error('id is required');
 
-  const url = API_ROUTES.astroImage.replace(':id', String(id));
+  const url = API_ROUTES.astroImage.replace(':slug', String(id));
   const response: AxiosResponse<AstroImage> = await api.get(url);
   const image = handleResponse<AstroImage>(response);
   if (image) {

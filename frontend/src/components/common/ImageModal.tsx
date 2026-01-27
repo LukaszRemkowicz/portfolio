@@ -33,7 +33,9 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
     }
 
     setLoading(true);
-    fetchAstroImage(image.pk)
+    // Use slug if available, otherwise PK (backend now expects slug or PK if configured, but we moved to slug primarily)
+    // Actually, backend lookup_field="slug". PK won't work unless slug=PK.
+    fetchAstroImage(image.slug || image.pk)
       .then((data: AstroImage) => {
         setDetailedImage(data);
         setDescription(data.description || 'No description available.');

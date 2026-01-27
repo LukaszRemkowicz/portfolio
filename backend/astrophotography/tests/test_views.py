@@ -25,7 +25,8 @@ class TestAstroImageViewSet:
 
     def test_retrieve_astro_image(self, api_client, astro_image):
         """Test retrieving a single image via the router generated URL"""
-        url = reverse("astroimages:astroimage-detail", args=[astro_image.pk])
+        # Detail lookup is now by slug
+        url = reverse("astroimages:astroimage-detail", args=[astro_image.slug])
         response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         # Detail serializer doesn't include ID, check another field

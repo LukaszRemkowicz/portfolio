@@ -79,6 +79,7 @@ class AstroImageSerializerList(serializers.ModelSerializer):
         model = AstroImage
         fields = [
             "pk",
+            "slug",
             "name",
             "description",
             "url",
@@ -108,6 +109,8 @@ class AstroImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = AstroImage
         fields = [
+            "pk",
+            "slug",
             "capture_date",
             "telescope",
             "camera",
@@ -137,7 +140,7 @@ class AstroImageThumbnailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AstroImage
-        fields = ["pk", "url", "thumbnail_url", "description"]
+        fields = ["pk", "slug", "url", "thumbnail_url", "description"]
 
 
 class MainPageLocationSerializer(serializers.ModelSerializer):

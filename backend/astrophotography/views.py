@@ -32,6 +32,7 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
     """
 
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
+    lookup_field = "slug"
 
     def get_queryset(self):
         return GalleryQueryService.get_filtered_images(self.request.query_params)
