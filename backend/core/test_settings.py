@@ -46,5 +46,3 @@ PASSWORD_HASHERS = [
 
 # Disable logging during tests
 LOGGING_CONFIG = None
-
-SESSION_COOKIE_DOMAIN = "testapi.local"
