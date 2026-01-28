@@ -1,8 +1,10 @@
-## What
--
+# Pull Request
 
-## Why
--
+## Description
+
+## Fixes
+
+## Type of change
 
 ## Scope
 - [ ] Backend
