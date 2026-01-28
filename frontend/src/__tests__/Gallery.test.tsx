@@ -11,16 +11,6 @@ jest.mock('../api/services', () => ({
   fetchAstroImages: jest.fn().mockResolvedValue([]),
   fetchBackground: jest.fn().mockResolvedValue(null),
   fetchEnabledFeatures: jest.fn().mockResolvedValue({}),
-  fetchAstroImage: jest.fn().mockResolvedValue({
-    camera_settings: {
-      focal_length: '50mm',
-      aperture: 'f/2.8',
-      iso: '1600',
-      shutter_speed: '30s',
-    },
-    equipment: [],
-    software: [],
-  }),
   fetchProfile: jest.fn().mockResolvedValue({}),
 }));
 

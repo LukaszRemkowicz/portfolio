@@ -37,7 +37,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-root
+RUN python -m venv $VIRTUAL_ENV && \
+    poetry install --no-root
 
 COPY . .
 RUN mkdir -p /app/media /app/staticfiles

@@ -1,9 +1,10 @@
-from django.test import TestCase
+import pytest
 
 from astrophotography.serializers import TrackerSerializer
 
 
-class TestEquipmentSerializers(TestCase):
+@pytest.mark.django_db
+class TestEquipmentSerializers:
     def test_tracker_serializer_configuration(self):
         """
         Regression test: Ensure TrackerSerializer has 'fields' or 'exclude' defined.
@@ -16,7 +17,7 @@ class TestEquipmentSerializers(TestCase):
             # Access fields to trigger the validation logic inside DRF
             _ = serializer.fields
         except AssertionError as e:
-            self.fail(f"TrackerSerializer Configuration Error: {e}")
+            pytest.fail(f"TrackerSerializer Configuration Error: {e}")
 
     def test_tripod_serializer_configuration(self):
         """
@@ -28,7 +29,7 @@ class TestEquipmentSerializers(TestCase):
             serializer = TripodSerializer()
             _ = serializer.fields
         except AssertionError as e:
-            self.fail(f"TripodSerializer Configuration Error: {e}")
+            pytest.fail(f"TripodSerializer Configuration Error: {e}")
 
     def test_camera_serializer_configuration(self):
         from astrophotography.serializers import CameraSerializer
@@ -37,7 +38,7 @@ class TestEquipmentSerializers(TestCase):
             serializer = CameraSerializer()
             _ = serializer.fields
         except AssertionError as e:
-            self.fail(f"CameraSerializer Configuration Error: {e}")
+            pytest.fail(f"CameraSerializer Configuration Error: {e}")
 
     def test_lens_serializer_configuration(self):
         from astrophotography.serializers import LensSerializer
@@ -46,7 +47,7 @@ class TestEquipmentSerializers(TestCase):
             serializer = LensSerializer()
             _ = serializer.fields
         except AssertionError as e:
-            self.fail(f"LensSerializer Configuration Error: {e}")
+            pytest.fail(f"LensSerializer Configuration Error: {e}")
 
     def test_telescope_serializer_configuration(self):
         from astrophotography.serializers import TelescopeSerializer
@@ -55,7 +56,7 @@ class TestEquipmentSerializers(TestCase):
             serializer = TelescopeSerializer()
             _ = serializer.fields
         except AssertionError as e:
-            self.fail(f"TelescopeSerializer Configuration Error: {e}")
+            pytest.fail(f"TelescopeSerializer Configuration Error: {e}")
 
     def test_place_serializer_configuration(self):
         from astrophotography.serializers import PlaceSerializer
@@ -64,7 +65,7 @@ class TestEquipmentSerializers(TestCase):
             serializer = PlaceSerializer()
             _ = serializer.fields
         except AssertionError as e:
-            self.fail(f"PlaceSerializer Configuration Error: {e}")
+            pytest.fail(f"PlaceSerializer Configuration Error: {e}")
 
     def test_meteors_config_serializer_configuration(self):
         from astrophotography.serializers import MeteorsMainPageConfigSerializer
@@ -74,7 +75,7 @@ class TestEquipmentSerializers(TestCase):
             serializer = MeteorsMainPageConfigSerializer()
             _ = serializer.fields
         except AssertionError as e:
-            self.fail(f"MeteorsMainPageConfigSerializer Configuration Error: {e}")
+            pytest.fail(f"MeteorsMainPageConfigSerializer Configuration Error: {e}")
 
     def test_astro_image_serializer_configuration(self):
         from astrophotography.serializers import AstroImageSerializer
@@ -85,7 +86,7 @@ class TestEquipmentSerializers(TestCase):
             _ = serializer.fields
         except AssertionError as e:
             # If nested serializers (Camera, etc.) are broken, this MIGHT fail here too
-            self.fail(f"AstroImageSerializer Configuration Error: {e}")
+            pytest.fail(f"AstroImageSerializer Configuration Error: {e}")
 
     def test_main_page_location_serializer_logic(self):
         """Test custom logic in MainPageLocationSerializer (adventure_date)"""
@@ -120,4 +121,4 @@ class TestEquipmentSerializers(TestCase):
             serializer = TagSerializer()
             _ = serializer.fields
         except AssertionError as e:
-            self.fail(f"TagSerializer Configuration Error: {e}")
+            pytest.fail(f"TagSerializer Configuration Error: {e}")
