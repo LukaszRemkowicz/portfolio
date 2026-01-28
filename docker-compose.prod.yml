@@ -69,8 +69,7 @@ services:
   # ---------- Frontend ----------
   portfolio-fe:
     image: portfolio-frontend:${TAG}
-    restart: always
-    # No bind mounts here to avoid overwriting built assets
+    restart: "always"
     networks:
       - portfolio_network
 
@@ -101,14 +100,14 @@ services:
     networks:
       - portfolio_network
     depends_on:
-      - portfolio-fe
       - portfolio-be
+      - portfolio-fe
     volumes:
       - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
       - ${NGINX_SSL_DIR}:/etc/nginx/ssl:ro
       - ${NGINX_LOG_DIR}:/var/log/nginx
-      - ./backend/media:/app/media:ro
-      - ./backend/staticfiles:/app/staticfiles:ro
+      - prod_media_data:/app/media:ro
+      - prod_static_data:/app/staticfiles:ro
     ports:
       - "80:80"
       - "443:443"

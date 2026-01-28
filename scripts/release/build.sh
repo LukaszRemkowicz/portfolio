@@ -1,14 +1,99 @@
 #!/usr/bin/env bash
+###############################################################################
+# build.sh
+#
+# Purpose:
+#   Build versioned Docker images for production in a deterministic,
+#   reproducible, and rollback-safe way.
+#
+# High-level behavior:
+#   - Refuses to run outside a git repository
+#   - Refuses to run if the working tree is dirty
+#   - Requires an exact git tag on HEAD (tag == release)
+#   - Builds backend and frontend Docker images for that tag
+#   - Does NOT deploy anything
+#   - Does NOT run migrations or collect static files
+#
+# What this script DOES:
+#   - Builds:
+#       portfolio-backend:<TAG>
+#       portfolio-frontend:<TAG>
+#   - Uses Docker BuildKit for consistent builds
+#   - Injects runtime configuration via environment variables
+#   - Cleans up old images while keeping:
+#       - the tag just built
+#       - the currently deployed tag
+#       - the previous (rollback) tag
+#
+# What this script DOES NOT DO:
+#   - Does not start containers
+#   - Does not modify docker-compose state
+#   - Does not update current_tag / prev_tag
+#   - Does not touch the database
+#
+# Preconditions:
+#   - Must be run from inside the git repository
+#   - HEAD must be exactly tagged (vX.Y.Z)
+#   - Required environment variables must be provided
+#     (typically via: doppler run -- ./build.sh)
+#   - Docker must be available on the host
+#
+# Typical usage:
+#   TAG=v1.2.3 doppler run -- ./build.sh
+#
+# Relationship to other scripts:
+#   - build.sh   → builds images only (this file)
+#   - release.sh → runs migrations / collectstatic
+#   - deploy.sh  → starts services and handles rollback
+#
+# Design principles:
+#   - Deterministic: same inputs → same images
+#   - Explicit: no hidden defaults for production config
+#   - Boring: no automation magic, easy to reason about
+#
+###############################################################################
+
 set -euo pipefail
 
+# ------------------------------------------------------------------
+# Required environment variables (injected by Doppler)
+#
+# These must be provided at runtime (not hardcoded defaults),
+# to avoid accidentally building a production image with "local" config.
+#
+# Usage example:
+#   doppler run -- ./build.sh
+# ------------------------------------------------------------------
+: "${API_DOMAIN:?API_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
+: "${SITE_DOMAIN:?SITE_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
+
+echo "API_DOMAIN=${API_DOMAIN}"
+
+
+# ------------------------------------------------------------------
+# Resolve project root directory
+#
+# We require running inside the git repository, because:
+# - build context paths are relative to repo root
+# - tag detection uses git metadata
+# - prevents "ran from wrong directory" mistakes
+# ------------------------------------------------------------------
 PROJECT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -z "$PROJECT_DIR" ]]; then
   echo "❌ ERROR: build.sh must be run inside a Git repository."
   exit 1
 fi
 cd "$PROJECT_DIR"
+echo "📁 Project root: ${PROJECT_DIR}"
 
-# Require an explicit release tag
+
+
+# ------------------------------------------------------------------
+# Resolve release TAG
+#
+# We require an exact git tag on HEAD to make builds reproducible.
+# This prevents "I built some random commit and forgot which one".
+# ------------------------------------------------------------------
 TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || true)}"
 if [[ -z "$TAG" ]]; then
   echo "🛑 ERROR: No Git tag on HEAD."
@@ -17,6 +102,14 @@ if [[ -z "$TAG" ]]; then
 fi
 export TAG
 
+if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([\-+].+)?$ ]]; then
+  echo "ERROR: Tag '$TAG' is not SemVer-like (expected vX.Y.Z or vX.Y.Z-suffix)" >&2
+  exit 1
+fi
+
+echo "🏷️  Release tag: $TAG"
+
+
 # Enforce deterministic build
 if [[ -n "$(git status --porcelain)" ]]; then
   echo "🛑 ERROR: Working tree is dirty. Commit or stash changes first."
@@ -24,9 +117,16 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-export DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"
 
-echo "🏷️  Release tag: $TAG"
+# ------------------------------------------------------------------
+# Enable Docker BuildKit
+#
+# BuildKit improves performance and caching and is the modern builder.
+# ------------------------------------------------------------------
+export DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"
+echo "⚙️  DOCKER_BUILDKIT=${DOCKER_BUILDKIT}"
+
+
 echo "🏗️  Starting build..."
 
 # ---------------- Backend ----------------
@@ -44,19 +144,33 @@ docker build \
   --pull \
   -f frontend/Dockerfile \
   --target prod \
-  --build-arg "SITE_DOMAIN=${SITE_DOMAIN:-portfolio.local}" \
-  --build-arg "API_URL=https://${API_DOMAIN:-api.portfolio.local}" \
-  --build-arg "SSL_KEY_PATH=${SSL_KEY_PATH:-/etc/nginx/ssl/portfolio.local.key}" \
-  --build-arg "SSL_CRT_PATH=${SSL_CRT_PATH:-/etc/nginx/ssl/portfolio.local.crt}" \
+  --build-arg "SITE_DOMAIN=${SITE_DOMAIN}" \
+  --build-arg "API_URL=https://${API_DOMAIN}" \
   -t "portfolio-frontend:$TAG" \
   .
 echo "✅ Frontend image built"
 
-# ---------------- Summary ----------------
+
+# ------------------------------------------------------------------
+# Summary
+#
+# Show resulting images for quick verification.
+# ------------------------------------------------------------------
+
 echo "📦 Built images:"
 docker images | awk 'NR==1 || $1 ~ /^portfolio-(frontend|backend)$/ {print}'
 
-# ---------------- Cleanup ----------------
+
+# ------------------------------------------------------------------
+# Cleanup old images
+#
+# We keep:
+# - the tag we just built
+# - the "current" tag (currently deployed)
+# - the "prev" tag (rollback target)
+#
+# Everything else for these repos can be removed to save disk space.
+# ------------------------------------------------------------------
 STATE_DIR="${STATE_DIR:-/var/lib/portfolio}"
 CURRENT_FILE="$STATE_DIR/current_tag"
 PREV_FILE="$STATE_DIR/prev_tag"
@@ -86,6 +200,10 @@ for repo in portfolio-backend portfolio-frontend; do
     docker image rm -f "$repo:$t" >/dev/null 2>&1 || true
   done
 done
+
+KEEP_TAGS=("$TAG")
+[[ -n "$CURRENT_TAG" ]] && KEEP_TAGS+=("$CURRENT_TAG")
+[[ -n "$PREV_TAG" ]] && KEEP_TAGS+=("$PREV_TAG")
 
 docker image prune -f >/dev/null 2>&1 || true
 

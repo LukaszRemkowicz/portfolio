@@ -1,140 +1,233 @@
-# Deploy (Build → Release → Switch)
+# Production Scripts: Build, Release, Deploy
 
-This project uses a simple, repeatable deployment flow based on Docker images
-tagged with the current git commit (`TAG`). The goal is predictable deployments
-and easy rollbacks.
+This repository uses three small shell scripts to manage production changes on a single VPS:
 
----
+- `build.sh` → **builds Docker images** for a tagged release (no deploy)
+- `release.sh` → runs the **one-shot release job** (migrations/static/messages/seeds)
+- `deploy.sh` → performs the **deployment switch** to the new tag and updates rollback state
 
-## Files
-
-- `scripts/deploy/build.sh`
-  Builds production images only (no migrations, no container restarts).
-
-- `scripts/deploy/deploy.sh`
-  Runs backend release tasks and switches running containers to the new images.
-
-- `docker-compose.yml`
-  Base (local / dev) configuration.
-
-- `docker-compose.prod.yml`
-  Production overrides and the `release` service definition.
+These scripts are designed for a “boring”, rollback-aware workflow:
+**tag == release**, deployment is manual, and images are built on the server.
 
 ---
 
-## Core idea
+## Quick start (the happy path)
 
-### Image vs container
+From the repo root on the server:
 
-- **Image** – a built, versioned artifact (e.g. `portfolio-backend:1a2b3c4`).
-- **Container** – a running instance of an image.
+```bash
+# Build images for the currently checked-out tag on HEAD
+doppler run -- ./build.sh
 
-“Switching” means Docker Compose recreates containers so they run the image
-tag specified in `docker-compose.prod.yml` (`image: ...:${TAG}`).
+# Run release tasks (DB migrate, collectstatic, etc.)
+TAG=vX.Y.Z doppler run -- ./release.sh
+
+# Deploy (runs release.sh, switches services, runs health checks, writes state)
+TAG=vX.Y.Z doppler run -- ./deploy.sh
+```
+
+If you’re already on an exactly-tagged commit, you can omit `TAG=...` for scripts that auto-detect it (depending on your current implementation).
 
 ---
 
-## Why the `release` step exists (backend only)
+## Shared conventions
 
-The backend performs stateful operations that must run once per deploy:
+### Tag discipline (important)
+These scripts assume:
 
-- Django database migrations (`migrate`)
-- Translation compilation (`compilemessages`)
-- Static files collection (`collectstatic`)
+- You deploy **only** tagged releases (example: `v1.2.3`)
+- The tag points to the exact commit you intend to run in production
 
-These tasks are executed via a one-off `release` service defined in
-`docker-compose.prod.yml`.
+If HEAD is not exactly tagged, the scripts should fail rather than deploy ambiguous code.
 
-Frontend does not require a release step — its production artifact (`dist`)
-is already baked into the image during build.
+### Environment injection
+Production configuration is expected to be injected at runtime, typically via Doppler:
+
+```bash
+doppler run -- ./build.sh
+TAG=v1.2.3 doppler run -- ./release.sh
+TAG=v1.2.3 doppler run -- ./deploy.sh
+```
+
+### Compose file
+Production stack is defined in:
+
+- `docker-compose.prod.yml` (default)
+
+You can override the path for `release.sh` / `deploy.sh` via `COMPOSE_PROD=/path/to/file.yml` if your scripts support it.
+
+### State files (rollback metadata)
+The deployment flow maintains:
+
+- `/var/lib/portfolio/current_tag`
+- `/var/lib/portfolio/prev_tag`
+
+`deploy.sh` should update these **only after** a successful deploy + health check.
 
 ---
 
-## Environment variables (Doppler)
+## `build.sh`
 
-### Why Doppler is needed for both build and deploy
+### What it does
+- Validates it’s running inside the git repo
+- Ensures the working tree is clean (no uncommitted changes)
+- Ensures a valid release tag is selected (SemVer-like)
+- Builds images:
+  - `portfolio-backend:<TAG>`
+  - `portfolio-frontend:<TAG>`
+- Cleans up old images while keeping:
+  - the tag just built
+  - `current_tag`
+  - `prev_tag`
 
-Your `docker-compose.prod.yml` contains many `${VAR}` entries under `environment:`
-(without defaults). Docker Compose interpolates these variables when it loads
-the compose file — even for `docker compose build`.
+### What it does NOT do
+- Does not run DB migrations
+- Does not start containers
+- Does not change `current_tag/prev_tag`
 
-That means **any compose command** (`build`, `run`, `up`) must be executed with
-those variables present in the shell environment. If your secrets live in
-Doppler, you wrap the scripts with `doppler run`.
-
-### Recommended usage (scripts)
-
-Build images:
-
+### Typical usage
 ```bash
-doppler run -- ./scripts/deploy/build.sh
+doppler run -- ./build.sh
+# or explicitly:
+TAG=v1.2.3 doppler run -- ./build.sh
 ```
 
-Release + switch containers:
+### Required environment (typical)
+Exact requirements depend on your script, but commonly include:
 
-```bash
-doppler run -- TAG=$(git rev-parse --short HEAD) ./scripts/deploy/deploy.sh
-```
+- `API_DOMAIN` (domain only, e.g. `api.example.com`)
+- `SITE_DOMAIN` (domain only, e.g. `example.com`)
+- Any FE build-time variables needed to bake config into the static build
 
-> If your `build.sh` already exports `TAG`, you can also run:
-> `doppler run -- ./scripts/deploy/deploy.sh`
-> as long as `TAG` is set consistently.
-
-### Manual usage (no scripts)
-
-```bash
-doppler run -- bash -lc '
-  TAG=$(git rev-parse --short HEAD)
-  docker compose -f docker-compose.yml -f docker-compose.prod.yml build
-  docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm release
-  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-'
-```
-
-### When you *don’t* need Doppler
-
-If required variables are already present in the environment (CI, systemd unit,
-exported in shell, etc.), you can run the scripts without `doppler run`.
+If your FE expects `API_URL`, your build script may derive it from `API_DOMAIN` and pass:
+`API_URL=https://$API_DOMAIN` as a Docker build-arg.
 
 ---
 
-## Standard production flow
+## `release.sh`
 
-From the repository root:
+### What it does
+- Prevents concurrent releases (lock file)
+- Ensures dependencies are up (`db`, `redis`)
+- Waits for DB health (via Docker healthcheck)
+- Ensures the backend image for the tag exists locally (release never builds)
+- Runs the compose `release` service once:
 
-1) Build images:
+Typical `release` command includes:
+- `python manage.py migrate --noinput`
+- `python manage.py seed_settings`
+- `python manage.py compilemessages`
+- `python manage.py collectstatic --noinput`
 
+### What it does NOT do
+- Does not deploy/switch long-running services
+- Does not update `current_tag/prev_tag`
+
+### Usage
 ```bash
-doppler run -- ./scripts/deploy/build.sh
+TAG=v1.2.3 doppler run -- ./release.sh
 ```
 
-2) Release + switch:
-
+### Dry run (if supported)
 ```bash
-doppler run -- TAG=$(git rev-parse --short HEAD) ./scripts/deploy/deploy.sh
+TAG=v1.2.3 doppler run -- ./release.sh --dry-run
 ```
+
+---
+
+## `deploy.sh`
+
+### What it does
+A proper deploy script should:
+1. Prevent concurrent deploys (lock file)
+2. Resolve a tag (SemVer-like, tag == release)
+3. Confirm required images exist locally (never builds)
+4. Run `release.sh` for that tag
+5. Switch services to the new tag:
+   - `docker compose up -d --remove-orphans`
+6. Run a post-deploy health check (frontend + backend)
+7. Update state files:
+   - `prev_tag` ← old `current_tag`
+   - `current_tag` ← new `TAG`
+
+### Usage
+```bash
+TAG=v1.2.3 doppler run -- ./deploy.sh
+```
+
+### Dry run (if supported)
+```bash
+TAG=v1.2.3 doppler run -- ./deploy.sh --dry-run
+```
+
+### Health check endpoints
+Your deploy health check should use endpoints that **actually exist** in production, e.g.:
+
+- Frontend: `https://$SITE_DOMAIN/`
+- Backend: a stable endpoint such as:
+  - `https://$API_DOMAIN/healthz` (recommended if you have it)
+  - or another always-on endpoint you control (avoid expensive calls)
+
+If the endpoint doesn’t exist, deploy will report failure even if the system is fine.
 
 ---
 
 ## Rollback
 
-Rollback is switching `TAG` to an older commit tag and recreating containers:
+This setup is intended to make rollback simple:
 
-```bash
-doppler run -- bash -lc '
-  export TAG=<older_commit>
-  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-'
-```
+1. Read rollback target:
+   ```bash
+   cat /var/lib/portfolio/prev_tag
+   ```
+2. Deploy the previous tag:
+   ```bash
+   TAG="$(cat /var/lib/portfolio/prev_tag)" doppler run -- ./deploy.sh
+   ```
 
-Old images are intentionally not removed to keep rollback simple.
+**Note:** Whether rollback is safe depends on your migrations strategy.
+If you ship irreversible migrations, rollback may require manual DB intervention.
 
 ---
 
-## Notes
+## Troubleshooting
 
-- Do not run migrations in the backend container `CMD`. Keep them in the
-  one-off `release` step.
-- Static and media files are shared via volumes so Nginx can serve `/static/`
-  and `/media/` consistently.
-- Keep deploy boring. Add “options” to `build.sh`, not `deploy.sh`.
+### “Missing image …”
+Run `build.sh` first for the same tag:
+```bash
+TAG=v1.2.3 doppler run -- ./build.sh
+```
+
+### “db did not become healthy”
+Check DB container logs and status:
+```bash
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs db
+```
+
+### “release already running” / “deploy already running”
+A previous run may have stalled.
+Check what’s running:
+```bash
+ps aux | grep -E 'release.sh|deploy.sh'
+```
+
+Lock files:
+- `/var/lock/portfolio-release.lock`
+- `/var/lock/portfolio-deploy.lock`
+
+---
+
+## Operator checklist (before/after)
+
+Before:
+- Confirm you are on the correct tag: `git describe --tags --exact-match`
+- Confirm Doppler environment is correct for production
+
+After:
+- Confirm FE is reachable and serving the new build
+- Confirm BE endpoints behave as expected
+- Confirm `current_tag` updated:
+  ```bash
+  cat /var/lib/portfolio/current_tag
+  ```
