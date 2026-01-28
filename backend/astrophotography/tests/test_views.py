@@ -25,7 +25,8 @@ class TestAstroImageViewSet:
 
     def test_retrieve_astro_image(self, api_client, astro_image):
         """Test retrieving a single image via the router generated URL"""
-        url = reverse("astroimages:astroimage-detail", args=[astro_image.pk])
+        # Detail lookup is now by slug
+        url = reverse("astroimages:astroimage-detail", args=[astro_image.slug])
         response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         # Detail serializer doesn't include ID, check another field
@@ -158,3 +159,15 @@ class TestCelestialObjectCategoriesView:
 
         expected_categories = [choice[0] for choice in CelestialObjectChoices]
         assert response.data == expected_categories
+
+
+@pytest.mark.django_db
+class TestTagsView:
+    def test_list_tags(self, api_client):
+        """Test retrieving tags list"""
+        url = reverse("astroimages:tags-list")
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        # Basic check that it returns list
+        assert isinstance(response.data, list)

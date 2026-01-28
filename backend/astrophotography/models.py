@@ -204,6 +204,30 @@ class AstroImage(BaseImage):
     tags = TaggableManager(
         through=UUIDTaggedItem, verbose_name=_("Tags"), help_text=_("Relevant tags for the image.")
     )
+    slug = models.SlugField(
+        max_length=255,
+        unique=True,
+        blank=True,
+        # null=True removed to enforce non-null
+        verbose_name=_("Slug"),
+        help_text=_("SEO friendly URL slug."),
+    )
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if not self.slug:
+            base_slug = slugify(self.name)
+            self.slug = base_slug
+            # Simple uniqueness check (append count)
+            # Note: This is a basic implementation. For high concurrency or strictness,
+            # consider checking DB for collisions.
+            # In update task, we said we will handle uniqueness.
+            # For now, let's implement basic collision avoidance for NEW items.
+            n = 1
+            while AstroImage.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
+                self.slug = f"{base_slug}-{n}"
+                n += 1
+
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.name} ({self.capture_date})" if self.capture_date else self.name

@@ -100,24 +100,6 @@ export const fetchAstroImages = async (
   return data;
 };
 
-export const fetchAstroImage = async (
-  id: number | string
-): Promise<AstroImage> => {
-  if (!id) throw new Error('id is required');
-
-  const url = API_ROUTES.astroImage.replace(':id', String(id));
-  const response: AxiosResponse<AstroImage> = await api.get(url);
-  const image = handleResponse<AstroImage>(response);
-  if (image) {
-    return {
-      ...image,
-      url: getMediaUrl(image.url) || '',
-      thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-    };
-  }
-  return image;
-};
-
 export const fetchContact = async (
   contactData: ContactFormData
 ): Promise<void> => {

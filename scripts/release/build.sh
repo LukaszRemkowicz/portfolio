@@ -1,257 +1,210 @@
 #!/usr/bin/env bash
-# =============================================================================
-# build.sh — build-only (prod targets) for frontend + backend
-# =============================================================================
-# Builds Docker images using:
-#   docker-compose.yml + docker-compose.prod.yml
+###############################################################################
+# build.sh
 #
-# It ONLY builds images (no migrations, no container restarts).
+# Purpose:
+#   Build versioned Docker images for production in a deterministic,
+#   reproducible, and rollback-safe way.
 #
-# Default behavior is SAFE:
-# - It will NOT switch branches.
-# - It will only pull if you explicitly pass --pull.
+# High-level behavior:
+#   - Refuses to run outside a git repository
+#   - Refuses to run if the working tree is dirty
+#   - Requires an exact git tag on HEAD (tag == release)
+#   - Builds backend and frontend Docker images for that tag
+#   - Does NOT deploy anything
+#   - Does NOT run migrations or collect static files
 #
-# Usage:
-#   ./build.sh                 # build both (no git pull)
-#   ./build.sh --pull          # pull current branch, then build
-#   ./build.sh --no-cache      # build without cache
-#   ./build.sh --frontend-only # build FE only
-#   ./build.sh --backend-only  # build BE only
-#   ./build.sh --main          # switch to main (refuse if dirty), then build
+# What this script DOES:
+#   - Builds:
+#       portfolio-backend:<TAG>
+#       portfolio-frontend:<TAG>
+#   - Uses Docker BuildKit for consistent builds
+#   - Injects runtime configuration via environment variables
+#   - Cleans up old images while keeping:
+#       - the tag just built
+#       - the currently deployed tag
+#       - the previous (rollback) tag
 #
-# Env:
-#   TAG=<tag>                  # override tag (default: git short sha)
-#   PROJECT_DIR=<path>         # repo root (auto-detected via git)
-#   LOG_FILE=<path>            # log path (auto)
-#   COMPOSE_BASE, COMPOSE_PROD # compose file overrides
-# =============================================================================
+# What this script DOES NOT DO:
+#   - Does not start containers
+#   - Does not modify docker-compose state
+#   - Does not update current_tag / prev_tag
+#   - Does not touch the database
+#
+# Preconditions:
+#   - Must be run from inside the git repository
+#   - HEAD must be exactly tagged (vX.Y.Z)
+#   - Required environment variables must be provided
+#     (typically via: doppler run -- ./build.sh)
+#   - Docker must be available on the host
+#
+# Typical usage:
+#   TAG=v1.2.3 doppler run -- ./build.sh
+#
+# Relationship to other scripts:
+#   - build.sh   → builds images only (this file)
+#   - release.sh → runs migrations / collectstatic
+#   - deploy.sh  → starts services and handles rollback
+#
+# Design principles:
+#   - Deterministic: same inputs → same images
+#   - Explicit: no hidden defaults for production config
+#   - Boring: no automation magic, easy to reason about
+#
+###############################################################################
 
 set -euo pipefail
 
-# -------- Paths / defaults --------
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# ------------------------------------------------------------------
+# Required environment variables (injected by Doppler)
+#
+# These must be provided at runtime (not hardcoded defaults),
+# to avoid accidentally building a production image with "local" config.
+#
+# Usage example:
+#   doppler run -- ./build.sh
+# ------------------------------------------------------------------
+: "${API_DOMAIN:?API_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
+: "${SITE_DOMAIN:?SITE_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
 
-# Robust project root detection:
-# Prefer user override, else ask git for repo root (works no matter where the script lives).
-if [[ -z "${PROJECT_DIR:-}" ]]; then
-  if git -C "$SCRIPT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    PROJECT_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
-  else
-    echo "[ERROR] PROJECT_DIR not set and script is not inside a git repo."
-    echo "Set PROJECT_DIR explicitly, e.g.:"
-    echo "  PROJECT_DIR=/path/to/repo ./build.sh"
-    exit 1
-  fi
+echo "API_DOMAIN=${API_DOMAIN}"
+
+
+# ------------------------------------------------------------------
+# Resolve project root directory
+#
+# We require running inside the git repository, because:
+# - build context paths are relative to repo root
+# - tag detection uses git metadata
+# - prevents "ran from wrong directory" mistakes
+# ------------------------------------------------------------------
+PROJECT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "$PROJECT_DIR" ]]; then
+  echo "❌ ERROR: build.sh must be run inside a Git repository."
+  exit 1
 fi
+cd "$PROJECT_DIR"
+echo "📁 Project root: ${PROJECT_DIR}"
 
-COMPOSE_BASE="${COMPOSE_BASE:-$PROJECT_DIR/docker-compose.yml}"
-COMPOSE_PROD="${COMPOSE_PROD:-$PROJECT_DIR/docker-compose.prod.yml}"
 
-ORIGINAL_COMPOSE_PROD="$COMPOSE_PROD"
 
-ORIGINAL_COMPOSE_PROD_CONTENT=""
-if [[ -f "$COMPOSE_PROD" ]]; then
-  ORIGINAL_COMPOSE_PROD_CONTENT="$(cat "$COMPOSE_PROD")"
+# ------------------------------------------------------------------
+# Resolve release TAG
+#
+# We require an exact git tag on HEAD to make builds reproducible.
+# This prevents "I built some random commit and forgot which one".
+# ------------------------------------------------------------------
+TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || true)}"
+if [[ -z "$TAG" ]]; then
+  echo "🛑 ERROR: No Git tag on HEAD."
+  echo "👉 Fix: git tag vX.Y.Z && git push origin vX.Y.Z"
+  exit 1
 fi
+export TAG
 
-# Prefer /var/log if writable, else fallback to project-local, else /tmp
-DEFAULT_LOG_FILE="/var/log/portfolio-build.log"
-LOG_FILE="${LOG_FILE:-$DEFAULT_LOG_FILE}"
-
-if ! (touch "$LOG_FILE" >/dev/null 2>&1); then
-  LOG_FILE="$PROJECT_DIR/portfolio-build.log"
-  if ! (touch "$LOG_FILE" >/dev/null 2>&1); then
-    LOG_FILE="/tmp/portfolio-build.log"
-    touch "$LOG_FILE" >/dev/null 2>&1 || true
-  fi
-fi
-
-# -------- Flags --------
-DO_PULL=false
-FRONTEND_ONLY=false
-BACKEND_ONLY=false
-NO_CACHE=false
-FORCE_MAIN=false
-MAIN_BRANCH="${MAIN_BRANCH:-main}"
-
-# -------- Colors --------
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-NC='\033[0m'
-
-# -------- Logging --------
-log()     { echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE" >/dev/null; echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $1"; }
-info()    { echo -e "${PURPLE}[$(date '+%Y-%m-%d %H:%M:%S')] INFO:${NC} $1" | tee -a "$LOG_FILE" >/dev/null; echo -e "${PURPLE}[$(date '+%Y-%m-%d %H:%M:%S')] INFO:${NC} $1"; }
-success() { echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS:${NC} $1" | tee -a "$LOG_FILE" >/dev/null; echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS:${NC} $1"; }
-warning() { echo -e "${YELLOW}[$(date '+%Y-%m-%d %H:%M:%S')] WARNING:${NC} $1" | tee -a "$LOG_FILE" >/dev/null; echo -e "${YELLOW}[$(date '+%Y-%m-%d %H:%M:%S')] WARNING:${NC} $1"; }
-error()   { echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1" | tee -a "$LOG_FILE" >/dev/null; echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1" >&2; }
-
-usage() {
-  cat <<EOF
-build.sh (build-only)
-
-Usage:
-  $0 [options]
-
-Options:
-  --pull              git pull --ff-only on current branch, then build
-  --frontend-only     build only portfolio-fe
-  --backend-only      build only portfolio-be
-  --no-cache          pass --no-cache to docker build
-  -h, --help          show help
-
-Env:
-  TAG=<tag>           override image tag (default: git short sha)
-  PROJECT_DIR         repo root (auto via git if possible)
-  LOG_FILE            optional log path
-  COMPOSE_BASE, COMPOSE_PROD
-
-Notes:
-- Does NOT switch branches.
-- Uses: docker compose -f docker-compose.yml -f docker-compose.prod.yml build
-EOF
-}
-
-# -------- Parse args --------
-if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  usage
-  exit 0
-fi
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --pull) DO_PULL=true; shift ;;
-    --frontend-only) FRONTEND_ONLY=true; shift ;;
-    --backend-only) BACKEND_ONLY=true; shift ;;
-    --no-cache) NO_CACHE=true; shift ;;
-    --main) FORCE_MAIN=true; shift ;;
-    -h|--help) usage; exit 0 ;;
-    *) error "Unknown argument: $1"; echo "Use --help"; exit 1 ;;
-  esac
-done
-
-if [[ "$FRONTEND_ONLY" == true && "$BACKEND_ONLY" == true ]]; then
-  error "Cannot use --frontend-only and --backend-only together"
+if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([\-+].+)?$ ]]; then
+  echo "ERROR: Tag '$TAG' is not SemVer-like (expected vX.Y.Z or vX.Y.Z-suffix)" >&2
   exit 1
 fi
 
-# -------- Preconditions --------
-cd "$PROJECT_DIR" || { error "Cannot cd to PROJECT_DIR=$PROJECT_DIR"; exit 1; }
+echo "🏷️  Release tag: $TAG"
 
-[[ -f "$COMPOSE_BASE" ]] || { error "Missing compose file: $COMPOSE_BASE"; exit 1; }
-if [[ ! -f "$COMPOSE_PROD" ]]; then
-  if [[ "$FORCE_MAIN" == true ]]; then
-    warning "Missing compose prod file at: $COMPOSE_PROD (will try fallback after switching to main)"
-  else
-    error "Missing compose file: $COMPOSE_PROD"
-    exit 1
-  fi
+
+# Enforce deterministic build
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "🛑 ERROR: Working tree is dirty. Commit or stash changes first."
+  git status --porcelain
+  exit 1
 fi
-[[ -d ".git" ]] || { error "Not a git repository: $PROJECT_DIR"; exit 1; }
 
-command -v docker >/dev/null 2>&1 || { error "Docker is not installed/available"; exit 1; }
 
+# ------------------------------------------------------------------
+# Enable Docker BuildKit
+#
+# BuildKit improves performance and caching and is the modern builder.
+# ------------------------------------------------------------------
 export DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"
-
-log "🏗️  Starting build-only..."
-info "Project: $PROJECT_DIR"
-info "Compose: $COMPOSE_BASE + $COMPOSE_PROD"
-info "Log: $LOG_FILE"
-
-CURRENT_BRANCH="$(git branch --show-current || true)"
-log "📋 Current branch: ${CURRENT_BRANCH:-unknown}"
-
-if [[ "$FORCE_MAIN" == true ]]; then
-  # refuse if dirty (protect your work)
-  if [[ -n "$(git status --porcelain)" ]]; then
-    error "Refusing to switch to '$MAIN_BRANCH': working tree is dirty."
-    error "Commit or stash changes, then retry."
-    git status --porcelain | tee -a "$LOG_FILE" >/dev/null || true
-    exit 1
-  fi
-
-  if [[ "$CURRENT_BRANCH" != "$MAIN_BRANCH" ]]; then
-    log "🔄 Switching to branch $MAIN_BRANCH (because --main)..."
-    git checkout "$MAIN_BRANCH"
-    CURRENT_BRANCH="$MAIN_BRANCH"
-    log "📋 Current branch: $CURRENT_BRANCH"
-  fi
-fi
-
-TMP_COMPOSE_PROD=""
-if [[ "$FORCE_MAIN" == true && ! -f "$COMPOSE_PROD" ]]; then
-  warning "docker-compose.prod.yml not found on branch '$MAIN_BRANCH'"
-  warning "Using temporary compose file from starting branch (TEST MODE)"
-  if [[ -z "$ORIGINAL_COMPOSE_PROD_CONTENT" ]]; then
-    error "Cannot fallback: starting branch did not have docker-compose.prod.yml to copy from."
-    error "Run build.sh from the branch that contains docker-compose.prod.yml, then use --main."
-    exit 1
-  fi
-  TMP_COMPOSE_PROD="$(mktemp -t docker-compose.prod.XXXXXX.yml)"
-  printf "%s" "$ORIGINAL_COMPOSE_PROD_CONTENT" > "$TMP_COMPOSE_PROD"
-  COMPOSE_PROD="$TMP_COMPOSE_PROD"
-
-  info "Using compose: $COMPOSE_PROD"
-fi
-
-trap '[[ -n "${TMP_COMPOSE_PROD:-}" && -f "$TMP_COMPOSE_PROD" ]] && rm -f "$TMP_COMPOSE_PROD"' EXIT
-
-if [[ "$DO_PULL" == true ]]; then
-  if [[ -n "$(git status --porcelain)" ]]; then
-    error "Working tree is not clean. Commit/stash changes before pulling."
-    git status --porcelain | tee -a "$LOG_FILE" >/dev/null || true
-    exit 1
-  fi
-  log "📥 Pulling latest code (current branch)..."
-  if [[ "$FORCE_MAIN" == true ]]; then
-    git pull --ff-only origin "$MAIN_BRANCH"
-  else
-    git pull --ff-only
-  fi
-  success "✅ Code updated"
-else
-  info "⏭️  Skipping git pull (use --pull to enable)"
-fi
+echo "⚙️  DOCKER_BUILDKIT=${DOCKER_BUILDKIT}"
 
 
-BRANCH_NAME="$(git branch --show-current || echo detached)"
-COMMIT_FULL="$(git rev-parse HEAD)"
-COMMIT_SUBJECT="$(git log -1 --pretty=%s)"
-COMMIT_DATE="$(git log -1 --pretty=%ci)"
+echo "🏗️  Starting build..."
 
-log "🌿 Branch: $BRANCH_NAME"
-log "🔗 Commit: $COMMIT_FULL"
-log "📝 Commit msg: $COMMIT_SUBJECT"
-log "🕒 Commit date: $COMMIT_DATE"
+# ---------------- Backend ----------------
+echo "🐍 Building backend image..."
+docker build \
+  --pull \
+  --target production \
+  -t "portfolio-backend:$TAG" \
+  ./backend
+echo "✅ Backend image built"
 
-TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)}"
-export TAG
-log "📌 TAG (detected): $TAG"
+# ---------------- Frontend ----------------
+echo "🌐 Building frontend image..."
+docker build \
+  --pull \
+  -f frontend/Dockerfile \
+  --target prod \
+  --build-arg "SITE_DOMAIN=${SITE_DOMAIN}" \
+  --build-arg "API_URL=https://${API_DOMAIN}" \
+  -t "portfolio-frontend:$TAG" \
+  .
+echo "✅ Frontend image built"
 
-CACHE_FLAG=""
-if [[ "$NO_CACHE" == true ]]; then
-  CACHE_FLAG="--no-cache"
-fi
 
-log "🔨 Building images..."
+# ------------------------------------------------------------------
+# Summary
+#
+# Show resulting images for quick verification.
+# ------------------------------------------------------------------
 
-if [[ "$FRONTEND_ONLY" == true ]]; then
-  log "➡️  Building frontend only (portfolio-fe)"
-  docker compose -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" build $CACHE_FLAG portfolio-fe
-elif [[ "$BACKEND_ONLY" == true ]]; then
-  log "➡️  Building backend only (portfolio-be)"
-  docker compose -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" build $CACHE_FLAG portfolio-be
-else
-  docker compose -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" build $CACHE_FLAG
-fi
+echo "📦 Built images:"
+docker images | awk 'NR==1 || $1 ~ /^portfolio-(frontend|backend)$/ {print}'
 
-success "✅ Build complete"
 
-log "📋 Built images (filtered):"
-docker images | awk 'NR==1 || $1 ~ /^portfolio-(frontend|backend)$/ {print}' | tee -a "$LOG_FILE" >/dev/null || true
-docker images | awk 'NR==1 || $1 ~ /^portfolio-(frontend|backend)$/ {print}' || true
+# ------------------------------------------------------------------
+# Cleanup old images
+#
+# We keep:
+# - the tag we just built
+# - the "current" tag (currently deployed)
+# - the "prev" tag (rollback target)
+#
+# Everything else for these repos can be removed to save disk space.
+# ------------------------------------------------------------------
+STATE_DIR="${STATE_DIR:-/var/lib/portfolio}"
+CURRENT_FILE="$STATE_DIR/current_tag"
+PREV_FILE="$STATE_DIR/prev_tag"
+mkdir -p "$STATE_DIR"
 
-log "✅ Done. Images tagged with: $TAG"
+CURRENT_TAG="$(cat "$CURRENT_FILE" 2>/dev/null || true)"
+PREV_TAG="$(cat "$PREV_FILE" 2>/dev/null || true)"
+
+echo "🧹 Cleaning up old images..."
+echo "📌 Keeping tags: build=$TAG current=${CURRENT_TAG:-none} prev=${PREV_TAG:-none}"
+
+should_keep() {
+  local t="$1"
+  [[ -n "$t" && "$t" != "<none>" ]] || return 1
+  [[ "$t" == "$TAG" ]] && return 0
+  [[ -n "$CURRENT_TAG" && "$t" == "$CURRENT_TAG" ]] && return 0
+  [[ -n "$PREV_TAG" && "$t" == "$PREV_TAG" ]] && return 0
+  return 1
+}
+
+for repo in portfolio-backend portfolio-frontend; do
+  mapfile -t tags < <(docker images "$repo" --format '{{.Tag}}' | sort -u)
+  for t in "${tags[@]}"; do
+    if should_keep "$t"; then
+      continue
+    fi
+    docker image rm -f "$repo:$t" >/dev/null 2>&1 || true
+  done
+done
+
+KEEP_TAGS=("$TAG")
+[[ -n "$CURRENT_TAG" ]] && KEEP_TAGS+=("$CURRENT_TAG")
+[[ -n "$PREV_TAG" ]] && KEEP_TAGS+=("$PREV_TAG")
+
+docker image prune -f >/dev/null 2>&1 || true
+
+echo "🎉 Build completed successfully for tag: $TAG"

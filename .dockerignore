@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# OS
+**/.DS_Store
+
+# Backend caches
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage
+**/htmlcov
+**/coverage.xml
+
+# Backend secrets & DB
+.env
+.env.*
+*.sqlite3
+backend/.env
+backend/.env.*
+
+# Media and Static (handled by volumes)
+media/
+staticfiles/
+backend/media/
+backend/staticfiles/
+
+# Frontend artifacts
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# CI/CD & IDE
+.github/
+.vscode/
+.idea/
+*.log

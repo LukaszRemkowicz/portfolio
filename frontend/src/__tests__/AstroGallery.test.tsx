@@ -15,7 +15,6 @@ import { AstroImage } from '../types';
 jest.mock('../api/services', () => ({
   fetchAstroImages: jest.fn(),
   fetchBackground: jest.fn(),
-  fetchAstroImage: jest.fn(),
   fetchSettings: jest.fn(),
   fetchProfile: jest.fn(),
   fetchTags: jest.fn(),
@@ -24,7 +23,6 @@ jest.mock('../api/services', () => ({
 
 import {
   fetchAstroImages,
-  fetchAstroImage,
   fetchSettings,
   fetchProfile,
   fetchTags,
@@ -38,9 +36,6 @@ import { Tag } from '../types';
 describe('AstroGallery Component', () => {
   const mockFetchAstroImages = fetchAstroImages as jest.MockedFunction<
     typeof fetchAstroImages
-  >;
-  const mockFetchAstroImage = fetchAstroImage as jest.MockedFunction<
-    typeof fetchAstroImage
   >;
   const mockFetchTags = fetchTags as jest.MockedFunction<typeof fetchTags>;
 
@@ -151,6 +146,7 @@ describe('AstroGallery Component', () => {
     const mockImages: AstroImage[] = [
       {
         pk: 1,
+        slug: 'test-image-1',
         url: '/test1.jpg',
         name: 'Test Image 1',
         description: 'Test description 1',
@@ -235,6 +231,7 @@ describe('AstroGallery Component', () => {
     const mockImages: AstroImage[] = [
       {
         pk: 1,
+        slug: 'test-image-1',
         url: '/test1.jpg',
         name: 'Test Image 1',
         description: 'Test description 1',
@@ -276,21 +273,14 @@ describe('AstroGallery Component', () => {
     const mockImages: AstroImage[] = [
       {
         pk: 1,
+        slug: 'test-image-1',
         url: '/test1.jpg',
         name: 'Test Image 1',
         description: 'Test description 1',
       },
     ];
 
-    const mockImageDetail: AstroImage = {
-      pk: 1,
-      url: '/test2.jpg',
-      name: 'Test Image 1',
-      description: 'Test detailed description',
-    };
-
     mockFetchAstroImages.mockResolvedValue(mockImages);
-    mockFetchAstroImage.mockResolvedValue(mockImageDetail);
 
     await act(async () => {
       render(
@@ -329,9 +319,7 @@ describe('AstroGallery Component', () => {
 
     await waitFor(() => {
       const modal = screen.getByTestId('image-modal');
-      expect(
-        within(modal).getByText(/Test detailed description/)
-      ).toBeInTheDocument();
+      expect(within(modal).getByText(/Test description 1/)).toBeInTheDocument();
     });
   });
 

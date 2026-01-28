@@ -55,12 +55,12 @@ class TelescopeSerializer(BaseEquipmentSerializer):
 
 
 class TrackerSerializer(BaseEquipmentSerializer):
-    class Meta:
+    class Meta(BaseEquipmentSerializer.Meta):
         model = Tracker
 
 
 class TripodSerializer(BaseEquipmentSerializer):
-    class Meta:
+    class Meta(BaseEquipmentSerializer.Meta):
         model = Tripod
 
 
@@ -79,6 +79,7 @@ class AstroImageSerializerList(serializers.ModelSerializer):
         model = AstroImage
         fields = [
             "pk",
+            "slug",
             "name",
             "description",
             "url",
@@ -92,6 +93,9 @@ class AstroImageSerializerList(serializers.ModelSerializer):
             "capture_date",
             "location",
             "celestial_object",
+            "exposure_details",
+            "processing_details",
+            "astrobin_url",
             "created_at",
         ]
 
@@ -108,6 +112,8 @@ class AstroImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = AstroImage
         fields = [
+            "pk",
+            "slug",
             "capture_date",
             "telescope",
             "camera",
@@ -137,7 +143,7 @@ class AstroImageThumbnailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AstroImage
-        fields = ["pk", "url", "thumbnail_url", "description"]
+        fields = ["pk", "slug", "url", "thumbnail_url", "description"]
 
 
 class MainPageLocationSerializer(serializers.ModelSerializer):

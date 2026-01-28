@@ -32,6 +32,15 @@ class SettingsView(generics.RetrieveAPIView):
         return cast(LandingPageSettings, obj)
 
 
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def health_check_view(request: Request) -> Response:
+    """
+    Simple health check endpoint returning 200 OK.
+    """
+    return Response({"status": "healthy"}, status=status.HTTP_200_OK)
+
+
 @api_view(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
 @permission_classes([permissions.AllowAny])
 def api_404_view(request: Request, *args: Any, **kwargs: Any) -> Response:
