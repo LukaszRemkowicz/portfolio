@@ -31,21 +31,15 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "travel_highlights_enabled",
-                    models.BooleanField(
-                        default=True, verbose_name="Travel Highlights Enabled"
-                    ),
+                    models.BooleanField(default=True, verbose_name="Travel Highlights Enabled"),
                 ),
                 (
                     "programming_enabled",
-                    models.BooleanField(
-                        default=True, verbose_name="Programming Section Enabled"
-                    ),
+                    models.BooleanField(default=True, verbose_name="Programming Section Enabled"),
                 ),
                 (
                     "lastimages_enabled",
-                    models.BooleanField(
-                        default=True, verbose_name="Last Images Section Enabled"
-                    ),
+                    models.BooleanField(default=True, verbose_name="Last Images Section Enabled"),
                 ),
                 (
                     "meteors",
