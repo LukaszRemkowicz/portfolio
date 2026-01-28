@@ -13,6 +13,7 @@ import MainLayout from './components/MainLayout';
 import LoadingScreen from './components/common/LoadingScreen';
 import ScrollToHash from './components/common/ScrollToHash';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import CookieConsent from './components/common/CookieConsent';
 import { APP_ROUTES } from './api/constants';
 import './styles/components/App.module.css';
 
@@ -51,6 +52,7 @@ const App: React.FC = () => {
           </Routes>
         </ErrorBoundary>
       </Suspense>
+      <CookieConsent />
     </Router>
   );
 };

@@ -43,6 +43,18 @@ const Footer: React.FC = () => {
               Email
             </a>
           )}
+          <button
+            onClick={() => {
+              const openSettings = (
+                window as Window & { openCookieSettings?: () => void }
+              ).openCookieSettings;
+              openSettings?.();
+            }}
+            className={styles.link}
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            Cookie Settings
+          </button>
         </div>
       </div>
     </footer>
