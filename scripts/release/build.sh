@@ -158,7 +158,7 @@ echo "✅ Frontend image built"
 # ------------------------------------------------------------------
 
 echo "📦 Built images:"
-docker images | awk 'NR==1 || $1 ~ /^portfolio-(frontend|backend)$/ {print}'
+docker images | grep -E '^portfolio-(frontend|backend)'
 
 
 # ------------------------------------------------------------------
@@ -171,7 +171,7 @@ docker images | awk 'NR==1 || $1 ~ /^portfolio-(frontend|backend)$/ {print}'
 #
 # Everything else for these repos can be removed to save disk space.
 # ------------------------------------------------------------------
-STATE_DIR="${STATE_DIR:-/var/lib/portfolio}"
+STATE_DIR="${STATE_DIR:-$HOME/.portfolio-state}"
 CURRENT_FILE="$STATE_DIR/current_tag"
 PREV_FILE="$STATE_DIR/prev_tag"
 mkdir -p "$STATE_DIR"

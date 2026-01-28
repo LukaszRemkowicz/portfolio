@@ -1,11 +1,10 @@
-name: CI/CD Pipeline
+name: Quality Checks
 
 on:
-  push:
-    branches: [main, dev]
   pull_request:
     branches: [main, dev]
-  workflow_dispatch:
+  push:
+    branches: [dev]
 
 env:
   PYTHON_VERSION: "3.13"
@@ -287,7 +286,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -299,6 +298,7 @@ jobs:
         if: always()
         with:
           sarif_file: "trivy-results.sarif"
+          category: "trivy"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -399,77 +399,3 @@ jobs:
                 body
               });
             }
-
-  # Tagging
-  tag-main:
-    name: Tag main from VERSION
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    needs: [frontend, backend, docker-build, security-scan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout main
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Create and push tag (if missing)
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          git fetch origin main --tags
-
-          # Find the latest tag matching v*
-          # Use xargs to trim potential whitespace, although sort should handle it
-          LATEST_TAG=$(git tag -l "v*" --sort=-v:refname | head -n 1)
-
-          if [[ -z "$LATEST_TAG" ]]; then
-            echo "⚠️ No previous release tag found. Proceeding with initial version."
-          else
-            echo "🏷️ Latest release tag: $LATEST_TAG"
-
-            # Extract version from old tag's VERSION file
-            if git cat-file -e "$LATEST_TAG:VERSION" 2>/dev/null; then
-              OLD_VER=$(git show "$LATEST_TAG:VERSION" | tr -d ' \t\r\n')
-            else
-              echo "⚠️ VERSION file missing in $LATEST_TAG. Assuming 0.0.0 baseline."
-              OLD_VER="0.0.0"
-            fi
-            CUR_VER=$(tr -d ' \t\r\n' < VERSION)
-
-            if [[ "$OLD_VER" == "$CUR_VER" ]]; then
-              echo "ℹ️ VERSION ($CUR_VER) has not changed since $LATEST_TAG. Skipping."
-              exit 0
-            fi
-            echo "🚀 Version change detected: $OLD_VER -> $CUR_VER"
-          fi
-
-          if [[ ! -f VERSION ]]; then
-            echo "❌ ERROR: VERSION file missing on main."
-            exit 1
-          fi
-
-          VER="$(tr -d ' \t\r\n' < VERSION)"
-          if ! [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ ERROR: VERSION must be MAJOR.MINOR.PATCH, got: '$VER'"
-            exit 1
-          fi
-
-          TAG="v$VER"
-          echo "🏷️  Target tag: $TAG"
-
-          git fetch --tags
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "ℹ️ Tag already exists: $TAG (skipping)"
-            exit 0
-          fi
-
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin "$TAG"
-
-          echo "✅ Created and pushed tag: $TAG"
