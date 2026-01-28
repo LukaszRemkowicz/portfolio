@@ -166,6 +166,15 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+    env:
+      DB_HOST: localhost
+      DB_NAME: test_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_PORT: 5432
+      DEFAULT_FROM_EMAIL: test@example.com
+      CONTACT_EMAIL: test@example.com
+      SESSION_COOKIE_DOMAIN: .example.com
 
     steps:
       - name: Checkout code
@@ -209,15 +218,6 @@ jobs:
         working-directory: ./backend
         run: |
           poetry run pytest --cov=. --cov-report=xml
-        env:
-          DB_HOST: localhost
-          DB_NAME: test_db
-          DB_USER: postgres
-          DB_PASSWORD: postgres
-          DB_PORT: 5432
-          DEFAULT_FROM_EMAIL: test@example.com
-          CONTACT_EMAIL: test@example.com
-          SESSION_COOKIE_DOMAIN: .example.com
 
       - name: Upload coverage reports
         if: github.event_name == 'push'
@@ -257,6 +257,15 @@ jobs:
       security-events: write
       actions: read
       contents: read
+    env:
+      DB_HOST: localhost
+      DB_NAME: test_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_PORT: 5432
+      DEFAULT_FROM_EMAIL: test@example.com
+      CONTACT_EMAIL: test@example.com
+      SESSION_COOKIE_DOMAIN: .example.com
 
     steps:
       - name: Checkout code
