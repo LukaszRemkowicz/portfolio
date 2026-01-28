@@ -29,6 +29,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Log App Version
+        run: |
+          if [[ -f VERSION ]]; then
+            VER=$(tr -d ' \t\r\n' < VERSION)
+            echo "✅ PR introduces VERSION: $VER"
+            echo "🏷️  Release tag would be: v$VER"
+          else
+            echo "⚠️ VERSION file not found"
+          fi
+
       - name: Validate VERSION file and bump
         shell: bash
         env:
