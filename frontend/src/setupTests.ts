@@ -1,5 +1,8 @@
 import '@testing-library/jest-dom';
 
+// Ensure API_URL is defined for tests to avoid constant initialization error
+process.env.API_URL = 'http://localhost:8000';
+
 // Mock window.matchMedia for components that use it (e.g., animations, responsive hooks)
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

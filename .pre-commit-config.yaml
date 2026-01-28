@@ -29,7 +29,15 @@ repos:
       - id: eslint
         files: ^frontend/src/.*\.tsx?$
         types: [text]
-        args: ["--ext", ".ts,.tsx", "--max-warnings", "0", "--config", "frontend/.eslintrc.js"]
+        args:
+          [
+            "--ext",
+            ".ts,.tsx",
+            "--max-warnings",
+            "0",
+            "--config",
+            "frontend/.eslintrc.js",
+          ]
         additional_dependencies:
           - eslint@8.57.0
           - eslint-plugin-react@7.34.1
@@ -52,7 +60,8 @@ repos:
     hooks:
       - id: isort
         files: ^backend/
-        args: ["--settings-path", "backend/pyproject.toml", "--profile", "black"]
+        args:
+          ["--settings-path", "backend/pyproject.toml", "--profile", "black"]
 
   - repo: https://github.com/pycqa/flake8
     rev: 7.3.0
@@ -66,3 +75,22 @@ repos:
   # Security and Docker hooks - run manually when needed
   # detect-secrets scan --baseline .secrets.baseline
   # hadolint Dockerfile
+
+  # Testing hooks
+  - repo: local
+    hooks:
+      - id: backend-tests
+        name: backend-tests
+        entry: bash -c "cd backend && poetry run pytest"
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: frontend-tests
+        name: frontend-tests
+        entry: bash -c "cd frontend && npm test -- --watchAll=false"
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]

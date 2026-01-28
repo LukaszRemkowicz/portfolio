@@ -4,12 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import TravelHighlightsPage from '../components/TravelHighlightsPage';
 import { api } from '../api/api';
 import { useAppStore } from '../store/useStore';
-import {
-  fetchProfile,
-  fetchBackground,
-  fetchSettings,
-  fetchAstroImage,
-} from '../api/services';
+import { fetchProfile, fetchBackground, fetchSettings } from '../api/services';
 
 // Mock API (direct axios calls)
 jest.mock('../api/api');
@@ -20,7 +15,6 @@ jest.mock('../api/services', () => ({
   fetchProfile: jest.fn(),
   fetchBackground: jest.fn(),
   fetchSettings: jest.fn(),
-  fetchAstroImage: jest.fn(),
 }));
 
 describe('TravelHighlightsPage', () => {
@@ -48,13 +42,6 @@ describe('TravelHighlightsPage', () => {
         bolidOpacityRange: [0.7, 1.0],
         smokeOpacityRange: [0.5, 0.8],
       },
-    });
-
-    (fetchAstroImage as jest.Mock).mockResolvedValue({
-      pk: 1,
-      name: 'Test Image',
-      url: '/test.jpg',
-      description: 'Test description',
     });
 
     useAppStore.setState({

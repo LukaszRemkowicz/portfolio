@@ -38,6 +38,7 @@ export interface EquipmentItem {
 
 export interface AstroImage {
   pk: number;
+  slug: string;
   url: string;
   thumbnail_url?: string;
   tags?: string[];
@@ -190,7 +191,6 @@ export interface ApiRoutes {
   profile: string;
   background: string;
   astroImages: string;
-  astroImage: string;
   contact: string;
   settings: string;
   projects: string;

@@ -1,11 +1,10 @@
 // frontend/src/components/common/ImageModal.tsx
-import { type FC, useEffect, useState, useCallback } from 'react';
+import { type FC, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, Calendar, MapPin } from 'lucide-react';
 import styles from '../../styles/components/ImageModal.module.css';
 import { AstroImage, EquipmentItem } from '../../types';
-import { fetchAstroImage } from '../../api/services';
 import { sanitizeHtml, slugify } from '../../utils/html';
 import { APP_ROUTES } from '../../api/constants';
 
@@ -16,35 +15,6 @@ interface ImageModalProps {
 
 const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   const navigate = useNavigate();
-  const [detailedImage, setDetailedImage] = useState<AstroImage | null>(null);
-  const [description, setDescription] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (!image) return;
-
-    // Reset state
-    setDescription('');
-    setDetailedImage(null);
-
-    // Optimization: if image already has a substantial description, use it
-    if (image.description && image.description.length > 100) {
-      setDescription(image.description);
-    }
-
-    setLoading(true);
-    fetchAstroImage(image.pk)
-      .then((data: AstroImage) => {
-        setDetailedImage(data);
-        setDescription(data.description || 'No description available.');
-      })
-      .catch(() => {
-        setDescription(image.description || 'No description available.');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [image]);
 
   useEffect(() => {
     if (!image) return;
@@ -69,8 +39,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   );
 
   const renderEquipment = () => {
-    // Prefer detailedImage data, fallback to image prop (which is guaranteed non-null here)
-    const source = detailedImage || image;
+    const source = image;
     if (!source) return null;
 
     const getEquipmentValue = (
@@ -81,13 +50,25 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
       return items.map(t => (typeof t === 'string' ? t : t[key])).join(', ');
     };
 
-    const telescopeValue = getEquipmentValue(source.telescope, 'model');
+    const telescopeValue = getEquipmentValue(
+      source.telescope as (EquipmentItem | string)[],
+      'model'
+    );
     const lensValue = !telescopeValue
-      ? getEquipmentValue(source.lens, 'model')
+      ? getEquipmentValue(source.lens as (EquipmentItem | string)[], 'model')
       : null;
-    const cameraValue = getEquipmentValue(source.camera, 'model');
-    const trackerValue = getEquipmentValue(source.tracker, 'name');
-    const tripodValue = getEquipmentValue(source.tripod, 'name');
+    const cameraValue = getEquipmentValue(
+      source.camera as (EquipmentItem | string)[],
+      'model'
+    );
+    const trackerValue = getEquipmentValue(
+      source.tracker as (EquipmentItem | string)[],
+      'name'
+    );
+    const tripodValue = getEquipmentValue(
+      source.tripod as (EquipmentItem | string)[],
+      'name'
+    );
 
     const items = [
       {
@@ -132,7 +113,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
             {source.exposure_details
               .replace(' Foreground:', '\nForeground:')
               .split('\n')
-              .map((line, idx) => {
+              .map((line: string, idx: number) => {
                 const parts = line.split(':');
                 if (parts.length > 1) {
                   return (
@@ -224,13 +205,10 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
         <div className={styles.descriptionWrapper}>
           {renderEquipment()}
           <div className={styles.descriptionContent}>
-            {(loading
-              ? 'Loading cosmic details...'
-              : description || 'No description available.'
-            )
+            {(image.description || 'No description available.')
               .split(/\r?\n/)
-              .filter(para => para.trim().length > 0)
-              .map((para, index) => (
+              .filter((para: string) => para.trim().length > 0)
+              .map((para: string, index: number) => (
                 <div
                   key={index}
                   className={
