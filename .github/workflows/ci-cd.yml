@@ -426,8 +426,12 @@ jobs:
             echo "🏷️ Latest release tag: $LATEST_TAG"
 
             # Extract version from old tag's VERSION file
-            # tr -d is used to ensure no hidden characters interfere
-            OLD_VER=$(git show "$LATEST_TAG:VERSION" | tr -d ' \t\r\n')
+            if git cat-file -e "$LATEST_TAG:VERSION" 2>/dev/null; then
+              OLD_VER=$(git show "$LATEST_TAG:VERSION" | tr -d ' \t\r\n')
+            else
+              echo "⚠️ VERSION file missing in $LATEST_TAG. Assuming 0.0.0 baseline."
+              OLD_VER="0.0.0"
+            fi
             CUR_VER=$(tr -d ' \t\r\n' < VERSION)
 
             if [[ "$OLD_VER" == "$CUR_VER" ]]; then
