@@ -213,6 +213,21 @@ fi
 
 echo "✅ Health check OK"
 
+# ------------------------------------------------------------------
+# Reload Nginx configuration
+#
+# If the Nginx config file changed on the host, the container won't
+# automatically pick it up since it's mounted read-only. We force a
+# reload here to ensure any config updates take effect.
+# ------------------------------------------------------------------
+echo "🔄 Reloading Nginx configuration..."
+if "${COMPOSE[@]}" exec -T portfolio-nginx nginx -s reload 2>/dev/null; then
+  echo "✅ Nginx config reloaded successfully"
+else
+  echo "⚠️  Nginx reload skipped (container may not be running or nginx not installed)"
+fi
+
+
 
 # ------------------------------------------------------------------
 # Update deployment state for rollback tracking
