@@ -415,3 +415,7 @@ CKEDITOR_5_CONFIGS = {
 }
 
 CKEDITOR_5_CUSTOM_CSS = "css/ckeditor_admin_fix.css"
+
+if not DEBUG:
+    # We handle SSL Redirect and HSTS in Nginx, so we silence these checks
+    SILENCED_SYSTEM_CHECKS = ["security.W004", "security.W008"]

@@ -182,9 +182,9 @@ echo "🧪 [2/3] Release tasks (migrate/compilemessages/collectstatic/seeds)"
 # ------------------------------------------------------------------
 echo "🧪 Running release tasks via release.sh..."
 if [[ "${DRY_RUN}" == true ]]; then
-  echo "🧾 DRY RUN: would execute: TAG=${TAG} doppler run -- ./release.sh"
+  echo "🧾 DRY RUN: would execute: TAG=${TAG} doppler run -- $SCRIPT_DIR/release.sh"
 else
-  TAG="${TAG}" ./release.sh
+  TAG="${TAG}" "$SCRIPT_DIR/release.sh"
 fi
 
 
@@ -221,7 +221,7 @@ echo "✅ Health check OK"
 # - current_tag: the tag considered "currently deployed"
 # - prev_tag   : the previous value of current_tag (rollback target)
 # ------------------------------------------------------------------
-STATE_DIR="${STATE_DIR:-/var/lib/portfolio}"
+STATE_DIR="${STATE_DIR:-$HOME/.portfolio-state}"
 CURRENT_FILE="$STATE_DIR/current_tag"
 PREV_FILE="$STATE_DIR/prev_tag"
 mkdir -p "$STATE_DIR"
