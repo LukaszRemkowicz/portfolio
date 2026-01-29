@@ -25,7 +25,6 @@ describe('API Interceptor', () => {
 
   beforeAll(() => {
     // Extract the error handler from the interceptor
-    // @ts-ignore - accessing private/internal interceptor storage for testing
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const interceptor = (api.interceptors.response as any).handlers[0];
     errorHandler = interceptor.rejected;
