@@ -37,6 +37,7 @@ services:
     <<: *frontend-common
     environment:
       API_URL: https://${API_DOMAIN:-api.portfolio.local}
+      GA_TRACKING_ID: ${GA_TRACKING_ID:-G-2WGK87YBL6}
     ports:
       - "3000:3000"
     restart: unless-stopped
