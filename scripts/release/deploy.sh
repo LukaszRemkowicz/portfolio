@@ -197,6 +197,21 @@ fi
 echo "🚀 [3/3] Switching containers to new images (TAG=$TAG)"
 "${COMPOSE[@]}" up -d --remove-orphans
 
+# ------------------------------------------------------------------
+# Reload Nginx configuration
+#
+# If the Nginx config file changed on the host, the container won't
+# automatically pick it up since it's mounted read-only. We force a
+# reload here to ensure any config updates take effect.
+# Also crucial to refresh upstream DNS resolution if container IPs changed.
+# ------------------------------------------------------------------
+echo "🔄 Reloading Nginx configuration..."
+if "${COMPOSE[@]}" exec -T portfolio-nginx nginx -s reload 2>/dev/null; then
+  echo "✅ Nginx config reloaded successfully"
+else
+  echo "⚠️  Nginx reload skipped (container may not be running or nginx not installed)"
+fi
+
 echo "🩺 Health check..."
 
 # Frontend (expect 200/304)
@@ -213,19 +228,6 @@ fi
 
 echo "✅ Health check OK"
 
-# ------------------------------------------------------------------
-# Reload Nginx configuration
-#
-# If the Nginx config file changed on the host, the container won't
-# automatically pick it up since it's mounted read-only. We force a
-# reload here to ensure any config updates take effect.
-# ------------------------------------------------------------------
-echo "🔄 Reloading Nginx configuration..."
-if "${COMPOSE[@]}" exec -T portfolio-nginx nginx -s reload 2>/dev/null; then
-  echo "✅ Nginx config reloaded successfully"
-else
-  echo "⚠️  Nginx reload skipped (container may not be running or nginx not installed)"
-fi
 
 
 
