@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Gallery Page', () => {
   test.beforeEach(async ({ page }) => {
     // Override default empty image list with mock data for Gallery tests
-    await page.route('**/api/v1/image/**', async route => {
+    await page.route('**/v1/image/**', async route => {
       const url = route.request().url();
       const images = [
         {

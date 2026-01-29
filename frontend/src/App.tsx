@@ -9,10 +9,12 @@ const Programming = lazy(() => import('./components/Programming'));
 const TravelHighlightsPage = lazy(
   () => import('./components/TravelHighlightsPage')
 );
+const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 import MainLayout from './components/MainLayout';
 import LoadingScreen from './components/common/LoadingScreen';
 import ScrollToHash from './components/common/ScrollToHash';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import CookieConsent from './components/common/CookieConsent';
 import { APP_ROUTES } from './api/constants';
 import './styles/components/App.module.css';
 
@@ -48,9 +50,18 @@ const App: React.FC = () => {
                 </MainLayout>
               }
             />
+            <Route
+              path={APP_ROUTES.PRIVACY}
+              element={
+                <MainLayout>
+                  <PrivacyPolicy />
+                </MainLayout>
+              }
+            />
           </Routes>
         </ErrorBoundary>
       </Suspense>
+      <CookieConsent />
     </Router>
   );
 };

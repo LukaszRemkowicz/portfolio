@@ -37,7 +37,6 @@ describe('API Configuration', () => {
     jest.isolateModules(() => {
       // Mock global.process as undefined
       const actualProcess = global.process;
-      // @ts-ignore - simulating environment without process
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (global as any).process;
 
@@ -55,7 +54,6 @@ describe('API Configuration', () => {
     jest.isolateModules(() => {
       // Mock global.process as undefined
       const actualProcess = global.process;
-      // @ts-ignore - simulating environment without process
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (global as any).process;
 

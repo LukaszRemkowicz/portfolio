@@ -23,6 +23,7 @@ export const APP_ROUTES = {
   PROGRAMMING: '/programming',
   CONTACT: '/contact',
   TRAVEL_HIGHLIGHTS: '/travel-highlights',
+  PRIVACY: '/privacy',
 };
 
 export const DEFAULT_TRAVEL_IMAGE =

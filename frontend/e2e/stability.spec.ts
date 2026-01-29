@@ -5,7 +5,7 @@ test.describe('Stability Check', () => {
     page,
   }) => {
     // Catch-all mock for API v1
-    await page.route('**/api/v1/**', async route => {
+    await page.route('**/v1/**', async route => {
       const url = route.request().url();
 
       if (url.includes('/profile/')) {
@@ -30,7 +30,7 @@ test.describe('Stability Check', () => {
         });
       }
 
-      if (url.includes('/whats-enabled/')) {
+      if (url.includes('/settings/')) {
         return route.fulfill({
           status: 200,
           contentType: 'application/json',

@@ -5,7 +5,7 @@ test.describe('Landing Page', () => {
     // Override specific routes needed for Homepage tests
 
     // 1. Mock specific image data for the homepage "Latest Images" section
-    await page.route('**/api/v1/image/**', async route => {
+    await page.route('**/v1/image/**', async route => {
       // Logic from original test: return 2 specific images
       // We only care about the list view here
       return route.fulfill({
@@ -37,11 +37,26 @@ test.describe('Landing Page', () => {
     });
 
     // 2. Mock Contact Form endpoint
-    await page.route('**/api/v1/contact/', async route => {
+    await page.route('**/v1/contact/', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ success: true }),
+      });
+    });
+
+    // 3. Mock Feature Flags explicitly to ensure Contact Form is enabled
+    await page.route('**/v1/settings/', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          contactForm: true,
+          programming: true,
+          gallery: true,
+          lastimages: true,
+          travelHighlights: true,
+        }),
       });
     });
 
@@ -88,8 +103,11 @@ test.describe('Landing Page', () => {
   });
 
   test('should submit contact form', async ({ page }) => {
-    const contactHeading = page.locator('h2:has-text("Direct Inquiry")');
-    await expect(contactHeading).toBeVisible();
+    // Use more robust selector and longer timeout for lazy loaded component
+    const contactHeading = page.getByRole('heading', {
+      name: /Direct Inquiry/i,
+    });
+    await expect(contactHeading).toBeVisible({ timeout: 15000 });
     await contactHeading.scrollIntoViewIfNeeded();
 
     await page.fill('#contact input[name="name"]', 'Test User', {

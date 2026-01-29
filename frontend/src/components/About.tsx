@@ -4,7 +4,8 @@ import { Camera } from 'lucide-react';
 import { AboutProps } from '../types';
 
 const About: React.FC<AboutProps> = ({ profile }) => {
-  if (!profile) return null;
+  // Gracefull degradation: If profile is missing, render with defaults instead of returning null
+  // if (!profile) return null;
 
   return (
     <section id='about' className={styles.section}>
@@ -19,7 +20,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
             className={styles.description}
             dangerouslySetInnerHTML={{
               __html:
-                profile.bio ||
+                profile?.bio ||
                 'Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye.',
             }}
           />
@@ -37,7 +38,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
         <div className={styles.visual}>
           <div className={styles.glassCard}>
             <div className={styles.cardGradient}></div>
-            {profile.about_me_image ? (
+            {profile?.about_me_image ? (
               <img
                 src={profile.about_me_image}
                 alt='About me'

@@ -14,7 +14,7 @@ describe('HTML Utils', () => {
 
     it('returns empty string for null/undefined/empty input', () => {
       expect(stripHtml('')).toBe('');
-      // @ts-ignore
+      // @ts-expect-error - Testing runtime null handling
       expect(stripHtml(null)).toBe('');
     });
   });
