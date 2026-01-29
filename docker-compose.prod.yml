@@ -72,6 +72,8 @@ services:
     restart: "always"
     networks:
       - portfolio_network
+    environment:
+      GA_TRACKING_ID: ${GA_TRACKING_ID}
 
   # ---------- Backend ----------
   portfolio-be:
