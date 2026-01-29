@@ -88,7 +88,6 @@ services:
       sh -c "
         python manage.py migrate --noinput &&
         python manage.py seed_settings &&
-        python manage.py compilemessages &&
         python manage.py collectstatic --noinput
       "
 
