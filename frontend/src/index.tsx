@@ -12,8 +12,8 @@ const root = createRoot(rootElement);
 root.render(<App />);
 
 // Register service worker for offline support and PWA features
-// Register service worker for offline support and PWA features
-if (process.env.NODE_ENV === 'production') {
+const isProd = process.env.NODE_ENV === 'production';
+if (isProd) {
   serviceWorkerRegistration.register();
 } else {
   // Unregister service worker in development to avoid refresh loops

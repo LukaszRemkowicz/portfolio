@@ -9,6 +9,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default (env, argv) => {
+  console.log('🏗️ Webpack config GA_TRACKING_ID from env:', env.GA_TRACKING_ID);
+  console.log(
+    '🏗️ Webpack config GA_TRACKING_ID from process.env:',
+    process.env.GA_TRACKING_ID
+  );
+
   // Check for SSL certificates via environment variables
   const sslKeyPath = env.SSL_KEY_PATH || process.env.SSL_KEY_PATH;
   const sslCertPath = env.SSL_CRT_PATH || process.env.SSL_CRT_PATH;
@@ -107,6 +113,10 @@ export default (env, argv) => {
       }),
       new webpack.DefinePlugin({
         'process.env.API_URL': JSON.stringify(apiUrl),
+        'process.env.NODE_ENV': JSON.stringify(argv.mode || 'development'),
+        'process.env.GA_TRACKING_ID': JSON.stringify(
+          env.GA_TRACKING_ID || process.env.GA_TRACKING_ID || ''
+        ),
       }),
       // Only include the service worker plugin in production to avoid HMR issues
       ...(argv.mode !== 'development'

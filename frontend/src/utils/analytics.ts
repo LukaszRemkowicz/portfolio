@@ -1,78 +1,55 @@
 // frontend/src/utils/analytics.ts
 declare global {
   interface Window {
-    dataLayer: unknown[][];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    dataLayer: any[];
     gtag: (...args: unknown[]) => void;
-    __ga_inited?: boolean;
   }
 }
 
-const GA_TRACKING_ID = 'G-2WGK87YBL6';
+const GA_TRACKING_ID = process.env.GA_TRACKING_ID || '';
 
 /**
- * Initializes Google Analytics if consent is granted.
- * Handles race conditions, avoids shadowing the global gtag,
- * and ensures idempotency across React renders.
+ * Simplified Google Analytics loader.
+ * Uses a standard stub to capture events before the library loads.
  */
 export const loadGoogleAnalytics = () => {
-  // Guard against multiple initializations
-  if (window.__ga_inited) return;
-
-  // 1) Initialize dataLayer
-  window.dataLayer = window.dataLayer || [];
-
-  // 2) Initialize helper function ONLY if real GA library hasn't loaded yet
-  if (typeof window.gtag !== 'function') {
-    window.gtag = function () {
-      // eslint-disable-next-line prefer-rest-params
-      window.dataLayer.push(Array.from(arguments));
-    };
+  if (document.querySelector(`script[src*="gtag/js?id=${GA_TRACKING_ID}"]`)) {
+    return;
   }
 
-  const src = `https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`;
-  const scriptExists = document.querySelector(`script[src="${src}"]`);
-
-  const initDataLayer = () => {
-    if (window.__ga_inited) return;
-    window.__ga_inited = true;
-
-    window.gtag('js', new Date());
-    window.gtag('config', GA_TRACKING_ID, {
-      debug_mode: process.env.NODE_ENV === 'development',
-      send_page_view: false,
-    });
-
-    // Trigger the initial page view once GA is ready,
-    // as we disabled automatic page views.
-    trackPageView(window.location.pathname + window.location.search);
-
-    console.log('✅ GA fully initialized (config + first pview)');
+  // 1. Stub (Standard Google pattern)
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer.push(arguments);
   };
 
-  if (!scriptExists) {
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = src;
-    script.onload = initDataLayer;
-    document.head.appendChild(script);
-  } else {
-    // Pro-level refinement: if script exists, wait for its 'load' event
-    // and attempt init immediately if it happens to be already loaded.
-    const s = scriptExists as HTMLScriptElement;
-    s.addEventListener('load', initDataLayer, { once: true });
-    initDataLayer();
-  }
+  // 2. Load script
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`;
+  script.onload = () => {
+    if (!GA_TRACKING_ID) return;
+    window.gtag('js', new Date());
+    window.gtag('config', GA_TRACKING_ID, {
+      send_page_view: true,
+    });
+  };
+
+  document.head.appendChild(script);
 };
 
 /**
- * Manually tracks a page view. Useful for SPAs where route changes
- * don't trigger a full page reload.
+ * Manually tracks a page view (Simplified for verification).
  */
 export const trackPageView = (path: string) => {
-  if (!window.__ga_inited) return;
-  window.gtag('event', 'page_view', {
-    page_path: path,
-  });
+  // Pass-through if gtag exists, otherwise it hits the stub
+  if (typeof window.gtag === 'function') {
+    window.gtag('event', 'page_view', {
+      page_path: path,
+    });
+  }
 };
 
 export const hasAnalyticsConsent = (): boolean => {
