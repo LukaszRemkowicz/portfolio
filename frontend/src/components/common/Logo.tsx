@@ -7,8 +7,8 @@ const Logo: React.FC = () => {
     <Link to='/' className={styles.logo}>
       <div className={styles.logoMarkWrapper}>
         <svg
-          width='48'
-          height='48'
+          width='100%'
+          height='100%'
           viewBox='0 0 100 100'
           className={styles.logoMark}
         >
@@ -59,13 +59,15 @@ const Logo: React.FC = () => {
           </g>
 
           {/* Telescope Image */}
-          <foreignObject x='15' y='15' width='70' height='70'>
-            <img
-              src='/telescope.png'
-              alt='Telescope'
-              className={styles.logoImage}
-            />
-          </foreignObject>
+          <image
+            x='15'
+            y='10'
+            width='70'
+            height='70'
+            href='/telescope.png'
+            preserveAspectRatio='xMidYMid meet'
+            className={styles.logoImage}
+          />
         </svg>
       </div>
       <div className={styles.logoTextWrapper}>

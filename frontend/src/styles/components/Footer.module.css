@@ -49,6 +49,15 @@
 .links {
   display: flex;
   gap: 3rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .links {
+    gap: 1rem;
+    padding: 0 1rem;
+  }
 }
 
 .link {
