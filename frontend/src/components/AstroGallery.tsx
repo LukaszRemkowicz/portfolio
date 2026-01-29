@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import styles from '../styles/components/AstroGallery.module.css';
 import { ASSETS } from '../api/routes';
@@ -23,29 +23,20 @@ const AstroGallery: React.FC = () => {
   const loadCategories = useAppStore(state => state.loadCategories);
   const loadTags = useAppStore(state => state.loadTags);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [modalImage, setModalImage] = useState<AstroImage | null>(null);
   const [isTagsDrawerOpen, setIsTagsDrawerOpen] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const selectedFilter = searchParams.get('filter') as FilterType | null;
   const selectedTag = searchParams.get('tag');
+  const imgParam = searchParams.get('img');
 
-  useEffect(() => {
-    const imgParam = searchParams.get('img');
-    if (imgParam) {
-      // Lookup by slug (primary) or pk (fallback)
-      const img = images.find(
-        i => i.slug === imgParam || i.pk.toString() === imgParam
-      );
-      if (img) {
-        setModalImage(img);
-      } else {
-        setModalImage(null);
-      }
-    } else {
-      setModalImage(null);
-    }
-  }, [searchParams, images]);
+  const modalImage = useMemo(() => {
+    if (!imgParam) return null;
+    return (
+      images.find(i => i.slug === imgParam || i.pk.toString() === imgParam) ||
+      null
+    );
+  }, [imgParam, images]);
 
   useEffect(() => {
     loadInitialData();
