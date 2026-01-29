@@ -29,10 +29,23 @@ const HomePage: React.FC = () => {
   }, [loadInitialData]);
 
   if (loading) return <LoadingScreen />;
-  if (error) return <div className={styles.error}>{error}</div>;
+  if (loading) return <LoadingScreen />;
 
+  // Graceful degradation: If error occurs, render content anyway with a notification
   return (
     <div className={styles.appContainer}>
+      {error && (
+        <div className={styles.errorBanner} role='alert'>
+          {error}
+          <button
+            onClick={() => useAppStore.getState().clearError()}
+            className={styles.dismissError}
+            aria-label='Dismiss error'
+          >
+            ×
+          </button>
+        </div>
+      )}
       <StarBackground />
       <Navbar transparent />
       <main className={styles.mainContent}>

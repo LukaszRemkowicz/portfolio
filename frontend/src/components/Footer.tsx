@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import styles from '../styles/components/Footer.module.css';
 import { Sparkles } from 'lucide-react';
 import { useAppStore } from '../store/useStore';
@@ -43,6 +44,9 @@ const Footer: React.FC = () => {
               Email
             </a>
           )}
+          <Link to='/privacy' className={styles.link}>
+            Privacy Policy
+          </Link>
           <button
             onClick={() => {
               const openSettings = (

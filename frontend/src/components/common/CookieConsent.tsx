@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { Cookie } from 'lucide-react';
 import styles from './CookieConsent.module.css';
@@ -64,9 +65,9 @@ const CookieConsent: React.FC = () => {
               We use cookies to enhance your experience, analyze traffic, and
               personalize your journey through the cosmos. By continuing to
               explore, you accept our use of cookies.{' '}
-              <a href='#privacy' className={styles.learnMore}>
+              <Link to='/privacy' className={styles.learnMore}>
                 Learn more
-              </a>
+              </Link>
             </p>
           </div>
         </div>

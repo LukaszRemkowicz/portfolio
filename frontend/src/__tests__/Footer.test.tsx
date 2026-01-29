@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import Footer from '../components/Footer';
 import { useAppStore } from '../store/useStore';
@@ -17,7 +18,11 @@ describe('Footer Component', () => {
     mockUseAppStore.mockReturnValue({
       profile: { contact_email: 'test@example.com' },
     });
-    render(<Footer />);
+    render(
+      <MemoryRouter>
+        <Footer />
+      </MemoryRouter>
+    );
     expect(screen.getByText('Łukasz Remkowicz © 2026')).toBeInTheDocument();
   });
 
@@ -34,7 +39,11 @@ describe('Footer Component', () => {
     };
     mockUseAppStore.mockReturnValue({ profile: mockProfile });
 
-    render(<Footer />);
+    render(
+      <MemoryRouter>
+        <Footer />
+      </MemoryRouter>
+    );
 
     const igLink = screen.getByText('Instagram');
     const astroLink = screen.getByText('Astrobin');
@@ -54,7 +63,11 @@ describe('Footer Component', () => {
 
   it('does not render social links when profile data is missing', () => {
     mockUseAppStore.mockReturnValue({ profile: { profiles: [] } });
-    render(<Footer />);
+    render(
+      <MemoryRouter>
+        <Footer />
+      </MemoryRouter>
+    );
 
     expect(screen.queryByText('Instagram')).not.toBeInTheDocument();
     expect(screen.queryByText('Astrobin')).not.toBeInTheDocument();

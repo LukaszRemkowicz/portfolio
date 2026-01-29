@@ -9,6 +9,7 @@ const Programming = lazy(() => import('./components/Programming'));
 const TravelHighlightsPage = lazy(
   () => import('./components/TravelHighlightsPage')
 );
+const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 import MainLayout from './components/MainLayout';
 import LoadingScreen from './components/common/LoadingScreen';
 import ScrollToHash from './components/common/ScrollToHash';
@@ -46,6 +47,14 @@ const App: React.FC = () => {
               element={
                 <MainLayout>
                   <TravelHighlightsPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path={APP_ROUTES.PRIVACY}
+              element={
+                <MainLayout>
+                  <PrivacyPolicy />
                 </MainLayout>
               }
             />
