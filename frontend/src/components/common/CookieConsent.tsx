@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { Cookie } from 'lucide-react';
 import styles from './CookieConsent.module.css';
-import { loadGoogleAnalytics } from '../../utils/analytics';
 
 interface WindowWithCookieSettings extends Window {
   openCookieSettings?: () => void;
@@ -10,20 +9,20 @@ interface WindowWithCookieSettings extends Window {
 
 declare const window: WindowWithCookieSettings;
 
-const CookieConsent: React.FC = () => {
+interface CookieConsentProps {
+  onAccept: () => void;
+}
+
+const CookieConsent: React.FC<CookieConsentProps> = ({ onAccept }) => {
   const [showBanner, setShowBanner] = useState(false);
 
+  // Initialize state from local storage
   useEffect(() => {
     // Check if user has already consented
     const consent = localStorage.getItem('cookieConsent');
-    if (consent === 'true') {
-      // User previously accepted, load GA
-      loadGoogleAnalytics();
-    } else if (!consent) {
+    if (!consent) {
       // No consent stored, show banner after delay
       const timer = setTimeout(() => setShowBanner(true), 1000);
-      // This return is for the timer cleanup, but we also need to expose the global function.
-      // We'll handle the global function exposure and its cleanup separately.
       return () => clearTimeout(timer);
     }
   }, []);
@@ -37,11 +36,11 @@ const CookieConsent: React.FC = () => {
     return () => {
       delete window.openCookieSettings;
     };
-  }, []); // Empty dependency array ensures this runs once on mount and cleans up on unmount
+  }, []);
 
   const acceptCookies = () => {
     localStorage.setItem('cookieConsent', 'true');
-    loadGoogleAnalytics();
+    onAccept();
     setShowBanner(false);
   };
 
@@ -63,11 +62,12 @@ const CookieConsent: React.FC = () => {
             <h4 className={styles.title}>Cookie Consent</h4>
             <p className={styles.description}>
               We use cookies to enhance your experience, analyze traffic, and
-              personalize your journey through the cosmos. By continuing to
-              explore, you accept our use of cookies.{' '}
-              <Link to='/privacy' className={styles.learnMore}>
-                Learn more
+              personalize your journey through the cosmos. By using our site,
+              you agree to our{' '}
+              <Link to='/privacy-policy' className={styles.learnMore}>
+                Privacy Policy
               </Link>
+              .
             </p>
           </div>
         </div>

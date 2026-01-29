@@ -92,25 +92,20 @@ jobs:
           echo "🔢 PR version:   $NEW"
 
           if [[ "$OLD" == "$NEW" ]]; then
-            # TODO: Uncomment this check in the next release.
-            # Temporarily disabled to allow initial bootstrap/fix convergence.
-            echo "⚠️ VERSION was not changed ($NEW), but proceeding for this release."
-            # echo "❌ ERROR: VERSION was not changed in this PR (still $NEW)."
-            # exit 1
+            echo "❌ ERROR: VERSION was not changed in this PR (still $NEW)."
+            exit 1
           fi
 
           IFS='.' read -r oldM oldm oldp <<< "$OLD"
           IFS='.' read -r newM newm newp <<< "$NEW"
 
           # Require strictly greater
-          # TODO: Uncomment this check in the next release.
-          # Temporarily disabled to allow initial bootstrap/fix convergence.
-          # if (( newM < oldM )) || \
-          #   (( newM == oldM && newm < oldm )) || \
-          #   (( newM == oldM && newm == oldm && newp <= oldp )); then
-          #   echo "❌ ERROR: VERSION must increase. Base=$OLD PR=$NEW"
-          #   exit 1
-          # fi
+          if (( newM < oldM )) || \
+            (( newM == oldM && newm < oldm )) || \
+            (( newM == oldM && newm == oldm && newp <= oldp )); then
+            echo "❌ ERROR: VERSION must increase. Base=$OLD PR=$NEW"
+            exit 1
+          fi
 
           echo "✅ VERSION bump is valid: $OLD → $NEW"
           echo "🏷️  Release tag would be: v$NEW"
