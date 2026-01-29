@@ -2,7 +2,6 @@
 import { type FC, useEffect } from 'react';
 import { useAppStore } from '../store/useStore';
 import styles from '../styles/components/Programming.module.css';
-// @ts-ignore: Github icon is deprecated in lucide-react in favor of simple-icons
 import { Github, ExternalLink, Code2 } from 'lucide-react';
 import LoadingScreen from './common/LoadingScreen';
 

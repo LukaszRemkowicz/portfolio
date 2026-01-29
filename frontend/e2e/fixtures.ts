@@ -9,7 +9,7 @@ export const test = base.extend<PortfolioFixtures>({
   mockApi: [
     async ({ page }, use) => {
       // Catch-all mock for API v1
-      await page.route('**/api/v1/**', async route => {
+      await page.route('**/v1/**', async route => {
         const url = route.request().url();
 
         // 1. User Profile
@@ -37,7 +37,7 @@ export const test = base.extend<PortfolioFixtures>({
         }
 
         // 3. Feature Flags (Enable ALL for max coverage by default)
-        if (url.includes('/whats-enabled/')) {
+        if (url.includes('/settings/')) {
           return route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -51,7 +51,28 @@ export const test = base.extend<PortfolioFixtures>({
           });
         }
 
-        // 4. Default Image List (Empty by default, override in specific tests if needed)
+        // 5. Categories
+        if (url.includes('/categories/')) {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify([
+              'Deep Sky',
+              'Solar System',
+              'Landscape',
+              'Nature',
+            ]),
+          });
+        }
+
+        // 6. Default Image List (Empty by default, override in specific tests if needed)
+        // Note: gallery.spec.ts needs complex logic, so we let it fall through or it overrides this.
+        // But for "navigation" and "stability", empty is fine.
+        // We'll return "continue" for image endpoints if not handled here to allow overrides?
+        // No, Playwright routes are "first match wins" if defined later? Actually LATEST defined route handler executes FIRST.
+        // So if we define this here, test-specific 'page.route' calls inside the test will take precedence.
+
+        // 6. Default Image List (Empty by default, override in specific tests if needed)
         // Note: gallery.spec.ts needs complex logic, so we let it fall through or it overrides this.
         // But for "navigation" and "stability", empty is fine.
         // We'll return "continue" for image endpoints if not handled here to allow overrides?

@@ -7,7 +7,6 @@ import { registerRoute } from 'workbox-routing';
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
-// eslint-disable-next-line no-undef
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision: string | null }>;
 };
@@ -84,7 +83,6 @@ self.addEventListener('message', event => {
   // Only accept messages from trusted origins and with the expected shape
   const trustedOrigins = [self.location.origin];
   const messageOrigin =
-    // eslint-disable-next-line no-undef
     (event as ExtendableMessageEvent).origin || self.location.origin;
 
   if (

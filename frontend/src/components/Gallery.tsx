@@ -13,23 +13,13 @@ const Gallery: React.FC = () => {
   const error = useAppStore(state => state.error);
   const loadImages = useAppStore(state => state.loadImages);
   const features = useAppStore(state => state.features);
-  const [modalImage, setModalImage] = useState<AstroImage | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const imgId = searchParams.get('img');
 
-  // Sync modalImage with 'img' query parameter
-  useEffect(() => {
-    const imgId = searchParams.get('img');
-    if (imgId) {
-      const img = images.find(i => i.pk.toString() === imgId);
-      if (img) {
-        setModalImage(img);
-      } else {
-        setModalImage(null);
-      }
-    } else {
-      setModalImage(null);
-    }
-  }, [searchParams, images]);
+  const modalImage = useMemo(() => {
+    if (!imgId) return null;
+    return images.find(i => i.pk.toString() === imgId) || null;
+  }, [imgId, images]);
 
   useEffect(() => {
     if (features?.lastimages !== false) {

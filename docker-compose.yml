@@ -20,14 +20,21 @@ x-backend-common: &backend-common
     - db
     - redis
 
+
+x-frontend-common: &frontend-common
+  build:
+    context: .
+    dockerfile: frontend/Dockerfile
+    target: dev
+  networks:
+    - portfolio_network
+  volumes:
+    - ./frontend:/app
+    - fe_node_modules:/app/node_modules
+
 services:
   portfolio-fe:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-      target: dev
-    networks:
-      - portfolio_network
+    <<: *frontend-common
     environment:
       API_URL: https://${API_DOMAIN:-api.portfolio.local}
     ports:
@@ -50,6 +57,11 @@ services:
         python manage.py collectstatic --noinput &&
         python manage.py runserver 0.0.0.0:8000
       "
+
+  portfolio-fe-test:
+    <<: *frontend-common
+    profiles: [ "test" ]
+    command: npm test
 
   portfolio-test:
     <<: *backend-common
