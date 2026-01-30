@@ -70,9 +70,6 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
       {isMenuOpen && (
         <div className={styles.mobileDrawer}>
           <div className={styles.mobileDrawerContent}>
-            <button className={styles.closeDrawer} onClick={toggleMenu}>
-              <X size={24} />
-            </button>
             <div className={styles.drawerLinks}>
               <NavLink
                 to={APP_ROUTES.HOME}
