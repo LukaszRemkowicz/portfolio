@@ -28,6 +28,18 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
             className={({ isActive }) =>
               `${styles.link} ${isActive ? styles.active : ''}`
             }
+            onClick={() => {
+              requestAnimationFrame(() => {
+                const root = document.getElementById('root');
+                if (root) root.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                document.documentElement.scrollTo({
+                  top: 0,
+                  behavior: 'smooth',
+                });
+                document.body.scrollTo({ top: 0, behavior: 'smooth' });
+              });
+            }}
           >
             Home
           </NavLink>
@@ -73,7 +85,19 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
             <div className={styles.drawerLinks}>
               <NavLink
                 to={APP_ROUTES.HOME}
-                onClick={toggleMenu}
+                onClick={() => {
+                  toggleMenu();
+                  requestAnimationFrame(() => {
+                    const root = document.getElementById('root');
+                    if (root) root.scrollTo({ top: 0, behavior: 'smooth' });
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    document.documentElement.scrollTo({
+                      top: 0,
+                      behavior: 'smooth',
+                    });
+                    document.body.scrollTo({ top: 0, behavior: 'smooth' });
+                  });
+                }}
                 end
                 className={({ isActive }) => (isActive ? styles.active : '')}
               >
