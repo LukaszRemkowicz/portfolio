@@ -4,6 +4,7 @@
   background: rgba(15, 23, 42, 0.1);
   position: relative;
   z-index: 1;
+  scroll-margin-top: 6rem;
 }
 
 .container {

@@ -220,11 +220,21 @@ if ! curl -fsS -o /dev/null "https://${SITE_DOMAIN}/"; then
   exit 1
 fi
 
-# Backend (choose ONE stable endpoint you have)
-if ! curl -fsS -o /dev/null "https://${API_DOMAIN}/health"; then
-  echo "❌ Health check failed: backend not reachable"
-  exit 1
-fi
+# Backend (retrying for up to 30s to allow Gunicorn to bind)
+echo "🩺 Health check (Backend)..."
+MAX_RETRIES=30
+for ((i=1; i<=MAX_RETRIES; i++)); do
+  if curl -fsS -o /dev/null "https://${API_DOMAIN}/health" 2>/dev/null; then
+    echo "✅ Backend is healthy"
+    break
+  fi
+  echo "⏳ Waiting for backend to become ready… (${i}/${MAX_RETRIES})"
+  sleep 1
+  if [[ "$i" -eq "$MAX_RETRIES" ]]; then
+    echo "❌ Health check failed: backend not reachable after ${MAX_RETRIES}s"
+    exit 1
+  fi
+done
 
 echo "✅ Health check OK"
 

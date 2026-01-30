@@ -8,13 +8,14 @@ import ImageModal from './common/ImageModal';
 import LoadingScreen from './common/LoadingScreen';
 import GalleryCard from './common/GalleryCard';
 import TagSidebar from './TagSidebar';
-import { Sliders } from 'lucide-react';
+import CategorySidebar from './CategorySidebar';
+import { Sliders, LayoutGrid } from 'lucide-react';
 
 const AstroGallery: React.FC = () => {
   const images = useAppStore(state => state.images);
+  const categories = useAppStore(state => state.categories);
   const isInitialLoading = useAppStore(state => state.isInitialLoading);
   const isImagesLoading = useAppStore(state => state.isImagesLoading);
-  const categories = useAppStore(state => state.categories);
   const tags = useAppStore(state => state.tags);
   const background = useAppStore(state => state.backgroundUrl);
   const error = useAppStore(state => state.error);
@@ -24,6 +25,7 @@ const AstroGallery: React.FC = () => {
   const loadTags = useAppStore(state => state.loadTags);
   const [searchParams, setSearchParams] = useSearchParams();
   const [isTagsDrawerOpen, setIsTagsDrawerOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const selectedFilter = searchParams.get('filter') as FilterType | null;
@@ -73,6 +75,7 @@ const AstroGallery: React.FC = () => {
     } else {
       nextParams.set('filter', filter);
       nextParams.delete('tag');
+      setIsFiltersOpen(false); // Close menu on selection
     }
     setSearchParams(nextParams);
   };
@@ -90,6 +93,12 @@ const AstroGallery: React.FC = () => {
 
   const toggleTagsDrawer = (): void => {
     setIsTagsDrawerOpen(!isTagsDrawerOpen);
+    if (isFiltersOpen) setIsFiltersOpen(false);
+  };
+
+  const toggleFilters = (): void => {
+    setIsFiltersOpen(!isFiltersOpen);
+    if (isTagsDrawerOpen) setIsTagsDrawerOpen(false);
   };
 
   const handleImageClick = (image: AstroImage): void => {
@@ -122,18 +131,32 @@ const AstroGallery: React.FC = () => {
           Filter by category or explore images using the tags below.
         </h3>
 
-        <button
-          className={styles.mobileFilterToggle}
-          onClick={toggleTagsDrawer}
-          aria-expanded={isTagsDrawerOpen}
-        >
-          <Sliders size={18} />
-          Explore Tags
-        </button>
+        <div className={styles.mobileActions}>
+          <button
+            className={styles.mobileFilterToggle}
+            onClick={toggleTagsDrawer}
+            aria-expanded={isTagsDrawerOpen}
+          >
+            <Sliders size={18} />
+            Explore Tags
+          </button>
+
+          <button
+            className={styles.mobileFilterToggle}
+            onClick={toggleFilters}
+            aria-expanded={isFiltersOpen}
+          >
+            <LayoutGrid size={18} />
+            Categories
+          </button>
+        </div>
 
         <div
-          className={`${styles.overlay} ${isTagsDrawerOpen ? styles.visible : ''}`}
-          onClick={toggleTagsDrawer}
+          className={`${styles.overlay} ${isTagsDrawerOpen || isFiltersOpen ? styles.visible : ''}`}
+          onClick={() => {
+            setIsTagsDrawerOpen(false);
+            setIsFiltersOpen(false);
+          }}
         />
 
         <div className={styles.sidebarContainer}>
@@ -145,6 +168,14 @@ const AstroGallery: React.FC = () => {
             onToggle={toggleTagsDrawer}
           />
         </div>
+
+        <CategorySidebar
+          categories={categories}
+          selectedCategory={selectedFilter}
+          onCategorySelect={handleFilterClick}
+          isOpen={isFiltersOpen}
+          onToggle={toggleFilters}
+        />
 
         <div className={styles.filtersSection}>
           {categories.map((filter: FilterType) => {

@@ -26,6 +26,7 @@ import {
   fetchSettings,
   fetchProfile,
   fetchTags,
+  fetchCategories,
 } from '../api/services';
 import { useAppStore } from '../store/useStore';
 import { Tag } from '../types';
@@ -45,14 +46,7 @@ describe('AstroGallery Component', () => {
       backgroundUrl: null,
       images: [],
       projects: [],
-      categories: [
-        'Landscape',
-        'Deep Sky',
-        'Startrails',
-        'Solar System',
-        'Milky Way',
-        'Northern Lights',
-      ],
+      categories: [],
       tags: [],
       features: null,
       isInitialLoading: true,
@@ -90,6 +84,14 @@ describe('AstroGallery Component', () => {
     });
     mockFetchTags.mockResolvedValue([]);
     mockFetchAstroImages.mockResolvedValue([]);
+    (fetchCategories as jest.Mock).mockResolvedValue([
+      'Landscape',
+      'Deep Sky',
+      'Startrails',
+      'Solar System',
+      'Milky Way',
+      'Northern Lights',
+    ]);
     resetStore();
   });
 
@@ -138,8 +140,9 @@ describe('AstroGallery Component', () => {
     });
 
     expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
-    expect(screen.getByText(/Landscape/i)).toBeInTheDocument();
-    expect(screen.getByText(/Deep Sky/i)).toBeInTheDocument();
+    // Categories are rendered twice (Mobile Sidebar + Desktop List)
+    expect(screen.getAllByText(/Landscape/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Deep Sky/i).length).toBeGreaterThan(0);
   });
 
   it('renders images from the API after loading', async () => {
@@ -255,8 +258,9 @@ describe('AstroGallery Component', () => {
       expect(screen.queryByTestId('loading-screen')).not.toBeInTheDocument();
     });
 
-    // Use findByText to ensure we wait for category buttons to appear
-    const landscapeFilter = await screen.findByText(/Landscape/i);
+    // Use findByText to ensure we wait for category buttons to appear (might be multiple)
+    const landscapeFilters = await screen.findAllByText(/Landscape/i);
+    const landscapeFilter = landscapeFilters[0]; // Click the first available one
 
     await act(async () => {
       fireEvent.click(landscapeFilter);
@@ -384,7 +388,8 @@ describe('AstroGallery Component', () => {
       expect(screen.queryByTestId('loading-screen')).not.toBeInTheDocument();
     });
 
-    const milkiWayFilter = await screen.findByText(/Milky Way/i);
+    const milkiWayFilters = await screen.findAllByText(/Milky Way/i);
+    const milkiWayFilter = milkiWayFilters[0];
 
     // Clear initial load call
     mockFetchTags.mockClear();
