@@ -109,25 +109,21 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
       {
         label: 'Exposure',
         value: source.exposure_details ? (
-          <>
-            {source.exposure_details
-              .replace(' Foreground:', '\nForeground:')
-              .split('\n')
-              .map((line: string, idx: number) => {
-                const parts = line.split(':');
-                if (parts.length > 1) {
-                  return (
-                    <div key={idx}>
-                      {parts[0]}:
-                      <span className={styles.lightWeight}>
-                        {parts.slice(1).join(':')}
-                      </span>
-                    </div>
-                  );
-                }
-                return <div key={idx}>{line}</div>;
-              })}
-          </>
+          <div
+            dangerouslySetInnerHTML={{
+              __html: sanitizeHtml(source.exposure_details),
+            }}
+          />
+        ) : null,
+      },
+      {
+        label: 'Processing',
+        value: source.processing_details ? (
+          <div
+            dangerouslySetInnerHTML={{
+              __html: sanitizeHtml(source.processing_details),
+            }}
+          />
         ) : null,
       },
     ].filter(item => item.value);
@@ -205,22 +201,14 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
         <div className={styles.descriptionWrapper}>
           {renderEquipment()}
           <div className={styles.descriptionContent}>
-            {(image.description || 'No description available.')
-              .split(/\r?\n/)
-              .filter((para: string) => para.trim().length > 0)
-              .map((para: string, index: number) => (
-                <div
-                  key={index}
-                  className={
-                    index === 0
-                      ? styles.modalDescription
-                      : styles.descriptionParagraph
-                  }
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeHtml(para),
-                  }}
-                />
-              ))}
+            <div
+              className={styles.modalDescription}
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHtml(
+                  image.description || 'No description available.'
+                ),
+              }}
+            />
           </div>
         </div>
       </div>

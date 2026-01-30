@@ -18,7 +18,9 @@ const Gallery: React.FC = () => {
 
   const modalImage = useMemo(() => {
     if (!imgId) return null;
-    return images.find(i => i.pk.toString() === imgId) || null;
+    return (
+      images.find(i => i.slug === imgId || i.pk.toString() === imgId) || null
+    );
   }, [imgId, images]);
 
   useEffect(() => {
@@ -52,7 +54,7 @@ const Gallery: React.FC = () => {
     (image: AstroImage): void => {
       console.log('Card clicked!', image.name);
       // Use URL params for modal state to support browser back button
-      searchParams.set('img', image.pk.toString());
+      searchParams.set('img', image.slug);
       setSearchParams(searchParams);
     },
     [searchParams, setSearchParams]
