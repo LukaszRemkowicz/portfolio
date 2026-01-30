@@ -47,6 +47,13 @@
   font-family: var(--font-family-heading);
 }
 
+@media (max-width: 480px) {
+  .filterBtn {
+    padding: 0.5rem 1.25rem;
+    font-size: 9px;
+  }
+}
+
 .filterBtn:hover {
   background: rgba(255, 255, 255, 0.05);
 }

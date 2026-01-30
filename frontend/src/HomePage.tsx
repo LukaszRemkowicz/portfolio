@@ -29,7 +29,6 @@ const HomePage: React.FC = () => {
   }, [loadInitialData]);
 
   if (loading) return <LoadingScreen />;
-  if (loading) return <LoadingScreen />;
 
   // Graceful degradation: If error occurs, render content anyway with a notification
   return (

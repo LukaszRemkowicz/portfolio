@@ -52,9 +52,15 @@
   grid-column: 2;
   grid-row: 2;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
   justify-content: center;
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .placeholder {
@@ -74,7 +80,7 @@
 }
 
 .hero {
-  width: 100vw;
+  width: 100%;
   height: 33vh;
   min-height: 250px;
   background-size: cover;
@@ -102,11 +108,13 @@
 
 .heroTitle {
   color: #fff;
-  font-size: 3rem;
+  font-size: clamp(2rem, 8vw, 3rem);
   font-weight: 700;
   letter-spacing: 2px;
   z-index: 2;
   position: relative;
+  text-align: center;
+  padding: 0 1rem;
 }
 
 .filtersSection {
@@ -117,6 +125,15 @@
   gap: 1rem;
   margin: 0;
   flex-wrap: wrap;
+  transition: all var(--transition-normal);
+}
+
+.mobileActions {
+  display: none;
+  gap: 1rem;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 1rem;
 }
 
 .filterBox {
@@ -134,6 +151,22 @@
     transform var(--transition-fast),
     border-color var(--transition-fast);
   border: 2px solid transparent;
+}
+
+@media (max-width: 480px) {
+  .filterBox {
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .filterBox {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
 }
 
 .filterBox:not(.activeFilter):hover {
@@ -180,6 +213,15 @@
   border-color: var(--celestial-blue);
 }
 
+@media (max-width: 340px) {
+  .mobileFilterToggle {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.6875rem;
+    /* 11px */
+    letter-spacing: 0.02em;
+  }
+}
+
 .overlay {
   display: none;
   position: fixed;
@@ -221,6 +263,9 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    width: 100%;
+    /* Use full width on mobile */
+    padding: 0 1rem;
   }
 
   /* Reset grid placement for flex usage */
@@ -243,7 +288,11 @@
   }
 
   .filtersSection {
-    justify-content: center;
+    display: none;
+  }
+
+  .mobileActions {
+    display: flex;
   }
 
   .sidebarLabel {

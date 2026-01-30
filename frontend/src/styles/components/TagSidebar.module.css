@@ -11,6 +11,8 @@
   max-height: calc(100vh - var(--navbar-height) - 4rem);
   overflow: hidden;
   overflow: hidden;
+  overflow: hidden;
+  /* box-shadow removed from desktop/default state as it is handled per media query usually, or we specificy it here but careful about mobile leak */
   box-shadow: var(--glass-shadow);
   backdrop-filter: var(--glass-blur);
   opacity: 0.8;
@@ -125,19 +127,25 @@
     position: fixed;
     top: 0;
     left: -100%;
-    width: 300px;
+    width: 100%;
+    max-width: 300px;
     height: 100vh;
     max-height: 100vh;
-    z-index: var(--z-modal);
+    z-index: 2001;
+    /* Above navbar (2000) */
     border-radius: 0;
     transition: left var(--transition-normal);
     background-color: var(--celestial-bg);
     opacity: 1;
     backdrop-filter: blur(20px);
+    box-shadow: none;
+    /* No shadow when closed */
   }
 
   .sidebar.open {
     left: 0;
+    box-shadow: var(--glass-shadow);
+    /* Shadow only when open */
   }
 
   .closeButton {

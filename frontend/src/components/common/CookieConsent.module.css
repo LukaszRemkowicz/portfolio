@@ -12,6 +12,12 @@
   box-shadow: var(--glass-shadow);
 }
 
+@media (max-width: 480px) {
+  .cookieBanner {
+    padding: var(--space-4);
+  }
+}
+
 .container {
   max-width: 1200px;
   margin: 0 auto;

@@ -2,6 +2,7 @@
   padding: 5rem 0rem;
   position: relative;
   z-index: 1;
+  scroll-margin-top: 6rem;
 }
 
 .container {
