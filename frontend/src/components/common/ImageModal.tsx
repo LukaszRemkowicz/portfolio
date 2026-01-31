@@ -303,6 +303,8 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
                 ? 'Click to view full resolution'
                 : undefined
             }
+            draggable='false'
+            onContextMenu={e => e.preventDefault()}
           />
         </div>
 
@@ -368,6 +370,8 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
                           : 'grab'
                         : 'zoom-in',
                 }}
+                draggable='false'
+                onContextMenu={e => e.preventDefault()}
               />
             </div>,
             document.body
