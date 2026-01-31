@@ -103,7 +103,7 @@ const AstroGallery: React.FC = () => {
 
   const handleImageClick = (image: AstroImage): void => {
     const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('img', image.slug || image.pk.toString());
+    nextParams.set('img', image.slug);
     setSearchParams(nextParams);
   };
 

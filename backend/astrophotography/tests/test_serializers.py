@@ -122,3 +122,27 @@ class TestEquipmentSerializers:
             _ = serializer.fields
         except AssertionError as e:
             pytest.fail(f"TagSerializer Configuration Error: {e}")
+
+
+@pytest.mark.django_db
+class TestAstroImageSerializers:
+    def test_zoom_serialization_mapping(self):
+        """Test that 'zoom' model field is serialized as 'process' in API"""
+        from astrophotography.serializers import AstroImageSerializer, AstroImageSerializerList
+        from astrophotography.tests.factories import AstroImageFactory
+
+        image_zoom_true = AstroImageFactory(zoom=True)
+        image_zoom_false = AstroImageFactory(zoom=False)
+
+        # Test AstroImageSerializer
+        data_zoom_true = AstroImageSerializer(image_zoom_true).data
+        data_zoom_false = AstroImageSerializer(image_zoom_false).data
+
+        assert "process" in data_zoom_true
+        assert data_zoom_true["process"] is True
+        assert data_zoom_false["process"] is False
+        assert "zoom" not in data_zoom_true
+
+        # Test AstroImageSerializerList
+        data_list_true = AstroImageSerializerList(image_zoom_true).data
+        assert data_list_true["process"] is True

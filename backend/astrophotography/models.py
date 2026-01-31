@@ -179,13 +179,15 @@ class AstroImage(BaseImage):
         verbose_name=_("Lens"),
         help_text=_("Lens model and focal length"),
     )
-    exposure_details = models.TextField(
+    exposure_details = CKEditor5Field(
         blank=True,
+        config_name="default",
         verbose_name=_("Exposure Details"),
         help_text=_("Technical details of the exposure (gain, sub-exposures, total time)."),
     )
-    processing_details = models.TextField(
+    processing_details = CKEditor5Field(
         blank=True,
+        config_name="default",
         verbose_name=_("Processing Details"),
         help_text=_("Software and techniques used for post-processing."),
     )
@@ -211,6 +213,11 @@ class AstroImage(BaseImage):
         # null=True removed to enforce non-null
         verbose_name=_("Slug"),
         help_text=_("SEO friendly URL slug."),
+    )
+    zoom = models.BooleanField(
+        default=False,
+        verbose_name=_("Zoom"),
+        help_text=_("Allow users to zoom this image in detail mode."),
     )
 
     def save(self, *args: Any, **kwargs: Any) -> None:

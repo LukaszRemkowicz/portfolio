@@ -5,11 +5,14 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 
 from core.throttling import GalleryRateThrottle
+from core.utils.signing import validate_signed_url
 
 from .models import (
+    AstroImage,
     CelestialObjectChoices,
     MainPageBackgroundImage,
     MainPageLocation,
@@ -118,3 +121,47 @@ class CelestialObjectCategoriesView(APIView):
     def get(self, request: Request) -> Response:
         categories = [choice[0] for choice in CelestialObjectChoices]
         return Response(categories)
+
+
+class SecureMediaView(APIView):
+    """
+    Serves high-resolution images via Nginx X-Accel-Redirect.
+    This effectively hides the physical file path from the public.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []  # Explicitly disable auth to avoid defaults causing redirects
+
+    def get(self, request, slug):
+        # Validate signature
+        signature = request.query_params.get("s")
+        expiration = request.query_params.get("e")
+
+        if not signature or not expiration:
+            return HttpResponse("Missing signature", status=403)
+
+        if not validate_signed_url(slug, signature, expiration):
+            return HttpResponse("Invalid or expired signature", status=403)
+
+        image = get_object_or_404(AstroImage, slug=slug)
+
+        # Security check: Ensure the image actually has a file
+        if not image.path:
+            raise Http404("Image file not found")
+
+        # Construct the protected path for Nginx
+        # Note: image.path.name usually looks like 'images/my_photo.jpg'
+        # We redirect to /protected_media/images/my_photo.jpg
+        # which maps to /app/media/images/my_photo.jpg inside the container
+
+        file_path = image.path.name
+        response = HttpResponse()
+        # The semicolon separates the header from the value in Nginx, but strictly
+        # speaking for the header value, we just need the path.
+        # This path must match the 'location /protected_media/' block in nginx.conf
+        redirect_uri = f"/protected_media/{file_path}"
+
+        response["X-Accel-Redirect"] = redirect_uri
+        response["Content-Type"] = ""  # Let Nginx determine the content type
+
+        return response

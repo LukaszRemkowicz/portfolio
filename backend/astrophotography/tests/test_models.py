@@ -32,6 +32,18 @@ class TestAstroImageModel:
         assert image.thumbnail is not None
         assert image.thumbnail.name.startswith("thumbnails/thumb_")
 
+    def test_zoom_field_default(self):
+        """Test that zoom field defaults to False"""
+        image = AstroImageFactory()
+        assert image.zoom is False
+
+    def test_zoom_field_persistence(self):
+        """Test that zoom field can be set to False and persisted"""
+        image = AstroImageFactory(zoom=False)
+        assert image.zoom is False
+        image.refresh_from_db()
+        assert image.zoom is False
+
 
 @pytest.mark.django_db
 class TestMainPageBackgroundImageModel:

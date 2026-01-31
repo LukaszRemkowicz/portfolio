@@ -26,7 +26,7 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
             to={APP_ROUTES.HOME}
             end
             className={({ isActive }) =>
-              `${styles.link} ${isActive ? styles.active : ''}`
+              `${styles.link} ${isActive && !location.hash ? styles.active : ''}`
             }
             onClick={() => {
               requestAnimationFrame(() => {
@@ -61,10 +61,16 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
               Programming
             </NavLink>
           )}
-          <Link to={`${APP_ROUTES.HOME}#about`} className={styles.link}>
+          <Link
+            to={`${APP_ROUTES.HOME}#about`}
+            className={`${styles.link} ${location.hash === '#about' ? styles.active : ''}`}
+          >
             About
           </Link>
-          <Link to={`${APP_ROUTES.HOME}#contact`} className={styles.link}>
+          <Link
+            to={`${APP_ROUTES.HOME}#contact`}
+            className={`${styles.link} ${location.hash === '#contact' ? styles.active : ''}`}
+          >
             Contact
           </Link>
         </div>
@@ -99,7 +105,9 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
                   });
                 }}
                 end
-                className={({ isActive }) => (isActive ? styles.active : '')}
+                className={({ isActive }) =>
+                  isActive && !location.hash ? styles.active : ''
+                }
               >
                 Home
               </NavLink>

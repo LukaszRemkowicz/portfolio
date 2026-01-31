@@ -1,15 +1,9 @@
+import { getEnv } from '../utils/env';
+
 export const API_BASE_URL =
   (typeof window !== 'undefined' &&
     (window as unknown as { env?: { API_URL?: string } }).env?.API_URL) ||
-  (typeof window !== 'undefined' &&
-    (window as unknown as { env?: { API_URL?: string } }).env?.API_URL) ||
-  (() => {
-    try {
-      return process.env.API_URL;
-    } catch {
-      return undefined;
-    }
-  })();
+  getEnv('API_URL');
 
 if (!API_BASE_URL) {
   throw new Error('API_URL is not defined');

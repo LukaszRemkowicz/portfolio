@@ -86,6 +86,7 @@ class AstroImageAdmin(admin.ModelAdmin):
                     "description",
                     "capture_date",
                     "astrobin_url",
+                    "zoom",
                 )
             },
         ),

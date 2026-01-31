@@ -43,6 +43,8 @@ const Home: FC<HomeProps> = ({
               loading='eager'
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               {...({ fetchpriority: 'high' } as any)}
+              draggable='false'
+              onContextMenu={e => e.preventDefault()}
             />
           </div>
         )}
