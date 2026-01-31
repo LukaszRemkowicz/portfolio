@@ -56,6 +56,7 @@ export interface AstroImage {
   processing_details?: string;
   celestial_object?: string;
   astrobin_url?: string;
+  process?: boolean;
 }
 
 export interface Tag {

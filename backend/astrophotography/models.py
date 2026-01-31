@@ -214,6 +214,11 @@ class AstroImage(BaseImage):
         verbose_name=_("Slug"),
         help_text=_("SEO friendly URL slug."),
     )
+    zoom = models.BooleanField(
+        default=False,
+        verbose_name=_("Zoom"),
+        help_text=_("Allow users to zoom this image in detail mode."),
+    )
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         if not self.slug:

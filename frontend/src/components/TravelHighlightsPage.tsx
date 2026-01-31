@@ -177,6 +177,8 @@ const TravelHighlightsPage: React.FC = () => {
                       alt={image.name}
                       className={styles.viewerImage}
                       onClick={() => handleImageClick(image)}
+                      draggable='false'
+                      onContextMenu={e => e.preventDefault()}
                     />
                   </div>
 

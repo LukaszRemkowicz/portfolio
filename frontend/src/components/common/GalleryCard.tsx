@@ -47,6 +47,8 @@ const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
           loading='lazy'
           onLoad={() => setIsLoaded(true)}
           className={`${styles.cardImage} ${isLoaded ? styles.show : ''}`}
+          draggable='false'
+          onContextMenu={e => e.preventDefault()}
         />
       </div>
       <div className={styles.cardContent}>

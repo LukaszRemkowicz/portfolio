@@ -15,6 +15,7 @@ test.describe('Landing Page', () => {
           {
             pk: 1,
             name: 'Test Galaxy',
+            slug: 'test-galaxy',
             url: 'https://via.placeholder.com/800x600',
             thumbnail_url: 'https://via.placeholder.com/200x150',
             description: 'A test galaxy far away',
@@ -25,6 +26,7 @@ test.describe('Landing Page', () => {
           {
             pk: 2,
             name: 'Test Nebula',
+            slug: 'test-nebula',
             url: 'https://via.placeholder.com/800x600',
             thumbnail_url: 'https://via.placeholder.com/200x150',
             description: 'A test nebula',
