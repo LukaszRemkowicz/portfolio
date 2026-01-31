@@ -49,6 +49,8 @@ export default (env, argv) => {
     process.env.API_URL ||
     (isDev ? 'https://api.portfolio.local' : '');
 
+  const enableGA = env.ENABLE_GA || process.env.ENABLE_GA || 'false';
+
   if (!apiUrl && !isDev) {
     console.error(
       '\x1b[31m%s\x1b[0m',
@@ -117,6 +119,7 @@ export default (env, argv) => {
         'process.env.GA_TRACKING_ID': JSON.stringify(
           env.GA_TRACKING_ID || process.env.GA_TRACKING_ID || ''
         ),
+        'process.env.ENABLE_GA': JSON.stringify(enableGA),
       }),
       // Only include the service worker plugin in production to avoid HMR issues
       ...(argv.mode !== 'development'

@@ -1,4 +1,5 @@
-// frontend/src/utils/analytics.ts
+import { getEnv } from './env';
+
 declare global {
   interface Window {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -7,13 +8,28 @@ declare global {
   }
 }
 
-const GA_TRACKING_ID = process.env.GA_TRACKING_ID || '';
+const GA_TRACKING_ID = getEnv('GA_TRACKING_ID');
+const ENABLE_GA_VAL = getEnv('ENABLE_GA', 'false');
+const ENABLE_GA = ENABLE_GA_VAL.toLowerCase() === 'true';
+const IS_DEV = getEnv('NODE_ENV') === 'development';
+
+if (IS_DEV) {
+  console.log('📊 Google Analytics Status:', {
+    ENABLED: ENABLE_GA,
+    RAW_VALUE: ENABLE_GA_VAL,
+    TRACKING_ID: GA_TRACKING_ID,
+  });
+}
 
 /**
  * Simplified Google Analytics loader.
  * Uses a standard stub to capture events before the library loads.
  */
 export const loadGoogleAnalytics = () => {
+  if (!ENABLE_GA) {
+    return;
+  }
+
   if (document.querySelector(`script[src*="gtag/js?id=${GA_TRACKING_ID}"]`)) {
     return;
   }

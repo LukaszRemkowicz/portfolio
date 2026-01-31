@@ -7,6 +7,7 @@ describe('Google Analytics Utility', () => {
   beforeEach(() => {
     jest.resetModules();
     process.env.GA_TRACKING_ID = GA_ID;
+    process.env.ENABLE_GA = 'true';
 
     // Clear DOM and global state
     document.head.innerHTML = '';
@@ -82,5 +83,38 @@ describe('Google Analytics Utility', () => {
     );
     expect(events.some(e => e[0] === 'js')).toBe(true);
     expect(events.some(e => e[0] === 'config' && e[1] === GA_ID)).toBe(true);
+  });
+
+  describe('Switch Logic', () => {
+    test.each(['false', '0', 'no', 'undefined', ''])(
+      'does not load GA when ENABLE_GA is "%s"',
+      val => {
+        jest.resetModules();
+        process.env.ENABLE_GA = val;
+        let localAnalytics: typeof import('../utils/analytics');
+        jest.isolateModules(() => {
+          localAnalytics = require('../utils/analytics');
+        });
+
+        localAnalytics!.loadGoogleAnalytics();
+        expect(document.querySelector('script')).toBeNull();
+        expect(window.dataLayer).toBeUndefined();
+      }
+    );
+
+    test.each(['true', 'TRUE', 'True', 'TrUe'])(
+      'enables GA when ENABLE_GA is "%s" (case-insensitive)',
+      val => {
+        jest.resetModules();
+        process.env.ENABLE_GA = val;
+        let localAnalytics: typeof import('../utils/analytics');
+        jest.isolateModules(() => {
+          localAnalytics = require('../utils/analytics');
+        });
+
+        localAnalytics!.loadGoogleAnalytics();
+        expect(document.querySelector('script')).toBeTruthy();
+      }
+    );
   });
 });
