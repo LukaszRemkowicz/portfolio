@@ -35,7 +35,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (scale <= 1) return;
+    if (!image || scale <= 1 || image.process === false) return;
     e.preventDefault();
     e.stopPropagation(); // Stop from hitting overlay
     setIsDragging(true);
@@ -70,7 +70,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   };
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (!isFullRes) return;
+    if (!image || !isFullRes || image.process === false) return;
 
     // Always prevent default to stop the background from scrolling while in lightbox
     e.preventDefault();
@@ -82,6 +82,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!image || image.process === false) return;
     if (e.touches.length === 2) {
       const distance = Math.hypot(
         e.touches[0].pageX - e.touches[1].pageX,
@@ -92,6 +93,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!image || image.process === false) return;
     if (e.touches.length === 2 && lastTouchDistance !== null) {
       const distance = Math.hypot(
         e.touches[0].pageX - e.touches[1].pageX,
@@ -115,6 +117,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   };
 
   const toggleZoom = (e: React.MouseEvent) => {
+    if (!image || image.process === false) return;
     e.stopPropagation();
     const duration = Date.now() - dragStartTime;
     if (hasMoved || duration > 200) return; // Ignore if moved or held for long
@@ -289,10 +292,17 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
             alt={image.name}
             className={styles.modalImage}
             onClick={() => {
-              setIsFullRes(true);
-              setPanPosition({ x: 0, y: 0 });
+              if (image.process !== false) {
+                setIsFullRes(true);
+                setPanPosition({ x: 0, y: 0 });
+              }
             }}
-            title='Click to view full resolution'
+            style={{ cursor: image.process !== false ? 'zoom-in' : 'default' }}
+            title={
+              image.process !== false
+                ? 'Click to view full resolution'
+                : undefined
+            }
           />
         </div>
 
@@ -350,11 +360,13 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
                     ? 'none'
                     : 'transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)',
                   cursor:
-                    scale > 1.01
-                      ? isDragging
-                        ? 'grabbing'
-                        : 'grab'
-                      : 'zoom-in',
+                    image.process === false
+                      ? 'default'
+                      : scale > 1.01
+                        ? isDragging
+                          ? 'grabbing'
+                          : 'grab'
+                        : 'zoom-in',
                 }}
               />
             </div>,

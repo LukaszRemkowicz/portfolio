@@ -93,4 +93,19 @@ describe('ImageModal Lightbox', () => {
     fireEvent.click(lightboxImage);
     expect(lightboxImage).not.toHaveClass('isZoomed');
   });
+
+  it('disables zoom when image.process is false', () => {
+    const disabledImage = { ...mockImage, process: false };
+    renderModal(disabledImage);
+
+    const modalImage = screen.getByAltText('Test Image');
+    fireEvent.click(modalImage);
+
+    // Lightbox should NOT open because we disabled it in the onClick handler
+    expect(screen.getAllByAltText('Test Image')).toHaveLength(1);
+
+    // Tooltip should be undefined/null
+    expect(modalImage).not.toHaveAttribute('title');
+    expect(modalImage).toHaveStyle('cursor: default');
+  });
 });

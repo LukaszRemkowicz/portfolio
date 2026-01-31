@@ -74,6 +74,7 @@ class AstroImageSerializerList(serializers.ModelSerializer):
     tracker: StringRelatedField = StringRelatedField(many=True)
     tripod: StringRelatedField = StringRelatedField(many=True)
     location: CharField = CharField(source="location.name")
+    process = serializers.BooleanField(source="zoom")
 
     class Meta:
         model = AstroImage
@@ -97,6 +98,7 @@ class AstroImageSerializerList(serializers.ModelSerializer):
             "processing_details",
             "astrobin_url",
             "created_at",
+            "process",
         ]
 
 
@@ -108,6 +110,7 @@ class AstroImageSerializer(serializers.ModelSerializer):
     tripod = TripodSerializer(many=True, read_only=True)
 
     location = serializers.CharField(source="location.name", read_only=True)
+    process = serializers.BooleanField(source="zoom")
 
     class Meta:
         model = AstroImage
@@ -126,6 +129,7 @@ class AstroImageSerializer(serializers.ModelSerializer):
             "celestial_object",
             "astrobin_url",
             "description",
+            "process",
         ]
 
 
