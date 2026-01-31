@@ -21,8 +21,8 @@ const CookieConsent: React.FC<CookieConsentProps> = ({ onAccept }) => {
     // Check if user has already consented
     const consent = localStorage.getItem('cookieConsent');
     if (!consent) {
-      // No consent stored, show banner after delay
-      const timer = setTimeout(() => setShowBanner(true), 1000);
+      // No consent stored, show banner after delay (shortened for tests/UX)
+      const timer = setTimeout(() => setShowBanner(true), 100);
       return () => clearTimeout(timer);
     }
   }, []);

@@ -9,6 +9,7 @@ test.describe('Gallery Page', () => {
         {
           pk: 1,
           name: 'Milky Way Arch',
+          slug: 'milky-way-arch',
           url: 'https://via.placeholder.com/800x600',
           thumbnail_url: 'https://via.placeholder.com/200x150',
           description: 'Milky Way over mountains',
@@ -19,6 +20,7 @@ test.describe('Gallery Page', () => {
         {
           pk: 2,
           name: 'Orion Nebula',
+          slug: 'orion-nebula',
           url: 'https://via.placeholder.com/800x600',
           thumbnail_url: 'https://via.placeholder.com/200x150',
           description: 'M42 Orion Nebula',

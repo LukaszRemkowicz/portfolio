@@ -7,6 +7,7 @@ from .views import (
     CelestialObjectCategoriesView,
     MainPageBackgroundImageView,
     MainPageLocationViewSet,
+    SecureMediaView,
     TagsView,
     TravelHighlightsBySlugView,
 )
@@ -21,6 +22,12 @@ router.register("tags", TagsView, basename="tags")
 
 
 urlpatterns = [
+    # Secure Media Endpoint
+    path(
+        "images/<slug:slug>/serve/",
+        SecureMediaView.as_view(),
+        name="secure-image-serve",
+    ),
     # Slug-based travel highlights endpoints (more specific routes first)
     path(
         "travel/<slug:country_slug>/<slug:place_slug>/",

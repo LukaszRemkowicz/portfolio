@@ -40,6 +40,10 @@ SITE_DOMAIN = env.str("SITE_DOMAIN", default="portfolio.local")
 ADMIN_DOMAIN = env.str("ADMIN_DOMAIN", default="admin.portfolio.local")
 API_DOMAIN = env.str("API_DOMAIN", default="api.portfolio.local")
 
+# Secure Media Settings
+# Expiration for signed image URLs in seconds (default: 1 hour)
+SECURE_MEDIA_URL_EXPIRATION = env.int("SECURE_MEDIA_URL_EXPIRATION", default=3600)
+
 # Filter out empty values and consolidate hosts
 _base_hosts = [SITE_DOMAIN, ADMIN_DOMAIN, API_DOMAIN]
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + [h for h in _base_hosts if h]

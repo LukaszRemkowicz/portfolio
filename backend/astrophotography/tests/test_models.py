@@ -33,9 +33,9 @@ class TestAstroImageModel:
         assert image.thumbnail.name.startswith("thumbnails/thumb_")
 
     def test_zoom_field_default(self):
-        """Test that zoom field defaults to True"""
+        """Test that zoom field defaults to False"""
         image = AstroImageFactory()
-        assert image.zoom is True
+        assert image.zoom is False
 
     def test_zoom_field_persistence(self):
         """Test that zoom field can be set to False and persisted"""

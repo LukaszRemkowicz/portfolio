@@ -5,6 +5,10 @@ from rest_framework import serializers
 from rest_framework.serializers import CharField, ImageField, StringRelatedField
 from taggit.models import Tag
 
+from django.conf import settings
+
+from core.utils.signing import generate_signed_url_params
+
 from .models import (
     AstroImage,
     Camera,
@@ -65,7 +69,7 @@ class TripodSerializer(BaseEquipmentSerializer):
 
 
 class AstroImageSerializerList(serializers.ModelSerializer):
-    url: ImageField = ImageField(source="path")
+    url = serializers.SerializerMethodField()
     thumbnail_url: ImageField = ImageField(source="thumbnail", read_only=True)
     tags: StringRelatedField = StringRelatedField(many=True)
     camera: StringRelatedField = StringRelatedField(many=True)
@@ -75,6 +79,19 @@ class AstroImageSerializerList(serializers.ModelSerializer):
     tripod: StringRelatedField = StringRelatedField(many=True)
     location: CharField = CharField(source="location.name")
     process = serializers.BooleanField(source="zoom")
+
+    def get_url(self, obj: AstroImage) -> str:
+        from django.urls import reverse
+
+        request = self.context.get("request")
+        if request is None:
+            return ""
+
+        url_path = reverse("astroimages:secure-image-serve", kwargs={"slug": obj.slug})
+        params = generate_signed_url_params(
+            obj.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
+        )
+        return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
 
     class Meta:
         model = AstroImage
@@ -112,6 +129,22 @@ class AstroImageSerializer(serializers.ModelSerializer):
     location = serializers.CharField(source="location.name", read_only=True)
     process = serializers.BooleanField(source="zoom")
 
+    # Override url field to use secure serving
+    url = serializers.SerializerMethodField()
+
+    def get_url(self, obj: AstroImage) -> str:
+        from django.urls import reverse
+
+        request = self.context.get("request")
+        if request is None:
+            return ""
+
+        url_path = reverse("astroimages:secure-image-serve", kwargs={"slug": obj.slug})
+        params = generate_signed_url_params(
+            obj.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
+        )
+        return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
+
     class Meta:
         model = AstroImage
         fields = [
@@ -130,6 +163,7 @@ class AstroImageSerializer(serializers.ModelSerializer):
             "astrobin_url",
             "description",
             "process",
+            "url",
         ]
 
 

@@ -215,7 +215,7 @@ class AstroImage(BaseImage):
         help_text=_("SEO friendly URL slug."),
     )
     zoom = models.BooleanField(
-        default=True,
+        default=False,
         verbose_name=_("Zoom"),
         help_text=_("Allow users to zoom this image in detail mode."),
     )
