@@ -179,13 +179,15 @@ class AstroImage(BaseImage):
         verbose_name=_("Lens"),
         help_text=_("Lens model and focal length"),
     )
-    exposure_details = models.TextField(
+    exposure_details = CKEditor5Field(
         blank=True,
+        config_name="default",
         verbose_name=_("Exposure Details"),
         help_text=_("Technical details of the exposure (gain, sub-exposures, total time)."),
     )
-    processing_details = models.TextField(
+    processing_details = CKEditor5Field(
         blank=True,
+        config_name="default",
         verbose_name=_("Processing Details"),
         help_text=_("Software and techniques used for post-processing."),
     )

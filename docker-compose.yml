@@ -38,6 +38,7 @@ services:
     environment:
       API_URL: https://${API_DOMAIN:-api.portfolio.local}
       GA_TRACKING_ID: ${GA_TRACKING_ID:-G-2WGK87YBL6}
+      ENABLE_GA: ${ENABLE_GA:-false}
     ports:
       - "3000:3000"
     restart: unless-stopped

@@ -34,6 +34,7 @@ describe('Gallery Component', () => {
     mockFetchAstroImages.mockResolvedValue([
       {
         pk: 1,
+        slug: 'm31-andromeda',
         name: 'M31 Andromeda',
         url: 'test.jpg',
         thumbnail_url: 'thumb.jpg',
@@ -59,6 +60,7 @@ describe('Gallery Component', () => {
     mockFetchAstroImages.mockResolvedValue([
       {
         pk: 1,
+        slug: 'deep-sky-object',
         name: 'Deep Sky Object',
         url: 'dso.jpg',
         tags: ['deepsky'],
@@ -66,6 +68,7 @@ describe('Gallery Component', () => {
       },
       {
         pk: 2,
+        slug: 'landscape-object',
         name: 'Landscape Object',
         url: 'lands.jpg',
         tags: ['astrolandscape'],
@@ -99,6 +102,7 @@ describe('Gallery Component', () => {
     mockFetchAstroImages.mockResolvedValue([
       {
         pk: 1,
+        slug: 'test-image',
         name: 'Test Image',
         url: 'test.jpg',
         tags: [],

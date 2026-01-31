@@ -22,6 +22,7 @@ jobs:
   version-check:
     name: Version bump check (dev → main)
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref == 'dev'
     steps:
       - name: Checkout PR HEAD
         uses: actions/checkout@v4
@@ -48,13 +49,6 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-
-          if [[ "$EVENT_NAME" != "pull_request" ]] || \
-            [[ "$BASE_REF" != "main" ]] || \
-            [[ "$HEAD_REF" != "dev" ]]; then
-            echo "ℹ️ Version check skipped (not dev → main PR)."
-            exit 0
-          fi
 
           VERSION_FILE="VERSION"
 
@@ -112,7 +106,6 @@ jobs:
 
   # Frontend: Lint, Type Check, and Test
   frontend:
-    needs: [version-check]
     name: Frontend Quality & Tests
     runs-on: ubuntu-latest
     steps:
@@ -158,7 +151,6 @@ jobs:
 
   # Backend: Lint, Type Check, and Test
   backend:
-    needs: [version-check]
     name: Backend Quality & Tests
     runs-on: ubuntu-latest
 

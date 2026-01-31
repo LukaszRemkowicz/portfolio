@@ -248,7 +248,16 @@ echo "✅ Health check OK"
 # - current_tag: the tag considered "currently deployed"
 # - prev_tag   : the previous value of current_tag (rollback target)
 # ------------------------------------------------------------------
-STATE_DIR="${STATE_DIR:-$HOME/.portfolio-state}"
+# State directory for tag tracking
+# We prefer /var/lib/portfolio for multi-user consistency (sudo vs regular),
+# but fallback to $HOME if we can't write there.
+if [[ -z "${STATE_DIR:-}" ]]; then
+  if [[ -w "/var/lib/portfolio" ]] || [[ "$EUID" -eq 0 && -d "/var/lib" ]]; then
+    STATE_DIR="/var/lib/portfolio"
+  else
+    STATE_DIR="$HOME/.portfolio-state"
+  fi
+fi
 CURRENT_FILE="$STATE_DIR/current_tag"
 PREV_FILE="$STATE_DIR/prev_tag"
 mkdir -p "$STATE_DIR"
