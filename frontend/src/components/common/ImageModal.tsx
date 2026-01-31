@@ -1,5 +1,5 @@
 // frontend/src/components/common/ImageModal.tsx
-import { type FC, useEffect, useCallback } from 'react';
+import { type FC, useEffect, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, Calendar, MapPin } from 'lucide-react';
@@ -16,14 +16,137 @@ interface ImageModalProps {
 const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   const navigate = useNavigate();
 
+  const [isFullRes, setIsFullRes] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [dragStartTime, setDragStartTime] = useState(0);
+  const [hasMoved, setHasMoved] = useState(false);
+  const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(
+    null
+  );
+
+  const closeFullRes = () => {
+    setIsFullRes(false);
+    setScale(1);
+    setPanPosition({ x: 0, y: 0 });
+    setLastTouchDistance(null);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale <= 1) return;
+    e.preventDefault();
+    e.stopPropagation(); // Stop from hitting overlay
+    setIsDragging(true);
+    setHasMoved(false);
+    setDragStartTime(Date.now());
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || scale <= 1) return;
+
+    const dx = Math.abs(e.clientX - dragStart.x);
+    const dy = Math.abs(e.clientY - dragStart.y);
+
+    if (dx > 5 || dy > 5) {
+      setHasMoved(true);
+    }
+
+    const moveX = e.clientX - dragStart.x;
+    const moveY = e.clientY - dragStart.y;
+
+    setPanPosition((prev: { x: number; y: number }) => ({
+      x: prev.x + moveX / (scale * 250), // Increased speed (was 500)
+      y: prev.y + moveY / (scale * 250),
+    }));
+
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!isFullRes) return;
+
+    // Always prevent default to stop the background from scrolling while in lightbox
+    e.preventDefault();
+
+    // Standard scroll or Trackpad Pinch (ctrlKey)
+    const factor = e.ctrlKey ? 0.05 : 0.005;
+    const delta = -e.deltaY * factor;
+    setScale(prev => Math.min(Math.max(1, prev + delta), 4));
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2) {
+      const distance = Math.hypot(
+        e.touches[0].pageX - e.touches[1].pageX,
+        e.touches[0].pageY - e.touches[1].pageY
+      );
+      setLastTouchDistance(distance);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2 && lastTouchDistance !== null) {
+      const distance = Math.hypot(
+        e.touches[0].pageX - e.touches[1].pageX,
+        e.touches[0].pageY - e.touches[1].pageY
+      );
+      const delta = (distance - lastTouchDistance) * 0.01;
+      setScale(prev => Math.min(Math.max(1, prev + delta), 4));
+      setLastTouchDistance(distance);
+    } else if (e.touches.length === 1 && scale > 1) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - dragStart.x;
+      const dy = touch.clientY - dragStart.y;
+
+      setPanPosition((prev: { x: number; y: number }) => ({
+        x: prev.x + dx / (scale * 250), // Increased speed (was 500)
+        y: prev.y + dy / (scale * 250),
+      }));
+
+      setDragStart({ x: touch.clientX, y: touch.clientY });
+    }
+  };
+
+  const toggleZoom = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const duration = Date.now() - dragStartTime;
+    if (hasMoved || duration > 200) return; // Ignore if moved or held for long
+
+    if (scale > 1) {
+      setScale(1.0);
+      setPanPosition({ x: 0, y: 0 });
+    } else {
+      setScale(2.0);
+      setPanPosition({ x: 0, y: 0 });
+    }
+  };
+
   useEffect(() => {
     if (!image) return;
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        if (isFullRes) {
+          if (scale > 1) {
+            setScale(1);
+            setPanPosition({ x: 0, y: 0 });
+          } else {
+            closeFullRes();
+          }
+        } else {
+          onClose();
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [image, onClose]);
+  }, [image, onClose, isFullRes, scale]);
 
   const handleTagClick = useCallback(
     (tag: string) => {
@@ -161,8 +284,82 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
         </button>
 
         <div className={styles.imageWrapper}>
-          <img src={image.url} alt={image.name} className={styles.modalImage} />
+          <img
+            src={image.url}
+            alt={image.name}
+            className={styles.modalImage}
+            onClick={() => {
+              setIsFullRes(true);
+              setPanPosition({ x: 0, y: 0 });
+            }}
+            title='Click to view full resolution'
+          />
         </div>
+
+        {isFullRes &&
+          createPortal(
+            <div
+              className={styles.fullResOverlay}
+              onMouseDown={() => {
+                setHasMoved(false);
+                setDragStartTime(Date.now());
+              }}
+              onClick={() => {
+                const duration = Date.now() - dragStartTime;
+                if (!hasMoved && duration < 200) closeFullRes();
+              }}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
+              onTouchStart={e => {
+                if (e.touches.length === 1) {
+                  setDragStart({
+                    x: e.touches[0].clientX,
+                    y: e.touches[0].clientY,
+                  });
+                }
+                handleTouchStart(e);
+              }}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={() => {
+                setIsDragging(false);
+                setLastTouchDistance(null);
+              }}
+            >
+              <button
+                className={styles.fullResClose}
+                onClick={e => {
+                  e.stopPropagation();
+                  closeFullRes();
+                }}
+              >
+                <X size={32} />
+              </button>
+              <img
+                src={image.url}
+                alt={image.name}
+                className={`${styles.fullResImage} ${
+                  scale > 1.01 ? styles.isZoomed : ''
+                }`}
+                onMouseDown={handleMouseDown}
+                onClick={toggleZoom}
+                style={{
+                  transform: `translate(${panPosition.x * 100}%, ${panPosition.y * 100}%) scale(${scale})`,
+                  transition: isDragging
+                    ? 'none'
+                    : 'transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)',
+                  cursor:
+                    scale > 1.01
+                      ? isDragging
+                        ? 'grabbing'
+                        : 'grab'
+                      : 'zoom-in',
+                }}
+              />
+            </div>,
+            document.body
+          )}
 
         <div className={styles.modalMetadata}>
           <div className={styles.metadataLeft}>
