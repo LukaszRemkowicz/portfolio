@@ -58,6 +58,13 @@ class User(AbstractUser, SingletonModel):
     about_me_image = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
     about_me_image2 = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
 
+    translations = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Translations"),
+        help_text=_("JSON translations (e.g., {'pl': {'short_description': '...'}})."),
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -137,6 +144,13 @@ class Profile(models.Model):
     )
     fb_url = models.URLField(max_length=200, blank=True)
     ig_url = models.URLField(max_length=200, blank=True)
+
+    translations = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Translations"),
+        help_text=_("JSON translations (e.g., {'pl': {'title': '...'}})."),
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

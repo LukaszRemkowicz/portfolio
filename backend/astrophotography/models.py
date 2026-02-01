@@ -219,6 +219,12 @@ class AstroImage(BaseImage):
         verbose_name=_("Zoom"),
         help_text=_("Allow users to zoom this image in detail mode."),
     )
+    translations = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Translations"),
+        help_text=_("JSON translations (e.g., {'pl': {'name': '...'}})."),
+    )
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         if not self.slug:
@@ -316,6 +322,13 @@ class MainPageLocation(models.Model):
         related_name="location_backgrounds",
         verbose_name=_("Background Image"),
         help_text=_("Optional specific background image for this location's page."),
+    )
+
+    translations = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Translations"),
+        help_text=_("JSON translations (e.g., {'pl': {'highlight_name': '...'}})."),
     )
 
     def save(self, *args: Any, **kwargs: Any) -> None:
