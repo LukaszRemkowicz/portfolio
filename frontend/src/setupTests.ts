@@ -42,3 +42,42 @@ console.warn = (...args) => {
   }
   originalWarn(...args);
 };
+
+// Mock react-i18next
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'nav.home': 'Home',
+        'nav.astrophotography': 'Astrophotography',
+        'nav.programming': 'Programming',
+        'nav.about': 'About',
+        'nav.contact': 'Contact',
+        'common.en': 'EN',
+        'common.pl': 'PL',
+        'common.privacyPolicy': 'Privacy Policy',
+        'common.cookieSettings': 'Cookie Settings',
+        'common.decline': 'Decline',
+        'common.accept': 'Accept',
+        'footer.rights': 'Łukasz Remkowicz © 2026',
+        'about.title': 'Beyond the Atmosphere.',
+        'about.defaultBio':
+          'Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye.',
+        'about.siteQuality': 'Site Quality',
+        'about.primaryOptics': 'Primary Optics',
+        'cookie.title': 'Cookie Consent',
+        'cookie.description':
+          'We use cookies to enhance your experience, analyze traffic, and personalize your journey through the cosmos. By using our site, you agree to our',
+      };
+      return translations[key] || key;
+    },
+    i18n: {
+      changeLanguage: jest.fn(),
+      language: 'en',
+    },
+  }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: jest.fn(),
+  },
+}));
