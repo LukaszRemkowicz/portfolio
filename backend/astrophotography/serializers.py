@@ -7,6 +7,7 @@ from taggit.models import Tag
 
 from django.conf import settings
 
+from core.services import TranslationService
 from core.utils.signing import generate_signed_url_params
 
 from .models import (
@@ -93,6 +94,19 @@ class AstroImageSerializerList(serializers.ModelSerializer):
         )
         return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
 
+    def to_representation(self, instance: AstroImage) -> dict:
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        lang = request.query_params.get("lang") if request else None
+
+        if lang and lang != "en":
+            # Translate fields
+            for field in ["name", "description", "exposure_details", "processing_details"]:
+                if field in data:
+                    data[field] = TranslationService.get_translated_field(instance, field, lang)
+
+        return data
+
     class Meta:
         model = AstroImage
         fields = [
@@ -144,6 +158,19 @@ class AstroImageSerializer(serializers.ModelSerializer):
             obj.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
         )
         return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
+
+    def to_representation(self, instance: AstroImage) -> dict:
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        lang = request.query_params.get("lang") if request else None
+
+        if lang and lang != "en":
+            # Translate fields
+            for field in ["description", "exposure_details", "processing_details"]:
+                if field in data:
+                    data[field] = TranslationService.get_translated_field(instance, field, lang)
+
+        return data
 
     class Meta:
         model = AstroImage
@@ -235,6 +262,19 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
 
         # 20 Jan 2025 - 05 Jan 2026
         return f"{self.format_date(lower)} - {self.format_date(display_upper)}"
+
+    def to_representation(self, instance: MainPageLocation) -> dict:
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        lang = request.query_params.get("lang") if request else None
+
+        if lang and lang != "en":
+            # Translate fields
+            for field in ["highlight_name", "story"]:
+                if field in data:
+                    data[field] = TranslationService.get_translated_field(instance, field, lang)
+
+        return data
 
     class Meta:
         model = MainPageLocation
