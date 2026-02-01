@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -52,8 +52,13 @@ class TestTranslationService:
         assert result == "Tytuł Polski"
         instance.save.assert_not_called()
 
-    def test_get_translated_field_generates_stub_when_missing(self):
+    @patch("core.ai_agents.GPTTranslationAgent")
+    def test_get_translated_field_calls_agent_when_missing(self, mock_agent_cls):
         from core.services import TranslationService
+
+        # Setup Mock Agent
+        mock_agent_instance = mock_agent_cls.return_value
+        mock_agent_instance.translate.return_value = "AI Translated Text"
 
         instance = MagicMock()
         instance.title = "Original Title"
@@ -61,10 +66,34 @@ class TestTranslationService:
 
         result = TranslationService.get_translated_field(instance, "title", "pl")
 
-        expected_stub = "[TRANSLATED to pl] Original Title"
-        assert result == expected_stub
+        # Verify result
+        assert result == "AI Translated Text"
 
-        # Verify it updated the instance.translations
-        assert instance.translations["pl"]["title"] == expected_stub
-        # Verify it saved
+        # Verify Agent Call
+        mock_agent_instance.translate.assert_called_once_with("Original Title", "pl")
+
+        # Verify Save
+        assert instance.translations["pl"]["title"] == "AI Translated Text"
+        instance.save.assert_called_once_with(update_fields=["translations"])
+
+    @patch("core.ai_agents.GPTTranslationAgent")
+    def test_get_translated_field_handles_agent_failure(self, mock_agent_cls):
+        from core.services import TranslationService
+
+        # Setup Mock Agent to Fail (return None)
+        mock_agent_instance = mock_agent_cls.return_value
+        mock_agent_instance.translate.return_value = None
+
+        instance = MagicMock()
+        instance.title = "Original Title"
+        instance.translations = {}
+
+        result = TranslationService.get_translated_field(instance, "title", "pl")
+
+        # Verify Fallback
+        expected_fallback = "[TRANSLATION FAILED] Original Title"
+        assert result == expected_fallback
+
+        # Verify Save of Fallback
+        assert instance.translations["pl"]["title"] == expected_fallback
         instance.save.assert_called_once_with(update_fields=["translations"])

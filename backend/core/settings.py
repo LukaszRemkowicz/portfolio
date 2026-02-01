@@ -112,6 +112,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "axes",  # Django Axes for admin login brute force protection
+    "django_extensions",
     # Local apps
     "astrophotography.apps.AstrophotographyConfig",
     "programming.apps.ProgrammingConfig",
@@ -161,6 +162,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
+
+# Third Party API Keys
+# ==============================================================================
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

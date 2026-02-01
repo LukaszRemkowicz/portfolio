@@ -21,9 +21,14 @@ class TranslationService:
         if field_name in lang_translations:
             return lang_translations[field_name]
 
-        # 3. Translation missing - Stub Provider
-        # TODO: Integrate real DeepL API here
-        translated_text = f"[TRANSLATED to {language_code}] {original_value}"
+        # 3. Translation missing - Call AI Agent
+        from core.ai_agents import GPTTranslationAgent
+
+        translated_text = GPTTranslationAgent().translate(original_value, language_code)
+
+        if not translated_text:
+            # Fallback if Agent fails
+            translated_text = f"[TRANSLATION FAILED] {original_value}"
 
         # 4. Save the new translation to the instance
         if language_code not in translations:
