@@ -727,6 +727,38 @@ files = [
 Django = ">=3.2"
 
 [[package]]
+name = "django-parler"
+version = "2.3"
+description = "Simple Django model translations without nasty hacks, featuring nice admin integration."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "django-parler-2.3.tar.gz", hash = "sha256:2c8f5012ceb5e49af93b16ea3fe4d0c83d70b91b2d0f470c05d7d742b6f3083d"},
+    {file = "django_parler-2.3-py3-none-any.whl", hash = "sha256:8f6c8061e4b5690f1ee2d8e5760940ef06bf78a5bfa033d11178377559c749cf"},
+]
+
+[package.dependencies]
+Django = ">=2.2"
+
+[[package]]
+name = "django-parler-rest"
+version = "2.2"
+description = "Multilingual support for django-rest-framework"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "django-parler-rest-2.2.tar.gz", hash = "sha256:58d0d7155964214dfbdb72783eff6a200c5e786e2d4f3cd74ea463d56cb10e9c"},
+    {file = "django_parler_rest-2.2-py2.py3-none-any.whl", hash = "sha256:3cba9a47ec64771394e99ca49f9bef6f7dd76c1e39634fd634d2c1050fb9630a"},
+]
+
+[package.dependencies]
+django = ">=2.2"
+django-parler = ">=1.9.2"
+djangorestframework = ">=3.5"
+
+[[package]]
 name = "django-select2"
 version = "8.4.8"
 description = "This is a Django_ integration of Select2_."
@@ -2759,4 +2791,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<4.0"
-content-hash = "0186160a3d474efc2a52ca2bf4091098a921ceb608de2a272a22150147cc3df5"
+content-hash = "e43ab3c9d9c7bce248172526ef722479942ca90bf0ad325c5613ede5dfb1e960"
