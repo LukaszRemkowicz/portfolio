@@ -1,9 +1,9 @@
 # backend/astrophotography/models.py
-from core.services import TranslationService
 from typing import Any
 
 from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
+from parler.models import TranslatableModel, TranslatedFields
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TaggedItemBase
 
@@ -11,7 +11,6 @@ from django.contrib.postgres.fields import DateRangeField
 from django.db import models
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
-from parler.models import TranslatableModel, TranslatedFields
 
 from core.models import BaseImage, SingletonModel
 
@@ -91,7 +90,7 @@ class Place(TranslatableModel):
         verbose_name=_("Country"),
         help_text=_("The country where the place is located."),
     )
-    
+
     translations = TranslatedFields(
         name=models.CharField(
             max_length=255,
@@ -100,7 +99,6 @@ class Place(TranslatableModel):
             help_text=_("The name of the specific place or city."),
         )
     )
-
 
     def __str__(self) -> str:
         name = self.safe_translation_getter("name", any_language=True)
@@ -143,7 +141,7 @@ class Tripod(AbstractEquipmentModel):
         verbose_name_plural = _("Tripods")
 
 
-class AstroImage(BaseImage):
+class AstroImage(BaseImage, TranslatableModel):
     """Model for astrophotography images"""
 
     capture_date = models.DateField(
@@ -189,7 +187,9 @@ class AstroImage(BaseImage):
     )
     translations = TranslatedFields(
         name=models.CharField(
-            max_length=255, verbose_name=_("Name"), help_text=_("A descriptive name for this image.")
+            max_length=255,
+            verbose_name=_("Name"),
+            help_text=_("A descriptive name for this image."),
         ),
         description=CKEditor5Field(
             blank=True,
@@ -208,9 +208,9 @@ class AstroImage(BaseImage):
             config_name="default",
             verbose_name=_("Processing Details"),
             help_text=_("Software and techniques used for post-processing."),
-        )
+        ),
     )
-    
+
     celestial_object = models.CharField(
         max_length=50,
         choices=CelestialObjectChoices,
@@ -273,9 +273,9 @@ class AstroImage(BaseImage):
 class MainPageLocation(TranslatableModel):
     """Model to manage which images appear in the travel section for a specific location"""
 
-    # country field removed - relying on Place country? 
+    # country field removed - relying on Place country?
     # Plan dictated removal.
-    
+
     place = models.ForeignKey(
         Place,
         on_delete=models.SET_NULL,
@@ -300,20 +300,20 @@ class MainPageLocation(TranslatableModel):
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
     translations = TranslatedFields(
-        highlight_name = models.CharField(
+        highlight_name=models.CharField(
             max_length=100,
             blank=True,
             null=True,
             verbose_name=_("Highlight Name"),
             help_text=_("Optional custom name for the travel highlight (overrides Country/Place)."),
         ),
-        story = CKEditor5Field(
+        story=CKEditor5Field(
             blank=True,
             null=True,
             verbose_name=_("Story/Blog Text"),
             help_text=_("Optional story or blog text to display above the images."),
             config_name="default",
-        )
+        ),
     )
 
     adventure_date = DateRangeField(
@@ -335,7 +335,7 @@ class MainPageLocation(TranslatableModel):
         verbose_name=_("Place Slug"),
         help_text=_("Auto-generated slug for the place."),
     )
-    
+
     background_image = models.ForeignKey(
         "AstroImage",
         on_delete=models.SET_NULL,
@@ -350,7 +350,7 @@ class MainPageLocation(TranslatableModel):
         if self.place:
             if self.place.country:
                 self.country_slug = slugify(self.place.country.name)
-            
+
             place_name = self.place.safe_translation_getter("name", any_language=True)
             if place_name:
                 self.place_slug = slugify(place_name)
@@ -364,7 +364,7 @@ class MainPageLocation(TranslatableModel):
     def __str__(self) -> str:
         name = self.safe_translation_getter("highlight_name", any_language=True)
         status = _("Active") if self.is_active else _("Inactive")
-        
+
         if name:
             return f"{name} ({status})"
 

@@ -1,17 +1,27 @@
-import pytest
 from datetime import date
-from psycopg2.extras import DateRange
 from unittest.mock import MagicMock, patch
 
-from astrophotography.models import AstroImage, MainPageLocation
+import pytest
+from psycopg2.extras import DateRange
+
+from astrophotography.models import MainPageLocation
 from astrophotography.serializers import (
-    TrackerSerializer, TripodSerializer, CameraSerializer, LensSerializer,
-    TelescopeSerializer, PlaceSerializer, MeteorsMainPageConfigSerializer,
-    AstroImageSerializer, AstroImageSerializerList, MainPageLocationSerializer,
-    TagSerializer
+    AstroImageSerializer,
+    AstroImageSerializerList,
+    CameraSerializer,
+    LensSerializer,
+    MainPageLocationSerializer,
+    MeteorsMainPageConfigSerializer,
+    PlaceSerializer,
+    TagSerializer,
+    TelescopeSerializer,
+    TrackerSerializer,
+    TripodSerializer,
 )
 from astrophotography.tests.factories import (
-    MainPageLocationFactory, PlaceFactory, AstroImageFactory
+    AstroImageFactory,
+    MainPageLocationFactory,
+    PlaceFactory,
 )
 
 
@@ -96,8 +106,7 @@ class TestEquipmentSerializers:
         # Case 1: Single date (formatted as lower)
         place = PlaceFactory(country="PL", name="Tatras")
         obj = MainPageLocationFactory(
-            place=place,
-            adventure_date=DateRange(date(2026, 1, 20), date(2026, 1, 21))
+            place=place, adventure_date=DateRange(date(2026, 1, 20), date(2026, 1, 21))
         )
         serializer = MainPageLocationSerializer(obj)
         # Expected: 20 Jan 2026
@@ -105,8 +114,7 @@ class TestEquipmentSerializers:
 
         # Case 2: Range in same month
         obj2 = MainPageLocationFactory(
-            place=place,
-            adventure_date=DateRange(date(2026, 1, 20), date(2026, 1, 26))
+            place=place, adventure_date=DateRange(date(2026, 1, 20), date(2026, 1, 26))
         )
         serializer2 = MainPageLocationSerializer(obj2)
         assert serializer2.data["adventure_date"] == "20 - 25 Jan 2026"
@@ -160,7 +168,7 @@ class TestTranslationSerializers:
             slug="test-slug-trans",
             description="Original Description",
             capture_date="2025-01-01",
-            place=place
+            place=place,
         )
 
         serializer = AstroImageSerializer(instance, context={"request": request})

@@ -9,12 +9,13 @@ This file defines the main routing table for the project, including:
 - Dynamic CSS for Parler-based admin translations
 - Media file serving (on admin domain)
 """
+
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 from django.views.static import serve
 
-from .views import SettingsView, api_404_view, health_check_view, admin_dynamic_parler_css_view
+from .views import SettingsView, admin_dynamic_parler_css_view, api_404_view, health_check_view
 
 admin.site.site_header = "Portfolio Administration"
 admin.site.site_title = "Portfolio Admin Portal"

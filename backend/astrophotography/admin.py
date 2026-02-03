@@ -1,13 +1,13 @@
-from django.conf import settings
-from django_countries import countries
+from parler.admin import TranslatableAdmin
+from parler.forms import TranslatableModelForm
 
 from django import forms
+from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.postgres.forms import RangeWidget
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
-from parler.admin import TranslatableAdmin
 
 from core.mixins import DynamicParlerStyleMixin
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
@@ -35,33 +35,41 @@ class PlaceAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
 
     def get_name(self, obj):
         return str(obj)
+
     get_name.short_description = _("Name")
 
     def save_model(self, request, obj, form, change):
-        from core.services import TranslationService
         from django.conf import settings
+
+        from core.services import TranslationService
 
         # 1. Save the primary instance (master record) first
         super().save_model(request, obj, form, change)
 
         # 2. Detect if name changed (or if it's a new object)
         # form.changed_data gives us the list of modified fields
-        should_refresh = not change or 'name' in form.changed_data
+        should_refresh = not change or "name" in form.changed_data
 
         if should_refresh:
             # 3. Get all configured languages
             supported_languages = TranslationService.get_available_languages()
-            
+
             for lang_code in supported_languages:
                 # 4. Skip the default language (already saved via master record)
                 if lang_code == settings.PARLER_DEFAULT_LANGUAGE_CODE:
                     continue
 
                 # 5. Fetch translation if it was a forced refresh or if it's missing
-                if should_refresh or not obj.has_translation(lang_code) or not obj.safe_translation_getter("name", language_code=lang_code):
+                if (
+                    should_refresh
+                    or not obj.has_translation(lang_code)
+                    or not obj.safe_translation_getter("name", language_code=lang_code)
+                ):
                     # fetch_place_name args: name, country, lang_code
-                    fetched_name = TranslationService().fetch_place_name(obj.name, obj.country, lang_code)
-                    
+                    fetched_name = TranslationService().fetch_place_name(
+                        obj.name, obj.country, lang_code
+                    )
+
                     if fetched_name:
                         # 6. Update/Create translation for this specific language
                         obj.set_current_language(lang_code)
@@ -109,6 +117,7 @@ class AstroImageAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
 
     def get_name(self, obj):
         return str(obj)
+
     get_name.short_description = _("Name")
     search_fields = (
         "translations__name",
@@ -182,7 +191,7 @@ class AstroImageAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
         """
         # Determine the current language code from the request
         current_language = request.GET.get("language")
-        
+
         # Get default language (fallback). Hardcoded 'en' or fetch from settings.
         # Ideally, use settings.PARLER_LANGUAGES['default']['fallback']
         default_language = getattr(settings, "PARLER_DEFAULT_LANGUAGE_CODE", "en")
@@ -208,7 +217,7 @@ class AstroImageAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
                 ),
                 # You might want to show a read-only sections for context, but user asked to HIDE.
             )
-            
+
         return super().get_fieldsets(request, obj)
 
     def tag_list(self, obj):
@@ -250,10 +259,8 @@ class MainPageBackgroundImageAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
 
     def get_name(self, obj):
         return str(obj)
+
     get_name.short_description = _("Name")
-
-
-from parler.forms import TranslatableModelForm
 
 
 class MainPageLocationForm(TranslatableModelForm):
@@ -263,8 +270,7 @@ class MainPageLocationForm(TranslatableModelForm):
         required=False,
         label=_("Images"),
         help_text=_(
-            "Select images to display in the slideshow for this location "
-            "(filtered by place)."
+            "Select images to display in the slideshow for this location " "(filtered by place)."
         ),
     )
 
@@ -279,9 +285,7 @@ class MainPageLocationForm(TranslatableModelForm):
         # Dynamic filtering for images field
         if self.instance.pk:
             # Edit mode
-            qs = AstroImage.objects.filter(
-                place=self.instance.place
-            )
+            qs = AstroImage.objects.filter(place=self.instance.place)
             images_field = self.fields.get("images")
             if isinstance(images_field, forms.ModelChoiceField):
                 images_field.queryset = qs

@@ -1,10 +1,10 @@
 from datetime import date, timedelta
 from typing import Optional
 
+from parler_rest.fields import TranslatedFieldsField
+from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
 from rest_framework.serializers import CharField, ImageField, StringRelatedField
-from parler_rest.serializers import TranslatableModelSerializer
-from parler_rest.fields import TranslatedFieldsField
 from taggit.models import Tag
 
 from django.conf import settings

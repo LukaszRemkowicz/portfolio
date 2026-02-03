@@ -11,12 +11,7 @@ from django.shortcuts import get_object_or_404
 from core.throttling import GalleryRateThrottle
 from core.utils.signing import validate_signed_url
 
-from .models import (
-    AstroImage,
-    CelestialObjectChoices,
-    MainPageBackgroundImage,
-    MainPageLocation,
-)
+from .models import AstroImage, CelestialObjectChoices, MainPageBackgroundImage, MainPageLocation
 from .serializers import (
     AstroImageSerializer,
     AstroImageSerializerList,

@@ -1,16 +1,21 @@
 """
 Services for managing translations and global state in the core application.
 """
+
 from typing import Any
-from django.conf import settings
+
 from parler.models import TranslatableModel
+
+from django.conf import settings
 
 from core.agents import GPTTranslationAgent
 
 
 class TranslationService:
     @staticmethod
-    def get_translated_field(instance: Any, field_name: str, language_code: str) -> str:
+    def get_translated_field(  # noqa: C901, E501
+        instance: Any, field_name: str, language_code: str
+    ) -> str:
         """
         Retrieves the translated value for a given field using Parler.
         If the translation is missing, it triggers an AI Agent to generate it and saves it.
@@ -23,10 +28,10 @@ class TranslationService:
         if isinstance(instance, TranslatableModel):
             # 1. Check if translation exists
             if instance.has_translation(language_code):
-                # Temporarily switch context to fetch exact translation (avoid fallback logic hiding missing trans)
+                # Temporarily switch context to fetch exact translation (avoid fallback logic hiding missing trans)  # noqa: E501
                 # Actually getattr handles it? No, getattr respects current language.
                 # safe_translation_getter is better but we want strict check.
-                # Since has_translation is True, we can use safe_translation_getter or context switch.
+                # Since has_translation is True, we can use safe_translation_getter or context switch.  # noqa: E501
                 # Using context switch is robust.
                 with instance.language(language_code):
                     return getattr(instance, field_name, "")
@@ -35,7 +40,7 @@ class TranslationService:
             # Fetch source (English)
             with instance.language("en"):
                 source_text = getattr(instance, field_name, "")
-            
+
             if not source_text:
                 return ""
 
@@ -70,13 +75,12 @@ class TranslationService:
 
             if language_code not in translations:
                 translations[language_code] = {}
-            
+
             translations[language_code][field_name] = translated_text
             instance.translations = translations
             instance.save(update_fields=["translations"])
 
             return translated_text
-
 
     @staticmethod
     def get_available_languages() -> list[str]:
@@ -85,12 +89,14 @@ class TranslationService:
         """
         # Direct extraction from the global 'None' key in PARLER_LANGUAGES
         parler_langs = settings.PARLER_LANGUAGES.get(None, [])
-        return [lang['code'] for lang in parler_langs if isinstance(lang, dict) and 'code' in lang]
+        return [lang["code"] for lang in parler_langs if isinstance(lang, dict) and "code" in lang]
 
     def fetch_place_name(self, name: str, country: str, language_code: str) -> str | None:
         return self._gpt_fetch_place_translation(name, country, language_code)
 
-    def _gpt_fetch_place_translation(self, source_text: str, country: str, language_code: str) -> str:
+    def _gpt_fetch_place_translation(
+        self, source_text: str, country: str, language_code: str
+    ) -> str:
         """Fetches translation from GPT."""
         translated_text = GPTTranslationAgent().translate_place(source_text, language_code, country)
 

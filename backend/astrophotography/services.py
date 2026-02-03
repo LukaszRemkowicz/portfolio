@@ -51,7 +51,9 @@ class GalleryQueryService:
         if country:
             queryset = queryset.filter(place__country=country)
             if place:
-                queryset = queryset.filter(Q(place__translations__name__iexact=place) | Q(place__isnull=True))
+                queryset = queryset.filter(
+                    Q(place__translations__name__iexact=place) | Q(place__isnull=True)
+                )
 
         return queryset
 

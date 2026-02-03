@@ -1,8 +1,10 @@
 """
 Common mixins for the core application and admin customizations.
 """
+
+from django.conf import settings  # noqa: F401
 from django.forms import Media
-from django.conf import settings
+
 
 class DynamicParlerStyleMixin:
     """
@@ -11,11 +13,11 @@ class DynamicParlerStyleMixin:
     that reads the current settings.PARLER_LANGUAGES to apply custom styling
     to language tabs.
     """
-    
+
     @property
     def media(self):
         """
         Injects the dynamic CSS link after the base admin media.
         """
         media = super().media
-        return media + Media(css={"all": ("/admin/dynamic-parler-fixes.css",)}) 
+        return media + Media(css={"all": ("/admin/dynamic-parler-fixes.css",)})

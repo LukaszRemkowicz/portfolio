@@ -221,7 +221,9 @@ LANGUAGES = [
 # Ensures the default language depends on PARLER_DEFAULT_LANGUAGE_CODE
 # and is always the FIRST tab.
 _other_languages = [lang[0] for lang in LANGUAGES if lang[0] != PARLER_DEFAULT_LANGUAGE_CODE]
-_parler_languages_list = [{"code": PARLER_DEFAULT_LANGUAGE_CODE}] + [{"code": code} for code in _other_languages]
+_parler_languages_list = [{"code": PARLER_DEFAULT_LANGUAGE_CODE}] + [
+    {"code": code} for code in _other_languages
+]
 
 PARLER_LANGUAGES = {
     None: tuple(_parler_languages_list),

@@ -17,7 +17,7 @@ class TestGPTTranslationAgent:
         # Setup mock responses
         mock_response1 = MagicMock()
         mock_response1.choices[0].message.content = "Translated raw"
-        
+
         mock_response2 = MagicMock()
         mock_response2.choices[0].message.content = "Przetłumaczony tekst"
 
@@ -35,7 +35,7 @@ class TestGPTTranslationAgent:
 
         # Verify calls to OpenAI
         assert mock_client_instance.chat.completions.create.call_count == 2
-        
+
         # 1st call (Translate)
         call1 = mock_client_instance.chat.completions.create.call_args_list[0][1]
         assert call1["model"] == "gpt-4o"

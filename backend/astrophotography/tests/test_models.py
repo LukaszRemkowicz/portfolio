@@ -47,6 +47,7 @@ class TestAstroImageModel:
     def test_slug_auto_generated(self):
         """Test that slug is automatically generated from name on creation"""
         from django.utils.text import slugify
+
         name = "Nebula in Orion"
         image = AstroImageFactory(name=name, slug=None)
         assert bool(image.slug)
@@ -55,6 +56,7 @@ class TestAstroImageModel:
     def test_slug_uniqueness(self):
         """Test that slugs are unique even if names are identical"""
         from django.utils.text import slugify
+
         name = "Same Name"
         image1 = AstroImageFactory(name=name)
         image2 = AstroImageFactory(name=name)
@@ -73,19 +75,22 @@ class TestMainPageBackgroundImageModel:
 
     def test_model_creation_and_translation(self):
         """Verify that MainPageBackgroundImage can be created with translations."""
-        from django.core.files.uploadedfile import SimpleUploadedFile
         from io import BytesIO
+
         from PIL import Image
 
-        img = Image.new('RGB', (1, 1), color='red')
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        img = Image.new("RGB", (1, 1), color="red")
         img_io = BytesIO()
-        img.save(img_io, format='PNG')
+        img.save(img_io, format="PNG")
         img_io.seek(0)
         image_file = SimpleUploadedFile("test_bg.png", img_io.read(), content_type="image/png")
 
         from astrophotography.models import MainPageBackgroundImage
+
         bg_image = MainPageBackgroundImage.objects.create(path=image_file)
-        
+
         bg_image.set_current_language("en")
         bg_image.name = "Test Background"
         bg_image.save()
@@ -95,7 +100,7 @@ class TestMainPageBackgroundImageModel:
         bg_image.save()
 
         bg_image.refresh_from_db()
-        
+
         bg_image.set_current_language("en")
         assert bg_image.name == "Test Background"
 
@@ -114,6 +119,7 @@ class TestPlaceModel:
 class TestCameraModel:
     def test_camera_str_method(self):
         from astrophotography.models import Camera
+
         camera = Camera.objects.create(model="Test Camera Z6")
         assert str(camera) == "Test Camera Z6"
 
@@ -122,6 +128,7 @@ class TestCameraModel:
 class TestLensModel:
     def test_lens_str_method(self):
         from astrophotography.models import Lens
+
         lens = Lens.objects.create(model="Nikkor Z 20mm f/1.8")
         assert str(lens) == "Nikkor Z 20mm f/1.8"
 

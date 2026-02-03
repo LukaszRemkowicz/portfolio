@@ -14,6 +14,7 @@ from astrophotography.models import (
     Tripod,
 )
 
+
 class PlaceFactory(DjangoModelFactory):
     class Meta:
         model = "astrophotography.Place"
@@ -119,9 +120,6 @@ class TripodFactory(DjangoModelFactory):
         model = Tripod
 
     model = factory.Faker("word")
-
-
-
 
 
 class MainPageLocationFactory(DjangoModelFactory):

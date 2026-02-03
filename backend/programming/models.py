@@ -1,8 +1,9 @@
 # backend/programming/models.py
+from django_ckeditor_5.fields import CKEditor5Field
+from parler.models import TranslatedFields
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from parler.models import TranslatableModel, TranslatedFields
-from django_ckeditor_5.fields import CKEditor5Field
 
 from core.models import BaseImage
 
@@ -35,14 +36,16 @@ class ProjectImage(BaseImage):
 
     translations = TranslatedFields(
         name=models.CharField(
-            max_length=255, verbose_name=_("Name"), help_text=_("A descriptive name for this image.")
+            max_length=255,
+            verbose_name=_("Name"),
+            help_text=_("A descriptive name for this image."),
         ),
         description=CKEditor5Field(
             blank=True,
             verbose_name=_("Description"),
             help_text=_("Optional detailed description of the image."),
             config_name="default",
-        )
+        ),
     )
 
     class Meta:

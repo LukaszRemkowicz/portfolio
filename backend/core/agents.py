@@ -5,8 +5,7 @@ from openai import OpenAI
 
 from django.conf import settings
 
-
-logger = logging.getLogger(__name__)    
+logger = logging.getLogger(__name__)
 
 LANGUAGE_MAP = {
     "pl": "Polish",
@@ -26,7 +25,7 @@ class GPTTranslationAgent:
         if not text:
             return ""
         prompt = f"""
-        Translate single words or short phrases from English into {target_lang_code} using the rules below:
+        Translate single words or short phrases from English into {target_lang_code} using the rules below:  # noqa: E501
 
         1. If the input is a proper noun (e.g. country, city, region, island):
         a) Use the official and commonly accepted {target_lang_code} name if one exists
@@ -42,7 +41,7 @@ class GPTTranslationAgent:
         If a country ({country_name}) is provided:
         - Use it to disambiguate place names.
         - If the association is uncertain or conflicting, do not translate the name.
-        - If user made mistake in place name, correct it (for example, if user wrote "Big Hawai", it should be "Big Hawaii")
+        - If user made mistake in place name, correct it (for example, if user wrote "Big Hawai", it should be "Big Hawaii")  # noqa: E501
         """
         try:
             r = self.client.chat.completions.create(
@@ -136,14 +135,14 @@ class GPTTranslationAgent:
             return None
 
 
-
-
 if __name__ == "__main__":
-    import django
     import os
+
+    import django
+
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
     django.setup()
-    # text = "Winter session in the Biała Woda Valley. 🏔️ The frame captures the winter Milky Way along with the Orion constellation and its surrounding nebulosity. On a December night under a blanket of snow, the place looked exceptional. Peace and quiet – nothing more is needed during such trips. Well, except for a clear sky. 😉 ✨"
+    # text = "Winter session in the Biała Woda Valley. 🏔️ The frame captures the winter Milky Way along with the Orion constellation and its surrounding nebulosity. On a December night under a blanket of snow, the place looked exceptional. Peace and quiet – nothing more is needed during such trips. Well, except for a clear sky. 😉 ✨"  # noqa: E501
     place = "Big Hawaii"
     agent = GPTTranslationAgent()
-    print(agent.translate_place(place, "pl"))  
+    print(agent.translate_place(place, "pl"))

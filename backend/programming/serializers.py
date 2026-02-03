@@ -1,6 +1,6 @@
-from rest_framework import serializers
-from parler_rest.serializers import TranslatableModelSerializer
 from parler_rest.fields import TranslatedFieldsField
+from parler_rest.serializers import TranslatableModelSerializer
+from rest_framework import serializers
 
 from .models import Project, ProjectImage
 

@@ -1,4 +1,5 @@
 from django_countries import countries
+from parler.forms import TranslatableModelForm
 from taggit.models import Tag
 
 from django import forms
@@ -38,9 +39,6 @@ class RangeField(forms.MultiValueField):
             # Sort to ensure [min, max]
             return sorted(data_list)
         return list()
-
-
-from parler.forms import TranslatableModelForm
 
 
 class AstroImageForm(TranslatableModelForm):

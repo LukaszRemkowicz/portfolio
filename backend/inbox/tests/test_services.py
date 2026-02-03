@@ -7,11 +7,7 @@ import pytest
 from django.conf import settings
 
 from inbox.models import ContactMessage
-from inbox.services import (
-    ContactMessageEmailService,
-    ContactSubmissionService,
-    DuplicateSubmission,
-)
+from inbox.services import ContactMessageEmailService, ContactSubmissionService, DuplicateSubmission
 from inbox.tests.factories import ContactMessageFactory
 
 

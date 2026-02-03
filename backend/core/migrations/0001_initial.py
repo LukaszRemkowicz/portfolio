@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("astrophotography", "0002_consolidated_updates"),
+        ("astrophotography", "0001_initial"),
     ]
 
     operations = [

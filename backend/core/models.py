@@ -3,7 +3,8 @@ import uuid
 from io import BytesIO
 from typing import Any
 
-from django_ckeditor_5.fields import CKEditor5Field
+from django_ckeditor_5.fields import CKEditor5Field  # noqa: F401
+from parler.models import TranslatableModel, TranslatedFields  # noqa: F401
 from PIL import Image
 
 from django.core.exceptions import ValidationError
@@ -11,8 +12,6 @@ from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-
-from parler.models import TranslatableModel, TranslatedFields
 
 class BaseImage(TranslatableModel):
     """Base abstract model for images"""
@@ -27,7 +26,7 @@ class BaseImage(TranslatableModel):
         verbose_name=_("Image File"),
         help_text=_("The actual image file to be displayed."),
     )
-    
+
     # Translations moved to concrete subclasses because BaseImage is abstract.
     # See AstroImage and ProjectImage.
 

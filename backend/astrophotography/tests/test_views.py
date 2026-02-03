@@ -89,7 +89,7 @@ class TestBackgroundMainPageView:
 class TestMainPageLocationViewSet:
     def test_list_active_sliders(self, api_client):
         """Test listing only active sliders."""
-        
+
         # Create active slider for PL
         place_pl = PlaceFactory(country="PL")
         img_pl = AstroImageFactory(place=place_pl)
@@ -124,7 +124,7 @@ class TestMainPageLocationViewSet:
 class TestTravelHighlightsBySlugView:
     def test_get_by_country_slug(self, api_client):
         """Test retrieving highlights by country slug only."""
-        place = PlaceFactory(country="US", name="") # Explicitly no name for country-only test
+        place = PlaceFactory(country="US", name="")  # Explicitly no name for country-only test
         img = AstroImageFactory(place=place, name="USA Image")
         slider = MainPageLocationFactory(place=place, is_active=True)
         slider.images.add(img)
@@ -135,7 +135,7 @@ class TestTravelHighlightsBySlugView:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["country"] == "United States of America"
-        assert not data["place"] # might be "" or None
+        assert not data["place"]  # might be "" or None
         assert len(data["images"]) >= 1
 
     def test_get_by_country_and_place_slug(self, api_client):
@@ -270,10 +270,10 @@ class TestAstroImageViewSetCountryPlaceFiltering:
         place_us = PlaceFactory(country="US", name="Hawaii")
         place_us_2 = PlaceFactory(country="US", name="Alaska")
         image_h = AstroImageFactory(place=place_us)
-        image_a = AstroImageFactory(place=place_us_2)
+        _ = AstroImageFactory(place=place_us_2)
 
         url = reverse("astroimages:astroimage-list")
-        
+
         # Exact match
         response = api_client.get(url, {"country": "US", "place": "Hawaii"})
         assert response.status_code == status.HTTP_200_OK
