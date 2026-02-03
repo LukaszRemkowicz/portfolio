@@ -1,14 +1,17 @@
 from rest_framework import serializers
+from parler_rest.serializers import TranslatableModelSerializer
+from parler_rest.fields import TranslatedFieldsField
 
 from .models import Project, ProjectImage
 
 
-class ProjectImageSerializer(serializers.ModelSerializer):
+class ProjectImageSerializer(TranslatableModelSerializer):
+    translations = TranslatedFieldsField(shared_model=ProjectImage)
     """Serializer for project-specific images"""
 
     class Meta:
         model = ProjectImage
-        fields = ["pk", "url", "thumbnail_url", "is_cover", "name"]
+        fields = ["pk", "url", "thumbnail_url", "is_cover", "name", "translations"]
 
 
 class ProjectSerializer(serializers.ModelSerializer):

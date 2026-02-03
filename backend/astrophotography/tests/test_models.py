@@ -44,13 +44,63 @@ class TestAstroImageModel:
         image.refresh_from_db()
         assert image.zoom is False
 
+    def test_slug_auto_generated(self):
+        """Test that slug is automatically generated from name on creation"""
+        from django.utils.text import slugify
+        name = "Nebula in Orion"
+        image = AstroImageFactory(name=name, slug=None)
+        assert bool(image.slug)
+        assert image.slug == slugify(name)
+
+    def test_slug_uniqueness(self):
+        """Test that slugs are unique even if names are identical"""
+        from django.utils.text import slugify
+        name = "Same Name"
+        image1 = AstroImageFactory(name=name)
+        image2 = AstroImageFactory(name=name)
+
+        assert image1.slug != image2.slug
+        assert slugify(name) in image1.slug
+        assert slugify(name) in image2.slug
+
 
 @pytest.mark.django_db
 class TestMainPageBackgroundImageModel:
     def test_string_representation(self):
         """Test MainPageBackgroundImage string representation"""
-        bg = MainPageBackgroundImageFactory()
-        assert str(bg) == bg.name
+        bg = MainPageBackgroundImageFactory(name="Test BG")
+        assert str(bg) == "Test BG"
+
+    def test_model_creation_and_translation(self):
+        """Verify that MainPageBackgroundImage can be created with translations."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from io import BytesIO
+        from PIL import Image
+
+        img = Image.new('RGB', (1, 1), color='red')
+        img_io = BytesIO()
+        img.save(img_io, format='PNG')
+        img_io.seek(0)
+        image_file = SimpleUploadedFile("test_bg.png", img_io.read(), content_type="image/png")
+
+        from astrophotography.models import MainPageBackgroundImage
+        bg_image = MainPageBackgroundImage.objects.create(path=image_file)
+        
+        bg_image.set_current_language("en")
+        bg_image.name = "Test Background"
+        bg_image.save()
+
+        bg_image.set_current_language("pl")
+        bg_image.name = "Testowe Tło"
+        bg_image.save()
+
+        bg_image.refresh_from_db()
+        
+        bg_image.set_current_language("en")
+        assert bg_image.name == "Test Background"
+
+        bg_image.set_current_language("pl")
+        assert bg_image.name == "Testowe Tło"
 
 
 @pytest.mark.django_db
@@ -61,20 +111,39 @@ class TestPlaceModel:
 
 
 @pytest.mark.django_db
+class TestCameraModel:
+    def test_camera_str_method(self):
+        from astrophotography.models import Camera
+        camera = Camera.objects.create(model="Test Camera Z6")
+        assert str(camera) == "Test Camera Z6"
+
+
+@pytest.mark.django_db
+class TestLensModel:
+    def test_lens_str_method(self):
+        from astrophotography.models import Lens
+        lens = Lens.objects.create(model="Nikkor Z 20mm f/1.8")
+        assert str(lens) == "Nikkor Z 20mm f/1.8"
+
+
+@pytest.mark.django_db
 class TestMainPageLocationModel:
     def test_string_representation(self):
-        slider = MainPageLocationFactory(country="PL", place__name="Bieszczady")
-        assert str(slider) == "Location: Poland (Bieszczady) (Active)"
+        place = PlaceFactory(name="Bieszczady", country="PL")
+        slider = MainPageLocationFactory(place=place)
+        assert str(slider) == "Poland - Bieszczady (Active)"
 
     def test_string_representation_with_highlight_name(self):
         slider = MainPageLocationFactory(highlight_name="Magical Poland")
         assert str(slider) == "Magical Poland (Active)"
 
     def test_clean_method_validation_success(self):
+        # Place for PL
+        place = PlaceFactory(country="PL")
         # Slider for PL
-        slider = MainPageLocationFactory(country="PL")
+        slider = MainPageLocationFactory(place=place)
         # Image in PL
-        image = AstroImageFactory(location="PL")
+        image = AstroImageFactory(place=place)
 
         # Should not raise validation error
         slider.images.add(image)

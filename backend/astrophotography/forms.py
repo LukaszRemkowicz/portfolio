@@ -40,7 +40,10 @@ class RangeField(forms.MultiValueField):
         return list()
 
 
-class AstroImageForm(forms.ModelForm):
+from parler.forms import TranslatableModelForm
+
+
+class AstroImageForm(TranslatableModelForm):
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,

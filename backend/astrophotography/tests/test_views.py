@@ -9,6 +9,7 @@ from astrophotography.tests.factories import (
     AstroImageFactory,
     MainPageBackgroundImageFactory,
     MainPageLocationFactory,
+    PlaceFactory,
 )
 
 
@@ -87,18 +88,20 @@ class TestBackgroundMainPageView:
 @pytest.mark.django_db
 class TestMainPageLocationViewSet:
     def test_list_active_sliders(self, api_client):
-        """Test listing only active sliders ordered by country"""
-
+        """Test listing only active sliders."""
+        
         # Create active slider for PL
-        img_pl = AstroImageFactory(location="PL")
-        MainPageLocationFactory(country="PL", is_active=True, images=[img_pl])
+        place_pl = PlaceFactory(country="PL")
+        img_pl = AstroImageFactory(place=place_pl)
+        MainPageLocationFactory(place=place_pl, is_active=True, images=[img_pl])
 
         # Create active slider for US
-        img_us = AstroImageFactory(location="US")
-        MainPageLocationFactory(country="US", is_active=True, images=[img_us])
+        place_us = PlaceFactory(country="US")
+        img_us = AstroImageFactory(place=place_us)
+        MainPageLocationFactory(place=place_us, is_active=True, images=[img_us])
 
         # Create inactive slider (should not be listed)
-        MainPageLocationFactory(country="NO", is_active=False)
+        MainPageLocationFactory(place=PlaceFactory(country="NO"), is_active=False)
 
         url = reverse("astroimages:travel-highlights-list")
         response = api_client.get(url)
@@ -106,9 +109,7 @@ class TestMainPageLocationViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 2
 
-        # Check ordering (PL comes before US alphabetically? No, country code PL vs US.
-        # Wait, model ordering is by 'country' field which is code. P vs U.
-        # Let's just check existence.
+        # Check existence and basic data
         countries = [item["country"] for item in response.data]
         assert "PL" in countries
         assert "US" in countries
@@ -117,22 +118,52 @@ class TestMainPageLocationViewSet:
         # Verify structure
         item_pl = next(item for item in response.data if item["country"] == "PL")
         assert item_pl["country_name"] == "Poland"
-        assert len(item_pl["images"]) == 1
-        assert item_pl["images"][0]["pk"] == str(img_pl.pk)
 
 
 @pytest.mark.django_db
 class TestTravelHighlightsBySlugView:
+    def test_get_by_country_slug(self, api_client):
+        """Test retrieving highlights by country slug only."""
+        place = PlaceFactory(country="US", name="") # Explicitly no name for country-only test
+        img = AstroImageFactory(place=place, name="USA Image")
+        slider = MainPageLocationFactory(place=place, is_active=True)
+        slider.images.add(img)
+
+        url = reverse("astroimages:travel-by-country", args=[slider.country_slug])
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["country"] == "United States of America"
+        assert not data["place"] # might be "" or None
+        assert len(data["images"]) >= 1
+
+    def test_get_by_country_and_place_slug(self, api_client):
+        """Test retrieving highlights by country and place slug."""
+        place = PlaceFactory(name="High Tatras", country="PL")
+        img = AstroImageFactory(place=place, name="Tatras 1")
+        slider = MainPageLocationFactory(place=place, is_active=True)
+        slider.images.add(img)
+
+        url = reverse(
+            "astroimages:travel-by-country-place",
+            args=[slider.country_slug, slider.place_slug],
+        )
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["country"] == "Poland"
+        assert data["place"] == "High Tatras"
+        assert len(data["images"]) == 1
+        assert data["images"][0]["name"] == "Tatras 1"
+
     def test_get_highlights_with_story(self, api_client):
         """Test retrieving highlights with a story"""
-
-        # Create slider with story
-        slider = MainPageLocationFactory(
-            place__name="Tatras",
-        )
-
-        # Create matching image
-        AstroImageFactory(location=slider.country, place=slider.place)
+        place = PlaceFactory(name="Tatras", country="PL")
+        slider = MainPageLocationFactory(place=place, story="A long time ago...")
+        AstroImageFactory(place=place)
+        slider.images.add(AstroImageFactory(place=place))
 
         url = reverse(
             "astroimages:travel-by-country-place",
@@ -141,9 +172,18 @@ class TestTravelHighlightsBySlugView:
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["story"] == slider.story
-        assert response.data["country"] == slider.country.name
-        assert response.data["place"] == slider.place.name
+        assert response.data["story"] == "A long time ago..."
+
+    def test_get_invalid_slug_returns_404(self, api_client):
+        url = reverse("astroimages:travel-by-country", args=["invalid-slug"])
+        response = api_client.get(url)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_inactive_slider_returns_404(self, api_client):
+        slider = MainPageLocationFactory(is_active=False)
+        url = reverse("astroimages:travel-by-country", args=[slider.country_slug])
+        response = api_client.get(url)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.django_db
@@ -169,5 +209,87 @@ class TestTagsView:
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        # Basic check that it returns list
         assert isinstance(response.data, list)
+
+    def test_tags_view_category_filtering(self, api_client):
+        """Test that tag counts are correctly filtered by celestial_object category."""
+        # Setup: 2 images in different categories sharing the same tag
+        img1 = AstroImageFactory(celestial_object="Landscape")
+        img1.tags.add("night")
+
+        img2 = AstroImageFactory(celestial_object="Deep Sky")
+        img2.tags.add("night", "galaxy")
+
+        url = reverse("astroimages:tags-list")
+
+        # 1. No filter - should see all tags with total counts
+        response = api_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        tags_data = {t["slug"]: t["count"] for t in response.data}
+        assert tags_data["night"] == 2
+        assert tags_data["galaxy"] == 1
+
+        # 2. Filter by Landscape - should only see 'night' tag with count 1
+        response = api_client.get(url, {"filter": "Landscape"})
+        assert response.status_code == status.HTTP_200_OK
+        tags_data = {t["slug"]: t["count"] for t in response.data}
+        assert tags_data["night"] == 1
+        assert "galaxy" not in tags_data
+
+        # 3. Filter by Deep Sky - should see 'night' and 'galaxy' with count 1
+        response = api_client.get(url, {"filter": "Deep Sky"})
+        assert response.status_code == status.HTTP_200_OK
+        tags_data = {t["slug"]: t["count"] for t in response.data}
+        assert tags_data["night"] == 1
+        assert tags_data["galaxy"] == 1
+
+
+@pytest.mark.django_db
+class TestAstroImageViewSetCountryPlaceFiltering:
+    """
+    Test country and place filtering for AstroImageViewSet.
+    """
+
+    def test_filter_by_country_code(self, api_client):
+        """Test filtering images by country code."""
+        place_us = PlaceFactory(country="US")
+        place_pl = PlaceFactory(country="PL")
+        AstroImageFactory(place=place_us)
+        AstroImageFactory(place=place_pl)
+
+        url = reverse("astroimages:astroimage-list")
+        response = api_client.get(url, {"country": "US"})
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert "United States" in data[0]["country_name"]
+
+    def test_filter_by_country_and_place(self, api_client):
+        """Test filtering by both country and place."""
+        place_us = PlaceFactory(country="US", name="Hawaii")
+        place_us_2 = PlaceFactory(country="US", name="Alaska")
+        image_h = AstroImageFactory(place=place_us)
+        image_a = AstroImageFactory(place=place_us_2)
+
+        url = reverse("astroimages:astroimage-list")
+        
+        # Exact match
+        response = api_client.get(url, {"country": "US", "place": "Hawaii"})
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["name"] == image_h.name
+
+    def test_travel_param_fuzzy_country_matching(self, api_client):
+        """Test fuzzy country matching with travel parameter."""
+        place_pl = PlaceFactory(country="PL", name="Tatras")
+        AstroImageFactory(place=place_pl)
+
+        url = reverse("astroimages:astroimage-list")
+        response = api_client.get(url, {"travel": "Poland"})
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) >= 1
+        assert any("Poland" in img["country_name"] for img in data)

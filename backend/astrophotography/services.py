@@ -49,9 +49,9 @@ class GalleryQueryService:
         country = params.get("country")
         place = params.get("place")
         if country:
-            queryset = queryset.filter(location=country)
+            queryset = queryset.filter(place__country=country)
             if place:
-                queryset = queryset.filter(Q(place__name__iexact=place) | Q(place__isnull=True))
+                queryset = queryset.filter(Q(place__translations__name__iexact=place) | Q(place__isnull=True))
 
         return queryset
 
@@ -66,7 +66,7 @@ class GalleryQueryService:
             .prefetch_related(
                 "tags", "camera", "lens", "telescope", "tracker", "tripod"
             )  # type: ignore[misc]
-            .filter(location=slider.country)
+            .filter(place__country=slider.place.country if slider.place else None)
         )
         if slider.place:
             queryset = queryset.filter(place=slider.place)
@@ -115,10 +115,10 @@ class GalleryQueryService:
             if matches_code or matches_name:
                 found_code = code
                 break
-        filter_q = Q(place__name__icontains=search_term)
+        filter_q = Q(place__translations__name__icontains=search_term)
         if found_code:
-            filter_q |= Q(location=found_code)
+            filter_q |= Q(place__country=found_code)
         # Fallback for manual code entry
         if not found_code:
-            filter_q |= Q(location__icontains=search_term)
+            filter_q |= Q(place__country__icontains=search_term)
         return queryset.filter(filter_q)

@@ -2,24 +2,27 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from core.ai_agents import GPTTranslationAgent
+from core.agents import GPTTranslationAgent
 
 
 @pytest.fixture
 def mock_openai_client():
-    with patch("core.ai_agents.OpenAI") as mock:
+    with patch("core.agents.OpenAI") as mock:
         yield mock
 
 
 class TestGPTTranslationAgent:
     def test_translate_calls_openai_correctly(self, mock_openai_client):
-        """Test that the agent initializes client and calls chat.completions.create"""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.choices[0].message.content = "Przetłumaczony tekst"
+        """Test that the agent initializes client and calls chat.completions.create twice"""
+        # Setup mock responses
+        mock_response1 = MagicMock()
+        mock_response1.choices[0].message.content = "Translated raw"
+        
+        mock_response2 = MagicMock()
+        mock_response2.choices[0].message.content = "Przetłumaczony tekst"
 
         mock_client_instance = mock_openai_client.return_value
-        mock_client_instance.chat.completions.create.return_value = mock_response
+        mock_client_instance.chat.completions.create.side_effect = [mock_response1, mock_response2]
 
         # Instantiate agent
         agent = GPTTranslationAgent()
@@ -30,16 +33,20 @@ class TestGPTTranslationAgent:
         # Assertions
         assert result == "Przetłumaczony tekst"
 
-        # Verify call to OpenAI
-        mock_client_instance.chat.completions.create.assert_called_once()
-        call_args = mock_client_instance.chat.completions.create.call_args[1]
+        # Verify calls to OpenAI
+        assert mock_client_instance.chat.completions.create.call_count == 2
+        
+        # 1st call (Translate)
+        call1 = mock_client_instance.chat.completions.create.call_args_list[0][1]
+        assert call1["model"] == "gpt-4o"
+        assert "Polish" in call1["messages"][0]["content"]
+        assert call1["messages"][1]["content"] == "Hello World"
 
-        assert call_args["model"] == "gpt-4-turbo-preview"
-        assert len(call_args["messages"]) == 2
-        assert call_args["messages"][0]["role"] == "system"
-        assert "Polish" in call_args["messages"][0]["content"]  # Should mention target lang
-        assert call_args["messages"][1]["role"] == "user"
-        assert call_args["messages"][1]["content"] == "Hello World"
+        # 2nd call (Edit)
+        call2 = mock_client_instance.chat.completions.create.call_args_list[1][1]
+        assert call2["model"] == "gpt-4o"
+        assert "Polish" in call2["messages"][0]["content"]
+        assert call2["messages"][1]["content"] == "Translated raw"
 
     def test_translate_handles_api_error_gracefully(self, mock_openai_client):
         """Test that the agent returns None or fallback when API fails"""

@@ -1,99 +1,56 @@
-from unittest.mock import MagicMock, patch
-
+# backend/core/tests/test_translation_service.py
 import pytest
+from core.services import TranslationService
+from django.conf import settings
 
-# We will import TranslationService from core.services once implemented
-# from core.services import TranslationService
-
-# Placeholder for now until service is created, but we write the test assuming it exists.
-# Since we can't import it yet, I will define a fixture that *will* import it or fail if not found,
-# but practically in TDD I should write the test that fails to import or fails to run.
-
-
+@pytest.mark.django_db
 class TestTranslationService:
-    def test_import_service(self):
-        """Simple test to verify service exists (will fail first)"""
-        try:
-            from core.services import TranslationService
+    def test_get_available_languages_returns_list(self):
+        """
+        Verify that get_available_languages returns a list of language codes.
+        """
+        languages = TranslationService.get_available_languages()
+        
+        assert isinstance(languages, list)
+        assert len(languages) > 0
+        # In this project, expected languages are 'en' and 'pl'
+        assert "en" in languages
+        assert "pl" in languages
 
-            assert TranslationService
-        except ImportError:
-            pytest.fail("TranslationService not implemented yet")
+    @pytest.mark.django_db
+    def test_get_available_languages_matches_settings(self):
+        """
+        Verify that the returned languages match what's configured in PARLER_LANGUAGES.
+        """
+        languages = TranslationService.get_available_languages()
+        
+        # Parler global settings are stored under the None key
+        parler_configs = getattr(settings, 'PARLER_LANGUAGES', {})
+        parler_langs = parler_configs.get(None, [])
+        
+        expected_codes = [lang['code'] for lang in parler_langs if isinstance(lang, dict) and 'code' in lang]
+        
+        # Ensure we found some expected codes to compare against
+        assert len(expected_codes) > 0
+        assert set(languages) == set(expected_codes)
 
-    def test_get_translated_field_returns_original_for_en(self):
-        from core.services import TranslationService
-
-        instance = MagicMock()
-        instance.title = "Original Title"
-        instance.translations = {}
-
-        result = TranslationService.get_translated_field(instance, "title", "en")
-        assert result == "Original Title"
-        instance.save.assert_not_called()
-
-    def test_get_translated_field_returns_original_for_none_lang(self):
-        from core.services import TranslationService
-
-        instance = MagicMock()
-        instance.title = "Original Title"
-        instance.translations = {}
-
-        result = TranslationService.get_translated_field(instance, "title", None)
-        assert result == "Original Title"
-
-    def test_get_translated_field_returns_existing_translation(self):
-        from core.services import TranslationService
-
-        instance = MagicMock()
-        instance.title = "Original Title"
-        instance.translations = {"pl": {"title": "Tytuł Polski"}}
-
-        result = TranslationService.get_translated_field(instance, "title", "pl")
-        assert result == "Tytuł Polski"
-        instance.save.assert_not_called()
-
-    @patch("core.ai_agents.GPTTranslationAgent")
-    def test_get_translated_field_calls_agent_when_missing(self, mock_agent_cls):
-        from core.services import TranslationService
-
-        # Setup Mock Agent
-        mock_agent_instance = mock_agent_cls.return_value
-        mock_agent_instance.translate.return_value = "AI Translated Text"
-
-        instance = MagicMock()
-        instance.title = "Original Title"
-        instance.translations = {}
-
-        result = TranslationService.get_translated_field(instance, "title", "pl")
-
-        # Verify result
-        assert result == "AI Translated Text"
-
-        # Verify Agent Call
-        mock_agent_instance.translate.assert_called_once_with("Original Title", "pl")
-
-        # Verify Save
-        assert instance.translations["pl"]["title"] == "AI Translated Text"
-        instance.save.assert_called_once_with(update_fields=["translations"])
-
-    @patch("core.ai_agents.GPTTranslationAgent")
-    def test_get_translated_field_handles_agent_failure(self, mock_agent_cls):
-        from core.services import TranslationService
-
-        # Setup Mock Agent to Fail (return None)
-        mock_agent_instance = mock_agent_cls.return_value
-        mock_agent_instance.translate.return_value = None
-
-        instance = MagicMock()
-        instance.title = "Original Title"
-        instance.translations = {}
-
-        result = TranslationService.get_translated_field(instance, "title", "pl")
-
-        # Verify Fallback
-        expected_fallback = "[TRANSLATION FAILED] Original Title"
-        assert result == expected_fallback
-
-        # Verify Save of Fallback
-        assert instance.translations["pl"]["title"] == expected_fallback
-        instance.save.assert_called_once_with(update_fields=["translations"])
+    def test_fetch_place_name_calls_agent_correctly(self):
+        """
+        Verify that TranslationService.fetch_place_name calls GPTTranslationAgent 
+        with the correct argument order (source_text, language_code, country).
+        """
+        from unittest.mock import patch
+        
+        # Mock the agent's instance
+        with patch('core.services.GPTTranslationAgent') as mock_agent_class:
+            mock_agent_instance = mock_agent_class.return_value
+            mock_agent_instance.translate_place.return_value = "Hawaje"
+            
+            service = TranslationService()
+            result = service.fetch_place_name("Hawaii", "US", "pl")
+            
+            assert result == "Hawaje"
+            
+            # CRITICAL CHECK: Verified the argument order: 
+            # translate_place(text, target_lang_code, country_name)
+            mock_agent_instance.translate_place.assert_called_once_with("Hawaii", "pl", "US")

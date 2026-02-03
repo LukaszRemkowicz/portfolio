@@ -1,4 +1,5 @@
 # backend/astrophotography/models.py
+from core.services import TranslationService
 from typing import Any
 
 from django_ckeditor_5.fields import CKEditor5Field
@@ -10,6 +11,7 @@ from django.contrib.postgres.fields import DateRangeField
 from django.db import models
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+from parler.models import TranslatableModel, TranslatedFields
 
 from core.models import BaseImage, SingletonModel
 
@@ -82,21 +84,33 @@ class AbstractEquipmentModel(models.Model):
         ordering = ["model"]
 
 
-class Place(models.Model):
-    name = models.CharField(
-        max_length=255,
-        default="",
-        verbose_name=_("Name"),
-        help_text=_("The name of the specific place or city."),
+class Place(TranslatableModel):
+    country = CountryField(
+        blank=True,
+        null=True,
+        verbose_name=_("Country"),
+        help_text=_("The country where the place is located."),
+    )
+    
+    translations = TranslatedFields(
+        name=models.CharField(
+            max_length=255,
+            default="",
+            verbose_name=_("Name"),
+            help_text=_("The name of the specific place or city."),
+        )
     )
 
+
     def __str__(self) -> str:
-        return self.name
+        name = self.safe_translation_getter("name", any_language=True)
+        if name:
+            return name
+        return f"Unnamed ({self.country})" if self.country else str(self.pk)
 
     class Meta:
         verbose_name = _("Place")
         verbose_name_plural = _("Places")
-        ordering = ["name"]
 
 
 class Telescope(AbstractEquipmentModel):
@@ -134,12 +148,6 @@ class AstroImage(BaseImage):
 
     capture_date = models.DateField(
         verbose_name=_("Capture Date"), help_text=_("The date when the photo was taken.")
-    )
-    location = CountryField(
-        blank=True,
-        null=True,
-        verbose_name=_("Country"),
-        help_text=_("The country where the photo was taken."),
     )
     place = models.ForeignKey(
         Place,
@@ -179,18 +187,30 @@ class AstroImage(BaseImage):
         verbose_name=_("Lens"),
         help_text=_("Lens model and focal length"),
     )
-    exposure_details = CKEditor5Field(
-        blank=True,
-        config_name="default",
-        verbose_name=_("Exposure Details"),
-        help_text=_("Technical details of the exposure (gain, sub-exposures, total time)."),
+    translations = TranslatedFields(
+        name=models.CharField(
+            max_length=255, verbose_name=_("Name"), help_text=_("A descriptive name for this image.")
+        ),
+        description=CKEditor5Field(
+            blank=True,
+            verbose_name=_("Description"),
+            help_text=_("Optional detailed description of the image."),
+            config_name="default",
+        ),
+        exposure_details=CKEditor5Field(
+            blank=True,
+            config_name="default",
+            verbose_name=_("Exposure Details"),
+            help_text=_("Technical details of the exposure (gain, sub-exposures, total time)."),
+        ),
+        processing_details=CKEditor5Field(
+            blank=True,
+            config_name="default",
+            verbose_name=_("Processing Details"),
+            help_text=_("Software and techniques used for post-processing."),
+        )
     )
-    processing_details = CKEditor5Field(
-        blank=True,
-        config_name="default",
-        verbose_name=_("Processing Details"),
-        help_text=_("Software and techniques used for post-processing."),
-    )
+    
     celestial_object = models.CharField(
         max_length=50,
         choices=CelestialObjectChoices,
@@ -219,12 +239,7 @@ class AstroImage(BaseImage):
         verbose_name=_("Zoom"),
         help_text=_("Allow users to zoom this image in detail mode."),
     )
-    translations = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name=_("Translations"),
-        help_text=_("JSON translations (e.g., {'pl': {'name': '...'}})."),
-    )
+    # translations JSONField removed
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         if not self.slug:
@@ -243,7 +258,11 @@ class AstroImage(BaseImage):
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
-        return f"{self.name} ({self.capture_date})" if self.capture_date else self.name
+        name = self.safe_translation_getter("name", any_language=True)
+        date_str = f" ({self.capture_date})" if getattr(self, "capture_date", None) else ""
+        if name:
+            return f"{name}{date_str}"
+        return f"Unnamed{date_str}"
 
     class Meta:
         verbose_name = _("Astrophotography Image")
@@ -251,12 +270,12 @@ class AstroImage(BaseImage):
         ordering = ["-created_at"]
 
 
-class MainPageLocation(models.Model):
+class MainPageLocation(TranslatableModel):
     """Model to manage which images appear in the travel section for a specific location"""
 
-    country = CountryField(
-        verbose_name=_("Country"), help_text=_("The country for this travel highlights slider.")
-    )
+    # country field removed - relying on Place country? 
+    # Plan dictated removal.
+    
     place = models.ForeignKey(
         Place,
         on_delete=models.SET_NULL,
@@ -280,13 +299,23 @@ class MainPageLocation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
-    highlight_name = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        verbose_name=_("Highlight Name"),
-        help_text=_("Optional custom name for the travel highlight (overrides Country/Place)."),
+    translations = TranslatedFields(
+        highlight_name = models.CharField(
+            max_length=100,
+            blank=True,
+            null=True,
+            verbose_name=_("Highlight Name"),
+            help_text=_("Optional custom name for the travel highlight (overrides Country/Place)."),
+        ),
+        story = CKEditor5Field(
+            blank=True,
+            null=True,
+            verbose_name=_("Story/Blog Text"),
+            help_text=_("Optional story or blog text to display above the images."),
+            config_name="default",
+        )
     )
+
     adventure_date = DateRangeField(
         blank=True,
         null=True,
@@ -306,14 +335,7 @@ class MainPageLocation(models.Model):
         verbose_name=_("Place Slug"),
         help_text=_("Auto-generated slug for the place."),
     )
-    story = CKEditor5Field(
-        blank=True,
-        null=True,
-        verbose_name=_("Story/Blog Text"),
-        help_text=_("Optional story or blog text to display above the images."),
-        config_name="default",
-    )
-
+    
     background_image = models.ForeignKey(
         "AstroImage",
         on_delete=models.SET_NULL,
@@ -324,32 +346,38 @@ class MainPageLocation(models.Model):
         help_text=_("Optional specific background image for this location's page."),
     )
 
-    translations = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name=_("Translations"),
-        help_text=_("JSON translations (e.g., {'pl': {'highlight_name': '...'}})."),
-    )
-
     def save(self, *args: Any, **kwargs: Any) -> None:
-        if self.country:
-            self.country_slug = slugify(self.country.name)
-
         if self.place:
-            self.place_slug = slugify(self.place.name)
+            if self.place.country:
+                self.country_slug = slugify(self.place.country.name)
+            
+            place_name = self.place.safe_translation_getter("name", any_language=True)
+            if place_name:
+                self.place_slug = slugify(place_name)
+            else:
+                self.place_slug = None
         else:
             self.place_slug = None
 
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
-        if self.highlight_name:
-            return f"{self.highlight_name} ({'Active' if self.is_active else 'Inactive'})"
+        name = self.safe_translation_getter("highlight_name", any_language=True)
+        status = _("Active") if self.is_active else _("Inactive")
+        
+        if name:
+            return f"{name} ({status})"
 
-        location = f"{self.country.name}"
+        location = _("Unknown Location")
         if self.place:
-            location += f" ({self.place})"
-        return f"Location: {location} ({'Active' if self.is_active else 'Inactive'})"
+            country_name = self.place.country.name if self.place.country else ""
+            place_name = str(self.place)
+            if country_name and place_name:
+                location = f"{country_name} - {place_name}"
+            else:
+                location = country_name or place_name
+
+        return f"{location} ({status})"
 
     class Meta:
         verbose_name = _("Main Page Location")
@@ -360,23 +388,37 @@ class MainPageLocation(models.Model):
 class MainPageBackgroundImage(BaseImage):
     """Model for the main page background image"""
 
-    # Override fields with appropriate defaults
-    name = models.CharField(
-        max_length=255,
-        default="Background Image",
-        verbose_name=_("Name"),
-        help_text=_("Identifier for the background image."),
-    )
     path = models.ImageField(
         upload_to="backgrounds/",
         verbose_name=_("Image File"),
         help_text=_("The large background image file."),
     )
 
+    translations = TranslatedFields(
+        name=models.CharField(
+            max_length=255,
+            blank=True,
+            verbose_name=_("Name"),
+            help_text=_("Identifier for the background image."),
+        ),
+        description=CKEditor5Field(
+            blank=True,
+            verbose_name=_("Description"),
+            help_text=_("Optional detailed description of the image."),
+            config_name="default",
+        ),
+    )
+
     class Meta:
-        verbose_name = _("Main Page Background Image")
-        verbose_name_plural = _("Main Page Background Images")
+        verbose_name = _("Main Page Background")
+        verbose_name_plural = _("Main Page Backgrounds")
         ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        name = self.safe_translation_getter("name", any_language=True)
+        if name:
+            return name
+        return self.path.name.split("/")[-1] if self.path else _("Unnamed Background")
 
 
 class MeteorsMainPageConfig(SingletonModel):

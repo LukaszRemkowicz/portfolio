@@ -100,6 +100,7 @@ CSRF_COOKIE_SECURE = True
 
 # Application definition
 INSTALLED_APPS = [
+    "parler",
     "users.apps.UsersConfig",  # Must be first
     "django.contrib.contenttypes",  # Required by auth
     "django.contrib.auth",  # Required for user model
@@ -204,14 +205,31 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+# --- Language Configuration ---
+# Change this ONE variable to switch default language (Order & Protection)
+PARLER_DEFAULT_LANGUAGE_CODE = "en"
+
+LANGUAGE_CODE = PARLER_DEFAULT_LANGUAGE_CODE
 
 # Supported languages
-
 LANGUAGES = [
     ("en", _("English")),
     ("pl", _("Polish")),
 ]
+
+# Dynamically construct PARLER_LANGUAGES based on default
+# Ensures the default language depends on PARLER_DEFAULT_LANGUAGE_CODE
+# and is always the FIRST tab.
+_other_languages = [lang[0] for lang in LANGUAGES if lang[0] != PARLER_DEFAULT_LANGUAGE_CODE]
+_parler_languages_list = [{"code": PARLER_DEFAULT_LANGUAGE_CODE}] + [{"code": code} for code in _other_languages]
+
+PARLER_LANGUAGES = {
+    None: tuple(_parler_languages_list),
+    "default": {
+        "fallback": PARLER_DEFAULT_LANGUAGE_CODE,
+        "hide_untranslated": False,
+    },
+}
 
 LOCALE_PATHS = [
     os.path.join(BASE_DIR, "core", "locale"),

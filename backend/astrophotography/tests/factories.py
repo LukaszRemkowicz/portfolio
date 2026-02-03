@@ -14,6 +14,13 @@ from astrophotography.models import (
     Tripod,
 )
 
+class PlaceFactory(DjangoModelFactory):
+    class Meta:
+        model = "astrophotography.Place"
+
+    name = factory.Faker("city")
+    country = "PL"
+
 
 class AstroImageFactory(DjangoModelFactory):
     class Meta:
@@ -24,7 +31,7 @@ class AstroImageFactory(DjangoModelFactory):
     description = factory.Faker("paragraph")
     path = factory.django.ImageField()
     capture_date = factory.LazyFunction(lambda: timezone.now().date())
-    location = "PL"
+    place = factory.SubFactory(PlaceFactory)
     exposure_details = "60x300s, Gain 100"
     processing_details = "PixInsight, BlurXTerminator"
     celestial_object = "Deep Sky"
@@ -114,11 +121,7 @@ class TripodFactory(DjangoModelFactory):
     model = factory.Faker("word")
 
 
-class PlaceFactory(DjangoModelFactory):
-    class Meta:
-        model = "astrophotography.Place"
 
-    name = factory.Faker("city")
 
 
 class MainPageLocationFactory(DjangoModelFactory):
@@ -126,7 +129,6 @@ class MainPageLocationFactory(DjangoModelFactory):
         model = "astrophotography.MainPageLocation"
         skip_postgeneration_save = True
 
-    country = factory.Iterator(["PL", "US", "NO", "CL"])
     place = factory.SubFactory(PlaceFactory)
     highlight_name = None
     is_active = True

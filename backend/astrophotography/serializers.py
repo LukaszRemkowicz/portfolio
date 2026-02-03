@@ -3,6 +3,8 @@ from typing import Optional
 
 from rest_framework import serializers
 from rest_framework.serializers import CharField, ImageField, StringRelatedField
+from parler_rest.serializers import TranslatableModelSerializer
+from parler_rest.fields import TranslatedFieldsField
 from taggit.models import Tag
 
 from django.conf import settings
@@ -38,10 +40,12 @@ class BaseEquipmentSerializer(serializers.ModelSerializer):
         fields = ["id", "model"]
 
 
-class PlaceSerializer(serializers.ModelSerializer):
+class PlaceSerializer(TranslatableModelSerializer):
+    translations = TranslatedFieldsField(shared_model=Place)
+
     class Meta:
         model = Place
-        fields = ["id", "name"]
+        fields = ["id", "name", "country", "translations"]
 
 
 class CameraSerializer(BaseEquipmentSerializer):
@@ -69,7 +73,8 @@ class TripodSerializer(BaseEquipmentSerializer):
         model = Tripod
 
 
-class AstroImageSerializerList(serializers.ModelSerializer):
+class AstroImageSerializerList(TranslatableModelSerializer):
+    translations = TranslatedFieldsField(shared_model=AstroImage)
     url = serializers.SerializerMethodField()
     thumbnail_url: ImageField = ImageField(source="thumbnail", read_only=True)
     tags: StringRelatedField = StringRelatedField(many=True)
@@ -78,7 +83,8 @@ class AstroImageSerializerList(serializers.ModelSerializer):
     telescope: StringRelatedField = StringRelatedField(many=True)
     tracker: StringRelatedField = StringRelatedField(many=True)
     tripod: StringRelatedField = StringRelatedField(many=True)
-    location: CharField = CharField(source="location.name")
+    location: CharField = CharField(source="place.name", read_only=True)
+    country_name: CharField = CharField(source="place.country.name", read_only=True)
     process = serializers.BooleanField(source="zoom")
 
     def get_url(self, obj: AstroImage) -> str:
@@ -124,23 +130,27 @@ class AstroImageSerializerList(serializers.ModelSerializer):
             "tripod",
             "capture_date",
             "location",
+            "country_name",
             "celestial_object",
             "exposure_details",
             "processing_details",
             "astrobin_url",
             "created_at",
             "process",
+            "translations",
         ]
 
 
-class AstroImageSerializer(serializers.ModelSerializer):
+class AstroImageSerializer(TranslatableModelSerializer):
+    translations = TranslatedFieldsField(shared_model=AstroImage)
     camera = CameraSerializer(many=True, read_only=True)
     lens = LensSerializer(many=True, read_only=True)
     telescope = TelescopeSerializer(many=True, read_only=True)
     tracker = TrackerSerializer(many=True, read_only=True)
     tripod = TripodSerializer(many=True, read_only=True)
 
-    location = serializers.CharField(source="location.name", read_only=True)
+    location = serializers.CharField(source="place.name", read_only=True)
+    country_name = serializers.CharField(source="place.country.name", read_only=True)
     process = serializers.BooleanField(source="zoom")
 
     # Override url field to use secure serving
@@ -184,6 +194,7 @@ class AstroImageSerializer(serializers.ModelSerializer):
             "tripod",
             "lens",
             "location",
+            "country_name",
             "exposure_details",
             "processing_details",
             "celestial_object",
@@ -191,6 +202,7 @@ class AstroImageSerializer(serializers.ModelSerializer):
             "description",
             "process",
             "url",
+            "translations",
         ]
 
 
@@ -211,9 +223,12 @@ class AstroImageThumbnailSerializer(serializers.ModelSerializer):
         fields = ["pk", "slug", "url", "thumbnail_url", "description"]
 
 
-class MainPageLocationSerializer(serializers.ModelSerializer):
+class MainPageLocationSerializer(TranslatableModelSerializer):
+    translations = TranslatedFieldsField(shared_model=MainPageLocation)
     place_name = serializers.CharField(source="place.name", read_only=True)
-    country_name = serializers.CharField(source="country.name", read_only=True)
+    country_name = serializers.CharField(source="place.country.name", read_only=True)
+    country = serializers.CharField(source="place.country", read_only=True)
+    country_slug = serializers.CharField(source="place.country_slug", read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
     background_image = serializers.SerializerMethodField()
     background_image_thumbnail = serializers.SerializerMethodField()
@@ -292,6 +307,7 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
             "background_image_thumbnail",
             "images",
             "created_at",
+            "translations",
         ]
 
 
@@ -301,8 +317,8 @@ class TravelHighlightDetailSerializer(MainPageLocationSerializer):
     Includes full image metadata and dynamic image filtering.
     """
 
-    country = serializers.CharField(source="country.name", read_only=True)
-    country_code = serializers.CharField(source="country.code", read_only=True)
+    country = serializers.CharField(source="place.country.name", read_only=True)
+    country_code = serializers.CharField(source="place.country.code", read_only=True)
     place = serializers.CharField(source="place.name", read_only=True, allow_null=True)
     images = serializers.SerializerMethodField()  # type: ignore[assignment]
 

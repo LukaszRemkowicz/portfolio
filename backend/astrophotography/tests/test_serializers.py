@@ -1,6 +1,18 @@
 import pytest
+from datetime import date
+from psycopg2.extras import DateRange
+from unittest.mock import MagicMock, patch
 
-from astrophotography.serializers import TrackerSerializer
+from astrophotography.models import AstroImage, MainPageLocation
+from astrophotography.serializers import (
+    TrackerSerializer, TripodSerializer, CameraSerializer, LensSerializer,
+    TelescopeSerializer, PlaceSerializer, MeteorsMainPageConfigSerializer,
+    AstroImageSerializer, AstroImageSerializerList, MainPageLocationSerializer,
+    TagSerializer
+)
+from astrophotography.tests.factories import (
+    MainPageLocationFactory, PlaceFactory, AstroImageFactory
+)
 
 
 @pytest.mark.django_db
@@ -20,10 +32,6 @@ class TestEquipmentSerializers:
             pytest.fail(f"TrackerSerializer Configuration Error: {e}")
 
     def test_tripod_serializer_configuration(self):
-        """
-        Regression test: Ensure TripodSerializer also has 'fields' or 'exclude' defined.
-        """
-        from astrophotography.serializers import TripodSerializer
 
         try:
             serializer = TripodSerializer()
@@ -32,7 +40,6 @@ class TestEquipmentSerializers:
             pytest.fail(f"TripodSerializer Configuration Error: {e}")
 
     def test_camera_serializer_configuration(self):
-        from astrophotography.serializers import CameraSerializer
 
         try:
             serializer = CameraSerializer()
@@ -41,7 +48,6 @@ class TestEquipmentSerializers:
             pytest.fail(f"CameraSerializer Configuration Error: {e}")
 
     def test_lens_serializer_configuration(self):
-        from astrophotography.serializers import LensSerializer
 
         try:
             serializer = LensSerializer()
@@ -50,7 +56,6 @@ class TestEquipmentSerializers:
             pytest.fail(f"LensSerializer Configuration Error: {e}")
 
     def test_telescope_serializer_configuration(self):
-        from astrophotography.serializers import TelescopeSerializer
 
         try:
             serializer = TelescopeSerializer()
@@ -59,7 +64,6 @@ class TestEquipmentSerializers:
             pytest.fail(f"TelescopeSerializer Configuration Error: {e}")
 
     def test_place_serializer_configuration(self):
-        from astrophotography.serializers import PlaceSerializer
 
         try:
             serializer = PlaceSerializer()
@@ -68,7 +72,6 @@ class TestEquipmentSerializers:
             pytest.fail(f"PlaceSerializer Configuration Error: {e}")
 
     def test_meteors_config_serializer_configuration(self):
-        from astrophotography.serializers import MeteorsMainPageConfigSerializer
 
         try:
             # Should have explicit fields
@@ -78,7 +81,6 @@ class TestEquipmentSerializers:
             pytest.fail(f"MeteorsMainPageConfigSerializer Configuration Error: {e}")
 
     def test_astro_image_serializer_configuration(self):
-        from astrophotography.serializers import AstroImageSerializer
 
         try:
             serializer = AstroImageSerializer()
@@ -90,32 +92,26 @@ class TestEquipmentSerializers:
 
     def test_main_page_location_serializer_logic(self):
         """Test custom logic in MainPageLocationSerializer (adventure_date)"""
-        from datetime import date
-
-        from psycopg2.extras import DateRange
-
-        from astrophotography.serializers import MainPageLocationSerializer
-        from astrophotography.tests.factories import MainPageLocationFactory
 
         # Case 1: Single date (formatted as lower)
+        place = PlaceFactory(country="PL", name="Tatras")
         obj = MainPageLocationFactory(
+            place=place,
             adventure_date=DateRange(date(2026, 1, 20), date(2026, 1, 21))
         )
         serializer = MainPageLocationSerializer(obj)
         # Expected: 20 Jan 2026
-        # Logic: upper is Jan 21. display_upper = Jan 20. lower == display_upper.
         assert serializer.data["adventure_date"] == "20 Jan 2026"
 
         # Case 2: Range in same month
         obj2 = MainPageLocationFactory(
+            place=place,
             adventure_date=DateRange(date(2026, 1, 20), date(2026, 1, 26))
-        )  # upper is exclusive? Logic says yes.
-        # display_upper = Jan 25.
+        )
         serializer2 = MainPageLocationSerializer(obj2)
         assert serializer2.data["adventure_date"] == "20 - 25 Jan 2026"
 
     def test_tag_serializer_configuration(self):
-        from astrophotography.serializers import TagSerializer
 
         try:
             serializer = TagSerializer()
@@ -128,11 +124,10 @@ class TestEquipmentSerializers:
 class TestAstroImageSerializers:
     def test_zoom_serialization_mapping(self):
         """Test that 'zoom' model field is serialized as 'process' in API"""
-        from astrophotography.serializers import AstroImageSerializer, AstroImageSerializerList
-        from astrophotography.tests.factories import AstroImageFactory
 
-        image_zoom_true = AstroImageFactory(zoom=True)
-        image_zoom_false = AstroImageFactory(zoom=False)
+        place = PlaceFactory()
+        image_zoom_true = AstroImageFactory(zoom=True, place=place)
+        image_zoom_false = AstroImageFactory(zoom=False, place=place)
 
         # Test AstroImageSerializer
         data_zoom_true = AstroImageSerializer(image_zoom_true).data
@@ -146,3 +141,62 @@ class TestAstroImageSerializers:
         # Test AstroImageSerializerList
         data_list_true = AstroImageSerializerList(image_zoom_true).data
         assert data_list_true["process"] is True
+
+
+@pytest.mark.django_db
+class TestTranslationSerializers:
+
+    @patch("core.services.TranslationService.get_translated_field")
+    def test_astro_image_serializer_calls_translation_service_with_lang(self, mock_translate):
+        """Test that AstroImageSerializer calls service when lang is present"""
+
+        mock_translate.return_value = "Translated Text"
+        request = MagicMock()
+        request.query_params.get.return_value = "pl"
+
+        place = PlaceFactory()
+        instance = AstroImageFactory(
+            name="Original Name",
+            slug="test-slug-trans",
+            description="Original Description",
+            capture_date="2025-01-01",
+            place=place
+        )
+
+        serializer = AstroImageSerializer(instance, context={"request": request})
+        data = serializer.data
+
+        assert data["description"] == "Translated Text"
+        mock_translate.assert_any_call(instance, "description", "pl")
+
+    @patch("core.services.TranslationService.get_translated_field")
+    def test_main_page_location_serializer_calls_translation_service(self, mock_translate):
+
+        mock_translate.return_value = "Translated Text"
+        request = MagicMock()
+        request.query_params.get.return_value = "pl"
+
+        instance = MainPageLocation.objects.create(highlight_name="Highlights")
+        serializer = MainPageLocationSerializer(instance, context={"request": request})
+        data = serializer.data
+
+        assert data["highlight_name"] == "Translated Text"
+        mock_translate.assert_any_call(instance, "highlight_name", "pl")
+
+    def test_serializer_ignores_translation_without_lang(self):
+        """Test that serializers return original data when lang is missing or en"""
+
+        request = MagicMock()
+        request.query_params.get.return_value = None
+
+        place = PlaceFactory()
+        instance = AstroImageFactory(
+            name="Original", slug="slug-no-lang-trans", capture_date="2025-01-01", place=place
+        )
+
+        with patch("core.services.TranslationService.get_translated_field") as mock_translate:
+            serializer = AstroImageSerializerList(instance, context={"request": request})
+            data = serializer.data
+
+            assert data["name"] == "Original"
+            mock_translate.assert_not_called()
