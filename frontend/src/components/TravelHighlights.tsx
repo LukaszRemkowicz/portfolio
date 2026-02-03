@@ -27,9 +27,9 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
   const displayImages = images.length > 0 ? images : [DEFAULT_TRAVEL_IMAGE];
 
   // Construct display location: "Place, Country" or just "Country"
-  const displayLocation = location.place_name
-    ? `${location.place_name}, ${location.country_name}`
-    : location.country_name;
+  const displayLocation = location.place?.name
+    ? `${location.place.name}, ${location.place.country}`
+    : location.place?.country;
 
   // Prioritize story from location model, fall back to first image description
   const description = useMemo(() => {
@@ -38,8 +38,8 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
     }
     return location.images.length > 0
       ? stripHtml(location.images[0].description)
-      : `Explore the cosmic wonders of ${location.country_name}.`;
-  }, [location.story, location.images, location.country_name]);
+      : `Explore the cosmic wonders of ${location.place?.country}.`;
+  }, [location.story, location.images, location.place?.country]);
 
   const handleCardClick = () => {
     const url = location.place_slug
@@ -60,7 +60,7 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
           <img
             key={index}
             src={img}
-            alt={`Travel highlight from ${location.country_name}`}
+            alt={`Travel highlight from ${location.place?.country}`}
             className={`${styles.cardImage} ${
               index === currentIndex ? styles.active : ''
             }`}
@@ -72,8 +72,8 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
         <span className={styles.category}>Adventure</span>
         <h3 className={styles.cardTitle}>
           {location.highlight_name ||
-            location.place_name ||
-            location.country_name}
+            location.place?.name ||
+            location.place?.country}
         </h3>
         <p className={styles.cardLocation}>
           <MapPin size={12} className={styles.metaIcon} />

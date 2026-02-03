@@ -9,8 +9,22 @@ import {
   AppError,
 } from './errors';
 
+import i18n from '../i18n';
+
 export const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
+});
+
+api.interceptors.request.use(config => {
+  const lang = i18n.language || 'en';
+  const shortLang = lang.split('-')[0];
+
+  config.params = {
+    ...config.params,
+    lang: shortLang,
+  };
+
+  return config;
 });
 
 api.interceptors.response.use(

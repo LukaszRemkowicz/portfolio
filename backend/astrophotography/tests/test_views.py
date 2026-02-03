@@ -110,14 +110,14 @@ class TestMainPageLocationViewSet:
         assert len(response.data) == 2
 
         # Check existence and basic data
-        countries = [item["country"] for item in response.data]
-        assert "PL" in countries
-        assert "US" in countries
-        assert "NO" not in countries
+        countries = [item["place"]["country"] for item in response.data]
+        assert "Poland" in countries
+        assert "United States of America" in countries
+        assert "Norway" not in countries
 
         # Verify structure
-        item_pl = next(item for item in response.data if item["country"] == "PL")
-        assert item_pl["country_name"] == "Poland"
+        item_pl = next(item for item in response.data if item["place"]["country"] == "Poland")
+        assert item_pl["place"]["country"] == "Poland"
 
 
 @pytest.mark.django_db
@@ -134,8 +134,8 @@ class TestTravelHighlightsBySlugView:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["country"] == "United States of America"
-        assert not data["place"]  # might be "" or None
+        assert data["place"]["country"] == "United States of America"
+        assert not data["place"]["name"]  # might be "" or None
         assert len(data["images"]) >= 1
 
     def test_get_by_country_and_place_slug(self, api_client):
@@ -153,8 +153,8 @@ class TestTravelHighlightsBySlugView:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["country"] == "Poland"
-        assert data["place"] == "High Tatras"
+        assert data["place"]["country"] == "Poland"
+        assert data["place"]["name"] == "High Tatras"
         assert len(data["images"]) == 1
         assert data["images"][0]["name"] == "Tatras 1"
 
@@ -263,7 +263,7 @@ class TestAstroImageViewSetCountryPlaceFiltering:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data) == 1
-        assert "United States" in data[0]["country_name"]
+        assert "United States" in data[0]["place"]["country"]
 
     def test_filter_by_country_and_place(self, api_client):
         """Test filtering by both country and place."""
@@ -292,4 +292,4 @@ class TestAstroImageViewSetCountryPlaceFiltering:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data) >= 1
-        assert any("Poland" in img["country_name"] for img in data)
+        assert any("Poland" in img["place"]["country"] for img in data)

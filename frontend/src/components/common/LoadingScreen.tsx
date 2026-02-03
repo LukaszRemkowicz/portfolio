@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from '../../styles/components/LoadingScreen.module.css';
 
 interface LoadingScreenProps {
@@ -7,16 +8,19 @@ interface LoadingScreenProps {
 }
 
 const LoadingScreen: React.FC<LoadingScreenProps> = ({
-  message = 'Synchronizing with the Cosmos',
+  message,
   fullScreen = true,
 }) => {
+  const { t } = useTranslation();
+  const displayMessage = message || t('common.syncCosmos');
+
   return (
     <div
       className={fullScreen ? styles.loadingScreen : ''}
       data-testid='loading-screen'
     >
       <div className={styles.spinner} />
-      <span className={styles.text}>{message}</span>
+      <span className={styles.text}>{displayMessage}</span>
     </div>
   );
 };

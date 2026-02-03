@@ -1,4 +1,6 @@
 # backend/users/admin.py
+import logging
+
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
@@ -7,6 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import Profile
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 @admin.register(User)

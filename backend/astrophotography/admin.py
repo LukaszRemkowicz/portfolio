@@ -1,3 +1,5 @@
+import logging
+
 from parler.admin import TranslatableAdmin
 from parler.forms import TranslatableModelForm
 
@@ -10,6 +12,7 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from core.mixins import DynamicParlerStyleMixin
+from core.services import TranslationService
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
 from .forms import AstroImageForm, MeteorsMainPageConfigForm
@@ -26,23 +29,31 @@ from .models import (
     Tripod,
 )
 
+logger = logging.getLogger(__name__)
+
 
 @admin.register(Place)
 class PlaceAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
+    """
+    Admin configuration for geographical places.
+    Supports automated translation of place names into multiple languages.
+    """
+
     list_display = ("get_name", "country")
     list_display_links = ("get_name",)
     search_fields = ("translations__name", "country")
 
     def get_name(self, obj):
+        """Returns the string representation of the place."""
         return str(obj)
 
     get_name.short_description = _("Name")
 
     def save_model(self, request, obj, form, change):
-        from django.conf import settings
-
-        from core.services import TranslationService
-
+        """
+        Saves the model and triggers automated translation for the place name
+        if it has changed or is new.
+        """
         # 1. Save the primary instance (master record) first
         super().save_model(request, obj, form, change)
 
@@ -65,11 +76,13 @@ class PlaceAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
                     or not obj.has_translation(lang_code)
                     or not obj.safe_translation_getter("name", language_code=lang_code)
                 ):
+                    logger.info(
+                        f"Triggering automated translation for Place '{obj.name}' into {lang_code}"
+                    )
                     # fetch_place_name args: name, country, lang_code
-                    fetched_name = TranslationService().fetch_place_name(
+                    fetched_name = TranslationService.fetch_place_name(
                         obj.name, obj.country, lang_code
                     )
-
                     if fetched_name:
                         # 6. Update/Create translation for this specific language
                         obj.set_current_language(lang_code)
@@ -110,6 +123,14 @@ class TripodAdmin(admin.ModelAdmin):
 
 @admin.register(AstroImage)
 class AstroImageAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
+    """
+    Main admin for Astrophotography images.
+    Complex logic includes:
+    - Dynamic fieldsets (hiding technical fields in non-default languages)
+    - Automated GPT-powered translations on save
+    - Dynamic filtering of equipment and locations
+    """
+
     form = AstroImageForm
     list_display = ("get_name", "capture_date", "place", "has_thumbnail", "tag_list")
     list_display_links = ("get_name",)
@@ -242,6 +263,22 @@ class AstroImageAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
         if object_id:
             extra_context["show_save_and_add_another"] = False
         return super().changeform_view(request, object_id, form_url, extra_context)
+
+    def save_model(self, request, obj, form, change):
+        """
+        Overrides save_model to trigger GPT-powered translations for all
+        secondary languages whenever an image is saved.
+        """
+        # 1. Save the primary instance first
+        super().save_model(request, obj, form, change)
+        # 2. Trigger translations for all secondary languages
+        supported_languages = TranslationService.get_available_languages()
+        for lang_code in supported_languages:
+            if lang_code == settings.PARLER_DEFAULT_LANGUAGE_CODE:
+                continue
+            logger.info(f"Triggering AstroImage translations for '{obj.name}' into {lang_code}")
+            # 3. Use Refactored TranslationService method
+            TranslationService.translate_astro_image(obj, lang_code)
 
 
 @admin.register(MainPageBackgroundImage)
@@ -380,6 +417,24 @@ class MainPageLocationAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
         if object_id:
             extra_context["show_save_and_add_another"] = False
         return super().changeform_view(request, object_id, form_url, extra_context)
+
+    def save_model(self, request, obj, form, change):
+        """
+        Saves the MainPageLocation and triggers automated translations
+        for text fields (highlight_name, story).
+        """
+        # 1. Save the primary instance first
+        super().save_model(request, obj, form, change)
+        # 2. Trigger translations for all secondary languages
+        supported_languages = TranslationService.get_available_languages()
+        for lang_code in supported_languages:
+            if lang_code == settings.PARLER_DEFAULT_LANGUAGE_CODE:
+                continue
+            logger.info(
+                f"Triggering MainPageLocation translations for Location {obj.pk} into {lang_code}"
+            )
+            # 3. Use Refactored TranslationService method
+            TranslationService.translate_main_page_location(obj, lang_code)
 
 
 @admin.register(MeteorsMainPageConfig)

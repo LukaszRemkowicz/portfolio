@@ -59,6 +59,17 @@ jest.mock('react-i18next', () => ({
         'common.cookieSettings': 'Cookie Settings',
         'common.decline': 'Decline',
         'common.accept': 'Accept',
+        'common.gallery': 'Gallery',
+        'common.gallerySubtitle':
+          'Filter by category or explore images using the tags below.',
+        'common.exploreTags': 'Explore Tags',
+        'common.categories': 'Categories',
+        'common.scanning': 'Scanning deep space sectors...',
+        'common.syncCosmos': 'Synchronizing with the Cosmos',
+        'common.compiling': 'Compiling projects...',
+        'common.noImagesFound': 'No images found for this filter.',
+        'common.noImagesHint':
+          'Try selecting a different category or tag to see more images.',
         'footer.rights': 'Łukasz Remkowicz © 2026',
         'about.title': 'Beyond the Atmosphere.',
         'about.defaultBio':
@@ -68,6 +79,15 @@ jest.mock('react-i18next', () => ({
         'cookie.title': 'Cookie Consent',
         'cookie.description':
           'We use cookies to enhance your experience, analyze traffic, and personalize your journey through the cosmos. By using our site, you agree to our',
+        'travel.adventureDate': 'ADVENTURE DATE',
+        'travel.exploringCosmic': 'Exploring the cosmic wonders of',
+        'programming.title': 'Project Archive',
+        'programming.subtitle':
+          'A collection of software engineering projects, from microservices to creative frontend experiments.',
+        'programming.source': 'Source',
+        'programming.liveDemo': 'Live Demo',
+        'programming.empty':
+          'The archives appear to be empty. Check back later for new transmissions.',
       };
       return translations[key] || key;
     },

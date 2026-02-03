@@ -56,7 +56,7 @@ const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
         <h3 className={styles.cardTitle}>{item.name}</h3>
         <p className={styles.cardLocation}>
           <MapPin size={12} className={styles.metaIcon} />
-          {item.location}
+          {item.place?.name}
         </p>
         <p className={styles.cardDescription}>{description}</p>
         <div className={styles.divider} aria-hidden='true'></div>

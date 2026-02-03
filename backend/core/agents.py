@@ -1,6 +1,7 @@
 import logging
-from typing import Optional
+from typing import List, Optional
 
+from bs4 import BeautifulSoup
 from openai import OpenAI
 
 from django.conf import settings
@@ -18,12 +19,23 @@ LANGUAGE_MAP = {
 
 
 class GPTTranslationAgent:
+    """
+    Agent responsible for translating text and HTML content using OpenAI's GPT models.
+    Supports dual-step translation (Translate then Edit) and HTML structure preservation.
+    """
+
     def __init__(self) -> None:
+        """Initializes the OpenAI client using settings."""
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
     def translate_place(self, text: str, target_lang_code: str, country_name: str) -> Optional[str]:
+        """
+        Translates a place name with country context.
+        Uses specific rules for proper nouns and disambiguation.
+        """
         if not text:
             return ""
+        logger.info(f"Translating place '{text}' to {target_lang_code} (Country: {country_name})")
         prompt = f"""
         Translate single words or short phrases from English into {target_lang_code} using the rules below:  # noqa: E501
 
@@ -53,20 +65,26 @@ class GPTTranslationAgent:
                 temperature=0.0,
                 top_p=1.0,
             )
-            return (r.choices[0].message.content or "").strip()
+            result = (r.choices[0].message.content or "").strip()
+            logger.info(f"Place translation result: '{text}' -> '{result}'")
+            return result
         except Exception:
-            logger.exception("GPT translation failed")
+            logger.exception(f"GPT place translation failed for '{text}'")
             return None
 
     def translate(self, text: str, target_lang_code: str) -> Optional[str]:
+        """
+        Translates plain text using a two-step process:
+        1. Literal translation with strict rule adherence.
+        2. Editorial refinement to ensure natural tone and neutral language.
+        """
         if not text:
             return ""
-
+        logger.info(f"Translating text to {target_lang_code}")
         # ===== PROMPT 1: TRANSLATE =====
-        TRANSLATE_PROMPT = """
+        translation_instructions = """
         Translate the text to {language}.
         If we are talking about island which are not translated, return the original name.
-
         Rules:
         - Preserve meaning exactly.
         - Do not add, remove, or change any information.
@@ -74,65 +92,96 @@ class GPTTranslationAgent:
         - Do NOT use metaphors, poetic language, or embellishments.
         - Do NOT use camera or meta narration (no “frame”, “photo”, “widać”, “na zdjęciu”).
         - Use plain, neutral language.
-
         Return ONLY the translated text.
+        If there is anchor <a href></a> text, keep it in the same place.
         """.strip()
-
         # ===== PROMPT 2: EDIT =====
-        EDIT_PROMPT = """
+        editing_instructions = """
         You are editing {language} text into a natural, short photo caption.
-
         Hard rules:
         - Do NOT change meaning.
         - Do NOT remove evaluations or opinions present in the text.
         - Do NOT add new evaluations.
         - Do NOT change perspective.
         - Keep emojis and punctuation.
-
         Editing goals:
         - Remove camera/meta narration (e.g. “widać”, “na zdjęciu”).
         - Replace metaphors with plain wording, but keep the original meaning.
         - If an evaluation exists (e.g. “looked exceptional”), keep it in simple, natural form.
         - Keep sentences concise and natural.
-
         Return ONLY the edited text.
         """.strip()
-
         try:
             lang_name = LANGUAGE_MAP.get(target_lang_code, target_lang_code)
-
             # ---- CALL 1: TRANSLATE ----
             r1 = self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": TRANSLATE_PROMPT.format(language=lang_name)},
+                    {
+                        "role": "system",
+                        "content": translation_instructions.format(language=lang_name),
+                    },
                     {"role": "user", "content": text},
                 ],
                 temperature=0.0,
                 top_p=1.0,
             )
-
-            translated = (r1.choices[0].message.content or "").strip()
-            if not translated:
+            translated_raw = (r1.choices[0].message.content or "").strip()
+            if not translated_raw:
+                logger.warning("GPT returned empty raw translation")
                 return None
-
-            lang_name = LANGUAGE_MAP.get(target_lang_code, target_lang_code)
+            logger.info("Raw translation complete, starting editorial refinement")
             # ---- CALL 2: EDIT ----
             r2 = self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": EDIT_PROMPT.format(language=lang_name)},
-                    {"role": "user", "content": translated},
+                    {"role": "system", "content": editing_instructions.format(language=lang_name)},
+                    {"role": "user", "content": translated_raw},
                 ],
                 temperature=0.2,
                 top_p=1.0,
             )
-
-            return (r2.choices[0].message.content or "").strip()
-
+            final_result = (r2.choices[0].message.content or "").strip()
+            logger.info(f"Two-step translation complete for {target_lang_code}")
+            return final_result
         except Exception:
-            logger.exception("GPT translation failed")
+            logger.exception("GPT two-step translation failed")
             return None
+
+    def _extract_links(self, html_content: str) -> tuple[str, List[str]]:
+        """
+        Extracts <a> tags from HTML and replaces them with placeholders [[L0]], [[L1]] etc.
+        Returns a tuple of (html_with_placeholders, original_link_tags).
+        """
+        soup = BeautifulSoup(html_content, "html.parser")
+        links = []
+        for i, a_tag in enumerate(soup.find_all("a")):
+            placeholder = f"[[L{i}]]"
+            links.append(str(a_tag))
+            a_tag.replace_with(placeholder)
+        return str(soup), links
+
+    def _restore_links(self, translated_text: str, links: List[str]) -> str:
+        """Restores original <a> tags into text by replacing placeholders."""
+        final_text = translated_text
+        for i, original_html in enumerate(links):
+            placeholder = f"[[L{i}]]"
+            final_text = final_text.replace(placeholder, original_html)
+        return final_text
+
+    def translate_html(self, text: str, target_lang_code: str) -> Optional[str]:
+        """
+        Orchestrates translation of HTML content.
+        Preserves <a> tags using placeholders to avoid GPT corruption of URLs/attributes.
+        """
+        if not text:
+            return ""
+        logger.info(f"Translating HTML content to {target_lang_code}")
+        clean_text, saved_links = self._extract_links(text)
+        translated = self.translate(clean_text, target_lang_code)
+        if translated is None:
+            return None
+        return self._restore_links(translated, saved_links)
 
 
 if __name__ == "__main__":
@@ -142,7 +191,18 @@ if __name__ == "__main__":
 
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
     django.setup()
-    # text = "Winter session in the Biała Woda Valley. 🏔️ The frame captures the winter Milky Way along with the Orion constellation and its surrounding nebulosity. On a December night under a blanket of snow, the place looked exceptional. Peace and quiet – nothing more is needed during such trips. Well, except for a clear sky. 😉 ✨"  # noqa: E501
-    place = "Big Hawaii"
+    text = (
+        "<p>The night in one of the darknest places in Poland - Tatra's was an incredible "
+        "experience.&nbsp;</p><p>&nbsp;</p><p>Together with "
+        '<a href="https://www.instagram.com/marzena_astrophotography/">Marzena Rogozińska</a> and '
+        '<a href="https://www.facebook.com/p/Cmk-Photo-100063621096476/">Jarek Cmk</a>, we trekked '
+        "over 20 km through the Tatra Mountains at night in classic winter conditions. Crampons on "
+        "our boots, heavy 15 kg backpacks, and snow and ice underfoot. ❄️ &nbsp;🌌 The first "
+        "night offered nearly perfect conditions—clear, starry skies and excellent atmospheric "
+        "transparency, despite some gear issues, including a tripod failure. ☁️ The second night "
+        "was significantly more challenging, as we battled clouds and shifting visibility. On both "
+        "nights, brief breaks were spent quickly warming our hands with a cup of hot tea ☕ before "
+        "heading back to the tripods.</p>"
+    )
     agent = GPTTranslationAgent()
-    print(agent.translate_place(place, "pl"))
+    print(agent.translate_html(text, "pl"))

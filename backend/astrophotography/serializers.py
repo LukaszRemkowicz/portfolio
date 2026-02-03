@@ -1,13 +1,13 @@
 from datetime import date, timedelta
 from typing import Optional
 
-from parler_rest.fields import TranslatedFieldsField
 from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
-from rest_framework.serializers import CharField, ImageField, StringRelatedField
+from rest_framework.serializers import ImageField, StringRelatedField
 from taggit.models import Tag
 
 from django.conf import settings
+from django.utils import translation
 
 from core.services import TranslationService
 from core.utils.signing import generate_signed_url_params
@@ -41,11 +41,27 @@ class BaseEquipmentSerializer(serializers.ModelSerializer):
 
 
 class PlaceSerializer(TranslatableModelSerializer):
-    translations = TranslatedFieldsField(shared_model=Place)
+    country = serializers.CharField(source="country.name", read_only=True)
+
+    def to_representation(self, instance: Place) -> dict:
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        lang = request.query_params.get("lang") if request else None
+
+        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
+            # Translate place name using Parler service
+            data["name"] = TranslationService.get_translated_field(instance, "name", lang)
+
+            # Translate country name using django-countries (native Django translation)
+            with translation.override(lang):
+                if instance.country:
+                    data["country"] = instance.country.name
+
+        return data
 
     class Meta:
         model = Place
-        fields = ["id", "name", "country", "translations"]
+        fields = ["id", "name", "country"]
 
 
 class CameraSerializer(BaseEquipmentSerializer):
@@ -74,7 +90,6 @@ class TripodSerializer(BaseEquipmentSerializer):
 
 
 class AstroImageSerializerList(TranslatableModelSerializer):
-    translations = TranslatedFieldsField(shared_model=AstroImage)
     url = serializers.SerializerMethodField()
     thumbnail_url: ImageField = ImageField(source="thumbnail", read_only=True)
     tags: StringRelatedField = StringRelatedField(many=True)
@@ -83,8 +98,7 @@ class AstroImageSerializerList(TranslatableModelSerializer):
     telescope: StringRelatedField = StringRelatedField(many=True)
     tracker: StringRelatedField = StringRelatedField(many=True)
     tripod: StringRelatedField = StringRelatedField(many=True)
-    location: CharField = CharField(source="place.name", read_only=True)
-    country_name: CharField = CharField(source="place.country.name", read_only=True)
+    place = PlaceSerializer(read_only=True)
     process = serializers.BooleanField(source="zoom")
 
     def get_url(self, obj: AstroImage) -> str:
@@ -105,7 +119,7 @@ class AstroImageSerializerList(TranslatableModelSerializer):
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
-        if lang and lang != "en":
+        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
             # Translate fields
             for field in ["name", "description", "exposure_details", "processing_details"]:
                 if field in data:
@@ -129,28 +143,24 @@ class AstroImageSerializerList(TranslatableModelSerializer):
             "tracker",
             "tripod",
             "capture_date",
-            "location",
-            "country_name",
+            "place",
             "celestial_object",
             "exposure_details",
             "processing_details",
             "astrobin_url",
             "created_at",
             "process",
-            "translations",
         ]
 
 
 class AstroImageSerializer(TranslatableModelSerializer):
-    translations = TranslatedFieldsField(shared_model=AstroImage)
     camera = CameraSerializer(many=True, read_only=True)
     lens = LensSerializer(many=True, read_only=True)
     telescope = TelescopeSerializer(many=True, read_only=True)
     tracker = TrackerSerializer(many=True, read_only=True)
     tripod = TripodSerializer(many=True, read_only=True)
 
-    location = serializers.CharField(source="place.name", read_only=True)
-    country_name = serializers.CharField(source="place.country.name", read_only=True)
+    place = PlaceSerializer(read_only=True)
     process = serializers.BooleanField(source="zoom")
 
     # Override url field to use secure serving
@@ -174,7 +184,7 @@ class AstroImageSerializer(TranslatableModelSerializer):
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
-        if lang and lang != "en":
+        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
             # Translate fields
             for field in ["description", "exposure_details", "processing_details"]:
                 if field in data:
@@ -193,8 +203,7 @@ class AstroImageSerializer(TranslatableModelSerializer):
             "tracker",
             "tripod",
             "lens",
-            "location",
-            "country_name",
+            "place",
             "exposure_details",
             "processing_details",
             "celestial_object",
@@ -202,7 +211,6 @@ class AstroImageSerializer(TranslatableModelSerializer):
             "description",
             "process",
             "url",
-            "translations",
         ]
 
 
@@ -224,11 +232,7 @@ class AstroImageThumbnailSerializer(serializers.ModelSerializer):
 
 
 class MainPageLocationSerializer(TranslatableModelSerializer):
-    translations = TranslatedFieldsField(shared_model=MainPageLocation)
-    place_name = serializers.CharField(source="place.name", read_only=True)
-    country_name = serializers.CharField(source="place.country.name", read_only=True)
-    country = serializers.CharField(source="place.country", read_only=True)
-    country_slug = serializers.CharField(source="place.country_slug", read_only=True)
+    place = PlaceSerializer(read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
     background_image = serializers.SerializerMethodField()
     background_image_thumbnail = serializers.SerializerMethodField()
@@ -283,7 +287,7 @@ class MainPageLocationSerializer(TranslatableModelSerializer):
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
-        if lang and lang != "en":
+        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
             # Translate fields
             for field in ["highlight_name", "story"]:
                 if field in data:
@@ -295,11 +299,9 @@ class MainPageLocationSerializer(TranslatableModelSerializer):
         model = MainPageLocation
         fields = [
             "pk",
-            "country",
-            "country_name",
-            "country_slug",
-            "place_name",
+            "place",
             "place_slug",
+            "country_slug",
             "highlight_name",
             "adventure_date",
             "story",
@@ -307,7 +309,6 @@ class MainPageLocationSerializer(TranslatableModelSerializer):
             "background_image_thumbnail",
             "images",
             "created_at",
-            "translations",
         ]
 
 
@@ -317,9 +318,6 @@ class TravelHighlightDetailSerializer(MainPageLocationSerializer):
     Includes full image metadata and dynamic image filtering.
     """
 
-    country = serializers.CharField(source="place.country.name", read_only=True)
-    country_code = serializers.CharField(source="place.country.code", read_only=True)
-    place = serializers.CharField(source="place.name", read_only=True, allow_null=True)
     images = serializers.SerializerMethodField()  # type: ignore[assignment]
 
     def get_images(self, obj: MainPageLocation) -> list:
@@ -328,7 +326,7 @@ class TravelHighlightDetailSerializer(MainPageLocationSerializer):
         return list(AstroImageSerializerList(queryset, many=True, context=self.context).data)
 
     class Meta(MainPageLocationSerializer.Meta):
-        fields = MainPageLocationSerializer.Meta.fields + ["country_code", "place"]
+        fields = MainPageLocationSerializer.Meta.fields
 
 
 class MeteorsMainPageConfigSerializer(serializers.ModelSerializer):

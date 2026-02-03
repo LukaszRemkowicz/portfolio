@@ -1,5 +1,6 @@
 // frontend/src/components/common/ImageModal.tsx
 import { type FC, useEffect, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, Calendar, MapPin } from 'lucide-react';
@@ -15,6 +16,7 @@ interface ImageModalProps {
 
 const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
   const [isFullRes, setIsFullRes] = useState(false);
   const [scale, setScale] = useState(1);
@@ -384,17 +386,21 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
               {image.capture_date && (
                 <span className={styles.metaItem}>
                   <Calendar size={14} className={styles.metaIcon} />
-                  {new Date(image.capture_date).toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+                  {new Date(image.capture_date).toLocaleDateString(
+                    i18n.language,
+                    {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    }
+                  )}
                 </span>
               )}
-              {image.location && (
+              {image.place?.name && (
                 <span className={styles.metaItem}>
                   <MapPin size={14} className={styles.metaIcon} />
-                  {image.location}
+                  {image.place.name}
+                  {image.place.country ? `, ${image.place.country}` : ''}
                 </span>
               )}
             </div>
@@ -418,7 +424,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
               className={styles.modalDescription}
               dangerouslySetInnerHTML={{
                 __html: sanitizeHtml(
-                  image.description || 'No description available.'
+                  image.description || t('common.noDescription')
                 ),
               }}
             />

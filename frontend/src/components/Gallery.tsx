@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import styles from '../styles/components/Gallery.module.css';
 import { AstroImage } from '../types';
@@ -7,6 +8,7 @@ import ImageModal from './common/ImageModal';
 import GalleryCard from './common/GalleryCard';
 
 const Gallery: React.FC = () => {
+  const { i18n } = useTranslation();
   const [filter, setFilter] = useState('all');
   const images = useAppStore(state => state.images);
   const loading = useAppStore(state => state.isImagesLoading);
@@ -27,7 +29,7 @@ const Gallery: React.FC = () => {
     if (features?.lastimages !== false) {
       loadImages({ limit: 50 });
     }
-  }, [loadImages, features]);
+  }, [loadImages, features, i18n.language]);
 
   const filteredImages = useMemo(() => {
     if (filter === 'all') return images.slice(0, 9);
