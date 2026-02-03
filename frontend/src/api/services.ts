@@ -138,19 +138,20 @@ export const fetchSettings = async (): Promise<EnabledFeatures> => {
   }
 };
 export const fetchProjects = async (): Promise<Project[]> => {
-  const response: AxiosResponse<Project[]> = await api.get(API_ROUTES.projects);
-  const data = handleResponse<Project[]>(response);
-  if (Array.isArray(data)) {
-    return data.map(project => ({
-      ...project,
-      images: project.images.map(image => ({
-        ...image,
-        url: getMediaUrl(image.url) || '',
-        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-      })),
-    }));
-  }
-  return data;
+  // const response: AxiosResponse<Project[]> = await api.get(API_ROUTES.projects);
+  // const data = handleResponse<Project[]>(response);
+  // if (Array.isArray(data)) {
+  //   return data.map(project => ({
+  //     ...project,
+  //     images: project.images.map(image => ({
+  //       ...image,
+  //       url: getMediaUrl(image.url) || '',
+  //       thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+  //     })),
+  //   }));
+  // }
+  // return data;
+  return [];
 };
 
 export const fetchTravelHighlights = async (): Promise<MainPageLocation[]> => {

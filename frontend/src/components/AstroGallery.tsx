@@ -189,7 +189,7 @@ const AstroGallery: React.FC = () => {
                 onClick={() => handleFilterClick(filter)}
                 aria-pressed={isActive}
               >
-                {filter}
+                {t(`categories.${filter}`)}
               </button>
             );
           })}

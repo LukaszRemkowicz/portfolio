@@ -28,6 +28,8 @@ const resources = {
         gallerySubtitle:
           'Filter by category or explore images using the tags below.',
         exploreTags: 'Explore Tags',
+        tags: 'Tags',
+        allTags: 'All Tags',
         categories: 'Categories',
         noImagesFound: 'No images found for this filter.',
         noImagesHint:
@@ -61,6 +63,14 @@ const resources = {
         adventureDate: 'ADVENTURE DATE',
         exploringCosmic: 'Exploring the cosmic wonders of',
       },
+      categories: {
+        Landscape: 'Landscape',
+        'Deep Sky': 'Deep Sky',
+        Startrails: 'Startrails',
+        'Solar System': 'Solar System',
+        'Milky Way': 'Milky Way',
+        'Northern Lights': 'Northern Lights',
+      },
     },
   },
   pl: {
@@ -88,6 +98,8 @@ const resources = {
         gallerySubtitle:
           'Filtruj według kategorii lub przeglądaj zdjęcia za pomocą tagów poniżej.',
         exploreTags: 'Przeglądaj Tagi',
+        tags: 'Tagi',
+        allTags: 'Wszystkie Tagi',
         categories: 'Kategorie',
         noImagesFound: 'Nie znaleziono zdjęć dla tego filtra.',
         noImagesHint:
@@ -119,6 +131,14 @@ const resources = {
       travel: {
         adventureDate: 'DATA PRZYGODY',
         exploringCosmic: 'Kosmiczna przygoda w',
+      },
+      categories: {
+        Landscape: 'Krajobraz',
+        'Deep Sky': 'Głębokie Niebo',
+        Startrails: 'Startrails',
+        'Solar System': 'Układ Słoneczny',
+        'Milky Way': 'Droga Mleczna',
+        'Northern Lights': 'Zorza Polarna',
       },
     },
   },

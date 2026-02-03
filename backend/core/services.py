@@ -33,11 +33,70 @@ class TranslationService:
             # Return original/current value (assuming English is default/fallback)
             return getattr(instance, field_name, "")
 
-        # Trigger Parler-based translation
-        translated_dict = TranslationService._translate_parler_fields(
-            instance, [field_name], language_code
-        )
-        return translated_dict[field_name]
+        # Trigger Parler-based translation if available
+        if hasattr(instance, "get_current_language"):
+            translated_dict = TranslationService._translate_parler_fields(
+                instance, [field_name], language_code
+            )
+            return translated_dict[field_name]
+
+        # Trigger JSON-based translation (User/Profile models)
+        if hasattr(instance, "translations"):
+            return TranslationService._translate_json_field(instance, field_name, language_code)
+
+        # Fallback
+        return getattr(instance, field_name, "")
+
+    @staticmethod
+    def _translate_json_field(instance: Any, field_name: str, language_code: str) -> str:
+        """
+        Translates a field stored in a 'translations' JSONField.
+        Structure: instance.translations[language_code][field_name]
+        """
+        # Ensure translations dict exists
+        if not instance.translations:
+            instance.translations = {}
+
+        # 1. Check if translation exists
+        current_val = instance.translations.get(language_code, {}).get(field_name)
+        if current_val and not TranslationService.is_empty_text(current_val):
+            return current_val
+
+        # 2. Fetch source (from model field)
+        source_text = getattr(instance, field_name, "")
+
+        if not source_text or TranslationService.is_empty_text(source_text):
+            return ""
+
+        # 3. Generate translation
+        if field_name in ["bio", "specific_bio", "description", "story"]:
+            logger.info(
+                f"Generating HTML translation for {instance}.{field_name} in {language_code}"
+            )
+            translated_text = GPTTranslationAgent().translate_html(source_text, language_code)
+        else:
+            logger.info(
+                f"Generating text translation for {instance}.{field_name} in {language_code}"
+            )
+            translated_text = GPTTranslationAgent().translate(source_text, language_code)
+
+        if not translated_text:
+            logger.warning(f"Translation failed for {instance}.{field_name} in {language_code}")
+            return f"[TRANSLATION FAILED] {source_text}"
+
+        # 4. Save translation
+        if language_code not in instance.translations:
+            instance.translations[language_code] = {}
+
+        instance.translations[language_code][field_name] = translated_text
+
+        try:
+            instance.save()
+            logger.info(f"Saved JSON translation for {instance} in {language_code}")
+        except Exception as e:
+            logger.exception(f"Failed to save JSON translation for {instance}: {e}")
+
+        return translated_text
 
     @staticmethod
     def _translate_parler_fields(

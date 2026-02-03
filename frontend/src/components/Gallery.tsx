@@ -8,7 +8,7 @@ import ImageModal from './common/ImageModal';
 import GalleryCard from './common/GalleryCard';
 
 const Gallery: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [filter, setFilter] = useState('all');
   const images = useAppStore(state => state.images);
   const loading = useAppStore(state => state.isImagesLoading);
@@ -93,7 +93,7 @@ const Gallery: React.FC = () => {
               filter === 'deepsky' ? styles.active : ''
             }`}
           >
-            Deep Sky
+            {t('categories.Deep Sky')}
           </button>
           <button
             type='button'

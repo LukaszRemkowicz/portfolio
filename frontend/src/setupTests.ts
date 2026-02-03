@@ -88,6 +88,17 @@ jest.mock('react-i18next', () => ({
         'programming.liveDemo': 'Live Demo',
         'programming.empty':
           'The archives appear to be empty. Check back later for new transmissions.',
+        'categories.Landscape': 'Landscape',
+        'categories.Deep Sky': 'Deep Sky',
+        'categories.Startrails': 'Startrails',
+        'categories.Solar System': 'Solar System',
+        'categories.Milky Way': 'Milky Way',
+        'categories.Northern Lights': 'Northern Lights',
+        'categories.Galaxy': 'Galaxy',
+        'categories.Nebula': 'Nebula',
+        'categories.Star': 'Star',
+        'common.tags': 'Tags',
+        'common.allTags': 'All Tags',
       };
       return translations[key] || key;
     },

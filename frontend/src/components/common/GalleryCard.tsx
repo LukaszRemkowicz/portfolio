@@ -1,4 +1,5 @@
 import { useState, memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from '../../styles/components/GalleryCard.module.css';
 import { MapPin } from 'lucide-react';
 import { AstroImage } from '../../types';
@@ -10,6 +11,7 @@ interface GalleryCardProps {
 }
 
 const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
+  const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false);
 
   const isNew = (dateString?: string) => {
@@ -52,7 +54,9 @@ const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
         />
       </div>
       <div className={styles.cardContent}>
-        <span className={styles.category}>{item.celestial_object}</span>
+        <span className={styles.category}>
+          {t(`categories.${item.celestial_object}`)}
+        </span>
         <h3 className={styles.cardTitle}>{item.name}</h3>
         <p className={styles.cardLocation}>
           <MapPin size={12} className={styles.metaIcon} />
