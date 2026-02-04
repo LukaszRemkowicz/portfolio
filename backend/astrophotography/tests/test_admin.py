@@ -137,11 +137,10 @@ class TestMainPageBackgroundImageAdmin:
 
 @pytest.mark.django_db
 class TestPlaceAdmin:
-    @patch("core.services.GPTTranslationAgent")
-    def test_save_model_triggers_translation_on_create(self, mock_agent_class, admin_client):
+    @patch("core.services.TranslationService.agent")
+    def test_save_model_triggers_translation_on_create(self, mock_agent, admin_client):
         """Test that creating a new Place via Admin triggers translation service."""
-        mock_agent_instance = mock_agent_class.return_value
-        mock_agent_instance.translate_place.return_value = "Hawaje"
+        mock_agent.translate_place.return_value = "Hawaje"
 
         url = reverse("admin:astrophotography_place_add")
         data = {"name": "Hawaii", "country": "US", "_save": "Save"}
@@ -154,17 +153,16 @@ class TestPlaceAdmin:
         assert place.country == "US"
 
         # Verify agent was called correctly via TranslationService
-        mock_agent_instance.translate_place.assert_called_with("Hawaii", "pl", "US")
+        mock_agent.translate_place.assert_called_with("Hawaii", "pl", "US")
 
         # Verify translation was saved
         place.set_current_language("pl")
         assert place.name == "Hawaje"
 
-    @patch("core.services.GPTTranslationAgent")
-    def test_save_model_triggers_translation_on_name_change(self, mock_agent_class, admin_client):
+    @patch("core.services.TranslationService.agent")
+    def test_save_model_triggers_translation_on_name_change(self, mock_agent, admin_client):
         """Test that updating Place name via Admin triggers translation service."""
-        mock_agent_instance = mock_agent_class.return_value
-        mock_agent_instance.translate_place.return_value = "Grecja"
+        mock_agent.translate_place.return_value = "Grecja"
 
         # 1. Create initial place
         place = PlaceFactory(name="Greece", country="GR")
@@ -176,14 +174,13 @@ class TestPlaceAdmin:
         assert response.status_code == 302
 
         # Verify agent called with NEW name
-        mock_agent_instance.translate_place.assert_called_with("New Greece", "pl", "GR")
+        mock_agent.translate_place.assert_called_with("New Greece", "pl", "GR")
 
-    @patch("core.services.GPTTranslationAgent")
+    @patch("core.services.TranslationService.agent")
     def test_save_model_does_not_trigger_translation_if_no_name_change(
-        self, mock_agent_class, admin_client
+        self, mock_agent, admin_client
     ):
         """Test that updating fields other than name does not trigger translations."""
-        mock_agent_instance = mock_agent_class.return_value
 
         # 1. Create initial place
         place = PlaceFactory(name="Italy", country="IT")
@@ -200,7 +197,7 @@ class TestPlaceAdmin:
         assert response.status_code == 302
 
         # Verify agent was NOT called because name didn't change
-        mock_agent_instance.translate_place.assert_not_called()
+        mock_agent.translate_place.assert_not_called()
 
 
 @pytest.mark.django_db

@@ -4,7 +4,6 @@ from typing import Optional
 from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
 from rest_framework.serializers import ImageField, StringRelatedField
-from taggit.models import Tag
 
 from django.conf import settings
 from django.utils import translation
@@ -20,6 +19,7 @@ from .models import (
     MainPageLocation,
     MeteorsMainPageConfig,
     Place,
+    Tag,
     Telescope,
     Tracker,
     Tripod,
@@ -27,8 +27,15 @@ from .models import (
 from .services import GalleryQueryService
 
 
-class TagSerializer(serializers.ModelSerializer):
+class TagSerializer(TranslatableModelSerializer):
+    name = serializers.SerializerMethodField()
+    slug = serializers.CharField(read_only=True)
     count = serializers.IntegerField(source="num_times", read_only=True)
+
+    def get_name(self, instance: Tag) -> str:
+        request = self.context.get("request")
+        lang = request.query_params.get("lang") if request else None
+        return TranslationService.get_translation(instance, "title", lang)
 
     class Meta:
         model = Tag
@@ -50,7 +57,7 @@ class PlaceSerializer(TranslatableModelSerializer):
 
         if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
             # Translate place name using Parler service
-            data["name"] = TranslationService.get_translated_field(instance, "name", lang)
+            data["name"] = TranslationService.get_translation(instance, "name", lang)
 
             # Translate country name using django-countries (native Django translation)
             with translation.override(lang):
@@ -123,7 +130,7 @@ class AstroImageSerializerList(TranslatableModelSerializer):
             # Translate fields
             for field in ["name", "description", "exposure_details", "processing_details"]:
                 if field in data:
-                    data[field] = TranslationService.get_translated_field(instance, field, lang)
+                    data[field] = TranslationService.get_translation(instance, field, lang)
 
         return data
 
@@ -188,7 +195,7 @@ class AstroImageSerializer(TranslatableModelSerializer):
             # Translate fields
             for field in ["description", "exposure_details", "processing_details"]:
                 if field in data:
-                    data[field] = TranslationService.get_translated_field(instance, field, lang)
+                    data[field] = TranslationService.get_translation(instance, field, lang)
 
         return data
 
@@ -291,7 +298,7 @@ class MainPageLocationSerializer(TranslatableModelSerializer):
             # Translate fields
             for field in ["highlight_name", "story"]:
                 if field in data:
-                    data[field] = TranslationService.get_translated_field(instance, field, lang)
+                    data[field] = TranslationService.get_translation(instance, field, lang)
 
         return data
 

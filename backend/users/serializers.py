@@ -17,7 +17,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         if lang and lang != "en":
             for field in ["title", "specific_bio"]:
                 if field in data:
-                    data[field] = TranslationService.get_translated_field(instance, field, lang)
+                    data[field] = TranslationService.get_translation(instance, field, lang)
         return data
 
     class Meta:
@@ -48,7 +48,7 @@ class UserSerializer(serializers.ModelSerializer):
         if lang and lang != "en":
             for field in ["short_description", "bio"]:
                 if field in data:
-                    data[field] = TranslationService.get_translated_field(instance, field, lang)
+                    data[field] = TranslationService.get_translation(instance, field, lang)
         return data
 
     class Meta:

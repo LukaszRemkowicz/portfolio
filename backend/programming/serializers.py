@@ -19,7 +19,7 @@ class ProjectImageSerializer(TranslatableModelSerializer):
         if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
             for field in ["name", "description"]:
                 if field in data:
-                    data[field] = TranslationService.get_translated_field(instance, field, lang)
+                    data[field] = TranslationService.get_translation(instance, field, lang)
 
         return data
 

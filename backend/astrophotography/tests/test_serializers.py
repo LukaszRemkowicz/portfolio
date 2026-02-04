@@ -154,7 +154,7 @@ class TestAstroImageSerializers:
 @pytest.mark.django_db
 class TestTranslationSerializers:
 
-    @patch("core.services.TranslationService.get_translated_field")
+    @patch("core.services.TranslationService.get_translation")
     def test_astro_image_serializer_calls_translation_service_with_lang(self, mock_translate):
         """Test that AstroImageSerializer calls service when lang is present"""
 
@@ -177,7 +177,7 @@ class TestTranslationSerializers:
         assert data["description"] == "Translated Text"
         mock_translate.assert_any_call(instance, "description", "pl")
 
-    @patch("core.services.TranslationService.get_translated_field")
+    @patch("core.services.TranslationService.get_translation")
     def test_main_page_location_serializer_calls_translation_service(self, mock_translate):
 
         mock_translate.return_value = "Translated Text"
@@ -202,7 +202,7 @@ class TestTranslationSerializers:
             name="Original", slug="slug-no-lang-trans", capture_date="2025-01-01", place=place
         )
 
-        with patch("core.services.TranslationService.get_translated_field") as mock_translate:
+        with patch("core.services.TranslationService.get_translation") as mock_translate:
             serializer = AstroImageSerializerList(instance, context={"request": request})
             data = serializer.data
 

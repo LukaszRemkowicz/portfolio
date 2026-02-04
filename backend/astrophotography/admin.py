@@ -24,6 +24,7 @@ from .models import (
     MainPageLocation,
     MeteorsMainPageConfig,
     Place,
+    Tag,
     Telescope,
     Tracker,
     Tripod,
@@ -66,29 +67,61 @@ class PlaceAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
             supported_languages = TranslationService.get_available_languages()
 
             for lang_code in supported_languages:
-                # 4. Skip the default language (already saved via master record)
+                # 4. Skip the default language
                 if lang_code == settings.PARLER_DEFAULT_LANGUAGE_CODE:
                     continue
 
-                # 5. Fetch translation if it was a forced refresh or if it's missing
-                if (
-                    should_refresh
-                    or not obj.has_translation(lang_code)
-                    or not obj.safe_translation_getter("name", language_code=lang_code)
-                ):
-                    logger.info(
-                        f"Triggering automated translation for Place '{obj.name}' into {lang_code}"
-                    )
-                    # fetch_place_name args: name, country, lang_code
-                    fetched_name = TranslationService.fetch_place_name(
-                        obj.name, obj.country, lang_code
-                    )
-                    if fetched_name:
-                        # 6. Update/Create translation for this specific language
-                        obj.set_current_language(lang_code)
-                        obj.name = fetched_name
-                        # Save only the translation bits
-                        obj.save_translations()
+                logger.info(
+                    f"Triggering automated translation for Place '{obj.name}' into {lang_code}"
+                )
+                TranslationService.translate_place(obj, lang_code)
+
+
+# Try to unregister Taggit's default admin to avoid confusion
+try:
+    # Force load taggit admin so we can unregister it reliably
+    import taggit.admin  # noqa
+    from taggit.models import Tag as TaggitTag
+
+    admin.site.unregister(TaggitTag)
+except (ImportError, admin.sites.NotRegistered):
+    pass
+
+
+@admin.register(Tag)
+class TagAdmin(DynamicParlerStyleMixin, TranslatableAdmin, admin.ModelAdmin):
+    list_display = ("get_name", "slug", "id")
+    list_display_links = ("get_name",)
+    search_fields = ("translations__name", "slug")
+    readonly_fields = ("id",)
+
+    def get_prepopulated_fields(self, request, obj=None):
+        return {"slug": ("name",)}
+
+    def save_model(self, request, obj, form, change):
+        """
+        Saves the model and triggers automated translation for the tag name
+        if it has changed or is new.
+        """
+        # 1. Save the primary instance (master record) first
+        super().save_model(request, obj, form, change)
+
+        # 2. Always check for missing translations
+        # 3. Get all configured languages
+        supported_languages = TranslationService.get_available_languages()
+
+        for lang_code in supported_languages:
+            # 4. Skip the default language
+            if lang_code == settings.PARLER_DEFAULT_LANGUAGE_CODE:
+                continue
+
+            # 5. Trigger translation service
+            TranslationService.translate_parler_tag(obj, lang_code)
+
+    def get_name(self, obj):
+        return str(obj)
+
+    get_name.short_description = _("Name")
 
 
 @admin.register(Camera)

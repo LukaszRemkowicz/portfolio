@@ -1,4 +1,6 @@
 # backend/core/tests/test_translation_service.py
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from django.conf import settings
@@ -44,18 +46,110 @@ class TestTranslationService:
         Verify that TranslationService.fetch_place_name calls GPTTranslationAgent
         with the correct argument order (source_text, language_code, country).
         """
-        from unittest.mock import patch
+        with patch.object(TranslationService.agent, "translate_place") as mock_translate:
+            mock_translate.return_value = "Hawaje"
 
-        # Mock the agent's instance
-        with patch("core.services.GPTTranslationAgent") as mock_agent_class:
-            mock_agent_instance = mock_agent_class.return_value
-            mock_agent_instance.translate_place.return_value = "Hawaje"
-
-            service = TranslationService()
-            result = service.fetch_place_name("Hawaii", "US", "pl")
+            result = TranslationService.fetch_place_name("Hawaii", "US", "pl")
 
             assert result == "Hawaje"
+            mock_translate.assert_called_once_with("Hawaii", "pl", "US")
 
-            # CRITICAL CHECK: Verified the argument order:
-            # translate_place(text, target_lang_code, country_name)
-            mock_agent_instance.translate_place.assert_called_once_with("Hawaii", "pl", "US")
+    def test_is_empty_text_edge_cases(self):
+        """
+        Verify is_empty_text with various HTML and whitespace edge cases.
+        """
+        assert TranslationService.is_empty_text("") is True
+        assert TranslationService.is_empty_text(None) is True
+        assert TranslationService.is_empty_text("<p></p>") is True
+        assert TranslationService.is_empty_text("<p>&nbsp;</p>") is True
+        assert TranslationService.is_empty_text("   ") is True
+        assert TranslationService.is_empty_text("<p>Content</p>") is False
+        assert TranslationService.is_empty_text("Valid") is False
+
+    @pytest.mark.django_db
+    def test_parler_ceremony_skip_if_exists(self):
+        """
+        Verify that _parler_ceremony yields None and stops if translation exists.
+        """
+        instance = MagicMock()
+
+        # Scenario: Translation already exists
+        with patch.object(TranslationService, "_has_translation", return_value=(True, "Existing")):
+            gen = TranslationService._parler_ceremony(instance, "name", "pl")
+            val = next(gen)
+            assert val is None
+            with pytest.raises(StopIteration):
+                next(gen)
+
+    @pytest.mark.django_db
+    def test_parler_ceremony_yields_source(self):
+        """
+        Verify that _parler_ceremony yields source text if translation is missing.
+        """
+        instance = MagicMock()
+        instance.get_current_language.return_value = "en"
+
+        with patch.object(TranslationService, "_has_translation", return_value=(False, None)):
+            with patch.object(
+                TranslationService, "_get_default_language_text", return_value="Source"
+            ):
+                gen = TranslationService._parler_ceremony(instance, "name", "pl")
+                val = next(gen)
+                assert val == "Source"
+
+                # Send back the translation
+                try:
+                    gen.send("Translated")
+                except StopIteration:
+                    pass
+
+                # Verify instance was updated
+                instance.set_current_language.assert_any_call("pl")
+                instance.set_current_language.assert_any_call("en")
+
+    def test_translate_parler_tag_uses_correct_agent_method(self):
+        """
+        Verify that translate_parler_tag calls translate_tag.
+        """
+        instance = MagicMock()
+
+        # Mock _run_parler_translation to just call the handler
+        with patch.object(TranslationService, "_run_parler_translation") as mock_run:
+            # Ensure the mocked method returns the string we expect
+            mock_run.return_value = "TranslatedTag"
+
+            # Since _run_parler_translation is mocked, we need to mock what it would return
+            # if it were called but here we are checking the return value
+            # of translate_parler_tag which calls correct_agent
+
+            result = TranslationService.translate_parler_tag(instance, "pl")
+
+            assert result == "TranslatedTag"
+            # Verify handler passed was translate_tag
+            args = mock_run.call_args[0]
+            handler = args[3]
+            assert handler == TranslationService.agent.translate_tag
+
+    def test_translate_astro_image_uses_html_agent_for_description(self):
+        """
+        Verify that translate_astro_image correctly uses HTML agent for description
+        and standard agent for others.
+        """
+        instance = MagicMock()
+
+        # We want to track which handlers were passed to _run_parler_translation
+        with patch.object(TranslationService, "_run_parler_translation") as mock_run:
+            TranslationService.translate_astro_image(instance, "pl")
+
+            # Check calls
+            # fields = ["name", "description", "exposure_details", "processing_details"]
+            call_args_list = mock_run.call_args_list
+            assert len(call_args_list) == 4
+
+            # Index 1 is description
+            handler_description = call_args_list[1][0][3]
+            assert handler_description == TranslationService.agent.translate_html
+
+            # Index 0 is name
+            handler_name = call_args_list[0][0][3]
+            assert handler_name == TranslationService.agent.translate

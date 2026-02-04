@@ -1,11 +1,11 @@
 # backend/astrophotography/models.py
-from typing import Any
 
 from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
+from parler.managers import TranslatableManager
 from parler.models import TranslatableModel, TranslatedFields
 from taggit.managers import TaggableManager
-from taggit.models import GenericUUIDTaggedItemBase, TaggedItemBase
+from taggit.models import GenericUUIDTaggedItemBase, NaturalKeyManager, TaggedItemBase
 
 from django.contrib.postgres.fields import DateRangeField
 from django.db import models
@@ -61,10 +61,95 @@ CelestialObjectChoices = [
 ]
 
 
-class UUIDTaggedItem(GenericUUIDTaggedItemBase, TaggedItemBase):
+class Place(TranslatableModel):
+    translations = TranslatedFields(
+        name=models.CharField(
+            verbose_name=_("Name"),
+            unique=True,
+            max_length=100,
+        ),
+    )
+    country = CountryField(verbose_name=_("Country"))
+
+    class Meta:
+        verbose_name = _("Place")
+        verbose_name_plural = _("Places")
+        ordering = ["translations__name"]
+
+    def __str__(self):
+        return self.safe_translation_getter("name", any_language=True) or ""
+
+
+class TagManager(TranslatableManager, NaturalKeyManager):
+    pass
+
+
+class Tag(TranslatableModel, models.Model):
+    name = models.CharField(verbose_name=_("Name"), unique=True, max_length=100)
+    translations = TranslatedFields(
+        title=models.CharField(verbose_name=_("Title"), max_length=100),
+    )
+    slug = models.SlugField(
+        verbose_name=_("Slug"),
+        unique=True,
+        max_length=100,
+        allow_unicode=True,
+    )
+
+    objects = TagManager()
+
     class Meta:
         verbose_name = _("Tag")
         verbose_name_plural = _("Tags")
+
+    def __str__(self):
+        return self.safe_translation_getter("title", any_language=True) or f"Tag {self.pk}"
+
+    def save(self, *args, **kwargs):
+        # 1. Generate slug from 'name' (column) if present (e.g. set by taggit)
+        if not self.slug and self.name:
+            self.slug = slugify(self.name, allow_unicode=True)
+
+        # 2. Basic save
+        super().save(*args, **kwargs)
+
+        # 3. Post-save sync: Synchronize the 'name' column with the DEFAULT language
+        # title for stable taggit compatibility, regardless of current language.
+        if self.pk:
+            try:
+                from django.conf import settings
+
+                default_lang = settings.PARLER_DEFAULT_LANGUAGE_CODE
+                title = self.safe_translation_getter("title", language_code=default_lang)
+                if not title:
+                    title = self.safe_translation_getter("title", any_language=True)
+
+                if title:
+                    update_kwargs = {}
+                    if self.name != title:
+                        self.name = title
+                        update_kwargs["name"] = title
+                    if not self.slug:
+                        self.slug = slugify(title, allow_unicode=True)
+                        update_kwargs["slug"] = self.slug
+
+                    if update_kwargs:
+                        Tag.objects.filter(pk=self.pk).update(**update_kwargs)
+            except (ValueError, TypeError):
+                pass
+
+
+class UUIDTaggedItem(GenericUUIDTaggedItemBase, TaggedItemBase):
+    tag = models.ForeignKey(
+        Tag,
+        on_delete=models.CASCADE,
+        related_name="%(app_label)s_%(class)s_items",
+        verbose_name=_("Tag"),
+    )
+
+    class Meta:
+        verbose_name = _("Tagged Item")
+        verbose_name_plural = _("Tagged Items")
 
 
 class AbstractEquipmentModel(models.Model):
@@ -75,46 +160,11 @@ class AbstractEquipmentModel(models.Model):
         help_text=_("The model identifiers or name of the equipment."),
     )
 
-    def __str__(self) -> str:
-        return self.model
-
     class Meta:
         abstract = True
-        ordering = ["model"]
-
-
-class Place(TranslatableModel):
-    country = CountryField(
-        blank=True,
-        null=True,
-        verbose_name=_("Country"),
-        help_text=_("The country where the place is located."),
-    )
-
-    translations = TranslatedFields(
-        name=models.CharField(
-            max_length=255,
-            default="",
-            verbose_name=_("Name"),
-            help_text=_("The name of the specific place or city."),
-        )
-    )
 
     def __str__(self) -> str:
-        name = self.safe_translation_getter("name", any_language=True)
-        if name:
-            return name
-        return f"Unnamed ({self.country})" if self.country else str(self.pk)
-
-    class Meta:
-        verbose_name = _("Place")
-        verbose_name_plural = _("Places")
-
-
-class Telescope(AbstractEquipmentModel):
-    class Meta:
-        verbose_name = _("Telescope")
-        verbose_name_plural = _("Telescopes")
+        return self.model
 
 
 class Camera(AbstractEquipmentModel):
@@ -127,6 +177,12 @@ class Lens(AbstractEquipmentModel):
     class Meta:
         verbose_name = _("Lens")
         verbose_name_plural = _("Lenses")
+
+
+class Telescope(AbstractEquipmentModel):
+    class Meta:
+        verbose_name = _("Telescope")
+        verbose_name_plural = _("Telescopes")
 
 
 class Tracker(AbstractEquipmentModel):
@@ -230,7 +286,6 @@ class AstroImage(BaseImage, TranslatableModel):
         max_length=255,
         unique=True,
         blank=True,
-        # null=True removed to enforce non-null
         verbose_name=_("Slug"),
         help_text=_("SEO friendly URL slug."),
     )
@@ -239,165 +294,42 @@ class AstroImage(BaseImage, TranslatableModel):
         verbose_name=_("Zoom"),
         help_text=_("Allow users to zoom this image in detail mode."),
     )
-    # translations JSONField removed
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        if not self.slug:
-            base_slug = slugify(self.name)
-            self.slug = base_slug
-            # Simple uniqueness check (append count)
-            # Note: This is a basic implementation. For high concurrency or strictness,
-            # consider checking DB for collisions.
-            # In update task, we said we will handle uniqueness.
-            # For now, let's implement basic collision avoidance for NEW items.
-            n = 1
-            while AstroImage.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
-                self.slug = f"{base_slug}-{n}"
-                n += 1
-
-        super().save(*args, **kwargs)
-
-    def __str__(self) -> str:
-        name = self.safe_translation_getter("name", any_language=True)
-        date_str = f" ({self.capture_date})" if getattr(self, "capture_date", None) else ""
-        if name:
-            return f"{name}{date_str}"
-        return f"Unnamed{date_str}"
 
     class Meta:
         verbose_name = _("Astrophotography Image")
         verbose_name_plural = _("Astrophotography Images")
         ordering = ["-created_at"]
 
+    def __str__(self):
+        name = self.safe_translation_getter("name", any_language=True) or _("Unnamed Image")
+        return f"{name} ({self.capture_date})"
 
-class MainPageLocation(TranslatableModel):
-    """Model to manage which images appear in the travel section for a specific location"""
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            # We use the English name (master/fallback) for slug generation
+            base_slug = slugify(self.safe_translation_getter("name", any_language=True))
+            if not base_slug:
+                base_slug = "image"
 
-    # country field removed - relying on Place country?
-    # Plan dictated removal.
+            self.slug = base_slug
+            # If slug already exists, append a short UUID
+            if AstroImage.objects.filter(slug=self.slug).exists():
+                import uuid
 
-    place = models.ForeignKey(
-        Place,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name=_("Place/City"),
-        help_text=_("Specific city or region (e.g. Hawaii, Tenerife)"),
-    )
-    images = models.ManyToManyField(
-        AstroImage,
-        blank=True,
-        related_name="location_sliders",
-        verbose_name=_("Images"),
-        help_text=_(
-            "Select images to display in the slideshow for this location (filtered by country)."
-        ),
-    )
-    is_active = models.BooleanField(
-        default=True, verbose_name=_("Is Active"), help_text=_("Toggle visibility on the homepage.")
-    )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
-    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
-
-    translations = TranslatedFields(
-        highlight_name=models.CharField(
-            max_length=100,
-            blank=True,
-            null=True,
-            verbose_name=_("Highlight Name"),
-            help_text=_("Optional custom name for the travel highlight (overrides Country/Place)."),
-        ),
-        story=CKEditor5Field(
-            blank=True,
-            null=True,
-            verbose_name=_("Story/Blog Text"),
-            help_text=_("Optional story or blog text to display above the images."),
-            config_name="default",
-        ),
-    )
-
-    adventure_date = DateRangeField(
-        blank=True,
-        null=True,
-        verbose_name=_("Adventure Date Range"),
-        help_text=_("The date range of the expedition."),
-    )
-    country_slug = models.SlugField(
-        max_length=100,
-        blank=True,
-        verbose_name=_("Country Slug"),
-        help_text=_("Auto-generated slug for the country."),
-    )
-    place_slug = models.SlugField(
-        max_length=100,
-        blank=True,
-        null=True,
-        verbose_name=_("Place Slug"),
-        help_text=_("Auto-generated slug for the place."),
-    )
-
-    background_image = models.ForeignKey(
-        "AstroImage",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="location_backgrounds",
-        verbose_name=_("Background Image"),
-        help_text=_("Optional specific background image for this location's page."),
-    )
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        if self.place:
-            if self.place.country:
-                self.country_slug = slugify(self.place.country.name)
-
-            place_name = self.place.safe_translation_getter("name", any_language=True)
-            if place_name:
-                self.place_slug = slugify(place_name)
-            else:
-                self.place_slug = None
-        else:
-            self.place_slug = None
-
+                self.slug = f"{base_slug}-{str(uuid.uuid4())[:8]}"
         super().save(*args, **kwargs)
 
-    def __str__(self) -> str:
-        name = self.safe_translation_getter("highlight_name", any_language=True)
-        status = _("Active") if self.is_active else _("Inactive")
 
-        if name:
-            return f"{name} ({status})"
-
-        location = _("Unknown Location")
-        if self.place:
-            country_name = self.place.country.name if self.place.country else ""
-            place_name = str(self.place)
-            if country_name and place_name:
-                location = f"{country_name} - {place_name}"
-            else:
-                location = country_name or place_name
-
-        return f"{location} ({status})"
-
-    class Meta:
-        verbose_name = _("Main Page Location")
-        verbose_name_plural = _("Main Page Locations")
-        ordering = ["-adventure_date"]
-
-
-class MainPageBackgroundImage(BaseImage):
-    """Model for the main page background image"""
-
+class MainPageBackgroundImage(BaseImage, TranslatableModel):
     path = models.ImageField(
         upload_to="backgrounds/",
         verbose_name=_("Image File"),
         help_text=_("The large background image file."),
     )
-
     translations = TranslatedFields(
         name=models.CharField(
             max_length=255,
-            blank=True,
+            default="Background Image",
             verbose_name=_("Name"),
             help_text=_("Identifier for the background image."),
         ),
@@ -410,20 +342,109 @@ class MainPageBackgroundImage(BaseImage):
     )
 
     class Meta:
-        verbose_name = _("Main Page Background")
-        verbose_name_plural = _("Main Page Backgrounds")
+        verbose_name = _("Main Page Background Image")
+        verbose_name_plural = _("Main Page Background Images")
         ordering = ["-created_at"]
 
-    def __str__(self) -> str:
-        name = self.safe_translation_getter("name", any_language=True)
-        if name:
-            return name
-        return self.path.name.split("/")[-1] if self.path else _("Unnamed Background")
+    def __str__(self):
+        return self.name
+
+
+class MainPageLocation(TranslatableModel, models.Model):
+    place = models.ForeignKey(
+        Place,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Place/City"),
+        help_text=_("Specific city or region (e.g. Hawaii, Tenerife)"),
+    )
+    is_active = models.BooleanField(
+        default=True, verbose_name=_("Is Active"), help_text=_("Toggle visibility on the homepage.")
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
+
+    adventure_date = DateRangeField(
+        verbose_name=_("Adventure Date Range"),
+        help_text=_("The date range of the expedition."),
+        null=True,
+        blank=True,
+    )
+
+    country_slug = models.SlugField(
+        max_length=100,
+        verbose_name=_("Country Slug"),
+        help_text=_("Auto-generated slug for the country."),
+        blank=True,
+    )
+    place_slug = models.SlugField(
+        max_length=100,
+        verbose_name=_("Place Slug"),
+        help_text=_("Auto-generated slug for the place."),
+        null=True,
+        blank=True,
+    )
+
+    background_image = models.ForeignKey(
+        AstroImage,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Background Image"),
+        help_text=_("Optional specific background image for this location's page."),
+        related_name="location_backgrounds",
+    )
+    images = models.ManyToManyField(
+        AstroImage,
+        blank=True,
+        verbose_name=_("Images"),
+        help_text=_(
+            "Select images to display in the slideshow for this location (filtered by country)."
+        ),
+        related_name="location_sliders",
+    )
+
+    translations = TranslatedFields(
+        highlight_name=models.CharField(
+            max_length=100,
+            verbose_name=_("Highlight Name"),
+            help_text=_("Optional custom name for the travel highlight (overrides Country/Place)."),
+            null=True,
+            blank=True,
+        ),
+        story=CKEditor5Field(
+            verbose_name=_("Story/Blog Text"),
+            help_text=_("Optional story or blog text to display above the images."),
+            null=True,
+            blank=True,
+            config_name="default",
+        ),
+    )
+
+    class Meta:
+        verbose_name = _("Main Page Location")
+        verbose_name_plural = _("Main Page Locations")
+        ordering = ["-adventure_date"]
+
+    def __str__(self):
+        name = self.safe_translation_getter("highlight_name", any_language=True)
+        if not name and self.place:
+            name = f"{self.place.country.name} - {self.place.name}"
+
+        status_str = _("Active") if self.is_active else _("Inactive")
+        return f"{name or _('Unnamed Location')} ({status_str})"
+
+    def save(self, *args, **kwargs):
+        if self.place:
+            if not self.country_slug:
+                self.country_slug = slugify(self.place.country.name)
+            if not self.place_slug and self.place.name:
+                self.place_slug = slugify(self.place.name)
+        super().save(*args, **kwargs)
 
 
 class MeteorsMainPageConfig(SingletonModel):
-    """Global configuration for shooting stars (meteors) on the homepage"""
-
     random_stars_shooting = models.BooleanField(
         default=True,
         verbose_name=_("Random Shooting Stars"),
@@ -524,9 +545,6 @@ class MeteorsMainPageConfig(SingletonModel):
         ),
     )
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
-
-    def __str__(self) -> str:
-        return f"Meteors Config (Updated: {self.updated_at.strftime('%Y-%m-%d %H:%M')})"
 
     class Meta:
         verbose_name = _("Meteors Main Page Configuration")

@@ -6,6 +6,8 @@ from openai import OpenAI
 
 from django.conf import settings
 
+from core.protocols import TranslationAgentProtocol
+
 logger = logging.getLogger(__name__)
 
 LANGUAGE_MAP = {
@@ -18,7 +20,7 @@ LANGUAGE_MAP = {
 }
 
 
-class GPTTranslationAgent:
+class GPTTranslationAgent(TranslationAgentProtocol):
     """
     Agent responsible for translating text and HTML content using OpenAI's GPT models.
     Supports dual-step translation (Translate then Edit) and HTML structure preservation.
@@ -70,6 +72,40 @@ class GPTTranslationAgent:
             return result
         except Exception:
             logger.exception(f"GPT place translation failed for '{text}'")
+            return None
+
+    def translate_tag(self, text: str, target_lang_code: str) -> Optional[str]:
+        """
+        Translates a technical or descriptive tag into the target language.
+        Optimized for brevity and technical accuracy (e.g. astronomy or programming).
+        """
+        if not text:
+            return ""
+        logger.info(f"Translating tag '{text}' to {target_lang_code}")
+        prompt = f"""
+        Translate the following tag from English into {target_lang_code}.
+        Rules:
+        - Keep it brief (usually 1-3 words).
+        - Preserve technical accuracy (e.g. for astronomy or programming).
+        - Use the most common technical term in {target_lang_code}.
+        - Maintain the same capitalization style as the source if possible.
+        - Return ONLY the translated tag. No explanations.
+        """
+        try:
+            r = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": text},
+                ],
+                temperature=0.0,
+                top_p=1.0,
+            )
+            result = (r.choices[0].message.content or "").strip()
+            logger.info(f"Tag translation result: '{text}' -> '{result}'")
+            return result
+        except Exception:
+            logger.exception(f"GPT tag translation failed for '{text}'")
             return None
 
     def translate(self, text: str, target_lang_code: str) -> Optional[str]:

@@ -2,11 +2,10 @@
 from typing import Any, Dict, Optional, cast
 
 from django_countries import countries
-from taggit.models import Tag
 
 from django.db.models import Count, Q, QuerySet
 
-from .models import AstroImage
+from .models import AstroImage, Tag
 
 
 class GalleryQueryService:
@@ -88,7 +87,7 @@ class GalleryQueryService:
             Tag.objects.filter(astroimage__isnull=False)
             .annotate(num_times=Count("astroimage", filter=annotation_filter, distinct=True))
             .filter(num_times__gt=0)
-            .order_by("name")
+            .order_by("slug")
             .distinct(),
         )
 
