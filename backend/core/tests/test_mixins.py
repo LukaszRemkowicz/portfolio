@@ -1,4 +1,3 @@
-from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory, TestCase
 
 from astrophotography.models import Place  # Example model
@@ -12,7 +11,6 @@ class TestTranslationStatusMixin(TestCase):
         self.mixin.model = Place  # Mock usage on Place model
         self.factory = RequestFactory()
         self.place = Place.objects.create(name="Warsaw", country="PL")
-        self.content_type = ContentType.objects.get_for_model(Place)
 
     def test_get_list_display_adds_column(self):
         """Ensure 'translation_status' is added to list_display."""
