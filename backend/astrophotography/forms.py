@@ -115,6 +115,10 @@ class AstroImageForm(TranslatableModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Fix duplicate places in dropdown by clearing ordering (which uses properties/joins)
+        if "place" in self.fields:
+            self.fields["place"].queryset = Place.objects.order_by("pk").distinct()
+
         # Enhance location (country) labels with codes for better searchability
         location_field = self.fields.get("location")
         if isinstance(location_field, forms.ChoiceField):

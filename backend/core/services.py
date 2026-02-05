@@ -8,6 +8,7 @@ from typing import Any
 from parler.models import TranslatableModel
 
 from django.conf import settings
+from django.db import transaction
 from django.utils.text import slugify
 
 from core.agents import GPTTranslationAgent
@@ -181,7 +182,8 @@ class TranslationService:
 
         if modified:
             try:
-                instance.save_translations()
+                with transaction.atomic():
+                    instance.save_translations()
             except Exception as e:
                 logger.exception(f"Failed to save translations for {instance}: {e}")
 
@@ -219,7 +221,8 @@ class TranslationService:
         )
 
         try:
-            instance.save_translations()
+            with transaction.atomic():
+                instance.save_translations()
         except Exception:
             logger.exception("Failed to save MainPageLocation translations")
 
@@ -237,7 +240,8 @@ class TranslationService:
             results[field] = cls._run_parler_translation(instance, field, language_code, handler)
 
         try:
-            instance.save_translations()
+            with transaction.atomic():
+                instance.save_translations()
         except Exception:
             logger.exception("Failed to save AstroImage translations")
 
@@ -282,7 +286,8 @@ class TranslationService:
                     results.append(expected_slug)
 
             if results:
-                instance.save_translations()
+                with transaction.atomic():
+                    instance.save_translations()
                 logger.info(f"Saved Tag translations for {language_code}: {results}")
 
         except Exception:
@@ -307,7 +312,8 @@ class TranslationService:
         translated = cls._run_parler_translation(instance, "name", language_code, place_handler)
 
         try:
-            instance.save_translations()
+            with transaction.atomic():
+                instance.save_translations()
         except Exception:
             logger.exception(f"Failed to save Place translations for {instance}")
 

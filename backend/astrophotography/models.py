@@ -63,9 +63,9 @@ class Place(TranslatableModel):
     translations = TranslatedFields(
         name=models.CharField(
             verbose_name=_("Name"),
-            unique=True,
             max_length=100,
         ),
+        meta={"unique_together": [("language_code", "name")]},
     )
     country = CountryField(verbose_name=_("Country"))
 

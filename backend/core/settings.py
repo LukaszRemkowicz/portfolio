@@ -104,7 +104,7 @@ INSTALLED_APPS = [
     "users.apps.UsersConfig",  # Must be first
     "django.contrib.contenttypes",  # Required by auth
     "django.contrib.auth",  # Required for user model
-    "django.contrib.admin",
+    "core.admin_config.PortfolioAdminConfig",  # Custom AdminSite replacement
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
@@ -121,7 +121,7 @@ INSTALLED_APPS = [
     "django_countries",
     "django_select2",
     "django_ckeditor_5",
-    "core",
+    "core.apps.CoreConfig",
 ]
 
 # Security Settings (for Nginx SSL termination)
@@ -447,3 +447,45 @@ CKEDITOR_5_CUSTOM_CSS = "css/ckeditor_admin_fix.css"
 if not DEBUG:
     # We handle SSL Redirect and HSTS in Nginx, so we silence these checks
     SILENCED_SYSTEM_CHECKS = ["security.W004", "security.W008"]
+
+ADMIN_SITE_ORDERING = (
+    {
+        "app": "astrophotography",
+        "label": "Astrophotography",
+        "models": (
+            "astrophotography.AstroImage",
+            "astrophotography.MainPageLocation",
+            "astrophotography.MainPageBackgroundImage",
+            "astrophotography.MeteorsMainPageConfig",
+            "astrophotography.Place",
+            "astrophotography.Tag",
+        ),
+    },
+    {
+        "app": "astrophotography",
+        "label": "Equipment",
+        "models": (
+            "astrophotography.Camera",
+            "astrophotography.Lens",
+            "astrophotography.Telescope",
+            "astrophotography.Tracker",
+            "astrophotography.Tripod",
+        ),
+    },
+    {
+        "app": "inbox",
+        "label": "Inbox",
+        "models": ("inbox.ContactMessage",),
+    },
+    {
+        "app": "users",
+        "label": "Users & Access",
+        "models": ("users.User", "users.Profile", "auth.Group"),
+    },
+    {"app": "axes", "label": "Security Logs"},
+    {
+        "app": "programming",
+        "label": "Programming",
+        "models": ("programming.Project", "programming.ProjectImage"),
+    },
+)

@@ -750,6 +750,20 @@ files = [
 Django = ">=3.2"
 
 [[package]]
+name = "django-modeladmin-reorder"
+version = "0.3.1"
+description = "Custom ordering for the apps and models in the admin app."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "django-modeladmin-reorder-0.3.1.tar.gz", hash = "sha256:bf42d0dcd184b796b4d6d988c4b4cea7914adfc4430dd9978a8a0199051f189f"},
+]
+
+[package.dependencies]
+django = "*"
+
+[[package]]
 name = "django-parler"
 version = "2.3"
 description = "Simple Django model translations without nasty hacks, featuring nice admin integration."
@@ -2811,4 +2825,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<4.0"
-content-hash = "6835708debac147e5efc90189105437efec4bc8df66f2dc687e3833ffdeaafe9"
+content-hash = "566321ff6d7e3eabdf32edac2f3054e0784b2262a6765c47846a3116f0717a9f"

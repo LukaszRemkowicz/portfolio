@@ -42,9 +42,13 @@ class PlaceAdmin(AutomatedTranslationMixin, DynamicParlerStyleMixin, Translatabl
     translation_service_method = "translate_place"
     translation_trigger_fields = ["name"]
 
-    list_display = ("get_name", "country")
+    list_display = ("id", "get_name", "country")
     list_display_links = ("get_name",)
     search_fields = ("translations__name", "country")
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.distinct()
 
     def get_name(self, obj):
         """Returns the string representation of the place."""
@@ -296,6 +300,11 @@ class MainPageLocationForm(TranslatableModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Fix duplicate places in dropdown by clearing ordering
+        if "place" in self.fields:
+            self.fields["place"].queryset = Place.objects.order_by("pk").distinct()
+
         self._apply_dynamic_filtering()
 
     def _apply_dynamic_filtering(self):  # noqa: C901
