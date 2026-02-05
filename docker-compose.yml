@@ -95,6 +95,28 @@ services:
     ports:
       - "6379:6379"
 
+  celery-worker:
+    <<: *backend-common
+    command: celery -A core worker -l info
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+
+  flower:
+    <<: *backend-common
+    command: celery -A core flower
+    ports:
+      - "5555:5555"
+    restart: unless-stopped
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+      - celery-worker
+
   portfolio-nginx:
     image: nginx:1.25
     networks:
