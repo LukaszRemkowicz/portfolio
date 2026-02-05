@@ -2,6 +2,7 @@
 """
 Test settings for pytest
 """
+
 __all__ = [  # noqa: F405
     "DATABASES",
     "CACHES",
