@@ -47,23 +47,10 @@ class AutomatedTranslationMixin:
         # should_trigger = not change or any(
         #     field in form.changed_data for field in self.translation_trigger_fields
         # )
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.info(
-            f"[AutomatedTranslationMixin] save_model called for {obj}. "
-            f"change={change}, changed_data={form.changed_data}, "
-            f"should_trigger={should_trigger}, fields={self.translation_trigger_fields}"
-        )
-
         if should_trigger:
             from core.services import TranslationService
 
             kwargs = self.get_translation_kwargs(obj, form, change, should_trigger)
-            logger.info(
-                f"[AutomatedTranslationMixin] Triggering sync with method "
-                f"{self.translation_service_method}"
-            )
             TranslationService.trigger_sync(obj, self.translation_service_method, **kwargs)
 
     def get_translation_kwargs(
