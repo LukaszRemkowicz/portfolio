@@ -488,6 +488,11 @@ ADMIN_SITE_ORDERING = (
         "label": "Programming",
         "models": ("programming.Project", "programming.ProjectImage"),
     },
+    {
+        "app": "core",
+        "label": "Core Settings",
+        "models": ("core.LandingPageSettings", "core.TranslationTask"),
+    },
 )
 
 # ===========================
