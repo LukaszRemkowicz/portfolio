@@ -15,7 +15,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.static import serve
 
-from .views import SettingsView, admin_dynamic_parler_css_view, api_404_view, health_check_view
+from .views import SettingsView, api_404_view, health_check_view
 
 admin.site.site_header = "Portfolio Administration"
 admin.site.site_title = "Portfolio Admin Portal"
@@ -31,7 +31,7 @@ urlpatterns = [
     path("v1/<path:path>", api_404_view),
     path("select2/", include("django_select2.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),
-    path("admin/dynamic-parler-fixes.css", admin_dynamic_parler_css_view, name="admin-dynamic-css"),
+    path("", include("translation.urls")),
 ]
 
 if settings.ADMIN_DOMAIN in settings.ALLOWED_HOSTS:

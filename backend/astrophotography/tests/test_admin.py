@@ -280,7 +280,7 @@ class TestAdminDebug:
         )
 
         # 2. Verify the CSS endpoint itself returns the expected generated CSS
-        css_url = reverse("admin-dynamic-css")
+        css_url = reverse("translation:admin-dynamic-css")
         css_response = admin_client.get(css_url)
         assert css_response.status_code == 200
         assert "Dynamic Parler CSS generated for default language" in css_response.content.decode(
