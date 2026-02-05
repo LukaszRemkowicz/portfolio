@@ -5,7 +5,7 @@ from parler.admin import TranslatableAdmin, TranslatableTabularInline
 from django.conf import settings
 from django.contrib import admin
 
-from core.services import TranslationService
+from translation.services import TranslationService
 
 from .models import Project, ProjectImage
 

@@ -10,7 +10,7 @@ from astrophotography.tests.factories import (
     PlaceFactory,
     TagFactory,
 )
-from core.services import TranslationService
+from translation.services import TranslationService
 
 
 @pytest.mark.django_db

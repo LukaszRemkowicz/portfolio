@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from django.conf import settings
 
-from core.services import TranslationService
+from translation.services import TranslationService
 
 from .models import Project, ProjectImage
 

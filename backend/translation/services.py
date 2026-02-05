@@ -11,8 +11,8 @@ from django.conf import settings
 from django.db import transaction
 from django.utils.text import slugify
 
-from core.agents import GPTTranslationAgent
-from core.protocols import TranslationAgentProtocol
+from .agents import GPTTranslationAgent
+from .protocols import TranslationAgentProtocol
 
 logger = logging.getLogger(__name__)
 

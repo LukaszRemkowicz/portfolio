@@ -6,8 +6,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from astrophotography.models import Place
-from core.models import TranslationTask
 from core.tests.factories import TranslationTaskFactory
+from translation.models import TranslationTask
 
 
 class TestTranslationTask(TestCase):

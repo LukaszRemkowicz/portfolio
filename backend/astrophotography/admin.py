@@ -11,8 +11,12 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from core.mixins import AutomatedTranslationMixin, DynamicParlerStyleMixin, TranslationStatusMixin
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
+from translation.mixins import (
+    AutomatedTranslationMixin,
+    DynamicParlerStyleMixin,
+    TranslationStatusMixin,
+)
 
 from .forms import AstroImageForm, MeteorsMainPageConfigForm, PlaceAdminForm
 from .models import (

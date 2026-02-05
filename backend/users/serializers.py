@@ -1,7 +1,7 @@
 # backend/users/serializers.py
 from rest_framework import serializers
 
-from core.services import TranslationService
+from translation.services import TranslationService
 
 from .models import Profile, User
 

@@ -6,7 +6,7 @@ from openai import OpenAI
 
 from django.conf import settings
 
-from core.protocols import TranslationAgentProtocol
+from .protocols import TranslationAgentProtocol
 
 logger = logging.getLogger(__name__)
 

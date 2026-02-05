@@ -121,6 +121,7 @@ INSTALLED_APPS = [
     "django_countries",
     "django_select2",
     "django_ckeditor_5",
+    "translation.apps.TranslationConfig",
     "core.apps.CoreConfig",
 ]
 
@@ -491,7 +492,12 @@ ADMIN_SITE_ORDERING = (
     {
         "app": "core",
         "label": "Core Settings",
-        "models": ("core.LandingPageSettings", "core.TranslationTask"),
+        "models": ("core.LandingPageSettings",),
+    },
+    {
+        "app": "translation",
+        "label": "Translations",
+        "models": ("translation.TranslationTask",),
     },
 )
 

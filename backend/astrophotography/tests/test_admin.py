@@ -143,10 +143,10 @@ class TestPlaceAdmin:
         """Test that creating a new Place via Admin triggers translation task."""
 
         with (
-            patch("core.mixins.translate_instance_task") as mock_task,
+            patch("translation.mixins.translate_instance_task") as mock_task,
             patch("django.conf.settings.PARLER_DEFAULT_LANGUAGE_CODE", "en"),
             patch(
-                "core.services.TranslationService.get_available_languages",
+                "translation.services.TranslationService.get_available_languages",
                 return_value=["en", "pl"],
             ),
         ):
@@ -177,10 +177,10 @@ class TestPlaceAdmin:
         """Test that updating Place name via Admin triggers translation task."""
 
         with (
-            patch("core.mixins.translate_instance_task") as mock_task,
+            patch("translation.mixins.translate_instance_task") as mock_task,
             patch("django.conf.settings.PARLER_DEFAULT_LANGUAGE_CODE", "en"),
             patch(
-                "core.services.TranslationService.get_available_languages",
+                "translation.services.TranslationService.get_available_languages",
                 return_value=["en", "pl"],
             ),
         ):
@@ -211,7 +211,7 @@ class TestPlaceAdmin:
         """Test that translation is triggered when target language differs from BASE."""
         import uuid
 
-        with patch("core.mixins.translate_instance_task") as mock_task:
+        with patch("translation.mixins.translate_instance_task") as mock_task:
             # Mock the task to return a proper task ID
             mock_task.delay.return_value.id = str(uuid.uuid4())
 

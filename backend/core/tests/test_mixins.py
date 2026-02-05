@@ -1,8 +1,14 @@
+import uuid
+from unittest.mock import MagicMock, patch
+
 from django.test import RequestFactory, TestCase
 
-from astrophotography.models import Place  # Example model
-from core.mixins import TranslationStatusMixin
-from core.models import TranslationTask
+from astrophotography.models import Place
+from translation.mixins import (
+    AutomatedTranslationMixin,
+    TranslationStatusMixin,
+)
+from translation.models import TranslationTask
 
 
 class TestTranslationStatusMixin(TestCase):
@@ -87,12 +93,6 @@ class TestTranslationStatusMixin(TestCase):
 class TestAutomatedTranslationMixin(TestCase):
     def test_save_model_triggers_tasks_and_creates_records(self):
         """Ensure save_model triggers celery tasks and creates TranslationTask records."""
-        import uuid
-        from unittest.mock import MagicMock, patch
-
-        from astrophotography.models import Place
-        from core.mixins import AutomatedTranslationMixin
-        from core.models import TranslationTask
 
         class BaseAdmin:
             def save_model(self, request, obj, form, change):
@@ -113,9 +113,9 @@ class TestAutomatedTranslationMixin(TestCase):
 
         # Mock dependencies
         with (
-            patch("core.mixins.translate_instance_task") as mock_task,
+            patch("translation.mixins.translate_instance_task") as mock_task,
             patch(
-                "core.services.TranslationService.get_available_languages",
+                "translation.services.TranslationService.get_available_languages",
                 return_value=["en", "pl", "es"],
             ),
             patch("django.conf.settings.PARLER_DEFAULT_LANGUAGE_CODE", "en"),

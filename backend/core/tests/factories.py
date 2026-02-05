@@ -20,7 +20,7 @@ class LandingPageSettingsFactory(DjangoModelFactory):
 
 class TranslationTaskFactory(DjangoModelFactory):
     class Meta:
-        model = "core.TranslationTask"
+        model = "translation.TranslationTask"
 
     task_id = factory.Faker("uuid4")
     language = "pl"

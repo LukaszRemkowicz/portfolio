@@ -6,9 +6,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.forms import Media
 from django.utils.safestring import mark_safe
 
-from core.celery.tasks import translate_instance_task
-from core.models import TranslationTask
-from core.services import TranslationService
+from .models import TranslationTask
+from .services import TranslationService
+from .tasks import translate_instance_task
 
 
 class DynamicParlerStyleMixin:
@@ -92,8 +92,6 @@ class AutomatedTranslationMixin:
 
             if should_translate:
                 # Clean up old completed/failed tasks for this language to avoid conflicts
-                # The Celery task uses update_or_create with (content_type, object_id, language)
-                # and expects only ONE task per instance+language combination
                 TranslationTask.objects.filter(
                     content_type=content_type,
                     object_id=object_id,
@@ -115,14 +113,16 @@ class AutomatedTranslationMixin:
                     **kwargs,
                 )
 
-                # Create TranslationTask record tracking the Celery task ID
-                TranslationTask.objects.create(
+                # Create/Update TranslationTask record tracking the Celery task ID
+                TranslationTask.objects.update_or_create(
                     content_type=content_type,
                     object_id=object_id,
                     language=lang_code,
-                    method=method_name,
-                    task_id=task.id,
-                    status=TranslationTask.Status.PENDING,
+                    defaults={
+                        "method": method_name,
+                        "task_id": task.id,
+                        "status": TranslationTask.Status.PENDING,
+                    },
                 )
                 triggered_languages.append(lang_code)
 
