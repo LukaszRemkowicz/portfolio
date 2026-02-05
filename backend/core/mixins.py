@@ -106,6 +106,7 @@ class AutomatedTranslationMixin:
                 kwargs = self.get_translation_kwargs(obj, form, change, should_translate)
 
                 # Dispatch async task
+                kwargs["force"] = True
                 task = translate_instance_task.delay(
                     model_name=obj._meta.label,
                     instance_pk=obj.pk,

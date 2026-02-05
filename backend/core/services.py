@@ -60,12 +60,17 @@ class TranslationService:
 
     @classmethod
     def _has_translation(
-        cls, instance: TranslatableModel, field_name: str, language_code: str
+        cls, instance: TranslatableModel, field_name: str, language_code: str, force: bool = False
     ) -> tuple[bool, Any]:
         """
         Checks if a translation exists in the database for the given field and language.
         Returns (True, value) if it exists, (False, None) otherwise.
+        If force is True, always returns (False, None) to trigger re-translation.
         """
+        if force:
+            logger.info(f"Force translation enabled for '{field_name}' in '{language_code}'.")
+            return False, None
+
         has_record = instance.translations.filter(language_code=language_code).exists()
         current_val = instance.safe_translation_getter(
             field_name, language_code=language_code, any_language=False
@@ -93,7 +98,9 @@ class TranslationService:
         )
 
     @classmethod
-    def _parler_ceremony(cls, instance: TranslatableModel, field_name: str, language_code: str):
+    def _parler_ceremony(
+        cls, instance: TranslatableModel, field_name: str, language_code: str, force: bool = False
+    ):
         """
         Generator to handle Parler translation infrastructure (checks, source, save).
         1. Checks for existing translation.
@@ -102,7 +109,9 @@ class TranslationService:
         4. Updates instance and handles language context.
         """
         # 1. Check existence
-        has_translation, current_val = cls._has_translation(instance, field_name, language_code)
+        has_translation, current_val = cls._has_translation(
+            instance, field_name, language_code, force=force
+        )
         if has_translation:
             yield None  # Signal that we should skip
             return
@@ -131,12 +140,17 @@ class TranslationService:
 
     @classmethod
     def _run_parler_translation(
-        cls, instance: TranslatableModel, field_name: str, language_code: str, handler: Any
+        cls,
+        instance: TranslatableModel,
+        field_name: str,
+        language_code: str,
+        handler: Any,
+        force: bool = False,
     ) -> str:
         """
         Helper that runs the ceremony for a single field using a provided GPT handler.
         """
-        gen = cls._parler_ceremony(instance, field_name, language_code)
+        gen = cls._parler_ceremony(instance, field_name, language_code, force=force)
         source = next(gen)
 
         if source is None:
@@ -161,7 +175,11 @@ class TranslationService:
 
     @classmethod
     def _bulk_sync_translations(
-        cls, instance: TranslatableModel, field_names: list[str], language_code: str
+        cls,
+        instance: TranslatableModel,
+        field_names: list[str],
+        language_code: str,
+        force: bool = False,
     ) -> dict[str, str]:
         """
         A generic helper for multi-field translation.
@@ -175,7 +193,7 @@ class TranslationService:
             # Specialized methods (like translate_astro_image) should not call this
             # if they need custom field-level logic (like HTML).
             val = cls._run_parler_translation(
-                instance, field_name, language_code, cls.agent.translate
+                instance, field_name, language_code, cls.agent.translate, force=force
             )
             results[field_name] = val
             modified = True
@@ -208,16 +226,18 @@ class TranslationService:
         return False
 
     @classmethod
-    def translate_main_page_location(cls, instance: Any, language_code: str) -> dict[str, str]:
+    def translate_main_page_location(
+        cls, instance: Any, language_code: str, force: bool = False
+    ) -> dict[str, str]:
         """Specific translator for MainPageLocation (highlight_name, story)."""
         results = {}
 
         # 'highlight_name' is text, 'story' is HTML
         results["highlight_name"] = cls._run_parler_translation(
-            instance, "highlight_name", language_code, cls.agent.translate
+            instance, "highlight_name", language_code, cls.agent.translate, force=force
         )
         results["story"] = cls._run_parler_translation(
-            instance, "story", language_code, cls.agent.translate_html
+            instance, "story", language_code, cls.agent.translate_html, force=force
         )
 
         try:
@@ -229,7 +249,9 @@ class TranslationService:
         return results
 
     @classmethod
-    def translate_astro_image(cls, instance: Any, language_code: str) -> dict[str, str]:
+    def translate_astro_image(
+        cls, instance: Any, language_code: str, force: bool = False
+    ) -> dict[str, str]:
         """Specific translator for AstroImage (name, description, technical details)."""
         results = {}
 
@@ -237,7 +259,9 @@ class TranslationService:
         fields = ["name", "description", "exposure_details", "processing_details"]
         for field in fields:
             handler = cls.agent.translate_html if field == "description" else cls.agent.translate
-            results[field] = cls._run_parler_translation(instance, field, language_code, handler)
+            results[field] = cls._run_parler_translation(
+                instance, field, language_code, handler, force=force
+            )
 
         try:
             with transaction.atomic():
@@ -298,7 +322,7 @@ class TranslationService:
         return results
 
     @classmethod
-    def translate_place(cls, instance: Any, language_code: str) -> str:
+    def translate_place(cls, instance: Any, language_code: str, force: bool = False) -> str:
         """
         Specialized translator for Place names.
         Uses specialized GPT place agent with country context.
@@ -309,7 +333,9 @@ class TranslationService:
         def place_handler(text: str, lang: str) -> str:
             return cls.agent.translate_place(text, lang, country_name) or ""
 
-        translated = cls._run_parler_translation(instance, "name", language_code, place_handler)
+        translated = cls._run_parler_translation(
+            instance, "name", language_code, place_handler, force=force
+        )
 
         try:
             with transaction.atomic():

@@ -152,3 +152,19 @@ class TestTranslationService:
             # Index 0 is name
             handler_name = call_args_list[0][0][3]
             assert handler_name == TranslationService.agent.translate
+
+    @pytest.mark.django_db
+    def test_parler_ceremony_obeys_force_parameter(self):
+        """
+        Verify that _parler_ceremony yields source text even if translation exists
+        when force=True is passed.
+        """
+        instance = MagicMock()
+        instance.get_current_language.return_value = "en"
+
+        # When force=True, _has_translation(..., force=True) returns (False, None)
+        # which triggers the ceremony to yield source
+        with patch.object(TranslationService, "_get_default_language_text", return_value="Source"):
+            gen = TranslationService._parler_ceremony(instance, "name", "pl", force=True)
+            val = next(gen)
+            assert val == "Source"
