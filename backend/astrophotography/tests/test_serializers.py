@@ -27,7 +27,7 @@ from astrophotography.tests.factories import (
 
 @pytest.mark.django_db
 class TestEquipmentSerializers:
-    def test_tracker_serializer_configuration(self):
+    def test_tracker_serializer_configuration(self) -> None:
         """
         Regression test: Ensure TrackerSerializer has 'fields' or 'exclude' defined.
         Failed in production with AssertionError because Meta overrides parent
@@ -41,7 +41,7 @@ class TestEquipmentSerializers:
         except AssertionError as e:
             pytest.fail(f"TrackerSerializer Configuration Error: {e}")
 
-    def test_tripod_serializer_configuration(self):
+    def test_tripod_serializer_configuration(self) -> None:
 
         try:
             serializer = TripodSerializer()
@@ -49,7 +49,7 @@ class TestEquipmentSerializers:
         except AssertionError as e:
             pytest.fail(f"TripodSerializer Configuration Error: {e}")
 
-    def test_camera_serializer_configuration(self):
+    def test_camera_serializer_configuration(self) -> None:
 
         try:
             serializer = CameraSerializer()
@@ -57,7 +57,7 @@ class TestEquipmentSerializers:
         except AssertionError as e:
             pytest.fail(f"CameraSerializer Configuration Error: {e}")
 
-    def test_lens_serializer_configuration(self):
+    def test_lens_serializer_configuration(self) -> None:
 
         try:
             serializer = LensSerializer()
@@ -65,7 +65,7 @@ class TestEquipmentSerializers:
         except AssertionError as e:
             pytest.fail(f"LensSerializer Configuration Error: {e}")
 
-    def test_telescope_serializer_configuration(self):
+    def test_telescope_serializer_configuration(self) -> None:
 
         try:
             serializer = TelescopeSerializer()
@@ -73,7 +73,7 @@ class TestEquipmentSerializers:
         except AssertionError as e:
             pytest.fail(f"TelescopeSerializer Configuration Error: {e}")
 
-    def test_place_serializer_configuration(self):
+    def test_place_serializer_configuration(self) -> None:
 
         try:
             serializer = PlaceSerializer()
@@ -81,7 +81,7 @@ class TestEquipmentSerializers:
         except AssertionError as e:
             pytest.fail(f"PlaceSerializer Configuration Error: {e}")
 
-    def test_meteors_config_serializer_configuration(self):
+    def test_meteors_config_serializer_configuration(self) -> None:
 
         try:
             # Should have explicit fields
@@ -90,7 +90,7 @@ class TestEquipmentSerializers:
         except AssertionError as e:
             pytest.fail(f"MeteorsMainPageConfigSerializer Configuration Error: {e}")
 
-    def test_astro_image_serializer_configuration(self):
+    def test_astro_image_serializer_configuration(self) -> None:
 
         try:
             serializer = AstroImageSerializer()
@@ -100,7 +100,7 @@ class TestEquipmentSerializers:
             # If nested serializers (Camera, etc.) are broken, this MIGHT fail here too
             pytest.fail(f"AstroImageSerializer Configuration Error: {e}")
 
-    def test_main_page_location_serializer_logic(self):
+    def test_main_page_location_serializer_logic(self) -> None:
         """Test custom logic in MainPageLocationSerializer (adventure_date)"""
 
         # Case 1: Single date (formatted as lower)
@@ -119,7 +119,7 @@ class TestEquipmentSerializers:
         serializer2 = MainPageLocationSerializer(obj2)
         assert serializer2.data["adventure_date"] == "20 - 25 Jan 2026"
 
-    def test_tag_serializer_configuration(self):
+    def test_tag_serializer_configuration(self) -> None:
 
         try:
             serializer = TagSerializer()
@@ -130,7 +130,7 @@ class TestEquipmentSerializers:
 
 @pytest.mark.django_db
 class TestAstroImageSerializers:
-    def test_zoom_serialization_mapping(self):
+    def test_zoom_serialization_mapping(self) -> None:
         """Test that 'zoom' model field is serialized as 'process' in API"""
 
         place = PlaceFactory()
@@ -155,7 +155,9 @@ class TestAstroImageSerializers:
 class TestTranslationSerializers:
 
     @patch("core.services.TranslationService.get_translation")
-    def test_astro_image_serializer_calls_translation_service_with_lang(self, mock_translate):
+    def test_astro_image_serializer_calls_translation_service_with_lang(
+        self, mock_translate: MagicMock
+    ) -> None:
         """Test that AstroImageSerializer calls service when lang is present"""
 
         mock_translate.return_value = "Translated Text"
@@ -178,7 +180,9 @@ class TestTranslationSerializers:
         mock_translate.assert_any_call(instance, "description", "pl")
 
     @patch("core.services.TranslationService.get_translation")
-    def test_main_page_location_serializer_calls_translation_service(self, mock_translate):
+    def test_main_page_location_serializer_calls_translation_service(
+        self, mock_translate: MagicMock
+    ) -> None:
 
         mock_translate.return_value = "Translated Text"
         request = MagicMock()
@@ -191,7 +195,7 @@ class TestTranslationSerializers:
         assert data["highlight_name"] == "Translated Text"
         mock_translate.assert_any_call(instance, "highlight_name", "pl")
 
-    def test_serializer_ignores_translation_without_lang(self):
+    def test_serializer_ignores_translation_without_lang(self) -> None:
         """Test that serializers return original data when lang is missing or en"""
 
         request = MagicMock()

@@ -1,7 +1,8 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from django.test import Client
 from django.urls import reverse
 
 from astrophotography.models import Place
@@ -16,7 +17,7 @@ from astrophotography.tests.factories import (
 
 @pytest.mark.django_db
 class TestAstroImageAdmin:
-    def test_admin_list_displays_name(self, admin_client):
+    def test_admin_list_displays_name(self, admin_client: Client) -> None:
         """
         Verify that the AstroImage list view in Admin displays the translated name.
         """
@@ -36,7 +37,7 @@ class TestAstroImageAdmin:
         content = response.content.decode("utf-8")
         assert image.name in content
 
-    def test_admin_change_page_displays_fields(self, admin_client):
+    def test_admin_change_page_displays_fields(self, admin_client: Client) -> None:
         """
         Verify that the AstroImage change page loads without errors and shows translated fields.
         """
@@ -49,7 +50,7 @@ class TestAstroImageAdmin:
         content = response.content.decode("utf-8")
         assert image.name in content
 
-    def test_admin_change_page_filtering_pl(self, admin_client):
+    def test_admin_change_page_filtering_pl(self, admin_client: Client) -> None:
         """
         Verify that non-translatable fields are hidden when editing 'pl' language.
         """
@@ -73,7 +74,7 @@ class TestAstroImageAdmin:
 
 @pytest.mark.django_db
 class TestCameraLensAdmin:
-    def test_camera_list_display(self, admin_client):
+    def test_camera_list_display(self, admin_client: Client) -> None:
         """
         Verify that the camera model name appears in the admin list view.
         """
@@ -86,7 +87,7 @@ class TestCameraLensAdmin:
         assert response.status_code == 200
         assert "Nikon Z6 Mod" in content
 
-    def test_lens_list_display(self, admin_client):
+    def test_lens_list_display(self, admin_client: Client) -> None:
         """
         Verify that the lens model name appears in the admin list view.
         """
@@ -102,13 +103,13 @@ class TestCameraLensAdmin:
 
 @pytest.mark.django_db
 class TestMainPageBackgroundImageAdmin:
-    def test_admin_changelist_view(self, admin_client):
+    def test_admin_changelist_view(self, admin_client: Client) -> None:
         url = reverse("admin:astrophotography_mainpagebackgroundimage_changelist")
         response = admin_client.get(url)
         assert response.status_code == 200
         assert "Main Page Background" in response.content.decode("utf-8")
 
-    def test_admin_change_view(self, admin_client):
+    def test_admin_change_view(self, admin_client: Client) -> None:
         from io import BytesIO
 
         from PIL import Image
@@ -138,7 +139,9 @@ class TestMainPageBackgroundImageAdmin:
 @pytest.mark.django_db
 class TestPlaceAdmin:
     @patch("core.services.TranslationService.agent")
-    def test_save_model_triggers_translation_on_create(self, mock_agent, admin_client):
+    def test_save_model_triggers_translation_on_create(
+        self, mock_agent: MagicMock, admin_client: Client
+    ) -> None:
         """Test that creating a new Place via Admin triggers translation service."""
         mock_agent.translate_place.return_value = "Hawaje"
 
@@ -160,7 +163,9 @@ class TestPlaceAdmin:
         assert place.name == "Hawaje"
 
     @patch("core.services.TranslationService.agent")
-    def test_save_model_triggers_translation_on_name_change(self, mock_agent, admin_client):
+    def test_save_model_triggers_translation_on_name_change(
+        self, mock_agent: MagicMock, admin_client: Client
+    ) -> None:
         """Test that updating Place name via Admin triggers translation service."""
         mock_agent.translate_place.return_value = "Grecja"
 
@@ -178,8 +183,8 @@ class TestPlaceAdmin:
 
     @patch("core.services.TranslationService.agent")
     def test_save_model_does_not_trigger_translation_if_no_name_change(
-        self, mock_agent, admin_client
-    ):
+        self, mock_agent: MagicMock, admin_client: Client
+    ) -> None:
         """Test that updating fields other than name does not trigger translations."""
 
         # 1. Create initial place
@@ -202,7 +207,7 @@ class TestPlaceAdmin:
 
 @pytest.mark.django_db
 class TestAdminDebug:
-    def test_admin_dynamic_mixin_debug(self, admin_client):
+    def test_admin_dynamic_mixin_debug(self, admin_client: Client) -> None:
         """Verify that the dynamic CSS link is injected and returns expected content."""
         image = AstroImageFactory()
         url = reverse("admin:astrophotography_astroimage_change", args=[image.pk])
@@ -223,7 +228,7 @@ class TestAdminDebug:
             "utf-8"
         )
 
-    def test_tabs_structure_multilang(self, admin_client):
+    def test_tabs_structure_multilang(self, admin_client: Client) -> None:
         """Create object with EN and PL translations and check tabs structure."""
         image = AstroImageFactory()
         image.set_current_language("pl")

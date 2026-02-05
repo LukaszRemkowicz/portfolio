@@ -37,7 +37,7 @@ class GalleryQueryService:
         # 2. Filter by Tags
         tag_slug = params.get("tag")
         if tag_slug:
-            queryset = queryset.filter(tags__slug__in=[tag_slug])
+            queryset = queryset.filter(tags__translations__slug__in=[tag_slug])
 
         # 3. Filter by Travel (Fuzzy country/place match)
         travel = params.get("travel")
@@ -74,20 +74,23 @@ class GalleryQueryService:
         return queryset.order_by("-created_at")
 
     @staticmethod
-    def get_tag_stats(category_filter: Optional[str] = None) -> QuerySet:
+    def get_tag_stats(
+        category_filter: Optional[str] = None, language_code: Optional[str] = None
+    ) -> QuerySet:
         """
         Aggregate tag counts, optionally filtered by gallery category.
+        Returns unique tag instances that have at least one associated image.
         """
-        annotation_filter = Q(astroimage__isnull=False)
+        annotation_filter = Q(images__isnull=False)
         if category_filter:
-            annotation_filter &= Q(astroimage__celestial_object=category_filter)
+            annotation_filter &= Q(images__celestial_object=category_filter)
 
         return cast(
             QuerySet,
-            Tag.objects.filter(astroimage__isnull=False)
-            .annotate(num_times=Count("astroimage", filter=annotation_filter, distinct=True))
+            Tag.objects.filter(images__isnull=False)
+            .annotate(num_times=Count("images", filter=annotation_filter, distinct=True))
             .filter(num_times__gt=0)
-            .order_by("slug")
+            .order_by("-num_times", "id")
             .distinct(),
         )
 

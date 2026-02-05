@@ -29,13 +29,26 @@ from .services import GalleryQueryService
 
 class TagSerializer(TranslatableModelSerializer):
     name = serializers.SerializerMethodField()
-    slug = serializers.CharField(read_only=True)
+    slug = serializers.SerializerMethodField()
     count = serializers.IntegerField(source="num_times", read_only=True)
 
     def get_name(self, instance: Tag) -> str:
         request = self.context.get("request")
-        lang = request.query_params.get("lang") if request else None
-        return TranslationService.get_translation(instance, "title", lang)
+        lang = (
+            getattr(request, "query_params", getattr(request, "GET", {})).get("lang")
+            if request
+            else None
+        )
+        return TranslationService.get_translation(instance, "name", lang)
+
+    def get_slug(self, instance: Tag) -> str:
+        request = self.context.get("request")
+        lang = (
+            getattr(request, "query_params", getattr(request, "GET", {})).get("lang")
+            if request
+            else None
+        )
+        return TranslationService.get_translation(instance, "slug", lang)
 
     class Meta:
         model = Tag

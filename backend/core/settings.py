@@ -118,7 +118,6 @@ INSTALLED_APPS = [
     "astrophotography.apps.AstrophotographyConfig",
     "programming.apps.ProgrammingConfig",
     "inbox.apps.InboxConfig",
-    "taggit",
     "django_countries",
     "django_select2",
     "django_ckeditor_5",

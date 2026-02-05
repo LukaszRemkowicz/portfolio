@@ -8,6 +8,7 @@ from typing import Any
 from parler.models import TranslatableModel
 
 from django.conf import settings
+from django.utils.text import slugify
 
 from core.agents import GPTTranslationAgent
 from core.protocols import TranslationAgentProtocol
@@ -221,21 +222,53 @@ class TranslationService:
         return results
 
     @classmethod
-    def translate_parler_tag(cls, instance: Any, language_code: str) -> str:
+    def translate_parler_tag(
+        cls, instance: Any, language_code: str, force: bool = False
+    ) -> list[str]:
         """
         Specialized translator for Tags.
-        Uses specialized GPT tag agent.
-        Translates from the shared 'name' field to the localized 'name' field.
+        Translates name from English (if missing or forced) and syncs slug locally.
         """
-        result = cls._run_parler_translation(
-            instance,
-            "title",
-            language_code,
-            cls.agent.translate_tag,
-        )
-        if result:
-            instance.save_translations()
-        return result
+        orig_lang = instance.get_current_language()
+        results = []
+        try:
+            instance.set_current_language(language_code)
+
+            # 1. Name: Translate from English if missing OR forced
+            has_name, _ = cls._has_translation(instance, "name", language_code)
+            if not has_name or force:
+                source = cls._get_default_language_text(instance, "name")
+                if source:
+                    logger.info(
+                        f"Translating Tag name '{source}' to {language_code} (force={force})"
+                    )
+                    new_name = cls.agent.translate_tag(source, language_code)
+                    if new_name:
+                        instance.name = new_name
+                        results.append(new_name)
+
+            # 2. Slug: Local sync from the translated name
+            if instance.name:
+                expected_slug = slugify(instance.name, allow_unicode=True)
+                has_slug, current_slug = cls._has_translation(instance, "slug", language_code)
+
+                if not has_slug or current_slug != expected_slug:
+                    logger.info(
+                        f"Sync Tag slug [{language_code}]: '{current_slug}' -> '{expected_slug}'"
+                    )
+                    instance.slug = expected_slug
+                    results.append(expected_slug)
+
+            if results:
+                instance.save_translations()
+                logger.info(f"Saved Tag translations for {language_code}: {results}")
+
+        except Exception:
+            logger.exception(f"Failed to process Tag translations for {language_code}")
+        finally:
+            instance.set_current_language(orig_lang)
+
+        return results
 
     @classmethod
     def translate_place(cls, instance: Any, language_code: str) -> str:

@@ -109,26 +109,25 @@ class TestTranslationService:
 
     def test_translate_parler_tag_uses_correct_agent_method(self):
         """
-        Verify that translate_parler_tag calls translate_tag.
+        Verify that translate_parler_tag calls translate_tag and handles slugs.
         """
         instance = MagicMock()
+        instance.get_current_language.return_value = "en"
+        instance.name = "TranslatedTag"
 
-        # Mock _run_parler_translation to just call the handler
-        with patch.object(TranslationService, "_run_parler_translation") as mock_run:
-            # Ensure the mocked method returns the string we expect
-            mock_run.return_value = "TranslatedTag"
+        with patch.object(TranslationService, "_has_translation", return_value=(False, None)):
+            with patch.object(
+                TranslationService, "_get_default_language_text", return_value="Source"
+            ):
+                with patch.object(
+                    TranslationService.agent, "translate_tag", return_value="TranslatedTag"
+                ) as mock_translate:
+                    result = TranslationService.translate_parler_tag(instance, "pl")
 
-            # Since _run_parler_translation is mocked, we need to mock what it would return
-            # if it were called but here we are checking the return value
-            # of translate_parler_tag which calls correct_agent
-
-            result = TranslationService.translate_parler_tag(instance, "pl")
-
-            assert result == "TranslatedTag"
-            # Verify handler passed was translate_tag
-            args = mock_run.call_args[0]
-            handler = args[3]
-            assert handler == TranslationService.agent.translate_tag
+                    assert result == ["TranslatedTag", "translatedtag"]
+                    mock_translate.assert_called_once_with("Source", "pl")
+                    assert instance.name == "TranslatedTag"
+                    assert instance.slug == "translatedtag"
 
     def test_translate_astro_image_uses_html_agent_for_description(self):
         """

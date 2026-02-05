@@ -77,46 +77,59 @@ class PlaceAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
                 TranslationService.translate_place(obj, lang_code)
 
 
-# Try to unregister Taggit's default admin to avoid confusion
-try:
-    # Force load taggit admin so we can unregister it reliably
-    import taggit.admin  # noqa
-    from taggit.models import Tag as TaggitTag
-
-    admin.site.unregister(TaggitTag)
-except (ImportError, admin.sites.NotRegistered):
-    pass
+# Taggit admin unregistration removed as the library is being uninstalled.
 
 
 @admin.register(Tag)
-class TagAdmin(DynamicParlerStyleMixin, TranslatableAdmin, admin.ModelAdmin):
+class TagAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
     list_display = ("get_name", "slug", "id")
     list_display_links = ("get_name",)
     search_fields = ("translations__name", "slug")
-    readonly_fields = ("id",)
+    readonly_fields = ("slug",)
 
-    def get_prepopulated_fields(self, request, obj=None):
-        return {"slug": ("name",)}
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "name",
+                    "slug",
+                )
+            },
+        ),
+    )
 
     def save_model(self, request, obj, form, change):
         """
         Saves the model and triggers automated translation for the tag name
         if it has changed or is new.
         """
-        # 1. Save the primary instance (master record) first
+        # 1. Check if name changed to force re-translation
+        name_changed = False
+        if change:
+            try:
+                old_obj = Tag.objects.get(pk=obj.pk)
+                name_changed = old_obj.name != obj.name
+            except Tag.DoesNotExist:
+                name_changed = True
+        else:
+            name_changed = True  # New object always triggers
+
+        logger.info(f"TagAdmin.save_model: name_changed={name_changed}")
+
+        # 2. Save the primary instance (master record)
         super().save_model(request, obj, form, change)
 
-        # 2. Always check for missing translations
-        # 3. Get all configured languages
+        # 3. Always check for missing translations or forced updates
         supported_languages = TranslationService.get_available_languages()
+        logger.info(f"Supported languages: {supported_languages}")
 
         for lang_code in supported_languages:
-            # 4. Skip the default language
             if lang_code == settings.PARLER_DEFAULT_LANGUAGE_CODE:
                 continue
 
-            # 5. Trigger translation service
-            TranslationService.translate_parler_tag(obj, lang_code)
+            logger.info(f"Updating translation for lang: {lang_code} (force={name_changed})")
+            TranslationService.translate_parler_tag(obj, lang_code, force=name_changed)
 
     def get_name(self, obj):
         return str(obj)

@@ -1,6 +1,5 @@
 from django_countries import countries
 from parler.forms import TranslatableModelForm
-from taggit.models import Tag
 
 from django import forms
 from django.contrib.admin.widgets import FilteredSelectMultiple
@@ -8,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 
 from core.widgets import ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
-from .models import AstroImage, MeteorsMainPageConfig, Place
+from .models import AstroImage, MeteorsMainPageConfig, Place, Tag
 
 
 class RangeWidget(forms.MultiWidget):
@@ -133,26 +132,7 @@ class AstroImageForm(TranslatableModelForm):
         if self.instance.pk:
             self.fields["tags"].initial = self.instance.tags.all()
 
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-
-        def save_tags():
-            instance.tags.set(self.cleaned_data["tags"])
-
-        # Override save_m2m to handle taggit manager
-        old_save_m2m = self.save_m2m
-
-        def save_m2m():
-            old_save_m2m()
-            save_tags()
-
-        setattr(self, "save_m2m", save_m2m)
-
-        if commit:
-            instance.save()
-            self.save_m2m()
-
-        return instance
+    # Removed custom save/save_m2m as standard ManyToMany handles this now
 
 
 class MeteorsMainPageConfigForm(forms.ModelForm):

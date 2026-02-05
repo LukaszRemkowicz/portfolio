@@ -7,6 +7,7 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
+from django.conf import settings
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 
@@ -117,8 +118,19 @@ class TagsView(ViewSet):
     def list(self, request: Request) -> Response:
         """Returns tag statistics, optionally filtered by category."""
         category_filter = request.query_params.get("filter")
-        tags = GalleryQueryService.get_tag_stats(category_filter)
-        serializer = self.serializer_class(tags, many=True)
+        lang = request.query_params.get("lang")
+        tags = GalleryQueryService.get_tag_stats(category_filter, language_code=lang)
+
+        # Proactive Translation: If a language is requested, ensure all tags have it
+        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
+            from core.services import TranslationService
+
+            for tag in tags:
+                if not tag.has_translation(lang):
+                    logger.info(f"Proactively translating tag '{tag.name}' to {lang}")
+                    TranslationService.translate_parler_tag(tag, lang)
+
+        serializer = self.serializer_class(tags, many=True, context={"request": request})
         return Response(serializer.data)
 
 

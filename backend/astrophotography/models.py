@@ -4,8 +4,6 @@ from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
 from parler.managers import TranslatableManager
 from parler.models import TranslatableModel, TranslatedFields
-from taggit.managers import TaggableManager
-from taggit.models import GenericUUIDTaggedItemBase, NaturalKeyManager, TaggedItemBase
 
 from django.contrib.postgres.fields import DateRangeField
 from django.db import models
@@ -80,20 +78,19 @@ class Place(TranslatableModel):
         return self.safe_translation_getter("name", any_language=True) or ""
 
 
-class TagManager(TranslatableManager, NaturalKeyManager):
+class TagManager(TranslatableManager):
     pass
 
 
 class Tag(TranslatableModel, models.Model):
-    name = models.CharField(verbose_name=_("Name"), unique=True, max_length=100)
     translations = TranslatedFields(
-        title=models.CharField(verbose_name=_("Title"), max_length=100),
-    )
-    slug = models.SlugField(
-        verbose_name=_("Slug"),
-        unique=True,
-        max_length=100,
-        allow_unicode=True,
+        name=models.CharField(verbose_name=_("Name"), max_length=100),
+        slug=models.SlugField(
+            verbose_name=_("Slug"),
+            unique=True,
+            max_length=100,
+            allow_unicode=True,
+        ),
     )
 
     objects = TagManager()
@@ -103,53 +100,14 @@ class Tag(TranslatableModel, models.Model):
         verbose_name_plural = _("Tags")
 
     def __str__(self):
-        return self.safe_translation_getter("title", any_language=True) or f"Tag {self.pk}"
+        return self.safe_translation_getter("name", any_language=True) or f"Tag {self.pk}"
 
     def save(self, *args, **kwargs):
-        # 1. Generate slug from 'name' (column) if present (e.g. set by taggit)
-        if not self.slug and self.name:
-            self.slug = slugify(self.name, allow_unicode=True)
-
-        # 2. Basic save
+        # Generate slug from translated name (auto-sync)
+        source = self.safe_translation_getter("name")
+        if source:
+            self.slug = slugify(source, allow_unicode=True)
         super().save(*args, **kwargs)
-
-        # 3. Post-save sync: Synchronize the 'name' column with the DEFAULT language
-        # title for stable taggit compatibility, regardless of current language.
-        if self.pk:
-            try:
-                from django.conf import settings
-
-                default_lang = settings.PARLER_DEFAULT_LANGUAGE_CODE
-                title = self.safe_translation_getter("title", language_code=default_lang)
-                if not title:
-                    title = self.safe_translation_getter("title", any_language=True)
-
-                if title:
-                    update_kwargs = {}
-                    if self.name != title:
-                        self.name = title
-                        update_kwargs["name"] = title
-                    if not self.slug:
-                        self.slug = slugify(title, allow_unicode=True)
-                        update_kwargs["slug"] = self.slug
-
-                    if update_kwargs:
-                        Tag.objects.filter(pk=self.pk).update(**update_kwargs)
-            except (ValueError, TypeError):
-                pass
-
-
-class UUIDTaggedItem(GenericUUIDTaggedItemBase, TaggedItemBase):
-    tag = models.ForeignKey(
-        Tag,
-        on_delete=models.CASCADE,
-        related_name="%(app_label)s_%(class)s_items",
-        verbose_name=_("Tag"),
-    )
-
-    class Meta:
-        verbose_name = _("Tagged Item")
-        verbose_name_plural = _("Tagged Items")
 
 
 class AbstractEquipmentModel(models.Model):
@@ -279,9 +237,7 @@ class AstroImage(BaseImage, TranslatableModel):
         verbose_name=_("Astrobin URL"),
         help_text=_("Link to this image on Astrobin (e.g., https://www.astrobin.com/XXXXX/)"),
     )
-    tags = TaggableManager(
-        through=UUIDTaggedItem, verbose_name=_("Tags"), help_text=_("Relevant tags for the image.")
-    )
+    tags = models.ManyToManyField(Tag, blank=True, related_name="images", verbose_name=_("Tags"))
     slug = models.SlugField(
         max_length=255,
         unique=True,
