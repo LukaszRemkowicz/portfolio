@@ -108,7 +108,7 @@ plugins = [
 ]
 
 [tool.django-stubs]
-django_settings_module = "core.settings"
+django_settings_module = "settings.base"
 
 [[tool.mypy.overrides]]
 module = [
@@ -129,7 +129,7 @@ module = "*.tests.*"
 ignore_errors = true
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "core.test_settings"
+DJANGO_SETTINGS_MODULE = "settings.tests"
 pythonpath = ["."]
 addopts = "--tb=short --strict-markers --reuse-db"
 markers = [
@@ -169,6 +169,6 @@ exclude = [
 per-file-ignores = [
     "__init__.py:F401",
     "migrations/*:E501",
-    "core/test_settings.py:E402"
+    "settings/tests.py:E402"
 ]
 max-complexity = 10

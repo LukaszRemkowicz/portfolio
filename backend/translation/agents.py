@@ -221,24 +221,13 @@ class GPTTranslationAgent(TranslationAgentProtocol):
 
 
 if __name__ == "__main__":
+    """TODO: Remove this block before production"""
     import os
 
     import django
 
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings.base")
     django.setup()
-    text = (
-        "<p>The night in one of the darknest places in Poland - Tatra's was an incredible "
-        "experience.&nbsp;</p><p>&nbsp;</p><p>Together with "
-        '<a href="https://www.instagram.com/marzena_astrophotography/">Marzena Rogozińska</a> and '
-        '<a href="https://www.facebook.com/p/Cmk-Photo-100063621096476/">Jarek Cmk</a>, we trekked '
-        "over 20 km through the Tatra Mountains at night in classic winter conditions. Crampons on "
-        "our boots, heavy 15 kg backpacks, and snow and ice underfoot. ❄️ &nbsp;🌌 The first "
-        "night offered nearly perfect conditions—clear, starry skies and excellent atmospheric "
-        "transparency, despite some gear issues, including a tripod failure. ☁️ The second night "
-        "was significantly more challenging, as we battled clouds and shifting visibility. On both "
-        "nights, brief breaks were spent quickly warming our hands with a cup of hot tea ☕ before "
-        "heading back to the tripods.</p>"
-    )
+    text = "text"
     agent = GPTTranslationAgent()
     print(agent.translate_html(text, "pl"))

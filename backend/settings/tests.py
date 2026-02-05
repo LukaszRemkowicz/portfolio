@@ -12,7 +12,7 @@ os.environ.setdefault("CSRF_COOKIE_DOMAIN", ".testapi.local")
 # Override DB_HOST for local test execution (tests run outside Docker)
 os.environ.setdefault("DB_HOST", "localhost")
 
-from .settings import *  # noqa: F401,F403,E402
+from .base import *  # noqa: F401,F403,E402
 
 # Configure test database name
 # pytest-django automatically creates a test database with this name

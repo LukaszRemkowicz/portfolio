@@ -15,7 +15,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.static import serve
 
-from .views import SettingsView, api_404_view, health_check_view
+from core.views import SettingsView, api_404_view, health_check_view
 
 admin.site.site_header = "Portfolio Administration"
 admin.site.site_title = "Portfolio Admin Portal"
