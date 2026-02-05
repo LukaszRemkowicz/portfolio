@@ -19,7 +19,7 @@ class PortfolioAdminSite(AdminSite):
     index_title = "Home"
 
     def get_app_list(  # noqa: C901
-        self, request: HttpRequest, app_label: str = None
+        self, request: HttpRequest, app_label: str | None = None
     ) -> List[Dict[str, Any]]:
         """
         Return a comprehensive list of all installed apps that have been

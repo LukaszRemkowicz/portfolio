@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "backend"
-version = "0.1.0"
+version = "1.1.0"
 description = "Portfolio backend with Django REST Framework"
 authors = ["l.remkowicz@gmail.com <l.remkowicz@gmail.com>"]
 readme = "README.md"
@@ -117,6 +117,8 @@ module = [
     "PIL.*",
     "celery.*",
     "taggit.*",
+    "parler.*",
+    "parler_rest.*",
     "django_countries.*",
     "django_ckeditor_5.*",
     "django_select2.*",
@@ -126,6 +128,24 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "*.tests.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+    "core.models",
+    "astrophotography.models",
+    "astrophotography.serializers",
+    "translation.mixins",
+    "astrophotography.admin",
+    "programming.models",
+    "programming.serializers",
+    "programming.admin",
+    "astrophotography.forms",
+    "translation.services",
+    "translation.tasks",
+    "astrophotography.services",
+    "astrophotography.management.commands.fix_parler_language_codes",
+]
 ignore_errors = true
 
 [tool.pytest.ini_options]
