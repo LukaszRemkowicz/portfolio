@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.shortcuts import redirect
 from django.urls import reverse
 
-from .models import LandingPageSettings
+from .models import LandingPageSettings, TranslationTask
 
 
 @admin.register(LandingPageSettings)
@@ -64,3 +64,16 @@ class LandingPageSettingsAdmin(admin.ModelAdmin):
         "lastimages_enabled",
         "meteors",
     )
+
+
+@admin.register(TranslationTask)
+class TranslationTaskAdmin(admin.ModelAdmin):
+    """Admin for monitoring translation tasks."""
+
+    list_display = ("task_id", "content_object", "language", "method", "status")
+    list_filter = ("status", "language", "method")
+    search_fields = ("task_id", "error_message")
+    readonly_fields = ("created_at", "updated_at")
+
+    def has_add_permission(self, request):
+        return False

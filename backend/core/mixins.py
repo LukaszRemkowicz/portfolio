@@ -60,3 +60,58 @@ class AutomatedTranslationMixin:
         Hook to provide extra arguments to the translation service method.
         """
         return {}
+
+
+class TranslationStatusMixin:
+    """
+    Mixin to add translation status column to admin list views.
+    Use alongside AutomatedTranslationMixin.
+    """
+
+    def get_list_display(self, request: Any) -> list[str]:
+        """Add translation_status to list_display if not already present."""
+        list_display = super().get_list_display(request)
+        if "translation_status" not in list_display:
+            return list(list_display) + ["translation_status"]
+        return list(list_display)
+
+    def translation_status(self, obj: Any) -> str:
+        """Show aggregated status for all language tasks."""
+        from django.contrib.contenttypes.models import ContentType
+        from django.utils.safestring import mark_safe
+
+        from core.models import TranslationTask
+
+        tasks = TranslationTask.objects.filter(
+            content_type=ContentType.objects.get_for_model(obj), object_id=str(obj.pk)
+        )
+
+        if not tasks.exists():
+            return mark_safe('<span style="color:gray">➖ Not Started</span>')
+
+        statuses = list(tasks.values_list("status", flat=True))
+        failed_count = statuses.count(TranslationTask.Status.FAILED)
+        pending_running = sum(
+            1
+            for s in statuses
+            if s in [TranslationTask.Status.PENDING, TranslationTask.Status.RUNNING]
+        )
+
+        if failed_count > 0:
+            return mark_safe(
+                f'<span style="color:red" title="{failed_count} failed">'
+                f"❌ Failed ({failed_count})</span>"
+            )
+        elif pending_running > 0:
+            return mark_safe(
+                f'<span style="color:orange" title="{pending_running} in progress">'
+                f"⏳ In Progress ({pending_running})</span>"
+            )
+        elif all(s == TranslationTask.Status.COMPLETED for s in statuses):
+            return mark_safe(
+                f'<span style="color:green" title="{len(statuses)} completed">✅ Complete</span>'
+            )
+
+        return mark_safe('<span style="color:gray">➖ Unknown</span>')
+
+    translation_status.short_description = "Translation Status"

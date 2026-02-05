@@ -11,7 +11,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from core.mixins import AutomatedTranslationMixin, DynamicParlerStyleMixin
+from core.mixins import AutomatedTranslationMixin, DynamicParlerStyleMixin, TranslationStatusMixin
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
 from .forms import AstroImageForm, MeteorsMainPageConfigForm
@@ -33,7 +33,9 @@ logger = logging.getLogger(__name__)
 
 
 @admin.register(Place)
-class PlaceAdmin(AutomatedTranslationMixin, DynamicParlerStyleMixin, TranslatableAdmin):
+class PlaceAdmin(
+    AutomatedTranslationMixin, TranslationStatusMixin, DynamicParlerStyleMixin, TranslatableAdmin
+):
     """
     Admin configuration for geographical places.
     Supports automated translation of place names into multiple languages.
@@ -61,7 +63,9 @@ class PlaceAdmin(AutomatedTranslationMixin, DynamicParlerStyleMixin, Translatabl
 
 
 @admin.register(Tag)
-class TagAdmin(AutomatedTranslationMixin, DynamicParlerStyleMixin, TranslatableAdmin):
+class TagAdmin(
+    AutomatedTranslationMixin, TranslationStatusMixin, DynamicParlerStyleMixin, TranslatableAdmin
+):
     translation_service_method = "translate_parler_tag"
     translation_trigger_fields = ["name"]
 
@@ -122,7 +126,9 @@ class TripodAdmin(admin.ModelAdmin):
 
 
 @admin.register(AstroImage)
-class AstroImageAdmin(AutomatedTranslationMixin, DynamicParlerStyleMixin, TranslatableAdmin):
+class AstroImageAdmin(
+    AutomatedTranslationMixin, TranslationStatusMixin, DynamicParlerStyleMixin, TranslatableAdmin
+):
     """
     Main admin for Astrophotography images.
     Complex logic includes:
@@ -373,7 +379,9 @@ class MainPageLocationForm(TranslatableModelForm):
 
 
 @admin.register(MainPageLocation)
-class MainPageLocationAdmin(AutomatedTranslationMixin, DynamicParlerStyleMixin, TranslatableAdmin):
+class MainPageLocationAdmin(
+    AutomatedTranslationMixin, TranslationStatusMixin, DynamicParlerStyleMixin, TranslatableAdmin
+):
     translation_service_method = "translate_main_page_location"
     translation_trigger_fields = ["highlight_name", "story"]
 
