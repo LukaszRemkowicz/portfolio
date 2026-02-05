@@ -18,7 +18,7 @@ class TestAstroImageModel:
     def test_string_representation(self) -> None:
         """Test AstroImage string representation uses the name field"""
         image = AstroImageFactory(name="Test Nebula")
-        assert str(image) == f"Test Nebula ({image.capture_date})"
+        assert str(image) == "Test Nebula"
 
     def test_default_ordering(self) -> None:
         """Test default ordering is by created_at descending (from BaseImage)"""

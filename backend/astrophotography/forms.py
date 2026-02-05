@@ -5,9 +5,22 @@ from django import forms
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.utils.translation import gettext_lazy as _
 
-from core.widgets import ThemedSelect2MultipleWidget, ThemedSelect2Widget
+from core.widgets import CountrySelect2Widget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
 from .models import AstroImage, MeteorsMainPageConfig, Place, Tag
+
+
+class PlaceAdminForm(TranslatableModelForm):
+    """Custom form for Place admin to use Select2 widget for country field."""
+
+    # Explicitly define country field to override django-countries default widget
+    country = forms.ChoiceField(
+        choices=list(countries), widget=CountrySelect2Widget(), required=False, label=_("Country")
+    )
+
+    class Meta:
+        model = Place
+        fields = "__all__"
 
 
 class RangeWidget(forms.MultiWidget):

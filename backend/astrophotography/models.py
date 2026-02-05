@@ -72,7 +72,7 @@ class Place(TranslatableModel):
     class Meta:
         verbose_name = _("Place")
         verbose_name_plural = _("Places")
-        ordering = ["translations__name"]
+        ordering = ["pk"]
 
     def __str__(self):
         return self.safe_translation_getter("name", any_language=True) or ""
@@ -257,8 +257,7 @@ class AstroImage(BaseImage, TranslatableModel):
         ordering = ["-created_at"]
 
     def __str__(self):
-        name = self.safe_translation_getter("name", any_language=True) or _("Unnamed Image")
-        return f"{name} ({self.capture_date})"
+        return str(self.safe_translation_getter("name", any_language=True) or _("Unnamed Image"))
 
     def save(self, *args, **kwargs):
         if not self.slug:

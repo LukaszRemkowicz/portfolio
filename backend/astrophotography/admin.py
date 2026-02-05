@@ -14,7 +14,7 @@ from django.utils.translation import gettext_lazy as _
 from core.mixins import AutomatedTranslationMixin, DynamicParlerStyleMixin, TranslationStatusMixin
 from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
-from .forms import AstroImageForm, MeteorsMainPageConfigForm
+from .forms import AstroImageForm, MeteorsMainPageConfigForm, PlaceAdminForm
 from .models import (
     AstroImage,
     Camera,
@@ -41,6 +41,9 @@ class PlaceAdmin(
     Supports automated translation of place names into multiple languages.
     """
 
+    fields = ("name", "country")
+    form = PlaceAdminForm
+
     translation_service_method = "translate_place"
     translation_trigger_fields = ["name"]
 
@@ -57,6 +60,21 @@ class PlaceAdmin(
         return str(obj)
 
     get_name.short_description = _("Name")
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        """
+        Switch active language to the one currently being edited (via Parler tab)
+        so that shared fields like CountryField display localized choices.
+        """
+        from django.utils import translation
+
+        lang_code = request.GET.get("language")
+        if lang_code:
+            translation.activate(lang_code)
+            if hasattr(request, "LANGUAGE_CODE"):
+                request.LANGUAGE_CODE = lang_code
+
+        return super().changeform_view(request, object_id, form_url, extra_context)
 
 
 # Taggit admin unregistration removed as the library is being uninstalled.

@@ -82,3 +82,62 @@ class TestTranslationStatusMixin(TestCase):
         status_html = self.mixin.translation_status(self.place)
         assert "❌ Failed" in status_html
         assert "color:red" in status_html
+
+
+class TestAutomatedTranslationMixin(TestCase):
+    def test_save_model_triggers_tasks_and_creates_records(self):
+        """Ensure save_model triggers celery tasks and creates TranslationTask records."""
+        import uuid
+        from unittest.mock import MagicMock, patch
+
+        from astrophotography.models import Place
+        from core.mixins import AutomatedTranslationMixin
+        from core.models import TranslationTask
+
+        class BaseAdmin:
+            def save_model(self, request, obj, form, change):
+                pass
+
+            def message_user(self, request, message, level):
+                pass
+
+        class MockAdmin(AutomatedTranslationMixin, BaseAdmin):
+            translation_service_method = "translate_place"
+            translation_trigger_fields = ["name"]
+
+            def get_translation_kwargs(self, obj, form, change, should_trigger):
+                return {"force": True}
+
+        place = Place.objects.create(name="Warsaw", country="PL")
+        admin_instance = MockAdmin()
+
+        # Mock dependencies
+        with (
+            patch("core.mixins.translate_instance_task") as mock_task,
+            patch(
+                "core.services.TranslationService.get_available_languages",
+                return_value=["en", "pl", "es"],
+            ),
+            patch("django.conf.settings.PARLER_DEFAULT_LANGUAGE_CODE", "en"),
+        ):
+
+            # Setup mock task return value with unique IDs
+            def side_effect(*args, **kwargs):
+                m = MagicMock()
+                m.id = str(uuid.uuid4())
+                return m
+
+            mock_task.delay.side_effect = side_effect
+
+            # Call save_model
+            admin_instance.save_model(None, place, None, False)
+
+            # Verify task calls
+            # 'en' is default (skipped), 'pl' and 'es' should be called
+            assert mock_task.delay.call_count == 2
+
+            # Verify TranslationTask records created
+            tasks = TranslationTask.objects.filter(object_id=place.pk)
+            assert tasks.count() == 2
+            assert tasks.filter(language="pl", status=TranslationTask.Status.PENDING).exists()
+            assert tasks.filter(language="es", status=TranslationTask.Status.PENDING).exists()
