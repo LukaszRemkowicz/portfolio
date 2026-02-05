@@ -49,7 +49,7 @@ class GPTTranslationAgent(TranslationAgentProtocol):
 
         2. Do NOT translate proper nouns literally.
 
-        3. If the input is NOT a proper noun, translate it normally into Polish.
+        3. If the input is NOT a proper noun, translate it normally into {target_lang_code}.
 
         Return only the translation. Do not add explanations or comments.
         If a country ({country_name}) is provided:

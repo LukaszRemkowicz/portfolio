@@ -6,6 +6,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ImageField, StringRelatedField
 
 from django.conf import settings
+from django.urls import reverse
 from django.utils import translation
 
 from core.services import TranslationService
@@ -122,8 +123,6 @@ class AstroImageSerializerList(TranslatableModelSerializer):
     process = serializers.BooleanField(source="zoom")
 
     def get_url(self, obj: AstroImage) -> str:
-        from django.urls import reverse
-
         request = self.context.get("request")
         if request is None:
             return ""
@@ -187,8 +186,6 @@ class AstroImageSerializer(TranslatableModelSerializer):
     url = serializers.SerializerMethodField()
 
     def get_url(self, obj: AstroImage) -> str:
-        from django.urls import reverse
-
         request = self.context.get("request")
         if request is None:
             return ""

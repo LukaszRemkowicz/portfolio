@@ -1,8 +1,5 @@
-"""
-Common mixins for the core application and admin customizations.
-"""
+from typing import Any, Optional
 
-from django.conf import settings  # noqa: F401
 from django.forms import Media
 
 
@@ -21,3 +18,41 @@ class DynamicParlerStyleMixin:
         """
         media = super().media
         return media + Media(css={"all": ("/admin/dynamic-parler-fixes.css",)})
+
+
+class AutomatedTranslationMixin:
+    """
+    Mixin for ModelAdmin classes that automatically triggers GPT translations.
+    Requires 'translation_service_method' to be defined (e.g., 'translate_astro_image').
+    """
+
+    translation_service_method: Optional[str] = None
+    translation_trigger_fields: list[str] = ["name"]
+
+    def save_model(self, request: Any, obj: Any, form: Any, change: bool) -> None:
+        """
+        Overrides save_model to trigger translations if trigger fields changed.
+        """
+        super().save_model(request, obj, form, change)
+
+        if not self.translation_service_method:
+            return
+
+        # Trigger if new object OR if any trigger field changed
+        should_trigger = not change or any(
+            field in form.changed_data for field in self.translation_trigger_fields
+        )
+
+        if should_trigger:
+            from core.services import TranslationService
+
+            kwargs = self.get_translation_kwargs(obj, form, change, should_trigger)
+            TranslationService.trigger_sync(obj, self.translation_service_method, **kwargs)
+
+    def get_translation_kwargs(
+        self, obj: Any, form: Any, change: bool, should_trigger: bool
+    ) -> dict[str, Any]:
+        """
+        Hook to provide extra arguments to the translation service method.
+        """
+        return {}

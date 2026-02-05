@@ -7,7 +7,6 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
-from django.conf import settings
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 
@@ -68,9 +67,12 @@ class MainPageLocationViewSet(ReadOnlyModelViewSet):
     ViewSet for listing active Main Page Location Sliders.
     """
 
-    queryset = MainPageLocation.objects.filter(is_active=True).order_by("-adventure_date")
     serializer_class = MainPageLocationSerializer
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
+
+    def get_queryset(self):
+        """Returns the optimized queryset for active locations."""
+        return GalleryQueryService.get_active_locations()
 
 
 class TravelHighlightsBySlugView(APIView):
@@ -121,14 +123,9 @@ class TagsView(ViewSet):
         lang = request.query_params.get("lang")
         tags = GalleryQueryService.get_tag_stats(category_filter, language_code=lang)
 
-        # Proactive Translation: If a language is requested, ensure all tags have it
-        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
-            from core.services import TranslationService
-
-            for tag in tags:
-                if not tag.has_translation(lang):
-                    logger.info(f"Proactively translating tag '{tag.name}' to {lang}")
-                    TranslationService.translate_parler_tag(tag, lang)
+        # Proactive Translation removed from view to prevent blocking the request thread.
+        # Translations are triggered on object save in the admin via AutomatedTranslationMixin.
+        # Future enhancement: Move this to a background Celery task.
 
         serializer = self.serializer_class(tags, many=True, context={"request": request})
         return Response(serializer.data)

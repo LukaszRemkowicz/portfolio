@@ -5,7 +5,7 @@ from django_countries import countries
 
 from django.db.models import Count, Q, QuerySet
 
-from .models import AstroImage, Tag
+from .models import AstroImage, MainPageLocation, Tag
 
 
 class GalleryQueryService:
@@ -13,6 +13,18 @@ class GalleryQueryService:
     Service for handling complex filtering logic for the Astro Gallery.
     Encapsulates QuerySet construction to adhere to SRP.
     """
+
+    _country_cache: Optional[Dict[str, Dict[str, str]]] = None
+
+    @classmethod
+    def _get_country_maps(cls) -> Dict[str, Dict[str, str]]:
+        """Returns cached country and code maps."""
+        if cls._country_cache is None:
+            cls._country_cache = {
+                "country_map": {name.lower(): code for code, name in dict(countries).items()},
+                "code_map": {code.lower(): code for code in dict(countries).keys()},
+            }
+        return cls._country_cache
 
     @staticmethod
     def get_filtered_images(params: Dict[str, Any]) -> QuerySet[AstroImage]:
@@ -23,7 +35,15 @@ class GalleryQueryService:
         queryset = (
             AstroImage.objects.select_related("place")
             .prefetch_related(
-                "tags", "camera", "lens", "telescope", "tracker", "tripod"
+                "translations",
+                "place__translations",
+                "tags",
+                "tags__translations",
+                "camera",
+                "lens",
+                "telescope",
+                "tracker",
+                "tripod",
             )  # type: ignore[misc]
             .all()
             .order_by("-created_at")
@@ -37,6 +57,7 @@ class GalleryQueryService:
         # 2. Filter by Tags
         tag_slug = params.get("tag")
         if tag_slug:
+            # Note: filtering by translations slug is fine, but prefetching helps representation
             queryset = queryset.filter(tags__translations__slug__in=[tag_slug])
 
         # 3. Filter by Travel (Fuzzy country/place match)
@@ -65,7 +86,15 @@ class GalleryQueryService:
         queryset = (
             AstroImage.objects.select_related("place")
             .prefetch_related(
-                "tags", "camera", "lens", "telescope", "tracker", "tripod"
+                "translations",
+                "place__translations",
+                "tags",
+                "tags__translations",
+                "camera",
+                "lens",
+                "telescope",
+                "tracker",
+                "tripod",
             )  # type: ignore[misc]
             .filter(place__country=slider.place.country if slider.place else None)
         )
@@ -87,7 +116,8 @@ class GalleryQueryService:
 
         return cast(
             QuerySet,
-            Tag.objects.filter(images__isnull=False)
+            Tag.objects.prefetch_related("translations")
+            .filter(images__isnull=False)
             .annotate(num_times=Count("images", filter=annotation_filter, distinct=True))
             .filter(num_times__gt=0)
             .order_by("-num_times", "id")
@@ -95,34 +125,52 @@ class GalleryQueryService:
         )
 
     @staticmethod
+    def get_active_locations() -> QuerySet[MainPageLocation]:
+        """
+        Retrieve active MainPageLocation instances with optimized prefetching.
+        Prevents N+1 queries for associated place, background image, and slider images.
+        """
+        return (
+            MainPageLocation.objects.filter(is_active=True)
+            .select_related("place", "background_image")
+            .prefetch_related(
+                "translations",
+                "place__translations",
+                "background_image__translations",
+                "images",
+                "images__translations",
+            )
+            .order_by("-adventure_date")
+        )
+
+    @classmethod
     def _apply_travel_filter(
-        queryset: QuerySet[AstroImage], search_term: str
+        cls, queryset: QuerySet[AstroImage], search_term: str
     ) -> QuerySet[AstroImage]:
         """
         Applies a smart fuzzy filter to images based on location and place.
-
-        Matches the search term against:
-        1. Country Names: Uses a lookup to convert terms like 'Poland' to their ISO code ('PL').
-        2. Country Codes: Matches direct Alpha-2 codes (e.g., 'PL').
-        3. Place Names: Matches specific cities/regions (e.g., 'Tenerife')
-           via case-insensitive lookup.
-
-        This allows the frontend to send a single search string while the backend handles
-        mapping it to the appropriate database fields (location code vs. place name).
+        Optimized with cached dictionary lookup for country mapping.
         """
         search_term_lower = search_term.lower()
-        found_code: Optional[str] = None
-        # Fuzzy country match
-        for code, name in dict(countries).items():
-            matches_code = search_term_lower == code.lower()
-            matches_name = search_term_lower in name.lower()
-            if matches_code or matches_name:
-                found_code = code
-                break
+        maps = cls._get_country_maps()
+        country_map = maps["country_map"]
+        code_map = maps["code_map"]
+
+        found_code = code_map.get(search_term_lower) or country_map.get(search_term_lower)
+
+        # Partial name match fallback (if exact match fails)
+        if not found_code:
+            for name_lower, code in country_map.items():
+                if search_term_lower in name_lower:
+                    found_code = code
+                    break
+
         filter_q = Q(place__translations__name__icontains=search_term)
         if found_code:
             filter_q |= Q(place__country=found_code)
-        # Fallback for manual code entry
+
+        # Fallback for manual code entry that might not be in official list
         if not found_code:
             filter_q |= Q(place__country__icontains=search_term)
+
         return queryset.filter(filter_q)

@@ -20,6 +20,28 @@ class TranslationService:
     agent: TranslationAgentProtocol = GPTTranslationAgent()
 
     @classmethod
+    def trigger_sync(cls, instance: Any, method_name: str, **kwargs: Any) -> dict[str, Any]:
+        """
+        Generic trigger to sync translations across all secondary languages.
+        Calls the specified class method for each language.
+        """
+        supported_languages = cls.get_available_languages()
+        default_lang = settings.PARLER_DEFAULT_LANGUAGE_CODE
+
+        results = {}
+        target_method = getattr(cls, method_name)
+
+        for lang_code in supported_languages:
+            if lang_code == default_lang:
+                continue
+
+            logger.info(f"Syncing {instance} into {lang_code} via {method_name}")
+            res = target_method(instance, lang_code, **kwargs)
+            results[lang_code] = res
+
+        return results
+
+    @classmethod
     def get_translation(cls, instance: Any, field_name: str, language_code: str) -> str:
         """Pure getter that retrieves an existing translation from the database."""
         if not language_code or language_code == settings.PARLER_DEFAULT_LANGUAGE_CODE:
