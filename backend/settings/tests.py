@@ -2,6 +2,13 @@
 """
 Test settings for pytest
 """
+__all__ = [  # noqa: F405
+    "DATABASES",
+    "CACHES",
+    "EMAIL_BACKEND",
+    "PASSWORD_HASHERS",
+    "LOGGING_CONFIG",
+]
 
 # Set required environment variables BEFORE importing settings
 import os

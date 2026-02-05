@@ -2,6 +2,7 @@
 """
 URL configuration for the translation app.
 """
+
 from django.urls import path
 
 from .views import admin_dynamic_parler_css_view

@@ -3,8 +3,7 @@ import uuid
 from io import BytesIO
 from typing import Any
 
-from django_ckeditor_5.fields import CKEditor5Field  # noqa: F401
-from parler.models import TranslatableModel, TranslatedFields  # noqa: F401
+from parler.models import TranslatableModel
 from PIL import Image
 
 from django.core.exceptions import ValidationError

@@ -13,9 +13,9 @@ packages = [
 ]
 
 [tool.poetry.scripts]
-test = "core.scripts:test"
-test-cov = "core.scripts:test_cov"
-security = "core.scripts:security"
+test = "scripts:test"
+test-cov = "scripts:test_cov"
+security = "scripts:security"
 
 [tool.poetry.dependencies]
 python = ">=3.13,<4.0"
@@ -84,7 +84,7 @@ profile = "black"
 multi_line_output = 3
 line_length = 100
 known_django = "django"
-known_first_party = ["astrophotography", "programming", "users", "inbox", "core"]
+known_first_party = ["astrophotography", "programming", "users", "inbox", "core", "common", "scripts", "settings"]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLDER"]
 
 [tool.mypy]

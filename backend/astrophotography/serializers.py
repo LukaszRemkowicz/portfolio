@@ -9,7 +9,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils import translation
 
-from core.utils.signing import generate_signed_url_params
+from common.utils.signing import generate_signed_url_params
 from translation.services import TranslationService
 
 from .models import (

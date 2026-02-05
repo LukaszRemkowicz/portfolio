@@ -3,6 +3,7 @@
 Tests for translation-related tasks, including Celery tasks, service logic,
 and GPT agent interactions.
 """
+
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest

@@ -13,7 +13,7 @@ from astrophotography.tests.factories import (
     PlaceFactory,
     TagFactory,
 )
-from core.utils.signing import generate_signed_url_params
+from common.utils.signing import generate_signed_url_params
 
 
 @pytest.mark.django_db

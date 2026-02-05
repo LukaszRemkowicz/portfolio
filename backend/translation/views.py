@@ -2,6 +2,7 @@
 """
 Views for the translation app, providing dynamic styling and status endpoints.
 """
+
 from rest_framework import permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.request import Request

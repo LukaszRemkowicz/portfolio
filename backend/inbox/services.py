@@ -10,7 +10,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
 
-from core.utils.logging import sanitize_for_logging
+from common.utils.logging import sanitize_for_logging
 
 from .models import ContactMessage
 

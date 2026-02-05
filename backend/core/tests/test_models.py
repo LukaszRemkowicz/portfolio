@@ -2,6 +2,7 @@
 """
 Tests for Core models, specifically TranslationTask.
 """
+
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 

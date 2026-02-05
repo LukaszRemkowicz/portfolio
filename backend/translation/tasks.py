@@ -2,6 +2,7 @@
 """
 Celery tasks for asynchronous translation processing.
 """
+
 import logging
 from typing import Any
 
@@ -98,7 +99,7 @@ def translate_instance_task(
                 content_type=content_type, object_id=str(instance_pk), language=language_code
             ).update(status=TranslationTask.Status.FAILED, error_message="Instance not found")
         except Exception:
-            pass
+            logger.exception("Failed to update TranslationTask status to FAILED")
 
         return {
             "model": model_name,

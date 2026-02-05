@@ -10,8 +10,8 @@ from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 
-from core.throttling import GalleryRateThrottle
-from core.utils.signing import validate_signed_url
+from common.throttling import GalleryRateThrottle
+from common.utils.signing import validate_signed_url
 
 from .models import AstroImage, CelestialObjectChoices, MainPageBackgroundImage, MainPageLocation
 from .serializers import (
@@ -25,6 +25,13 @@ from .serializers import (
 from .services import GalleryQueryService
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_for_log(value: str | None) -> str:
+    """Sanitizes a string for logging by removing control characters."""
+    if value is None:
+        return "None"
+    return str(value).replace("\n", "").replace("\r", "")
 
 
 class AstroImageViewSet(ReadOnlyModelViewSet):
@@ -100,10 +107,13 @@ class TravelHighlightsBySlugView(APIView):
                 try:
                     slider = MainPageLocation.objects.get(is_active=True, place_slug=country_slug)
                 except MainPageLocation.DoesNotExist:
-                    logger.warning(f"Travel highlight transition failed for slug: {country_slug}")
+                    safe_slug = _sanitize_for_log(country_slug)
+                    logger.warning(f"Travel highlight transition failed for slug: {safe_slug}")
                     raise Http404("No MainPageLocation matches the given query.")
             else:
-                logger.warning(f"Travel highlight not found: {country_slug}/{place_slug}")
+                safe_country = _sanitize_for_log(country_slug)
+                safe_place = _sanitize_for_log(place_slug)
+                logger.warning(f"Travel highlight not found: {safe_country}/{safe_place}")
                 raise Http404("No MainPageLocation matches the given query.")
         serializer = self.serializer_class(slider, context={"request": request})
         return Response(serializer.data)
@@ -156,19 +166,22 @@ class SecureMediaView(APIView):
 
     def get(self, request, slug):
         """Validates the signature and redirects to the protected media path."""
+        # Sanitize slug for logging
+        safe_slug = _sanitize_for_log(slug)
+
         # Validate signature
         signature = request.query_params.get("s")
         expiration = request.query_params.get("e")
         if not signature or not expiration:
-            logger.warning(f"Missing signature for secure media request: {slug}")
+            logger.warning(f"Missing signature for secure media request: {safe_slug}")
             return HttpResponse("Missing signature", status=403)
         if not validate_signed_url(slug, signature, expiration):
-            logger.warning(f"Invalid or expired signature for secure media: {slug}")
+            logger.warning(f"Invalid or expired signature for secure media: {safe_slug}")
             return HttpResponse("Invalid or expired signature", status=403)
         image = get_object_or_404(AstroImage, slug=slug)
         # Security check: Ensure the image actually has a file
         if not image.path:
-            logger.error(f"Image record found but file missing for slug: {slug}")
+            logger.error(f"Image record found but file missing for slug: {safe_slug}")
             raise Http404("Image file not found")
         # Construct the protected path for Nginx
         # Note: image.path.name usually looks like 'images/my_photo.jpg'

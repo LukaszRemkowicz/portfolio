@@ -98,7 +98,7 @@ services:
 
   celery-worker:
     <<: *backend-common
-    command: celery -A core worker -l info
+    command: celery -A settings worker -l info
     restart: unless-stopped
     depends_on:
       - db
@@ -106,7 +106,7 @@ services:
 
   flower:
     <<: *backend-common
-    command: celery -A core flower
+    command: celery -A settings flower
     ports:
       - "5555:5555"
     restart: unless-stopped

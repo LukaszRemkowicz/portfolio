@@ -2,6 +2,7 @@
 """
 Celery configuration for the Portfolio backend.
 """
+
 import os
 
 from celery import Celery
