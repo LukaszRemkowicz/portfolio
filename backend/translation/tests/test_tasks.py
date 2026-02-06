@@ -178,6 +178,70 @@ class TestTaskService:
                     assert instance.name == "TranslatedTag"
                     assert instance.slug == "translatedtag"
 
+    @patch("translation.services.TranslationService._run_parler_translation")
+    def test_translate_user_handles_text_and_html(
+        self, mock_run_parler, mock_task_infrastructure, mock_openai_client
+    ):
+        """
+        Test that translate_user uses correct handlers for bio (HTML) and short_description (text).
+        """
+        instance = MagicMock()
+        mock_run_parler.return_value = "Translated"
+
+        # Call the method
+        TranslationService.translate_user(instance, "pl")
+
+        # Verify calls - we expect 2 calls
+        assert mock_run_parler.call_count == 2
+
+        calls = mock_run_parler.call_args_list
+        fields_processed = {}
+
+        for call in calls:
+            args, _ = call
+            field_name = args[1]
+            handler = args[3]
+            fields_processed[field_name] = handler
+
+        # Verify short_description used standard text translator
+        assert "short_description" in fields_processed
+        assert fields_processed["short_description"] == TranslationService.agent.translate
+
+        # Verify bio used HTML translator
+        assert "bio" in fields_processed
+        assert fields_processed["bio"] == TranslationService.agent.translate_html
+
+    @patch("translation.services.TranslationService.agent")
+    def test_translate_user_saves_translations(self, mock_agent, mock_task_infrastructure):
+        """Test that translated fields are saved."""
+        instance = MagicMock()
+        mock_agent.translate.return_value = "Opis"
+        mock_agent.translate_html.return_value = "<p>Bio</p>"
+
+        # Mock the helper to actually return values like the real method would with the mock agent
+        # We can't easily mock the generator-based _run_parler_translation in a simple way
+        # that mimics full execution without complexity, so we'll mock _run_parler_translation
+        # directly to return the values we expect
+
+        with patch("translation.services.TranslationService._run_parler_translation") as mock_run:
+
+            def side_effect(inst, field, lang, handler, force=False):
+                if field == "short_description":
+                    return "Opis"
+                return "<p>Bio</p>"
+
+            mock_run.side_effect = side_effect
+
+            # Call method
+            results = TranslationService.translate_user(instance, "pl")
+
+            # Verify results
+            assert results["short_description"] == "Opis"
+            assert results["bio"] == "<p>Bio</p>"
+
+            # Verify save_translations called
+            instance.save_translations.assert_called_once()
+
     def test_translate_astro_image_uses_html_agent_for_description(self):
         """Verify HTML agent use for description in AstroImage translation."""
         instance = MagicMock()

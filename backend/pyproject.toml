@@ -55,6 +55,7 @@ safety = "^3.7.0"
 flake8-pyproject = "^1.2.4"
 factory-boy = "^3.3.0"
 Faker = "^37.0.0"
+watchdog = "^6.0.0"
 
 [build-system]
 requires = ["poetry-core"]

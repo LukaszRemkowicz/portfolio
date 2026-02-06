@@ -98,7 +98,7 @@ services:
 
   celery-worker:
     <<: *backend-common
-    command: celery -A settings worker -l info
+    command: watchmedo auto-restart --directory=./ --pattern=*.py --recursive -- celery -A settings worker -l info
     restart: unless-stopped
     depends_on:
       - db

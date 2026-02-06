@@ -3,12 +3,18 @@ import logging
 
 from parler.admin import TranslatableAdmin
 
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
 
-from translation.mixins import DynamicParlerStyleMixin, HideNonTranslatableFieldsMixin
+from translation.mixins import (
+    AutomatedTranslationMixin,
+    DynamicParlerStyleMixin,
+    HideNonTranslatableFieldsMixin,
+    TranslationStatusMixin,
+)
 
 from .models import Profile
 
@@ -18,12 +24,20 @@ logger = logging.getLogger(__name__)
 
 @admin.register(User)
 class UserAdmin(
-    DynamicParlerStyleMixin, HideNonTranslatableFieldsMixin, TranslatableAdmin, DjangoUserAdmin
+    AutomatedTranslationMixin,
+    TranslationStatusMixin,
+    DynamicParlerStyleMixin,
+    HideNonTranslatableFieldsMixin,
+    TranslatableAdmin,
+    DjangoUserAdmin,
 ):
     """
     Define admin model for custom User model with email as username.
     Singleton pattern: Only one user is allowed.
     """
+
+    translation_service_method = "translate_user"
+    translation_trigger_fields = ["short_description", "bio"]
 
     fieldsets = (
         (None, {"fields": ("email", "password")}),
@@ -51,12 +65,16 @@ class UserAdmin(
                     "is_superuser",
                     "groups",
                     "user_permissions",
-                )
+                ),
+                "classes": ("collapse",),
             },
         ),
         (
             _("Important dates"),
-            {"fields": ("last_login", "date_joined", "created_at", "updated_at")},
+            {
+                "fields": ("last_login", "date_joined", "created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
         ),
     )
 
@@ -77,6 +95,26 @@ class UserAdmin(
 
     # Fields to show when editing a translation (used by HideNonTranslatableFieldsMixin)
     translatable_fields = ["short_description", "bio"]
+
+    def get_fieldsets(self, request, obj=None):
+        """Dynamically add translation_status to Personal info on default language tab."""
+        fieldsets = super().get_fieldsets(request, obj)
+        if not obj:
+            return fieldsets
+        current_language = request.GET.get("language")
+        default_language = getattr(settings, "PARLER_DEFAULT_LANGUAGE_CODE", "en")
+        if not current_language or current_language == default_language:
+            fieldsets = list(fieldsets)
+            for index, (name, opts) in enumerate(fieldsets):
+                if name == _("Personal info"):
+                    new_opts = opts.copy()
+                    fields = list(new_opts["fields"])
+                    fields.insert(0, "translation_status")
+                    new_opts["fields"] = tuple(fields)
+                    fieldsets[index] = (name, new_opts)
+                    break
+            return tuple(fieldsets)
+        return fieldsets
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         """
@@ -126,7 +164,7 @@ class UserAdmin(
     list_display_links = ("email",)
     search_fields = ("email", "first_name", "last_name")
     ordering = ("email",)
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created_at", "updated_at", "translation_status")
 
     def has_add_permission(self, request) -> bool:
         """Only allow adding a user if no user exists (singleton pattern)"""

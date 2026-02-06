@@ -272,6 +272,37 @@ class TranslationService:
         return results
 
     @classmethod
+    def translate_user(
+        cls, instance: Any, language_code: str, force: bool = False
+    ) -> dict[str, str]:
+        """
+        Specific translator for User (short_description, bio).
+        Handles different content types:
+        - short_description: plain text
+        - bio: HTML
+        """
+        results = {}
+
+        # Define which handler to use for each field
+        field_config = {
+            "short_description": cls.agent.translate,
+            "bio": cls.agent.translate_html,
+        }
+
+        for field, handler in field_config.items():
+            results[field] = cls._run_parler_translation(
+                instance, field, language_code, handler, force=force
+            )
+
+        try:
+            with transaction.atomic():
+                instance.save_translations()
+        except Exception:
+            logger.exception(f"Failed to save User translations for {instance}")
+
+        return results
+
+    @classmethod
     def translate_parler_tag(
         cls, instance: Any, language_code: str, force: bool = False
     ) -> list[str]:
