@@ -2,11 +2,9 @@ import logging
 from typing import List, Optional
 
 from bs4 import BeautifulSoup
-from openai import OpenAI
-
-from django.conf import settings
 
 from .protocols import TranslationAgentProtocol
+from .providers import LLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +18,23 @@ LANGUAGE_MAP = {
 }
 
 
-class GPTTranslationAgent(TranslationAgentProtocol):
+class TranslationAgent(TranslationAgentProtocol):
     """
-    Agent responsible for translating text and HTML content using OpenAI's GPT models.
+    Agent responsible for translating text and HTML content using LLM providers.
     Supports dual-step translation (Translate then Edit) and HTML structure preservation.
+
+    This agent is provider-agnostic and uses dependency injection to work with any LLM
+    (GPT, Gemini, Claude, etc.) that implements the LLMProvider protocol.
     """
 
-    def __init__(self) -> None:
-        """Initializes the OpenAI client using settings."""
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    def __init__(self, provider: LLMProvider) -> None:
+        """
+        Initializes the translation agent with an LLM provider.
+
+        Args:
+            provider: LLM provider instance (GPTProvider, GeminiProvider, etc.)
+        """
+        self.provider = provider
 
     def translate_place(self, text: str, target_lang_code: str, country_name: str) -> Optional[str]:
         """
@@ -57,22 +63,16 @@ class GPTTranslationAgent(TranslationAgentProtocol):
         - If the association is uncertain or conflicting, do not translate the name.
         - If user made mistake in place name, correct it (for example, if user wrote "Big Hawai", it should be "Big Hawaii")  # noqa: E501
         """
-        try:
-            r = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": text},
-                ],
-                temperature=0.0,
-                top_p=1.0,
-            )
-            result = (r.choices[0].message.content or "").strip()
+        result = self.provider.ask_question(
+            system_prompt=prompt,
+            user_message=text,
+            temperature=0.0,
+        )
+        if result:
             logger.info(f"Place translation result: '{text}' -> '{result}'")
-            return result
-        except Exception:
-            logger.exception(f"GPT place translation failed for '{text}'")
-            return None
+        else:
+            logger.exception(f"LLM place translation failed for '{text}'")
+        return result
 
     def translate_tag(self, text: str, target_lang_code: str) -> Optional[str]:
         """
@@ -91,22 +91,16 @@ class GPTTranslationAgent(TranslationAgentProtocol):
         - Maintain the same capitalization style as the source if possible.
         - Return ONLY the translated tag. No explanations.
         """
-        try:
-            r = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": text},
-                ],
-                temperature=0.0,
-                top_p=1.0,
-            )
-            result = (r.choices[0].message.content or "").strip()
+        result = self.provider.ask_question(
+            system_prompt=prompt,
+            user_message=text,
+            temperature=0.0,
+        )
+        if result:
             logger.info(f"Tag translation result: '{text}' -> '{result}'")
-            return result
-        except Exception:
-            logger.exception(f"GPT tag translation failed for '{text}'")
-            return None
+        else:
+            logger.exception(f"LLM tag translation failed for '{text}'")
+        return result
 
     def translate(self, text: str, target_lang_code: str) -> Optional[str]:
         """
@@ -151,42 +145,34 @@ class GPTTranslationAgent(TranslationAgentProtocol):
         - Keep sentences concise and natural.
         Return ONLY the edited text with all placeholders preserved.
         """.strip()
-        try:
-            lang_name = LANGUAGE_MAP.get(target_lang_code, target_lang_code)
-            # ---- CALL 1: TRANSLATE ----
-            r1 = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": translation_instructions.format(language=lang_name),
-                    },
-                    {"role": "user", "content": text},
-                ],
-                temperature=0.0,
-                top_p=1.0,
-            )
-            translated_raw = (r1.choices[0].message.content or "").strip()
-            if not translated_raw:
-                logger.warning("GPT returned empty raw translation")
-                return None
-            logger.info("Raw translation complete, starting editorial refinement")
-            # ---- CALL 2: EDIT ----
-            r2 = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": editing_instructions.format(language=lang_name)},
-                    {"role": "user", "content": translated_raw},
-                ],
-                temperature=0.2,
-                top_p=1.0,
-            )
-            final_result = (r2.choices[0].message.content or "").strip()
-            logger.info(f"Two-step translation complete for {target_lang_code}")
-            return final_result
-        except Exception:
-            logger.exception("GPT two-step translation failed")
+        lang_name = LANGUAGE_MAP.get(target_lang_code, target_lang_code)
+
+        # ---- CALL 1: TRANSLATE ----
+        translated_raw = self.provider.ask_question(
+            system_prompt=translation_instructions.format(language=lang_name),
+            user_message=text,
+            temperature=0.0,
+        )
+
+        if not translated_raw:
+            logger.warning("LLM returned empty raw translation")
             return None
+
+        logger.info("Raw translation complete, starting editorial refinement")
+
+        # ---- CALL 2: EDIT ----
+        final_result = self.provider.ask_question(
+            system_prompt=editing_instructions.format(language=lang_name),
+            user_message=translated_raw,
+            temperature=0.2,
+        )
+
+        if final_result:
+            logger.info(f"Two-step translation complete for {target_lang_code}")
+        else:
+            logger.exception("LLM two-step translation failed")
+
+        return final_result
 
     def _extract_all_html_tags(self, html_content: str) -> tuple[str, dict[int, str]]:
         """
@@ -278,6 +264,10 @@ if __name__ == "__main__":
 
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings.base")
     django.setup()
-    text = "text"
-    agent = GPTTranslationAgent()
+
+    from .factory import get_llm_provider
+
+    text = "some text"
+    provider = get_llm_provider()
+    agent = TranslationAgent(provider)
     print(agent.translate_html(text, "pl"))

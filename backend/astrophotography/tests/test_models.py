@@ -1,6 +1,6 @@
 # backend/astrophotography/tests/test_models.py
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
+from pytest_mock import MockerFixture
 
 from astrophotography.models import AstroImage
 from astrophotography.tests.factories import (
@@ -189,7 +189,7 @@ class TestTagModel:
         assert tag.safe_translation_getter("name", language_code="en") == "Stars"
         assert tag.safe_translation_getter("name", language_code="pl") == "Gwiazdy"
 
-    def test_translation_service_integration(self, monkeypatch: MonkeyPatch) -> None:
+    def test_translation_service_integration(self, mocker: MockerFixture) -> None:
         """
         Verify TranslationService.translate_parler_tag works with the new field structure.
         Only generates name via GPT, slug is synced locally.
@@ -197,10 +197,10 @@ class TestTagModel:
         tag = TagFactory(name="Nebula")  # slug is "nebula"
 
         # Mock the agent to avoid actual GPT calls
-        def mock_translate_tag(text, lang):
-            return f"TR_{text}"
+        mock_agent = mocker.Mock()
+        mock_agent.translate_tag.side_effect = lambda text, lang: f"TR_{text}"
 
-        monkeypatch.setattr(TranslationService.agent, "translate_tag", mock_translate_tag)
+        mocker.patch.object(TranslationService, "_get_agent", return_value=mock_agent)
 
         # Execute service method
         TranslationService.translate_parler_tag(tag, "pl")

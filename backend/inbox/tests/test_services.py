@@ -1,32 +1,22 @@
 # backend/inbox/tests/test_services.py
-from typing import Generator
-from unittest.mock import MagicMock, patch
-
 import pytest
+from pytest_mock import MockerFixture
 
-from django.conf import settings
+from django.test import override_settings
 
 from inbox.models import ContactMessage
 from inbox.services import ContactMessageEmailService, ContactSubmissionService, DuplicateSubmission
 from inbox.tests.factories import ContactMessageFactory
 
 
-@pytest.fixture
-def mock_email_service() -> Generator[None, None, None]:
-    """
-    Override the autouse fixture from conftest.py to DO NOTHING.
-    This allows us to test the actual service methods without them being mocked out.
-    """
-    yield
-
-
 class TestContactMessageEmailService:
-    @patch("inbox.services.send_mail")
-    @patch("inbox.services.logger")
     def test_send_notification_email_success(
-        self, mock_logger: MagicMock, mock_send_mail: MagicMock, contact_message: ContactMessage
+        self, mocker: MockerFixture, contact_message: ContactMessage
     ) -> None:
         """Test successful email sending"""
+        mock_send_mail = mocker.patch("inbox.services.send_mail")
+        mock_logger = mocker.patch("inbox.services.logger")
+
         # Call the service method
         ContactMessageEmailService.send_notification_email(contact_message)
 
@@ -40,32 +30,33 @@ class TestContactMessageEmailService:
             f"Email notification sent for message ID={contact_message.id}"
         )
 
-    @patch("inbox.services.send_mail")
-    @patch("inbox.services.logger")
     def test_send_notification_email_debug_simulation(
-        self, mock_logger: MagicMock, mock_send_mail: MagicMock, contact_message: ContactMessage
+        self, mocker: MockerFixture, contact_message: ContactMessage
     ) -> None:
         """Test that email is simulated (logged) but NOT sent when DEBUG=True"""
+        mock_send_mail = mocker.patch("inbox.services.send_mail")
+        mock_logger = mocker.patch("inbox.services.logger")
 
-        with patch.object(settings, "DEBUG", True):
+        with override_settings(DEBUG=True):
             # Call the service method
             ContactMessageEmailService.send_notification_email(contact_message)
 
-            # Verify send_mail was NOT called
-            mock_send_mail.assert_not_called()
+        # Verify send_mail was NOT called
+        mock_send_mail.assert_not_called()
 
-            # Verify logger.info was called with simulation messages
-            mock_logger.info.assert_any_call("DEBUG=True: Simulating email send.")
-            mock_logger.info.assert_any_call(
-                f"Fake Email notification sent for message ID={contact_message.id}"
-            )
+        # Verify logger.info was called with simulation messages
+        mock_logger.info.assert_any_call("DEBUG=True: Simulating email send.")
+        mock_logger.info.assert_any_call(
+            f"Fake Email notification sent for message ID={contact_message.id}"
+        )
 
-    @patch("inbox.services.send_mail")
-    @patch("inbox.services.logger")
     def test_send_notification_email_failure(
-        self, mock_logger: MagicMock, mock_send_mail: MagicMock, contact_message: ContactMessage
+        self, mocker: MockerFixture, contact_message: ContactMessage
     ) -> None:
         """Test failure handling when send_mail raises exception"""
+        mock_send_mail = mocker.patch("inbox.services.send_mail")
+        mock_logger = mocker.patch("inbox.services.logger")
+
         # Simulate send_mail raising an exception
         mock_send_mail.side_effect = Exception("SMTP Error")
 
@@ -77,11 +68,12 @@ class TestContactMessageEmailService:
             f"Failed to send email notification for message ID={contact_message.id}: SMTP Error"
         )
 
-    @patch("threading.Thread")
     def test_send_notification_email_async(
-        self, mock_thread_class: MagicMock, contact_message: ContactMessage
+        self, mocker: MockerFixture, contact_message: ContactMessage
     ) -> None:
         """Test async wrapper starts a daemon thread"""
+        mock_thread_class = mocker.patch("threading.Thread")
+
         # Call the async method
         ContactMessageEmailService.send_notification_email_async(contact_message)
 
@@ -103,27 +95,31 @@ class TestContactSubmissionService:
         # Should not raise any exception
         ContactSubmissionService.check_duplicate(valid_contact_data, "127.0.0.1")
 
-    @patch("inbox.services.logger")
     def test_check_duplicate_raises_exception(
-        self, mock_logger: MagicMock, valid_contact_data: dict[str, str]
+        self, mocker: MockerFixture, valid_contact_data: dict[str, str]
     ) -> None:
         """Test that check_duplicate raises DuplicateSubmission when a duplicate exists"""
+        mocker.patch("inbox.services.logger")
         ContactMessageFactory(**valid_contact_data)
 
         with pytest.raises(DuplicateSubmission):
             ContactSubmissionService.check_duplicate(valid_contact_data, "127.0.0.1")
 
-    @patch("inbox.services.ContactMessageEmailService.send_notification_email_async")
     def test_finalize_submission(
-        self, mock_email: MagicMock, contact_message: ContactMessage
+        self, mocker: MockerFixture, contact_message: ContactMessage
     ) -> None:
         """Test that finalize_submission sends email and logs success"""
+        mock_email = mocker.patch(
+            "inbox.services.ContactMessageEmailService.send_notification_email_async"
+        )
+
         ContactSubmissionService.finalize_submission(contact_message, "127.0.0.1")
         mock_email.assert_called_once_with(contact_message)
 
-    @patch("inbox.services.logger")
-    def test_log_incoming_data_masking(self, mock_logger: MagicMock) -> None:
+    def test_log_incoming_data_masking(self, mocker: MockerFixture) -> None:
         """Test log masking for emails and long messages"""
+        mock_logger = mocker.patch("inbox.services.logger")
+
         data = {
             "email": "test@example.com",
             "message": "A" * 11,
@@ -140,9 +136,9 @@ class TestContactSubmissionService:
         assert "<11 chars>" in log_str
         assert "X" * 100 + "..." in log_str
 
-    @patch("inbox.services.logger")
-    def test_log_incoming_data_malformed_email(self, mock_logger: MagicMock) -> None:
+    def test_log_incoming_data_malformed_email(self, mocker: MockerFixture) -> None:
         """Test log masking for malformed email strings"""
+        mock_logger = mocker.patch("inbox.services.logger")
         data = {"email": "not-an-email"}
 
         ContactSubmissionService.log_incoming_data(data, "127.0.0.1")

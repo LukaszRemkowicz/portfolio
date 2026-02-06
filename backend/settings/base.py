@@ -168,6 +168,10 @@ WSGI_APPLICATION = "settings.wsgi.application"
 # ==============================================================================
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 
+# LLM Provider Configuration
+# Options: 'gpt' (default), 'gemini', etc.
+LLM_PROVIDER_BACKEND = env.str("LLM_PROVIDER_BACKEND", default="gpt")
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 

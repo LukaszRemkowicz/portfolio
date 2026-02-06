@@ -3,7 +3,7 @@ Services for managing translations and global state in the core application.
 """
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from parler.models import TranslatableModel
 
@@ -11,36 +11,34 @@ from django.conf import settings
 from django.db import transaction
 from django.utils.text import slugify
 
-from .agents import GPTTranslationAgent
 from .protocols import TranslationAgentProtocol
+
+if TYPE_CHECKING:
+    from .agents import TranslationAgent
 
 logger = logging.getLogger(__name__)
 
 
 class TranslationService:
-    agent: TranslationAgentProtocol = GPTTranslationAgent()
+    agent: TranslationAgentProtocol | None = None
 
     @classmethod
-    def trigger_sync(cls, instance: Any, method_name: str, **kwargs: Any) -> dict[str, Any]:
+    def _get_agent(cls) -> "TranslationAgent":
         """
-        Generic trigger to sync translations across all secondary languages.
-        Calls the specified class method for each language.
+        Lazy-load translation agent with configured LLM provider.
+
+        Returns:
+            TranslationAgent: Configured translation agent instance
         """
-        supported_languages = cls.get_available_languages()
-        default_lang = settings.PARLER_DEFAULT_LANGUAGE_CODE
+        if cls.agent is None:
+            from .agents import TranslationAgent
+            from .factory import get_llm_provider
 
-        results = {}
-        target_method = getattr(cls, method_name)
+            provider = get_llm_provider()
+            cls.agent = TranslationAgent(provider)
 
-        for lang_code in supported_languages:
-            if lang_code == default_lang:
-                continue
-
-            logger.info(f"Syncing {instance} into {lang_code} via {method_name}")
-            res = target_method(instance, lang_code, **kwargs)
-            results[lang_code] = res
-
-        return results
+        # Cast strict type for IDE/Mypy, even though runtime is Protocol
+        return cast("TranslationAgent", cls.agent)
 
     @classmethod
     def get_translation(cls, instance: Any, field_name: str, language_code: str) -> str:
@@ -193,7 +191,7 @@ class TranslationService:
             # Specialized methods (like translate_astro_image) should not call this
             # if they need custom field-level logic (like HTML).
             val = cls._run_parler_translation(
-                instance, field_name, language_code, cls.agent.translate, force=force
+                instance, field_name, language_code, cls._get_agent().translate, force=force
             )
             results[field_name] = val
             modified = True
@@ -234,10 +232,10 @@ class TranslationService:
 
         # 'highlight_name' is text, 'story' is HTML
         results["highlight_name"] = cls._run_parler_translation(
-            instance, "highlight_name", language_code, cls.agent.translate, force=force
+            instance, "highlight_name", language_code, cls._get_agent().translate, force=force
         )
         results["story"] = cls._run_parler_translation(
-            instance, "story", language_code, cls.agent.translate_html, force=force
+            instance, "story", language_code, cls._get_agent().translate_html, force=force
         )
 
         try:
@@ -258,7 +256,11 @@ class TranslationService:
         # 'description' is HTML, others are text
         fields = ["name", "description", "exposure_details", "processing_details"]
         for field in fields:
-            handler = cls.agent.translate_html if field == "description" else cls.agent.translate
+            handler = (
+                cls._get_agent().translate_html
+                if field == "description"
+                else cls._get_agent().translate
+            )
             results[field] = cls._run_parler_translation(
                 instance, field, language_code, handler, force=force
             )
@@ -285,8 +287,8 @@ class TranslationService:
 
         # Define which handler to use for each field
         field_config = {
-            "short_description": cls.agent.translate,
-            "bio": cls.agent.translate_html,
+            "short_description": cls._get_agent().translate,
+            "bio": cls._get_agent().translate_html,
         }
 
         for field, handler in field_config.items():
@@ -323,7 +325,7 @@ class TranslationService:
                     logger.info(
                         f"Translating Tag name '{source}' to {language_code} (force={force})"
                     )
-                    new_name = cls.agent.translate_tag(source, language_code)
+                    new_name = cls._get_agent().translate_tag(source, language_code)
                     if new_name:
                         instance.name = new_name
                         results.append(new_name)
@@ -362,7 +364,7 @@ class TranslationService:
 
         # We define a local handler that includes the country context
         def place_handler(text: str, lang: str) -> str:
-            return cls.agent.translate_place(text, lang, country_name) or ""
+            return cls._get_agent().translate_place(text, lang, country_name) or ""
 
         translated = cls._run_parler_translation(
             instance, "name", language_code, place_handler, force=force
@@ -395,7 +397,7 @@ class TranslationService:
         cls, source_text: str, country: str, language_code: str
     ) -> str:
         """Fetches translation for a place name using GPT with country context."""
-        translated_text = cls.agent.translate_place(source_text, language_code, country)
+        translated_text = cls._get_agent().translate_place(source_text, language_code, country)
 
         if not translated_text:
             translated_text = f"[TRANSLATION FAILED] {source_text}"

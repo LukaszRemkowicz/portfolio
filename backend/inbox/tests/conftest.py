@@ -1,8 +1,7 @@
-# backend/inbox/tests/conftest.py
-from typing import Generator
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
+from pytest_mock import MockerFixture
 
 from core.models import LandingPageSettings
 from core.tests.factories import LandingPageSettingsFactory
@@ -28,21 +27,20 @@ def kill_switch_middleware() -> ContactFormKillSwitchMiddleware:
     return ContactFormKillSwitchMiddleware(lambda request: None)
 
 
-@pytest.fixture(autouse=True)
-def mock_email_service() -> Generator[MagicMock, None, None]:
+@pytest.fixture
+def mock_email_service(mocker: MockerFixture) -> MagicMock:
     """
     Automatically mock email service for all tests.
     Prevents actual emails from being sent during tests.
     """
-    with (
-        patch(
-            "inbox.services.ContactMessageEmailService.send_notification_email_async"
-        ) as mock_async,
-        patch("django.core.mail.send_mail") as mock_send_mail,
-    ):
-        mock_async.return_value = None
-        mock_send_mail.return_value = 1
-        yield mock_async
+    mock_async = mocker.patch(
+        "inbox.services.ContactMessageEmailService.send_notification_email_async"
+    )
+    mock_send_mail = mocker.patch("django.core.mail.send_mail")
+
+    mock_async.return_value = None
+    mock_send_mail.return_value = 1
+    return mock_async
 
 
 @pytest.fixture

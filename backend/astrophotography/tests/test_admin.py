@@ -1,9 +1,9 @@
 import uuid
-from unittest.mock import MagicMock, patch
 
 import pytest
+from pytest_mock import MockerFixture
 
-from django.test import Client
+from django.test import Client, override_settings
 from django.urls import reverse
 
 from astrophotography.models import Place
@@ -139,53 +139,58 @@ class TestMainPageBackgroundImageAdmin:
 
 @pytest.mark.django_db
 class TestPlaceAdmin:
-    def test_save_model_triggers_translation_on_create(self, admin_client: Client) -> None:
+    def test_save_model_triggers_translation_on_create(
+        self, admin_client: Client, mocker: MockerFixture
+    ) -> None:
         """Test that creating a new Place via Admin triggers translation task."""
 
-        with (
-            patch("translation.mixins.translate_instance_task") as mock_task,
-            patch("django.conf.settings.PARLER_DEFAULT_LANGUAGE_CODE", "en"),
-            patch(
+        mock_task = mocker.patch("translation.mixins.translate_instance_task")
+        with override_settings(PARLER_DEFAULT_LANGUAGE_CODE="en"):
+            mocker.patch(
                 "translation.services.TranslationService.get_available_languages",
                 return_value=["en", "pl"],
-            ),
-        ):
+            )
 
-            mock_task.delay.side_effect = lambda *args, **kwargs: MagicMock(id=str(uuid.uuid4()))
+            # Use mocker.MagicMock instead of importing MagicMock
+            mock_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
+                id=str(uuid.uuid4())
+            )
 
             url = reverse("admin:astrophotography_place_add")
             data = {"name": "Hawaii", "country": "US", "_save": "Save"}
 
             response = admin_client.post(url, data)
-            assert response.status_code == 302  # Redirect on success
+        assert response.status_code == 302  # Redirect on success
 
-            # Verify Place exists
-            place = Place.objects.get(translations__name="Hawaii")
-            assert place.country == "US"
+        # Verify Place exists
+        place = Place.objects.get(translations__name="Hawaii")
+        assert place.country == "US"
 
-            # Verify task was dispatched
-            # We expect one call for 'pl' (since 'en' is default)
-            mock_task.delay.assert_called_once()
+        # Verify task was dispatched
+        # We expect one call for 'pl' (since 'en' is default)
+        mock_task.delay.assert_called_once()
 
-            args, kwargs = mock_task.delay.call_args
-            assert kwargs["model_name"] == "astrophotography.Place"
-            assert kwargs["instance_pk"] == place.pk
-            assert kwargs["language_code"] == "pl"
-            assert kwargs["method_name"] == "translate_place"
+        args, kwargs = mock_task.delay.call_args
+        assert kwargs["model_name"] == "astrophotography.Place"
+        assert kwargs["instance_pk"] == place.pk
+        assert kwargs["language_code"] == "pl"
+        assert kwargs["method_name"] == "translate_place"
 
-    def test_save_model_triggers_translation_on_name_change(self, admin_client: Client) -> None:
+    def test_save_model_triggers_translation_on_name_change(
+        self, admin_client: Client, mocker: MockerFixture
+    ) -> None:
         """Test that updating Place name via Admin triggers translation task."""
 
-        with (
-            patch("translation.mixins.translate_instance_task") as mock_task,
-            patch("django.conf.settings.PARLER_DEFAULT_LANGUAGE_CODE", "en"),
-            patch(
+        mock_task = mocker.patch("translation.mixins.translate_instance_task")
+        with override_settings(PARLER_DEFAULT_LANGUAGE_CODE="en"):
+            mocker.patch(
                 "translation.services.TranslationService.get_available_languages",
                 return_value=["en", "pl"],
-            ),
-        ):
+            )
 
-            mock_task.delay.side_effect = lambda *args, **kwargs: MagicMock(id=str(uuid.uuid4()))
+            mock_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
+                id=str(uuid.uuid4())
+            )
 
             # 1. Create initial place
             place = PlaceFactory(name="Greece", country="GR")
@@ -194,52 +199,52 @@ class TestPlaceAdmin:
             data = {"name": "New Greece", "country": "GR", "_save": "Save"}
 
             response = admin_client.post(url, data)
-            assert response.status_code == 302
+        assert response.status_code == 302
 
-            # Verify task dispatched
-            mock_task.delay.assert_called_once()
+        # Verify task dispatched
+        mock_task.delay.assert_called_once()
 
-            args, kwargs = mock_task.delay.call_args
-            assert kwargs["model_name"] == "astrophotography.Place"
-            assert kwargs["instance_pk"] == place.pk
-            assert kwargs["language_code"] == "pl"
-            assert kwargs["method_name"] == "translate_place"
+        args, kwargs = mock_task.delay.call_args
+        assert kwargs["model_name"] == "astrophotography.Place"
+        assert kwargs["instance_pk"] == place.pk
+        assert kwargs["language_code"] == "pl"
+        assert kwargs["method_name"] == "translate_place"
 
     def test_save_model_does_not_trigger_translation_if_no_name_change(
-        self, admin_client: Client
+        self, admin_client: Client, mocker: MockerFixture
     ) -> None:
         """Test that translation is triggered when target language differs from BASE."""
         import uuid
 
-        with patch("translation.mixins.translate_instance_task") as mock_task:
-            # Mock the task to return a proper task ID
-            mock_task.delay.return_value.id = str(uuid.uuid4())
+        mock_task = mocker.patch("translation.mixins.translate_instance_task")
+        # Mock the task to return a proper task ID
+        mock_task.delay.return_value.id = str(uuid.uuid4())
 
-            # 1. Create initial place with English (BASE) and Polish translation
-            place = PlaceFactory(name="Italy", country="IT")
+        # 1. Create initial place with English (BASE) and Polish translation
+        place = PlaceFactory(name="Italy", country="IT")
 
-            # Add Polish translation that differs from BASE
-            place.set_current_language("pl")
-            place.name = "Włochy"
-            place.save()
+        # Add Polish translation that differs from BASE
+        place.set_current_language("pl")
+        place.name = "Włochy"
+        place.save()
 
-            # Reset the mock after initial creation
-            mock_task.reset_mock()
+        # Reset the mock after initial creation
+        mock_task.reset_mock()
 
-            # 2. Update the place (change country, not name)
-            url = reverse("admin:astrophotography_place_change", args=[place.pk])
-            data = {
-                "name": "Italy",  # Unchanged
-                "country": "GR",  # Changed country
-                "_save": "Save",
-            }
+        # 2. Update the place (change country, not name)
+        url = reverse("admin:astrophotography_place_change", args=[place.pk])
+        data = {
+            "name": "Italy",  # Unchanged
+            "country": "GR",  # Changed country
+            "_save": "Save",
+        }
 
-            response = admin_client.post(url, data)
-            assert response.status_code == 302
+        response = admin_client.post(url, data)
+        assert response.status_code == 302
 
-            # Verify task WAS called because Polish translation differs from BASE
-            # New logic: compares target language against BASE, not field changes
-            mock_task.delay.assert_called()
+        # Verify task WAS called because Polish translation differs from BASE
+        # New logic: compares target language against BASE, not field changes
+        mock_task.delay.assert_called()
 
     def test_country_field_is_translated(self, admin_client: Client) -> None:
         """

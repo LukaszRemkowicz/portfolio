@@ -3,9 +3,8 @@
 Tests for users models
 """
 
-from unittest.mock import patch
-
 import pytest
+from pytest_mock import MockerFixture
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
@@ -101,20 +100,20 @@ def test_user_str_method() -> None:
 
 
 @pytest.mark.django_db
-def test_user_save_integrity_error() -> None:
+def test_user_save_integrity_error(mocker: MockerFixture) -> None:
     """Test handling of IntegrityError in User.save()"""
     user = UserFactory.build(email="test@example.com")
-    with patch("django.db.models.Model.save") as mock_save:
-        mock_save.side_effect = IntegrityError("Duplicate entry")
-        with pytest.raises(ValueError, match="Failed to save user. Only one user is allowed."):
-            user.save()
+    mock_save = mocker.patch("django.db.models.Model.save")
+    mock_save.side_effect = IntegrityError("Duplicate entry")
+    with pytest.raises(ValueError, match="Failed to save user. Only one user is allowed."):
+        user.save()
 
 
 @pytest.mark.django_db
-def test_user_save_generic_exception() -> None:
+def test_user_save_generic_exception(mocker: MockerFixture) -> None:
     """Test handling of generic Exception in User.save()"""
     user = UserFactory.build(email="test@example.com")
-    with patch("django.db.models.Model.save") as mock_save:
-        mock_save.side_effect = Exception("Some other error")
-        with pytest.raises(Exception, match="Some other error"):
-            user.save()
+    mock_save = mocker.patch("django.db.models.Model.save")
+    mock_save.side_effect = Exception("Some other error")
+    with pytest.raises(Exception, match="Some other error"):
+        user.save()

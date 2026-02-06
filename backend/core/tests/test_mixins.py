@@ -1,7 +1,9 @@
 import uuid
-from unittest.mock import MagicMock, patch
 
-from django.test import RequestFactory, TestCase
+import pytest
+from pytest_mock import MockerFixture
+
+from django.test import RequestFactory, override_settings
 
 from astrophotography.models import Place
 from translation.mixins import (
@@ -11,8 +13,10 @@ from translation.mixins import (
 from translation.models import TranslationTask
 
 
-class TestTranslationStatusMixin(TestCase):
-    def setUp(self):
+@pytest.mark.django_db
+class TestTranslationStatusMixin:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.mixin = TranslationStatusMixin()
         self.mixin.model = Place  # Mock usage on Place model
         self.factory = RequestFactory()
@@ -90,8 +94,9 @@ class TestTranslationStatusMixin(TestCase):
         assert "color:red" in status_html
 
 
-class TestAutomatedTranslationMixin(TestCase):
-    def test_save_model_triggers_tasks_and_creates_records(self):
+@pytest.mark.django_db
+class TestAutomatedTranslationMixin:
+    def test_save_model_triggers_tasks_and_creates_records(self, mocker: MockerFixture):
         """Ensure save_model triggers celery tasks and creates TranslationTask records."""
 
         class BaseAdmin:
@@ -112,18 +117,15 @@ class TestAutomatedTranslationMixin(TestCase):
         admin_instance = MockAdmin()
 
         # Mock dependencies
-        with (
-            patch("translation.mixins.translate_instance_task") as mock_task,
-            patch(
-                "translation.services.TranslationService.get_available_languages",
-                return_value=["en", "pl", "es"],
-            ),
-            patch("django.conf.settings.PARLER_DEFAULT_LANGUAGE_CODE", "en"),
-        ):
-
+        mock_task = mocker.patch("translation.mixins.translate_instance_task")
+        mocker.patch(
+            "translation.services.TranslationService.get_available_languages",
+            return_value=["en", "pl", "es"],
+        )
+        with override_settings(PARLER_DEFAULT_LANGUAGE_CODE="en"):
             # Setup mock task return value with unique IDs
             def side_effect(*args, **kwargs):
-                m = MagicMock()
+                m = mocker.MagicMock()
                 m.id = str(uuid.uuid4())
                 return m
 
@@ -132,12 +134,12 @@ class TestAutomatedTranslationMixin(TestCase):
             # Call save_model
             admin_instance.save_model(None, place, None, False)
 
-            # Verify task calls
-            # 'en' is default (skipped), 'pl' and 'es' should be called
-            assert mock_task.delay.call_count == 2
+        # Verify task calls
+        # 'en' is default (skipped), 'pl' and 'es' should be called
+        assert mock_task.delay.call_count == 2
 
-            # Verify TranslationTask records created
-            tasks = TranslationTask.objects.filter(object_id=place.pk)
-            assert tasks.count() == 2
-            assert tasks.filter(language="pl", status=TranslationTask.Status.PENDING).exists()
-            assert tasks.filter(language="es", status=TranslationTask.Status.PENDING).exists()
+        # Verify TranslationTask records created
+        tasks = TranslationTask.objects.filter(object_id=place.pk)
+        assert tasks.count() == 2
+        assert tasks.filter(language="pl", status=TranslationTask.Status.PENDING).exists()
+        assert tasks.filter(language="es", status=TranslationTask.Status.PENDING).exists()

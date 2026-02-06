@@ -1,8 +1,8 @@
 from datetime import date
-from unittest.mock import MagicMock, patch
 
 import pytest
 from psycopg2.extras import DateRange
+from pytest_mock import MockerFixture
 
 from astrophotography.models import MainPageLocation
 from astrophotography.serializers import (
@@ -154,14 +154,14 @@ class TestAstroImageSerializers:
 @pytest.mark.django_db
 class TestTranslationSerializers:
 
-    @patch("translation.services.TranslationService.get_translation")
     def test_astro_image_serializer_calls_translation_service_with_lang(
-        self, mock_translate: MagicMock
+        self, mocker: MockerFixture
     ) -> None:
         """Test that AstroImageSerializer calls service when lang is present"""
 
+        mock_translate = mocker.patch("translation.services.TranslationService.get_translation")
         mock_translate.return_value = "Translated Text"
-        request = MagicMock()
+        request = mocker.MagicMock()
         request.query_params.get.return_value = "pl"
 
         place = PlaceFactory()
@@ -179,13 +179,13 @@ class TestTranslationSerializers:
         assert data["description"] == "Translated Text"
         mock_translate.assert_any_call(instance, "description", "pl")
 
-    @patch("translation.services.TranslationService.get_translation")
     def test_main_page_location_serializer_calls_translation_service(
-        self, mock_translate: MagicMock
+        self, mocker: MockerFixture
     ) -> None:
 
+        mock_translate = mocker.patch("translation.services.TranslationService.get_translation")
         mock_translate.return_value = "Translated Text"
-        request = MagicMock()
+        request = mocker.MagicMock()
         request.query_params.get.return_value = "pl"
 
         instance = MainPageLocation.objects.create(highlight_name="Highlights")
@@ -195,10 +195,10 @@ class TestTranslationSerializers:
         assert data["highlight_name"] == "Translated Text"
         mock_translate.assert_any_call(instance, "highlight_name", "pl")
 
-    def test_serializer_ignores_translation_without_lang(self) -> None:
+    def test_serializer_ignores_translation_without_lang(self, mocker: MockerFixture) -> None:
         """Test that serializers return original data when lang is missing or en"""
 
-        request = MagicMock()
+        request = mocker.MagicMock()
         request.query_params.get.return_value = None
 
         place = PlaceFactory()
@@ -206,9 +206,9 @@ class TestTranslationSerializers:
             name="Original", slug="slug-no-lang-trans", capture_date="2025-01-01", place=place
         )
 
-        with patch("translation.services.TranslationService.get_translation") as mock_translate:
-            serializer = AstroImageSerializerList(instance, context={"request": request})
-            data = serializer.data
+        mock_translate = mocker.patch("translation.services.TranslationService.get_translation")
+        serializer = AstroImageSerializerList(instance, context={"request": request})
+        data = serializer.data
 
-            assert data["name"] == "Original"
-            mock_translate.assert_not_called()
+        assert data["name"] == "Original"
+        mock_translate.assert_not_called()
