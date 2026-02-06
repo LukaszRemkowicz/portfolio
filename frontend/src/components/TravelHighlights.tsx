@@ -8,6 +8,7 @@ import { MainPageLocation } from '../types';
 import { useAppStore } from '../store/useStore';
 import { stripHtml } from '../utils/html';
 import { APP_ROUTES, DEFAULT_TRAVEL_IMAGE } from '../api/constants';
+import { useTranslation } from 'react-i18next';
 
 const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
   const navigate = useNavigate();
@@ -90,6 +91,7 @@ const TravelHighlights: FC = () => {
   const [locations, setLocations] = useState<MainPageLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const { features } = useAppStore();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const loadSliders = async () => {
@@ -124,11 +126,8 @@ const TravelHighlights: FC = () => {
   return (
     <section id='travel' className={styles.section}>
       <header className={styles.header}>
-        <h2 className={styles.title}>Travel Highlights</h2>
-        <p className={styles.subtitle}>
-          Exploring the world&apos;s most remote locations in pursuit of the
-          perfect cosmic capture.
-        </p>
+        <h2 className={styles.title}>{t('travel.title')}</h2>
+        <p className={styles.subtitle}>{t('travel.subtitle')}</p>
       </header>
 
       <div className={styles.grid}>

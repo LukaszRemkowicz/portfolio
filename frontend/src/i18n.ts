@@ -60,8 +60,20 @@ const resources = {
           'We use cookies to enhance your experience, analyze traffic, and personalize your journey through the cosmos. By using our site, you agree to our',
       },
       travel: {
+        title: 'Travel Highlights',
+        subtitle:
+          "Exploring the world's most remote locations in pursuit of the perfect cosmic capture.",
         adventureDate: 'ADVENTURE DATE',
         exploringCosmic: 'Exploring the cosmic wonders of',
+      },
+      hero: {
+        subtitle: 'Documenting the Cosmos',
+        titlePart1: 'The Beauty of',
+        titlePart2: 'Ancient Light.',
+        viewPortfolio: 'View Portfolio',
+        aboutMe: 'About Me',
+        defaultDescription:
+          'I am a professional astrophotographer capturing the silent majesty of deep-space phenomena. My work bridges the gap between scientific observation and cinematic fine art.',
       },
       categories: {
         Landscape: 'Landscape',
@@ -70,6 +82,41 @@ const resources = {
         'Solar System': 'Solar System',
         'Milky Way': 'Milky Way',
         'Northern Lights': 'Northern Lights',
+      },
+      gallery: {
+        title: 'Latest images',
+        all: 'All Works',
+        astrolandscape: 'Astrolandscape',
+        timelapses: 'Timelapses',
+        loading: 'Loading Portfolio...',
+        empty: 'No works found in this category.',
+      },
+      contact: {
+        title: 'Direct Inquiry',
+        subtitle:
+          "Interested in prints or technical collaboration? Let's connect.",
+        identity: 'Identity',
+        namePlaceholder: 'Your Name',
+        communication: 'Communication',
+        emailPlaceholder: 'Email Address',
+        topic: 'Topic',
+        subjectPlaceholder: 'Subject',
+        transmission: 'Transmission',
+        messagePlaceholder: 'How can I help you?',
+        submit: 'Submit Inquiry',
+        sending: 'Sending...',
+        success: 'Thank you! Your message has been sent successfully.',
+        error:
+          'Transmission failure. Please check your signal or try again later.',
+        validationError:
+          'One or more details in your inquiry require adjustment.',
+        errors: {
+          name: 'Name must be at least 2 characters long.',
+          email: 'Please provide a valid email address.',
+          subject: 'Subject must be at least 5 characters long.',
+          message: 'Message must be at least 10 characters long.',
+          honeypot: 'Please correct the errors above and try again.',
+        },
       },
     },
   },
@@ -117,7 +164,7 @@ const resources = {
         rights: 'Łukasz Remkowicz © 2026',
       },
       about: {
-        title: 'Poza Atmosferę.',
+        title: 'Ponad Atmosferą.',
         defaultBio:
           'Astrofotografia to techniczny taniec z fizyką. Moja podróż składa się z tysięcy klatek, godzin integracji i poświęcenia w odkrywaniu tego, co pozostaje niewidoczne dla gołego oka.',
         siteQuality: 'Jakość Nieba',
@@ -129,8 +176,20 @@ const resources = {
           'Używamy plików cookie, aby ulepszyć Twoje doświadczenie, analizować ruch i spersonalizować Twoją podróż przez kosmos. Korzystając z naszej strony, akceptujesz naszą',
       },
       travel: {
+        title: 'Najciekawsze Podróże',
+        subtitle:
+          'Podróże do różnych zakątków świata, w poszukiwaniu idealnego ujęcia.',
         adventureDate: 'DATA PRZYGODY',
         exploringCosmic: 'Kosmiczna przygoda w',
+      },
+      hero: {
+        subtitle: 'Dokumentowanie Kosmosu',
+        titlePart1: 'Piękno Świata',
+        titlePart2: 'sprzed milionów lat.',
+        viewPortfolio: 'Zobacz Portfolio',
+        aboutMe: 'O mnie',
+        defaultDescription:
+          'Jestem profesjonalnym astrofotografem, uchwycającym cichy majestat zjawisk głębokiego nieba. Moja praca łączy obserwację naukową z artystyczną wizją.',
       },
       categories: {
         Landscape: 'Krajobraz',
@@ -139,6 +198,39 @@ const resources = {
         'Solar System': 'Układ Słoneczny',
         'Milky Way': 'Droga Mleczna',
         'Northern Lights': 'Zorza Polarna',
+      },
+      gallery: {
+        title: 'Ostatnie zdjęcia',
+        all: 'Wszystkie',
+        astrolandscape: 'Astrokrajobraz',
+        timelapses: 'Timelapsy',
+        loading: 'Ładowanie portfolio...',
+        empty: 'Nie znaleziono prac w tej kategorii.',
+      },
+      contact: {
+        title: 'Zapytanie',
+        subtitle: 'Interesują Cię wydruki lub współpraca? Napisz do mnie!',
+        identity: 'Imię',
+        namePlaceholder: 'Twoje Imię',
+        communication: 'Email',
+        emailPlaceholder: 'Adres Email',
+        topic: 'Temat',
+        subjectPlaceholder: 'Temat wiadomości',
+        transmission: 'Wiadomość',
+        messagePlaceholder: 'W czym mogę Ci pomóc?',
+        submit: 'Wyślij zapytanie',
+        sending: 'Wysyłanie...',
+        success: 'Dziękujemy! Twoja wiadomość została wysłana pomyślnie.',
+        error: 'Błąd transmisji. Sprawdź sygnał lub spróbuj ponownie później.',
+        validationError:
+          'Jedna lub więcej szczegółów zapytania wymaga korekty.',
+        errors: {
+          name: 'Imię musi mieć co najmniej 2 znaki.',
+          email: 'Podaj prawidłowy adres email.',
+          subject: 'Temat musi mieć co najmniej 5 znaków.',
+          message: 'Wiadomość musi mieć co najmniej 10 znaków.',
+          honeypot: 'Popraw błędy powyżej i spróbuj ponownie.',
+        },
       },
     },
   },

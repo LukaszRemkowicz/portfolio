@@ -125,10 +125,12 @@ class GPTTranslationAgent(TranslationAgentProtocol):
         - Preserve meaning exactly.
         - Do not add, remove, or change any information.
         - Keep emojis, punctuation, and line breaks.
+        - CRITICAL: Keep ALL placeholders like [[T0]], [[T1]], [[L0]] etc. EXACTLY as they appear.
+        - Do NOT remove, modify, or translate placeholder tokens in double square brackets.
         - Do NOT use metaphors, poetic language, or embellishments.
         - Do NOT use camera or meta narration (no “frame”, “photo”, “widać”, “na zdjęciu”).
         - Use plain, neutral language.
-        Return ONLY the translated text.
+        Return ONLY the translated text with placeholders preserved.
         If there is anchor <a href></a> text, keep it in the same place.
         """.strip()
         # ===== PROMPT 2: EDIT =====
@@ -140,12 +142,14 @@ class GPTTranslationAgent(TranslationAgentProtocol):
         - Do NOT add new evaluations.
         - Do NOT change perspective.
         - Keep emojis and punctuation.
+        - CRITICAL: Keep ALL placeholders like [[T0]], [[T1]], [[L0]] etc. EXACTLY as they appear.
+        - Do NOT remove, modify, or translate placeholder tokens in double square brackets.
         Editing goals:
         - Remove camera/meta narration (e.g. “widać”, “na zdjęciu”).
         - Replace metaphors with plain wording, but keep the original meaning.
         - If an evaluation exists (e.g. “looked exceptional”), keep it in simple, natural form.
         - Keep sentences concise and natural.
-        Return ONLY the edited text.
+        Return ONLY the edited text with all placeholders preserved.
         """.strip()
         try:
             lang_name = LANGUAGE_MAP.get(target_lang_code, target_lang_code)
@@ -184,6 +188,46 @@ class GPTTranslationAgent(TranslationAgentProtocol):
             logger.exception("GPT two-step translation failed")
             return None
 
+    def _extract_all_html_tags(self, html_content: str) -> tuple[str, dict[int, str]]:
+        """
+        Extracts ALL HTML tags and replaces them with placeholders [[T0]], [[T1]], etc.
+        Returns a tuple of (text_with_placeholders, tag_map).
+
+        Example:
+            Input:  "<p><strong>Hello</strong> world</p>"
+            Output: ("[[T0]][[T1]]Hello[[T2]] world[[T3]]",
+                     {0: "<p>", 1: "<strong>", 2: "</strong>", 3: "</p>"})
+        """
+        import re
+
+        tag_map = {}
+        counter = 0
+
+        # Pattern to match HTML tags (opening, closing, self-closing)
+        tag_pattern = re.compile(r"<[^>]+>")
+
+        def replace_tag(match):
+            nonlocal counter
+            tag = match.group(0)
+            placeholder = f"[[T{counter}]]"
+            tag_map[counter] = tag
+            counter += 1
+            return placeholder
+
+        text_with_placeholders = tag_pattern.sub(replace_tag, html_content)
+        return text_with_placeholders, tag_map
+
+    def _restore_all_tags(self, translated_text: str, tag_map: dict[int, str]) -> str:
+        """
+        Restores original HTML tags by replacing placeholders [[T0]], [[T1]], etc.
+        with their corresponding tags from the tag_map.
+        """
+        result = translated_text
+        for index, tag in tag_map.items():
+            placeholder = f"[[T{index}]]"
+            result = result.replace(placeholder, tag)
+        return result
+
     def _extract_links(self, html_content: str) -> tuple[str, List[str]]:
         """
         Extracts <a> tags from HTML and replaces them with placeholders [[L0]], [[L1]] etc.
@@ -208,16 +252,22 @@ class GPTTranslationAgent(TranslationAgentProtocol):
     def translate_html(self, text: str, target_lang_code: str) -> Optional[str]:
         """
         Orchestrates translation of HTML content.
-        Preserves <a> tags using placeholders to avoid GPT corruption of URLs/attributes.
+        Preserves ALL HTML tags and attributes using placeholders to avoid GPT corruption.
         """
         if not text:
             return ""
         logger.info(f"Translating HTML content to {target_lang_code}")
-        clean_text, saved_links = self._extract_links(text)
+
+        # Extract all HTML tags and replace with placeholders
+        clean_text, tag_map = self._extract_all_html_tags(text)
+
+        # Translate the text with placeholders
         translated = self.translate(clean_text, target_lang_code)
         if translated is None:
             return None
-        return self._restore_links(translated, saved_links)
+
+        # Restore original HTML tags
+        return self._restore_all_tags(translated, tag_map)
 
 
 if __name__ == "__main__":

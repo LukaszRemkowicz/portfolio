@@ -90,6 +90,85 @@ class TestTaskAgent:
 
         assert result is None
 
+    def test_extract_all_tags_replaces_tags_with_placeholders(self):
+        """Test that _extract_all_tags correctly extracts and replaces HTML tags."""
+        agent = GPTTranslationAgent()
+        html = "<p><strong>Hello</strong> world</p>"
+
+        text, tag_map = agent._extract_all_html_tags(html)
+
+        # Verify placeholders are created
+        assert "[[T0]]" in text
+        assert "[[T1]]" in text
+        assert "[[T2]]" in text
+        assert "[[T3]]" in text
+
+        # Verify tags are stored
+        assert tag_map[0] == "<p>"
+        assert tag_map[1] == "<strong>"
+        assert tag_map[2] == "</strong>"
+        assert tag_map[3] == "</p>"
+
+        # Verify text content is preserved
+        assert "Hello" in text
+        assert "world" in text
+
+    def test_restore_all_tags_reconstructs_html(self):
+        """Test that _restore_all_tags correctly restores HTML from placeholders."""
+        agent = GPTTranslationAgent()
+        translated_text = "[[T0]][[T1]]Cześć[[T2]] świat[[T3]]"
+        tag_map = {
+            0: "<p>",
+            1: "<strong>",
+            2: "</strong>",
+            3: "</p>",
+        }
+
+        result = agent._restore_all_tags(translated_text, tag_map)
+
+        assert result == "<p><strong>Cześć</strong> świat</p>"
+
+    def test_translate_html_preserves_list_with_attributes(self, mock_openai_client):
+        """
+        Test that translate_html preserves complex HTML lists with attributes.
+        """
+        html_input = """<ul>
+    <li data-list-item-id="abc123"><strong>APOD</strong> and <strong>SKY</strong></li>
+    <li data-list-item-id="def456"><strong>AAPOD2</strong></li>
+</ul>"""
+
+        # Mock GPT responses for two-step translation
+        mock_response1 = MagicMock()
+        mock_response1.choices[0].message.content = (
+            "[[T0]]\n    [[T1]][[T2]]APOD[[T3]] i [[T4]]SKY[[T5]][[T6]]\n    "
+            "[[T7]][[T8]]AAPOD2[[T9]][[T10]]\n[[T11]]"
+        )
+
+        mock_response2 = MagicMock()
+        mock_response2.choices[0].message.content = (
+            "[[T0]]\n    [[T1]][[T2]]APOD[[T3]] i [[T4]]SKY[[T5]][[T6]]\n    "
+            "[[T7]][[T8]]AAPOD2[[T9]][[T10]]\n[[T11]]"
+        )
+
+        mock_client_instance = mock_openai_client.return_value
+        mock_client_instance.chat.completions.create.side_effect = [
+            mock_response1,
+            mock_response2,
+        ]
+
+        agent = GPTTranslationAgent()
+        result = agent.translate_html(html_input, "pl")
+
+        # Verify structure preserved
+        assert "<ul>" in result
+        assert "</ul>" in result
+        assert 'data-list-item-id="abc123"' in result
+        assert 'data-list-item-id="def456"' in result
+        assert "<strong>" in result
+        assert "</strong>" in result
+        assert "<li" in result
+        assert "</li>" in result
+
 
 @pytest.mark.django_db
 class TestTaskService:

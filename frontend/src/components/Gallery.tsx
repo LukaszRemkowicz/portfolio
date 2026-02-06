@@ -75,7 +75,7 @@ const Gallery: React.FC = () => {
   return (
     <section id='gallery' className={styles.section}>
       <div className={styles.header}>
-        <h2 className={styles.title}>Latest images</h2>
+        <h2 className={styles.title}>{t('gallery.title')}</h2>
         <div className={styles.filters}>
           <button
             type='button'
@@ -84,7 +84,7 @@ const Gallery: React.FC = () => {
               filter === 'all' ? styles.active : ''
             }`}
           >
-            All Works
+            {t('gallery.all')}
           </button>
           <button
             type='button'
@@ -102,7 +102,7 @@ const Gallery: React.FC = () => {
               filter === 'astrolandscape' ? styles.active : ''
             }`}
           >
-            Astrolandscape
+            {t('gallery.astrolandscape')}
           </button>
           <button
             type='button'
@@ -111,14 +111,14 @@ const Gallery: React.FC = () => {
               filter === 'timelapse' ? styles.active : ''
             }`}
           >
-            Timelapses
+            {t('gallery.timelapses')}
           </button>
         </div>
       </div>
 
       <div className={styles.grid}>
         {loading ? (
-          <div className={styles.loading}>Loading Portfolio...</div>
+          <div className={styles.loading}>{t('gallery.loading')}</div>
         ) : error ? (
           <div className={styles.error}>{error}</div>
         ) : filteredImages.length > 0 ? (
@@ -126,9 +126,7 @@ const Gallery: React.FC = () => {
             <GalleryCard key={item.pk} item={item} onClick={handleImageClick} />
           ))
         ) : (
-          <div className={styles.noResults}>
-            No works found in this category.
-          </div>
+          <div className={styles.noResults}>{t('gallery.empty')}</div>
         )}
       </div>
 

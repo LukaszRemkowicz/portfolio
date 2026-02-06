@@ -53,7 +53,7 @@ describe('TravelHighlights Component', () => {
       );
     });
 
-    expect(await screen.findByText('Travel Highlights')).toBeInTheDocument();
+    expect(await screen.findByText('travel.title')).toBeInTheDocument();
     expect(screen.getByText('Fjord Expedition')).toBeInTheDocument();
   });
 
@@ -65,7 +65,7 @@ describe('TravelHighlights Component', () => {
     await act(async () => {
       render(<TravelHighlights />);
     });
-    expect(screen.queryByText('Travel Highlights')).not.toBeInTheDocument();
+    expect(screen.queryByText('travel.title')).not.toBeInTheDocument();
   });
 
   it('cycles images automatically', async () => {

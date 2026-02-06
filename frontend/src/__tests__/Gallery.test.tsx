@@ -53,7 +53,7 @@ describe('Gallery Component', () => {
     });
 
     // Wait for load to complete
-    expect(await screen.findByText('Latest images')).toBeInTheDocument();
+    expect(await screen.findByText('gallery.title')).toBeInTheDocument();
     expect(await screen.findByText('M31 Andromeda')).toBeInTheDocument();
   });
 
@@ -143,6 +143,6 @@ describe('Gallery Component', () => {
       );
     });
 
-    expect(screen.queryByText('Latest images')).not.toBeInTheDocument();
+    expect(screen.queryByText('gallery.title')).not.toBeInTheDocument();
   });
 });
