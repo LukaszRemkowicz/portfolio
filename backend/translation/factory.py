@@ -1,4 +1,5 @@
 # backend/translation/factory.py
+from typing import cast
 
 from django.conf import settings
 
@@ -18,9 +19,9 @@ def get_llm_provider() -> LLMProvider:
     backend = getattr(settings, "LLM_PROVIDER_BACKEND", "gpt")
 
     if backend == "gpt":
-        from .providers import GPTProvider
+        from .providers import GPTProvider  # noqa: F811
 
-        return GPTProvider()
+        return cast("GPTProvider", GPTProvider())
     # Future providers can be added here:
     # elif backend == "gemini":
     #     from .providers import GeminiProvider
