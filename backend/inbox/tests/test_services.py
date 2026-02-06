@@ -5,20 +5,21 @@ from pytest_mock import MockerFixture
 from django.test import override_settings
 
 from inbox.models import ContactMessage
-from inbox.services import ContactMessageEmailService, ContactSubmissionService, DuplicateSubmission
+from inbox.services import ContactSubmissionService, DuplicateSubmission
+from inbox.tasks import EmailHandler
 from inbox.tests.factories import ContactMessageFactory
 
 
-class TestContactMessageEmailService:
-    def test_send_notification_email_success(
+class TestEmailHandler:
+    def test_send_email_success(
         self, mocker: MockerFixture, contact_message: ContactMessage
     ) -> None:
         """Test successful email sending"""
-        mock_send_mail = mocker.patch("inbox.services.send_mail")
-        mock_logger = mocker.patch("inbox.services.logger")
+        mock_send_mail = mocker.patch("inbox.tasks.send_mail")
+        mock_logger = mocker.patch("inbox.tasks.logger")
 
         # Call the service method
-        ContactMessageEmailService.send_notification_email(contact_message)
+        EmailHandler.send_email(contact_message)
 
         # Verify send_mail was called with correct arguments
         mock_send_mail.assert_called_once()
@@ -34,12 +35,12 @@ class TestContactMessageEmailService:
         self, mocker: MockerFixture, contact_message: ContactMessage
     ) -> None:
         """Test that email is simulated (logged) but NOT sent when DEBUG=True"""
-        mock_send_mail = mocker.patch("inbox.services.send_mail")
-        mock_logger = mocker.patch("inbox.services.logger")
+        mock_send_mail = mocker.patch("inbox.tasks.send_mail")
+        mock_logger = mocker.patch("inbox.tasks.logger")
 
         with override_settings(DEBUG=True):
-            # Call the service method
-            ContactMessageEmailService.send_notification_email(contact_message)
+            # Call the handler method
+            EmailHandler.send_email(contact_message)
 
         # Verify send_mail was NOT called
         mock_send_mail.assert_not_called()
@@ -50,41 +51,23 @@ class TestContactMessageEmailService:
             f"Fake Email notification sent for message ID={contact_message.id}"
         )
 
-    def test_send_notification_email_failure(
+    def test_send_email_failure(
         self, mocker: MockerFixture, contact_message: ContactMessage
     ) -> None:
         """Test failure handling when send_mail raises exception"""
-        mock_send_mail = mocker.patch("inbox.services.send_mail")
-        mock_logger = mocker.patch("inbox.services.logger")
+        mock_send_mail = mocker.patch("inbox.tasks.send_mail")
+        mock_logger = mocker.patch("inbox.tasks.logger")
 
         # Simulate send_mail raising an exception
         mock_send_mail.side_effect = Exception("SMTP Error")
 
         # Call the service method
-        ContactMessageEmailService.send_notification_email(contact_message)
+        EmailHandler.send_email(contact_message)
 
         # Verify error was logged
         mock_logger.error.assert_called_with(
             f"Failed to send email notification for message ID={contact_message.id}: SMTP Error"
         )
-
-    def test_send_notification_email_async(
-        self, mocker: MockerFixture, contact_message: ContactMessage
-    ) -> None:
-        """Test async wrapper starts a daemon thread"""
-        mock_thread_class = mocker.patch("threading.Thread")
-
-        # Call the async method
-        ContactMessageEmailService.send_notification_email_async(contact_message)
-
-        # Verify Thread was initialized with correct target and args
-        mock_thread_class.assert_called_once_with(
-            target=ContactMessageEmailService.send_notification_email,
-            args=(contact_message,),
-            daemon=True,
-        )
-        # Verify thread was started
-        mock_thread_class.return_value.start.assert_called_once()
 
 
 @pytest.mark.django_db
@@ -108,13 +91,11 @@ class TestContactSubmissionService:
     def test_finalize_submission(
         self, mocker: MockerFixture, contact_message: ContactMessage
     ) -> None:
-        """Test that finalize_submission sends email and logs success"""
-        mock_email = mocker.patch(
-            "inbox.services.ContactMessageEmailService.send_notification_email_async"
-        )
+        """Test that finalize_submission triggers Celery task and logs success"""
+        mock_task_delay = mocker.patch("inbox.services.send_notification_email_task.delay")
 
         ContactSubmissionService.finalize_submission(contact_message, "127.0.0.1")
-        mock_email.assert_called_once_with(contact_message)
+        mock_task_delay.assert_called_once_with(contact_message.id)
 
     def test_log_incoming_data_masking(self, mocker: MockerFixture) -> None:
         """Test log masking for emails and long messages"""

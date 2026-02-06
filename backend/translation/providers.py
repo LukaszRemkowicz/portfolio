@@ -27,7 +27,7 @@ class LLMProvider(Protocol):
         Returns:
             LLM's response text, or None on failure
         """
-        ...
+        pass
 
 
 class GPTProvider(LLMProvider):

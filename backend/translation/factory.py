@@ -21,10 +21,8 @@ def get_llm_provider() -> LLMProvider:
     if backend == "gpt":
         from .providers import GPTProvider  # noqa: F811
 
-        return cast("GPTProvider", GPTProvider())
-    # Future providers can be added here:
-    # elif backend == "gemini":
-    #     from .providers import GeminiProvider
-    #     return GeminiProvider()
+        return cast("GPTProvider", GPTProvider())  # type: ignore[redundant-cast]
+    # Future providers can be added here by extending this conditional
+    # with additional backends and corresponding provider classes.
 
     raise ValueError(f"Unknown LLM provider backend: {backend}")

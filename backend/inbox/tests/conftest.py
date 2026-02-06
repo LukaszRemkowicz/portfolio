@@ -33,9 +33,7 @@ def mock_email_service(mocker: MockerFixture) -> MagicMock:
     Automatically mock email service for all tests.
     Prevents actual emails from being sent during tests.
     """
-    mock_async = mocker.patch(
-        "inbox.services.ContactMessageEmailService.send_notification_email_async"
-    )
+    mock_async = mocker.patch("inbox.tasks.send_notification_email_task.delay")
     mock_send_mail = mocker.patch("django.core.mail.send_mail")
 
     mock_async.return_value = None
