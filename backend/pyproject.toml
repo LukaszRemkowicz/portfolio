@@ -113,8 +113,6 @@ django_settings_module = "settings.base"
 
 [[tool.mypy.overrides]]
 module = [
-    "django.*",
-    "rest_framework.*",
     "PIL.*",
     "celery.*",
     "taggit.*",
@@ -136,18 +134,38 @@ module = [
     "core.models",
     "astrophotography.models",
     "astrophotography.serializers",
-    "translation.mixins",
-    "astrophotography.admin",
     "programming.models",
     "programming.serializers",
+    "users.models",
+]
+disable_error_code = [
+    "attr-defined",
+    "var-annotated",
+    "misc",
+    "return-value",
+    "assignment",
+    "django-manager-missing",
+    "unused-ignore",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "translation.mixins",
+    "astrophotography.admin",
     "programming.admin",
     "astrophotography.forms",
     "translation.services",
     "translation.tasks",
     "astrophotography.services",
     "astrophotography.management.commands.fix_parler_language_codes",
+    "users.admin",
 ]
-ignore_errors = true
+disable_error_code = [
+    "attr-defined",
+    "no-any-return",
+    "override",
+    "unused-ignore",
+]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "settings.tests"

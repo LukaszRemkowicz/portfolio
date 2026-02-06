@@ -44,7 +44,7 @@ class GalleryQueryService:
                 "telescope",
                 "tracker",
                 "tripod",
-            )  # type: ignore[misc]
+            )
             .all()
             .order_by("-created_at")
         )
@@ -95,7 +95,7 @@ class GalleryQueryService:
                 "telescope",
                 "tracker",
                 "tripod",
-            )  # type: ignore[misc]
+            )
             .filter(place__country=slider.place.country if slider.place else None)
         )
         if slider.place:

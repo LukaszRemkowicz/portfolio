@@ -21,7 +21,7 @@ class ProjectImageSerializer(TranslatableModelSerializer):
                 if field in data:
                     data[field] = TranslationService.get_translation(instance, field, lang)
 
-        return data
+        return data  # type: ignore[no-any-return]
 
     class Meta:
         model = ProjectImage

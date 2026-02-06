@@ -1,5 +1,6 @@
 # backend/users/admin.py
 import logging
+from typing import Any
 
 from parler.admin import TranslatableAdmin
 
@@ -7,6 +8,8 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.db import models
+from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
 
 from translation.mixins import (
@@ -23,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 @admin.register(User)
-class UserAdmin(
+class UserAdmin(  # type: ignore[misc]
     AutomatedTranslationMixin,
     TranslationStatusMixin,
     DynamicParlerStyleMixin,
@@ -78,7 +81,7 @@ class UserAdmin(
         ),
     )
 
-    @property
+    @property  # type: ignore[override]
     def change_form_template(self) -> str:
         """
         Force our robust template to ensure tabs are visible.
@@ -96,7 +99,7 @@ class UserAdmin(
     # Fields to show when editing a translation (used by HideNonTranslatableFieldsMixin)
     translatable_fields = ["short_description", "bio"]
 
-    def get_fieldsets(self, request, obj=None):
+    def get_fieldsets(self, request: HttpRequest, obj: models.Model | None = None):
         """Dynamically add translation_status to Personal info on default language tab."""
         fieldsets = super().get_fieldsets(request, obj)
         if not obj:
@@ -116,7 +119,13 @@ class UserAdmin(
             return tuple(fieldsets)
         return fieldsets
 
-    def change_view(self, request, object_id, form_url="", extra_context=None):
+    def change_view(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        form_url: str = "",
+        extra_context: dict[str, Any] | None = None,
+    ):
         """
         Ensure language_tabs are in context.
         """
@@ -130,7 +139,15 @@ class UserAdmin(
 
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
-    def render_change_form(self, request, context, add=False, change=False, form_url="", obj=None):
+    def render_change_form(
+        self,
+        request: HttpRequest,
+        context: dict[str, Any],
+        add: bool = False,
+        change: bool = False,
+        form_url: str = "",
+        obj: Any | None = None,
+    ):
         """
         Manually enforce our robust template to bypass base class shadowing.
         """
@@ -170,11 +187,11 @@ class UserAdmin(
         """Only allow adding a user if no user exists (singleton pattern)"""
         return not User.objects.exists()
 
-    def has_delete_permission(self, request, obj=None) -> bool:
+    def has_delete_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
         """Prevent deletion of the user (singleton pattern)"""
         return False
 
-    def changelist_view(self, request, extra_context=None):
+    def changelist_view(self, request: HttpRequest, extra_context: dict[str, Any] | None = None):
         """
         Redirect to the change view if a user instance already exists.
         This provides a better UX for the singleton pattern by skipping the list view.

@@ -305,7 +305,7 @@ class MainPageBackgroundImage(BaseImage, TranslatableModel):
         return self.name
 
 
-class MainPageLocation(TranslatableModel, models.Model):
+class MainPageLocation(TranslatableModel, models.Model):  # type: ignore[django-manager-missing]
     place = models.ForeignKey(
         Place,
         on_delete=models.SET_NULL,

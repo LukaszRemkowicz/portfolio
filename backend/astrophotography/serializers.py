@@ -40,7 +40,7 @@ class TagSerializer(TranslatableModelSerializer):
             if request
             else None
         )
-        return TranslationService.get_translation(instance, "name", lang)
+        return TranslationService.get_translation(instance, "name", lang)  # type: ignore[arg-type]
 
     def get_slug(self, instance: Tag) -> str:
         request = self.context.get("request")
@@ -49,7 +49,7 @@ class TagSerializer(TranslatableModelSerializer):
             if request
             else None
         )
-        return TranslationService.get_translation(instance, "slug", lang)
+        return TranslationService.get_translation(instance, "slug", lang)  # type: ignore[arg-type]
 
     class Meta:
         model = Tag
@@ -78,7 +78,7 @@ class PlaceSerializer(TranslatableModelSerializer):
                 if instance.country:
                     data["country"] = instance.country.name
 
-        return data
+        return data  # type: ignore[no-any-return]
 
     class Meta:
         model = Place
@@ -144,7 +144,7 @@ class AstroImageSerializerList(TranslatableModelSerializer):
                 if field in data:
                     data[field] = TranslationService.get_translation(instance, field, lang)
 
-        return data
+        return data  # type: ignore[no-any-return]
 
     class Meta:
         model = AstroImage
@@ -207,7 +207,7 @@ class AstroImageSerializer(TranslatableModelSerializer):
                 if field in data:
                     data[field] = TranslationService.get_translation(instance, field, lang)
 
-        return data
+        return data  # type: ignore[no-any-return]
 
     class Meta:
         model = AstroImage
@@ -310,7 +310,7 @@ class MainPageLocationSerializer(TranslatableModelSerializer):
                 if field in data:
                     data[field] = TranslationService.get_translation(instance, field, lang)
 
-        return data
+        return data  # type: ignore[no-any-return]
 
     class Meta:
         model = MainPageLocation

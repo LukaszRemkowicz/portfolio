@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
     retry_backoff=True,
     retry_backoff_max=600,
     retry_jitter=True,
-)
+)  # type: ignore[untyped-decorator]
 def translate_instance_task(
     self,
     model_name: str,

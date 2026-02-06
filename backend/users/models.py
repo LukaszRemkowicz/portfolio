@@ -1,6 +1,6 @@
 # backend/users/models.py
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from django_ckeditor_5.fields import CKEditor5Field
 from parler.managers import TranslatableManager
@@ -26,7 +26,7 @@ class UserManager(TranslatableManager, BaseUserManager):
         if not email:
             raise ValueError("Email must be set")
         email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+        user = cast(User, self.model(email=email, **extra_fields))
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -38,7 +38,7 @@ class User(TranslatableModel, AbstractUser, SingletonModel):
     Singleton pattern: Only one user instance is allowed in the database.
     """
 
-    username = None  # Remove username field - use email instead
+    username = None  # type: ignore[assignment]  # Remove username field - use email instead
     email = models.EmailField(_("email address"), unique=True)
 
     USERNAME_FIELD = "email"
@@ -65,7 +65,7 @@ class User(TranslatableModel, AbstractUser, SingletonModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    objects: UserManager = UserManager()  # type: ignore[assignment, misc]
+    objects = UserManager()
 
     class Meta:
         verbose_name = _("User")

@@ -3,7 +3,9 @@ from typing import Any, Optional
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.db import models
 from django.forms import Media
+from django.http import HttpRequest
 from django.utils.safestring import mark_safe
 
 from .models import TranslationTask
@@ -24,7 +26,7 @@ class DynamicParlerStyleMixin:
         """
         Injects the dynamic CSS link after the base admin media.
         """
-        media = super().media
+        media = super().media  # type: ignore[misc]
         return media + Media(css={"all": ("/admin/dynamic-parler-fixes.css",)})
 
 
@@ -37,13 +39,15 @@ class AutomatedTranslationMixin:
     translation_service_method: Optional[str] = None
     translation_trigger_fields: list[str] = ["name"]
 
-    def save_model(self, request: Any, obj: Any, form: Any, change: bool) -> None:  # noqa: C901
+    def save_model(  # noqa: C901
+        self, request: HttpRequest, obj: Any, form: Any, change: bool
+    ) -> None:
         """
         Overrides save_model to trigger translations if:
         1. Translations don't exist for a language
         2. Existing translations differ from the main language value
         """
-        super().save_model(request, obj, form, change)
+        super().save_model(request, obj, form, change)  # type: ignore[misc]
 
         if not self.translation_service_method:
             return
@@ -149,14 +153,14 @@ class TranslationStatusMixin:
     Use alongside AutomatedTranslationMixin.
     """
 
-    def get_list_display(self, request: Any) -> list[str]:
+    def get_list_display(self, request: HttpRequest) -> list[str]:
         """Add translation_status to list_display if not already present."""
-        list_display = super().get_list_display(request)
+        list_display = super().get_list_display(request)  # type: ignore[misc]
         if "translation_status" not in list_display:
             return list(list_display) + ["translation_status"]
         return list(list_display)
 
-    def translation_status(self, obj: Any) -> str:
+    def translation_status(self, obj: models.Model) -> str:
         """Show aggregated status for all language tasks."""
         tasks = TranslationTask.objects.filter(
             content_type=ContentType.objects.get_for_model(obj), object_id=str(obj.pk)
@@ -200,8 +204,8 @@ class HideNonTranslatableFieldsMixin:
     If the current language is NOT the default language, show only translatable fields.
     """
 
-    def get_fieldsets(self, request, obj=None):
-        base_fieldsets = super().get_fieldsets(request, obj)
+    def get_fieldsets(self, request: HttpRequest, obj=None):
+        base_fieldsets = super().get_fieldsets(request, obj)  # type: ignore[misc]
 
         # If no object (add view), return default fieldsets
         if not obj:
