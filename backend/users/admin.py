@@ -1,10 +1,14 @@
 # backend/users/admin.py
 import logging
 
+from parler.admin import TranslatableAdmin
+
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
+
+from translation.mixins import DynamicParlerStyleMixin, HideNonTranslatableFieldsMixin
 
 from .models import Profile
 
@@ -13,7 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 @admin.register(User)
-class UserAdmin(DjangoUserAdmin):
+class UserAdmin(
+    DynamicParlerStyleMixin, HideNonTranslatableFieldsMixin, TranslatableAdmin, DjangoUserAdmin
+):
     """
     Define admin model for custom User model with email as username.
     Singleton pattern: Only one user is allowed.
@@ -53,6 +59,52 @@ class UserAdmin(DjangoUserAdmin):
             {"fields": ("last_login", "date_joined", "created_at", "updated_at")},
         ),
     )
+
+    @property
+    def change_form_template(self) -> str:
+        """
+        Force our robust template to ensure tabs are visible.
+        This overrides TranslatableAdmin's dynamic property.
+        """
+        return "admin/users/user/robust_change_form.html"
+
+    def get_change_form_base_template(self):
+        """
+        TranslatableAdmin uses this to determine what to extend.
+        We force it to the standard admin template so our robust one doesn't circular loop.
+        """
+        return "admin/change_form.html"
+
+    # Fields to show when editing a translation (used by HideNonTranslatableFieldsMixin)
+    translatable_fields = ["short_description", "bio"]
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        """
+        Ensure language_tabs are in context.
+        """
+        extra_context = extra_context or {}
+        obj = self.get_object(request, object_id)
+        if obj:
+            available_languages = self.get_available_languages(obj)
+            extra_context["language_tabs"] = self.get_language_tabs(
+                request, obj, available_languages
+            )
+
+        return super().change_view(request, object_id, form_url, extra_context=extra_context)
+
+    def render_change_form(self, request, context, add=False, change=False, form_url="", obj=None):
+        """
+        Manually enforce our robust template to bypass base class shadowing.
+        """
+        response = super().render_change_form(request, context, add, change, form_url, obj)
+
+        from django.template.response import TemplateResponse
+
+        if isinstance(response, TemplateResponse):
+            response.template_name = self.change_form_template
+
+        return response
+
     add_fieldsets = (
         (
             None,

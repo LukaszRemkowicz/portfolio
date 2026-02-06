@@ -102,6 +102,7 @@ class Migration(migrations.Migration):
                 "verbose_name_plural": "Main Page Background Images",
                 "ordering": ["-created_at"],
             },
+            bases=(parler.models.TranslatableModel, models.Model),
         ),
         migrations.CreateModel(
             name="MeteorsMainPageConfig",
@@ -234,6 +235,7 @@ class Migration(migrations.Migration):
                 "verbose_name_plural": "Places",
                 "ordering": ["translations__name"],
             },
+            bases=(parler.models.TranslatableModel, models.Model),
         ),
         migrations.CreateModel(
             name="Tag",
@@ -246,6 +248,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={"verbose_name": "Tag", "verbose_name_plural": "Tags"},
+            bases=(parler.models.TranslatableModel, models.Model),
         ),
         migrations.CreateModel(
             name="Telescope",
@@ -462,6 +465,7 @@ class Migration(migrations.Migration):
                 "verbose_name_plural": "Astrophotography Images",
                 "ordering": ["-created_at"],
             },
+            bases=(parler.models.TranslatableModel, models.Model),
         ),
         migrations.CreateModel(
             name="MainPageLocation",
@@ -549,6 +553,7 @@ class Migration(migrations.Migration):
                 "verbose_name_plural": "Main Page Locations",
                 "ordering": ["-adventure_date"],
             },
+            bases=(parler.models.TranslatableModel, models.Model),
         ),
         migrations.CreateModel(
             name="TagTranslation",

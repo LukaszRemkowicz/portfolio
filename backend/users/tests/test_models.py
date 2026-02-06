@@ -25,7 +25,7 @@ def test_profile_creation(user: User):
     assert profile.user == user
     assert profile.type == Profile.ProfileType.PROGRAMMING
     assert profile.title == "Dev"
-    assert str(profile) == "Programming Profile"
+    assert str(profile) == "Programming Profile - Dev"
 
 
 @pytest.mark.django_db

@@ -192,3 +192,50 @@ class TranslationStatusMixin:
         return mark_safe('<span style="color:gray">➖ Unknown</span>')
 
     translation_status.short_description = "Translation Status"
+
+
+class HideNonTranslatableFieldsMixin:
+    """
+    Mixin to dynamically hide non-translatable fields when editing a translation.
+    If the current language is NOT the default language, show only translatable fields.
+    """
+
+    def get_fieldsets(self, request, obj=None):
+        base_fieldsets = super().get_fieldsets(request, obj)
+
+        # If no object (add view), return default fieldsets
+        if not obj:
+            return base_fieldsets
+
+        # Get the current language being edited (from query param or Parler default)
+        # Use get_form_language if available (TranslatableAdmin), otherwise fallback
+        if hasattr(self, "get_form_language"):
+            current_language = self.get_form_language(request, obj)
+        else:
+            current_language = request.GET.get("language")
+
+        default_language = getattr(settings, "PARLER_DEFAULT_LANGUAGE_CODE", "en")
+
+        # If editing original content (default language) or no language set, show everything
+        if not current_language or current_language == default_language:
+            return base_fieldsets
+
+        # If editing a translation, filter fieldsets to only show translatable fields
+        # usage: translatable_fields = ["short_description", "bio"]
+        if not hasattr(self, "translatable_fields"):
+            return base_fieldsets
+
+        filtered_fieldsets = []
+
+        for name, opts in base_fieldsets:
+            fields = opts.get("fields", ())
+            # Filter fields in this fieldset
+            visible_fields = [f for f in fields if f in self.translatable_fields]
+
+            if visible_fields:
+                # Create a copy of options with filtered fields
+                new_opts = opts.copy()
+                new_opts["fields"] = tuple(visible_fields)
+                filtered_fieldsets.append((name, new_opts))
+
+        return tuple(filtered_fieldsets)
