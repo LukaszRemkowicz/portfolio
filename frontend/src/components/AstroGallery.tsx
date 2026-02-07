@@ -11,19 +11,19 @@ import GalleryCard from './common/GalleryCard';
 import TagSidebar from './TagSidebar';
 import CategorySidebar from './CategorySidebar';
 import { Sliders, LayoutGrid } from 'lucide-react';
+import { useAstroImages } from '../hooks/useAstroImages';
 
 const AstroGallery: React.FC = () => {
-  const images = useAppStore(state => state.images);
-  const categories = useAppStore(state => state.categories);
-  const isInitialLoading = useAppStore(state => state.isInitialLoading);
-  const isImagesLoading = useAppStore(state => state.isImagesLoading);
-  const tags = useAppStore(state => state.tags);
+  // Global state
   const background = useAppStore(state => state.backgroundUrl);
-  const error = useAppStore(state => state.error);
+  const categories = useAppStore(state => state.categories);
+  const tags = useAppStore(state => state.tags);
+  const isInitialLoading = useAppStore(state => state.isInitialLoading);
   const loadInitialData = useAppStore(state => state.loadInitialData);
-  const loadImages = useAppStore(state => state.loadImages);
   const loadCategories = useAppStore(state => state.loadCategories);
   const loadTags = useAppStore(state => state.loadTags);
+
+  // Local state
   const [searchParams, setSearchParams] = useSearchParams();
   const [isTagsDrawerOpen, setIsTagsDrawerOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -32,6 +32,18 @@ const AstroGallery: React.FC = () => {
   const selectedFilter = searchParams.get('filter') as FilterType | null;
   const selectedTag = searchParams.get('tag');
   const imgParam = searchParams.get('img');
+
+  const { t, i18n } = useTranslation();
+
+  // Data Fetching (TanStack Query)
+  const {
+    data: images = [],
+    isLoading: isImagesLoading,
+    error: queryError,
+  } = useAstroImages({
+    filter: selectedFilter,
+    tag: selectedTag,
+  });
 
   const modalImage = useMemo(() => {
     if (!imgParam) return null;
@@ -45,15 +57,6 @@ const AstroGallery: React.FC = () => {
     loadInitialData();
     loadCategories();
   }, [loadInitialData, loadCategories]);
-
-  const { t, i18n } = useTranslation();
-
-  useEffect(() => {
-    loadImages({
-      ...(selectedFilter ? { filter: selectedFilter } : {}),
-      ...(selectedTag ? { tag: selectedTag } : {}),
-    });
-  }, [selectedFilter, selectedTag, loadImages, i18n.language]);
 
   // Refresh tags when category changes
   useEffect(() => {
@@ -117,7 +120,12 @@ const AstroGallery: React.FC = () => {
   };
 
   if (isInitialLoading) return <LoadingScreen />;
-  if (error) return <div className={styles.error}>{error}</div>;
+  if (queryError)
+    return (
+      <div className={styles.error}>
+        {queryError.message || t('common.error')}
+      </div>
+    );
 
   return (
     <div className={styles.container}>

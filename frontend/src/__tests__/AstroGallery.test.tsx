@@ -10,6 +10,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import AstroGallery from '../components/AstroGallery';
 import { AstroImage } from '../types';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock the API services
 jest.mock('../api/services', () => ({
@@ -39,6 +40,13 @@ describe('AstroGallery Component', () => {
     typeof fetchAstroImages
   >;
   const mockFetchTags = fetchTags as jest.MockedFunction<typeof fetchTags>;
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
 
   const resetStore = () => {
     useAppStore.setState({
@@ -63,6 +71,7 @@ describe('AstroGallery Component', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+    queryClient.clear();
     (fetchSettings as jest.Mock).mockResolvedValue({
       programming: true,
       contactForm: true,
@@ -111,11 +120,13 @@ describe('AstroGallery Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path='/' element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path='/' element={<AstroGallery />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 
@@ -126,11 +137,13 @@ describe('AstroGallery Component', () => {
   it('renders the gallery title and filter boxes after loading', async () => {
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path='/' element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path='/' element={<AstroGallery />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 
@@ -160,11 +173,13 @@ describe('AstroGallery Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path='/' element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path='/' element={<AstroGallery />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 
@@ -205,11 +220,13 @@ describe('AstroGallery Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path='/' element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path='/' element={<AstroGallery />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 
@@ -220,9 +237,7 @@ describe('AstroGallery Component', () => {
 
     await waitFor(
       () => {
-        expect(
-          screen.getByText(/Failed to fetch gallery images/i)
-        ).toBeInTheDocument();
+        expect(screen.getByText(/API Error/i)).toBeInTheDocument();
       },
       { timeout: 3000 }
     );
@@ -245,11 +260,13 @@ describe('AstroGallery Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path='/' element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path='/' element={<AstroGallery />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 
@@ -288,11 +305,13 @@ describe('AstroGallery Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path='/' element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path='/' element={<AstroGallery />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 
@@ -336,11 +355,13 @@ describe('AstroGallery Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path='/' element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path='/' element={<AstroGallery />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 
@@ -375,11 +396,13 @@ describe('AstroGallery Component', () => {
   it('refetches tags when category filter changes', async () => {
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path='/' element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path='/' element={<AstroGallery />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 

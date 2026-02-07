@@ -10,6 +10,7 @@ import {
   fetchTags,
   fetchCategories,
 } from '../api/services';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock the API services
 jest.mock('../api/services', () => ({
@@ -21,6 +22,13 @@ jest.mock('../api/services', () => ({
 }));
 
 describe('AstroGallery Mobile Navigation', () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
   const resetStore = () => {
     useAppStore.setState({
       profile: null,
@@ -62,11 +70,13 @@ describe('AstroGallery Mobile Navigation', () => {
   const renderGallery = async () => {
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path='/' element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path='/' element={<AstroGallery />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 

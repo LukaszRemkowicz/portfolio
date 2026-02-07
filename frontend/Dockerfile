@@ -1,8 +1,10 @@
 # --- Base deps ---
 FROM node:20-alpine AS base
 WORKDIR /app
+# Note: We don't copy node_modules, we let volume handle it or install fresh
+# checking for package.json changes
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm install -g npm@latest && npm ci
+RUN npm install
 
 # --- Development ---
 FROM base AS dev
@@ -10,7 +12,8 @@ COPY frontend/ .
 RUN chown -R node:node /app
 USER node
 EXPOSE 3000
-CMD ["npm", "start"]
+# Vite needs host binding
+CMD ["npm", "run", "start", "--", "--host"]
 
 # --- Production build ---
 FROM base AS build
