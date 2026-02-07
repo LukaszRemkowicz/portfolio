@@ -190,6 +190,33 @@ export const fetchTravelHighlights = async (): Promise<MainPageLocation[]> => {
   return [];
 };
 
+export const fetchTravelHighlightDetailBySlug = async (
+  countrySlug?: string,
+  placeSlug?: string
+): Promise<MainPageLocation> => {
+  if (!countrySlug) throw new Error('countrySlug is required');
+
+  const slugPath = placeSlug ? `${countrySlug}/${placeSlug}` : `${countrySlug}`;
+
+  const response = await api.get(`${API_ROUTES.travelBySlug}${slugPath}/`);
+  const data = handleResponse<MainPageLocation>(response);
+
+  if (data) {
+    return {
+      ...data,
+      background_image: data.background_image
+        ? getMediaUrl(data.background_image)
+        : null,
+      images: data.images.map(image => ({
+        ...image,
+        url: getMediaUrl(image.url) || '',
+        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+      })),
+    } as MainPageLocation;
+  }
+  return data;
+};
+
 export const fetchCategories = async (): Promise<string[]> => {
   const response: AxiosResponse<string[]> = await api.get(
     API_ROUTES.categories

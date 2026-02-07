@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense, lazy } from 'react';
+import React, { Suspense, lazy } from 'react';
 import Home from './components/Home';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -12,23 +12,29 @@ const Contact = lazy(() => import('./components/Contact'));
 
 import ErrorBoundary from './components/common/ErrorBoundary';
 import styles from './styles/components/App.module.css';
-import { useAppStore } from './store/useStore';
+import { useProfile } from './hooks/useProfile';
+import { useBackground } from './hooks/useBackground';
+import { useSettings } from './hooks/useSettings';
 import LoadingScreen from './components/common/LoadingScreen';
 
 const DEFAULT_PORTRAIT = '/portrait_default.png';
 
 const HomePage: React.FC = () => {
-  const profile = useAppStore(state => state.profile);
-  const backgroundUrl = useAppStore(state => state.backgroundUrl);
-  const loading = useAppStore(state => state.isInitialLoading);
-  const error = useAppStore(state => state.error);
-  const loadInitialData = useAppStore(state => state.loadInitialData);
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+    error: profileError,
+  } = useProfile();
+  const { data: backgroundUrl, isLoading: isBackgroundLoading } =
+    useBackground();
+  const { isLoading: isSettingsLoading } = useSettings();
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  const isInitialLoading =
+    isProfileLoading || isBackgroundLoading || isSettingsLoading;
 
-  if (loading) return <LoadingScreen />;
+  const error = profileError ? (profileError as Error).message : null;
+
+  if (isInitialLoading) return <LoadingScreen />;
 
   // Graceful degradation: If error occurs, render content anyway with a notification
   return (
@@ -37,7 +43,9 @@ const HomePage: React.FC = () => {
         <div className={styles.errorBanner} role='alert'>
           {error}
           <button
-            onClick={() => useAppStore.getState().clearError()}
+            onClick={() => {
+              /* Error dismissal is now handled by RQ or local state if we add one */
+            }}
             className={styles.dismissError}
             aria-label='Dismiss error'
           >
@@ -65,7 +73,7 @@ const HomePage: React.FC = () => {
             <Gallery />
           </ErrorBoundary>
           <ErrorBoundary>
-            <About profile={profile} />
+            <About profile={profile || null} />
           </ErrorBoundary>
           <ErrorBoundary>
             <Contact />

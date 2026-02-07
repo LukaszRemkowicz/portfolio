@@ -1,20 +1,24 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import styles from '../styles/components/Gallery.module.css';
 import { AstroImage } from '../types';
-import { useAppStore } from '../store/useStore';
+import { useAstroImages } from '../hooks/useAstroImages';
+import { useSettings } from '../hooks/useSettings';
 import ImageModal from './common/ImageModal';
 import GalleryCard from './common/GalleryCard';
 
 const Gallery: React.FC = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
-  const images = useAppStore(state => state.images);
-  const loading = useAppStore(state => state.isImagesLoading);
-  const error = useAppStore(state => state.error);
-  const loadImages = useAppStore(state => state.loadImages);
-  const features = useAppStore(state => state.features);
+  const {
+    data: images = [],
+    isLoading: loading,
+    error: queryError,
+  } = useAstroImages({ limit: 50 });
+  const { data: settings } = useSettings();
+  const error = queryError ? (queryError as Error).message : null;
+  const features = settings;
   const [searchParams, setSearchParams] = useSearchParams();
   const imgId = searchParams.get('img');
 
@@ -25,11 +29,7 @@ const Gallery: React.FC = () => {
     );
   }, [imgId, images]);
 
-  useEffect(() => {
-    if (features?.lastimages !== false) {
-      loadImages({ limit: 50 });
-    }
-  }, [loadImages, features, i18n.language]);
+  // No longer need manual image loading effect
 
   const filteredImages = useMemo(() => {
     if (filter === 'all') return images.slice(0, 9);

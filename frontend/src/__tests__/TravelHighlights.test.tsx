@@ -2,24 +2,22 @@ import { act } from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TravelHighlights from '../components/TravelHighlights';
-import { fetchTravelHighlights } from '../api/services';
-import { useAppStore } from '../store/useStore';
+import { useTravelHighlights } from '../hooks/useTravelHighlights';
+import { useSettings } from '../hooks/useSettings';
 
-// Mock Services
-jest.mock('../api/services', () => ({
-  fetchTravelHighlights: jest.fn().mockResolvedValue([]),
-  fetchProfile: jest.fn().mockResolvedValue({}),
-  fetchBackground: jest.fn().mockResolvedValue(null),
-  fetchEnabledFeatures: jest.fn().mockResolvedValue({}),
-}));
+// Mock Hooks
+jest.mock('../hooks/useTravelHighlights');
+jest.mock('../hooks/useSettings');
 
 describe('TravelHighlights Component', () => {
-  const mockedFetchTravelHighlights = fetchTravelHighlights as jest.Mock;
+  const mockUseTravelHighlights = useTravelHighlights as jest.Mock;
+  const mockUseSettings = useSettings as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    useAppStore.setState({
-      features: { travelHighlights: true },
+    mockUseSettings.mockReturnValue({
+      data: { travelHighlights: true },
+      isLoading: false,
     });
   });
 
@@ -43,7 +41,10 @@ describe('TravelHighlights Component', () => {
         ],
       },
     ];
-    mockedFetchTravelHighlights.mockResolvedValue(mockLocations);
+    mockUseTravelHighlights.mockReturnValue({
+      data: mockLocations,
+      isLoading: false,
+    });
 
     await act(async () => {
       render(
@@ -58,8 +59,9 @@ describe('TravelHighlights Component', () => {
   });
 
   it('renders nothing if feature is disabled', async () => {
-    useAppStore.setState({
-      features: { travelHighlights: false },
+    mockUseSettings.mockReturnValue({
+      data: { travelHighlights: false },
+      isLoading: false,
     });
 
     await act(async () => {
@@ -83,7 +85,10 @@ describe('TravelHighlights Component', () => {
         ],
       },
     ];
-    mockedFetchTravelHighlights.mockResolvedValue(mockLocations);
+    mockUseTravelHighlights.mockReturnValue({
+      data: mockLocations,
+      isLoading: false,
+    });
 
     jest.useFakeTimers();
     await act(async () => {

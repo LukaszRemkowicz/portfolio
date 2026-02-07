@@ -3,6 +3,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import ImageModal from '../components/common/ImageModal';
 import { AstroImage } from '../types';
+import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
+
+// Mock the hook
+jest.mock('../hooks/useAstroImageDetail');
 
 const mockImage: AstroImage = {
   pk: 1,
@@ -26,6 +30,15 @@ const renderModal = (
 };
 
 describe('ImageModal Lightbox', () => {
+  const mockUseAstroImageDetail = useAstroImageDetail as jest.Mock;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseAstroImageDetail.mockReturnValue({
+      data: mockImage,
+      isLoading: false,
+    });
+  });
   it('renders the modal when image is provided', () => {
     renderModal();
     expect(screen.getByText('Test Image')).toBeInTheDocument();

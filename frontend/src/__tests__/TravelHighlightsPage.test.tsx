@@ -2,82 +2,67 @@ import { act } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import TravelHighlightsPage from '../components/TravelHighlightsPage';
-import { api } from '../api/api';
-import { useAppStore } from '../store/useStore';
-import { fetchProfile, fetchBackground, fetchSettings } from '../api/services';
+import { useTravelHighlightDetail } from '../hooks/useTravelHighlightDetail';
+import { useBackground } from '../hooks/useBackground';
+import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Mock API (direct axios calls)
-jest.mock('../api/api');
-const mockedApi = api as jest.Mocked<typeof api>;
-
-// Mock Services (store calls)
-jest.mock('../api/services', () => ({
-  fetchProfile: jest.fn(),
-  fetchBackground: jest.fn(),
-  fetchSettings: jest.fn(),
-}));
+// Mock Hooks
+jest.mock('../hooks/useTravelHighlightDetail');
+jest.mock('../hooks/useBackground');
+jest.mock('../hooks/useAstroImageDetail');
 
 describe('TravelHighlightsPage', () => {
+  const mockUseTravelHighlightDetail = useTravelHighlightDetail as jest.Mock;
+  const mockUseBackground = useBackground as jest.Mock;
+  const mockUseAstroImageDetail = useAstroImageDetail as jest.Mock;
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
   beforeEach(() => {
     jest.resetAllMocks();
-
-    // Re-set mock implementations because resetAllMocks clears them
-    (fetchProfile as jest.Mock).mockResolvedValue({});
-    (fetchBackground as jest.Mock).mockResolvedValue(null);
-    (fetchSettings as jest.Mock).mockResolvedValue({
-      programming: true,
-      contactForm: true,
-      lastimages: true,
-      meteors: {
-        randomShootingStars: true,
-        bolidChance: 0.1,
-        bolidMinInterval: 60,
-        starPathRange: [50, 500],
-        bolidPathRange: [50, 500],
-        starStreakRange: [100, 200],
-        bolidStreakRange: [20, 100],
-        starDurationRange: [0.4, 1.2],
-        bolidDurationRange: [0.4, 0.9],
-        starOpacityRange: [0.4, 0.8],
-        bolidOpacityRange: [0.7, 1.0],
-        smokeOpacityRange: [0.5, 0.8],
-      },
+    queryClient.clear();
+    mockUseBackground.mockReturnValue({
+      data: '/test-bg.jpg',
+      isLoading: false,
     });
-
-    useAppStore.setState({
-      backgroundUrl: null,
-      meteorConfig: null,
-      isInitialLoading: false,
-      error: null,
-    });
+    mockUseAstroImageDetail.mockReturnValue({ data: null, isLoading: false });
   });
 
   const renderComponent = async (path = '/travel/iceland') => {
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={[path]}>
-          <Routes>
-            <Route
-              path='/travel/:countrySlug'
-              element={<TravelHighlightsPage />}
-            />
-            <Route
-              path='/travel/:countrySlug/:placeSlug'
-              element={<TravelHighlightsPage />}
-            />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={[path]}>
+            <Routes>
+              <Route
+                path='/travel/:countrySlug'
+                element={<TravelHighlightsPage />}
+              />
+              <Route
+                path='/travel/:countrySlug/:placeSlug'
+                element={<TravelHighlightsPage />}
+              />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
   };
 
   test('renders loading state initially', async () => {
-    // Keep promise pending
-    mockedApi.get.mockReturnValue(new Promise(() => {}));
+    mockUseTravelHighlightDetail.mockReturnValue({
+      data: null,
+      isLoading: true,
+    });
 
     await renderComponent();
 
-    // Check for the loading screen using the testid we added
     expect(screen.getByTestId('loading-screen')).toBeInTheDocument();
   });
 
@@ -102,7 +87,10 @@ describe('TravelHighlightsPage', () => {
       ],
     };
 
-    mockedApi.get.mockResolvedValue({ data: mockData });
+    mockUseTravelHighlightDetail.mockReturnValue({
+      data: mockData,
+      isLoading: false,
+    });
 
     await renderComponent();
 
@@ -126,7 +114,11 @@ describe('TravelHighlightsPage', () => {
   });
 
   test('handles API error gracefully', async () => {
-    mockedApi.get.mockRejectedValue(new Error('Network error'));
+    mockUseTravelHighlightDetail.mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: new Error('Network error'),
+    });
     // Spy to suppress console error
     const consoleSpy = jest
       .spyOn(console, 'error')
@@ -162,7 +154,10 @@ describe('TravelHighlightsPage', () => {
         },
       ],
     };
-    mockedApi.get.mockResolvedValue({ data: mockData });
+    mockUseTravelHighlightDetail.mockReturnValue({
+      data: mockData,
+      isLoading: false,
+    });
 
     await renderComponent();
 

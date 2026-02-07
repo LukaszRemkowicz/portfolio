@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import styles from '../styles/components/TravelHighlightsPage.module.css';
-import { API_ROUTES, getMediaUrl, ASSETS } from '../api/routes';
+import { getMediaUrl, ASSETS } from '../api/routes';
 import { AstroImage } from '../types';
-import { api } from '../api/api';
 import ImageModal from './common/ImageModal';
 import LoadingScreen from './common/LoadingScreen';
 import StarBackground from './StarBackground';
-import { useAppStore } from '../store/useStore';
+import { useBackground } from '../hooks/useBackground';
+import { useTravelHighlightDetail } from '../hooks/useTravelHighlightDetail';
 import { sanitizeHtml } from '../utils/html';
 
 const TravelHighlightsPage: React.FC = () => {
@@ -18,93 +18,33 @@ const TravelHighlightsPage: React.FC = () => {
     placeSlug?: string;
   }>();
 
-  const [images, setImages] = useState<AstroImage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
-  const [country, setCountry] = useState<string>('');
-  const [place, setPlace] = useState<string | null>(null);
-  const [story, setStory] = useState<string | null>(null);
-  const [adventureDate, setAdventureDate] = useState<string | null>(null);
-  const [createdAt, setCreatedAt] = useState<string | null>(null);
-  const [highlightName, setHighlightName] = useState<string | null>(null);
-  const [locationBackgroundImage, setLocationBackgroundImage] = useState<
-    string | null
-  >(null);
 
-  const { backgroundUrl, loadInitialData } = useAppStore();
+  const { data: backgroundUrl } = useBackground();
+  const {
+    data: locationData,
+    isLoading: loading,
+    error: queryError,
+  } = useTravelHighlightDetail(countrySlug, placeSlug);
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  const error = queryError ? (queryError as Error).message : null;
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (!countrySlug) {
-        setError('No location specified');
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-      try {
-        // Build slug-based URL
-        const slugPath = placeSlug
-          ? `${countrySlug}/${placeSlug}`
-          : `${countrySlug}`;
-
-        // Fetch from new slug-based endpoint
-        const response = await api.get(
-          `${API_ROUTES.travelBySlug}${slugPath}/`
-        );
-
-        const data = response.data;
-
-        // Validate response structure
-        if (!data || typeof data !== 'object') {
-          throw new Error('Invalid API response structure');
-        }
-
-        // Set metadata with fallbacks
-        const placeName = data.place?.name || null;
-        const countryName = data.place?.country || '';
-
-        setCountry(countryName);
-        setPlace(placeName);
-        setStory(data.story || null);
-        setAdventureDate(data.adventure_date || null);
-        setCreatedAt(data.created_at || null);
-        setHighlightName(data.highlight_name || null);
-        setLocationBackgroundImage(data.background_image || null);
-
-        // Process images with defensive checks
-        const imagesArray = Array.isArray(data.images) ? data.images : [];
-        const processedImages = imagesArray.map((image: AstroImage) => ({
-          ...image,
-          url: getMediaUrl(image.url) || '',
-          thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-        }));
-
-        setImages(processedImages);
-      } catch (err) {
-        console.error('Failed to load travel highlights:', err);
-        setError(
-          'Failed to load travel highlights. Please check the URL and try again.'
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, [countrySlug, placeSlug, i18n.language]);
+  // Metadata from locationData
+  const images = locationData?.images || [];
+  const country = locationData?.place?.country || '';
+  const place = locationData?.place?.name || null;
+  const story = locationData?.story || null;
+  const adventureDate = locationData?.adventure_date || null;
+  const createdAt = locationData?.created_at || null;
+  const highlightName = locationData?.highlight_name || null;
+  const locationBackgroundImage = locationData?.background_image || null;
 
   const handleImageClick = (image: AstroImage): void => {
     setModalImage(image);
   };
 
   if (loading) return <LoadingScreen />;
-  if (error) return <div className={styles.error}>{error}</div>;
+  if (error) return <div className={styles.error}>{t('travel.error')}</div>;
 
   // Display title: "Place, Country" or just "Country"
   const displayTitle =

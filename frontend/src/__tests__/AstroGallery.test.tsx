@@ -12,34 +12,34 @@ import AstroGallery from '../components/AstroGallery';
 import { AstroImage } from '../types';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Mock the API services
-jest.mock('../api/services', () => ({
-  fetchAstroImages: jest.fn(),
-  fetchBackground: jest.fn(),
-  fetchSettings: jest.fn(),
-  fetchProfile: jest.fn(),
-  fetchTags: jest.fn(),
-  fetchCategories: jest.fn(),
-}));
+import { useAstroImages } from '../hooks/useAstroImages';
+import { useBackground } from '../hooks/useBackground';
+import { useSettings } from '../hooks/useSettings';
+import { useCategories } from '../hooks/useCategories';
+import { useTags } from '../hooks/useTags';
+import { useProfile } from '../hooks/useProfile';
 
-import {
-  fetchAstroImages,
-  fetchSettings,
-  fetchProfile,
-  fetchTags,
-  fetchCategories,
-} from '../api/services';
-import { useAppStore } from '../store/useStore';
+// Mock the hooks
+jest.mock('../hooks/useAstroImages');
+jest.mock('../hooks/useBackground');
+jest.mock('../hooks/useSettings');
+jest.mock('../hooks/useCategories');
+jest.mock('../hooks/useTags');
+jest.mock('../hooks/useProfile');
+
 import { Tag } from '../types';
 
 /**
  * Test suite for the AstroGallery component
  */
 describe('AstroGallery Component', () => {
-  const mockFetchAstroImages = fetchAstroImages as jest.MockedFunction<
-    typeof fetchAstroImages
-  >;
-  const mockFetchTags = fetchTags as jest.MockedFunction<typeof fetchTags>;
+  const mockUseAstroImages = useAstroImages as jest.Mock;
+  const mockUseCategories = useCategories as jest.Mock;
+  const mockUseTags = useTags as jest.Mock;
+  const mockUseSettings = useSettings as jest.Mock;
+  const mockUseProfile = useProfile as jest.Mock;
+  const mockUseBackground = useBackground as jest.Mock;
+
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -48,75 +48,73 @@ describe('AstroGallery Component', () => {
     },
   });
 
-  const resetStore = () => {
-    useAppStore.setState({
-      profile: null,
-      backgroundUrl: null,
-      images: [],
-      projects: [],
-      categories: [],
-      tags: [],
-      features: null,
-      isInitialLoading: true,
-      isImagesLoading: true,
-      isProjectsLoading: false,
-      error: null,
-      initialSessionId: '',
-      imagesSessionId: '',
-      projectsSessionId: '',
-      tagsSessionId: '',
-      meteorConfig: null,
-    });
-  };
+  // No longer needed
+  const resetStore = () => {};
 
   beforeEach(() => {
     jest.resetAllMocks();
     queryClient.clear();
-    (fetchSettings as jest.Mock).mockResolvedValue({
-      programming: true,
-      contactForm: true,
-      lastimages: true,
-      meteors: {
-        randomShootingStars: true,
-        bolidChance: 0.1,
-        bolidMinInterval: 60,
-        starPathRange: [50, 500],
-        bolidPathRange: [50, 500],
-        starStreakRange: [100, 200],
-        bolidStreakRange: [20, 100],
-        starDurationRange: [0.4, 1.2],
-        bolidDurationRange: [0.4, 0.9],
-        starOpacityRange: [0.4, 0.8],
-        bolidOpacityRange: [0.7, 1.0],
-        smokeOpacityRange: [0.5, 0.8],
+
+    // Default hook implementations
+    mockUseSettings.mockReturnValue({
+      data: {
+        programming: true,
+        contactForm: true,
+        lastimages: true,
+        meteors: {
+          randomShootingStars: true,
+          bolidChance: 0.1,
+          bolidMinInterval: 60,
+          starPathRange: [50, 500],
+          bolidPathRange: [50, 500],
+          starStreakRange: [100, 200],
+          bolidStreakRange: [20, 100],
+          starDurationRange: [0.4, 1.2],
+          bolidDurationRange: [0.4, 0.9],
+          starOpacityRange: [0.4, 0.8],
+          bolidOpacityRange: [0.7, 1.0],
+          smokeOpacityRange: [0.5, 0.8],
+        },
       },
+      isLoading: false,
     });
-    mockFetchTags.mockResolvedValue([]);
-    mockFetchAstroImages.mockResolvedValue([]);
-    (fetchCategories as jest.Mock).mockResolvedValue([
-      'Landscape',
-      'Deep Sky',
-      'Startrails',
-      'Solar System',
-      'Milky Way',
-      'Northern Lights',
-    ]);
+
+    mockUseProfile.mockReturnValue({
+      data: {
+        first_name: 'John',
+        last_name: 'Doe',
+        about_me_image: null,
+        bio: 'Test bio',
+      },
+      isLoading: false,
+    });
+
+    mockUseBackground.mockReturnValue({
+      data: '/test-bg.jpg',
+      isLoading: false,
+    });
+
+    mockUseCategories.mockReturnValue({
+      data: [
+        'Landscape',
+        'Deep Sky',
+        'Startrails',
+        'Solar System',
+        'Milky Way',
+        'Northern Lights',
+      ],
+      isLoading: false,
+    });
+
+    mockUseTags.mockReturnValue({ data: [], isLoading: false });
+    mockUseAstroImages.mockReturnValue({ data: [], isLoading: false });
+
     resetStore();
   });
 
   it('shows loading state initially', async () => {
-    mockFetchAstroImages.mockImplementation(
-      () => new Promise(resolve => setTimeout(() => resolve([]), 100))
-    );
-    (fetchProfile as jest.Mock).mockImplementation(
-      () =>
-        new Promise(resolve =>
-          setTimeout(
-            () => resolve({ first_name: 'John', last_name: 'Doe' }),
-            100
-          )
-        )
-    );
+    mockUseAstroImages.mockReturnValue({ data: [], isLoading: true });
+    mockUseProfile.mockReturnValue({ data: null, isLoading: true });
 
     await act(async () => {
       render(
@@ -169,7 +167,7 @@ describe('AstroGallery Component', () => {
       },
     ];
 
-    mockFetchAstroImages.mockResolvedValue(mockImages);
+    mockUseAstroImages.mockReturnValue({ data: mockImages, isLoading: false });
 
     await act(async () => {
       render(
@@ -196,7 +194,7 @@ describe('AstroGallery Component', () => {
     });
 
     // Verify images were fetched
-    expect(fetchAstroImages).toHaveBeenCalled();
+    expect(useAstroImages).toHaveBeenCalled();
 
     // Wait for the card to be present and stable
     await waitFor(
@@ -212,7 +210,11 @@ describe('AstroGallery Component', () => {
   });
 
   it('handles API errors gracefully', async () => {
-    mockFetchAstroImages.mockRejectedValue(new Error('API Error'));
+    mockUseAstroImages.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: new Error('API Error'),
+    });
 
     const consoleSpy = jest
       .spyOn(console, 'error')
@@ -256,7 +258,7 @@ describe('AstroGallery Component', () => {
       },
     ];
 
-    mockFetchAstroImages.mockResolvedValue(mockImages);
+    mockUseAstroImages.mockReturnValue({ data: mockImages, isLoading: false });
 
     await act(async () => {
       render(
@@ -284,7 +286,7 @@ describe('AstroGallery Component', () => {
     });
 
     await waitFor(() => {
-      expect(fetchAstroImages).toHaveBeenCalledWith(
+      expect(useAstroImages).toHaveBeenCalledWith(
         expect.objectContaining({ filter: 'Landscape' })
       );
     });
@@ -301,7 +303,7 @@ describe('AstroGallery Component', () => {
       },
     ];
 
-    mockFetchAstroImages.mockResolvedValue(mockImages);
+    mockUseAstroImages.mockReturnValue({ data: mockImages, isLoading: false });
 
     await act(async () => {
       render(
@@ -351,7 +353,7 @@ describe('AstroGallery Component', () => {
       { name: 'Nebula', slug: 'nebula', count: 5 },
       { name: 'Galaxies', slug: 'galaxies', count: 3 },
     ];
-    mockFetchTags.mockResolvedValue(mockTags);
+    mockUseTags.mockReturnValue({ data: mockTags, isLoading: false });
 
     await act(async () => {
       render(
@@ -387,7 +389,7 @@ describe('AstroGallery Component', () => {
 
     // Verify imagery is refetched with the tag filter
     await waitFor(() => {
-      expect(fetchAstroImages).toHaveBeenCalledWith(
+      expect(useAstroImages).toHaveBeenCalledWith(
         expect.objectContaining({ tag: 'nebula' })
       );
     });
@@ -415,7 +417,7 @@ describe('AstroGallery Component', () => {
     const milkiWayFilter = milkiWayFilters[0];
 
     // Clear initial load call
-    mockFetchTags.mockClear();
+    mockUseTags.mockClear();
 
     await act(async () => {
       fireEvent.click(milkiWayFilter);
@@ -423,7 +425,7 @@ describe('AstroGallery Component', () => {
 
     // Verify fetchTags was called with "Milky Way"
     await waitFor(() => {
-      expect(fetchTags).toHaveBeenCalledWith('Milky Way');
+      expect(useTags).toHaveBeenCalledWith('Milky Way');
     });
   });
 });

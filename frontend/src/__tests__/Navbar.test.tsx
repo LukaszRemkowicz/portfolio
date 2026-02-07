@@ -3,13 +3,11 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import Navbar from '../components/Navbar';
-import { useAppStore } from '../store/useStore';
+import { useSettings } from '../hooks/useSettings';
 import { APP_ROUTES } from '../api/constants';
 
-// Mock the services
-jest.mock('../api/services', () => ({
-  fetchSettings: jest.fn(),
-}));
+// Mock useSettings hook
+jest.mock('../hooks/useSettings');
 
 const renderWithRouter = (component: ReactElement, initialEntries = ['/']) => {
   return render(
@@ -18,16 +16,21 @@ const renderWithRouter = (component: ReactElement, initialEntries = ['/']) => {
 };
 
 describe('Navbar Component', () => {
+  const mockUseSettings = useSettings as jest.Mock;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    useAppStore.setState({
-      features: null,
-      isInitialLoading: false,
+    mockUseSettings.mockReturnValue({
+      data: null,
+      isLoading: false,
     });
   });
 
   it('renders brand and navigation links', async () => {
-    useAppStore.setState({ features: { programming: true } });
+    mockUseSettings.mockReturnValue({
+      data: { programming: true },
+      isLoading: false,
+    });
     renderWithRouter(<Navbar />);
 
     expect(screen.getByText('Łukasz Remkowicz')).toBeInTheDocument();
@@ -42,7 +45,10 @@ describe('Navbar Component', () => {
   });
 
   it('hides Programming link when disabled', async () => {
-    useAppStore.setState({ features: { programming: false } });
+    mockUseSettings.mockReturnValue({
+      data: { programming: false },
+      isLoading: false,
+    });
     renderWithRouter(<Navbar />);
 
     expect(screen.getByText('Łukasz Remkowicz')).toBeInTheDocument();

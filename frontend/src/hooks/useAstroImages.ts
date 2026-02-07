@@ -6,17 +6,23 @@ import { useTranslation } from 'react-i18next';
 interface UseAstroImagesParams {
   filter?: FilterType | null;
   tag?: string | null;
+  limit?: number;
 }
 
-export const useAstroImages = ({ filter, tag }: UseAstroImagesParams) => {
+export const useAstroImages = ({
+  filter,
+  tag,
+  limit,
+}: UseAstroImagesParams) => {
   const { i18n } = useTranslation();
 
   return useQuery({
-    queryKey: ['astroImages', filter, tag, i18n.language],
+    queryKey: ['astroImages', filter, tag, limit, i18n.language],
     queryFn: () =>
       fetchAstroImages({
         filter: filter || undefined,
         tag: tag || undefined,
+        limit,
       }),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });

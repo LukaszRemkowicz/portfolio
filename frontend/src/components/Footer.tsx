@@ -2,13 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from '../styles/components/Footer.module.css';
 import { Sparkles } from 'lucide-react';
-import { useAppStore } from '../store/useStore';
-
+import { useProfile } from '../hooks/useProfile';
 import { useTranslation } from 'react-i18next';
 
 const Footer: React.FC = () => {
   const { t } = useTranslation();
-  const { profile } = useAppStore();
+  const { data: profile } = useProfile();
 
   // Extract links from the ASTRO profile (or fallback to any found)
   const astroProfile = profile?.profiles?.find(p => p.type === 'ASTRO');

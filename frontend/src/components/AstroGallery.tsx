@@ -4,25 +4,20 @@ import { useTranslation } from 'react-i18next';
 import styles from '../styles/components/AstroGallery.module.css';
 import { ASSETS } from '../api/routes';
 import { AstroImage, FilterType } from '../types';
-import { useAppStore } from '../store/useStore';
+import GalleryCard from './common/GalleryCard';
 import ImageModal from './common/ImageModal';
 import LoadingScreen from './common/LoadingScreen';
-import GalleryCard from './common/GalleryCard';
 import TagSidebar from './TagSidebar';
 import CategorySidebar from './CategorySidebar';
 import { Sliders, LayoutGrid } from 'lucide-react';
 import { useAstroImages } from '../hooks/useAstroImages';
+import { useBackground } from '../hooks/useBackground';
+import { useCategories } from '../hooks/useCategories';
+import { useTags } from '../hooks/useTags';
+import { useProfile } from '../hooks/useProfile';
+import { useSettings } from '../hooks/useSettings';
 
 const AstroGallery: React.FC = () => {
-  // Global state
-  const background = useAppStore(state => state.backgroundUrl);
-  const categories = useAppStore(state => state.categories);
-  const tags = useAppStore(state => state.tags);
-  const isInitialLoading = useAppStore(state => state.isInitialLoading);
-  const loadInitialData = useAppStore(state => state.loadInitialData);
-  const loadCategories = useAppStore(state => state.loadCategories);
-  const loadTags = useAppStore(state => state.loadTags);
-
   // Local state
   const [searchParams, setSearchParams] = useSearchParams();
   const [isTagsDrawerOpen, setIsTagsDrawerOpen] = useState(false);
@@ -33,9 +28,17 @@ const AstroGallery: React.FC = () => {
   const selectedTag = searchParams.get('tag');
   const imgParam = searchParams.get('img');
 
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   // Data Fetching (TanStack Query)
+  const { data: background } = useBackground();
+  const { data: categories = [] } = useCategories();
+  const { data: tags = [] } = useTags(selectedFilter || undefined);
+  const { isLoading: isProfileLoading } = useProfile();
+  const { isLoading: isSettingsLoading } = useSettings();
+
+  const isInitialLoading = isProfileLoading || isSettingsLoading;
+
   const {
     data: images = [],
     isLoading: isImagesLoading,
@@ -52,16 +55,6 @@ const AstroGallery: React.FC = () => {
       null
     );
   }, [imgParam, images]);
-
-  useEffect(() => {
-    loadInitialData();
-    loadCategories();
-  }, [loadInitialData, loadCategories]);
-
-  // Refresh tags when category changes
-  useEffect(() => {
-    loadTags(selectedFilter || undefined);
-  }, [selectedFilter, loadTags, i18n.language]);
 
   // Smooth scroll to results on filter/tag change (Mobile only)
   useEffect(() => {

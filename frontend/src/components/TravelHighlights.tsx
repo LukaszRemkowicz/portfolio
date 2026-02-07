@@ -3,12 +3,12 @@ import { type FC, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../styles/components/TravelHighlights.module.css';
 import { MapPin } from 'lucide-react';
-import { fetchTravelHighlights } from '../api/services';
 import { MainPageLocation } from '../types';
-import { useAppStore } from '../store/useStore';
 import { stripHtml } from '../utils/html';
 import { APP_ROUTES, DEFAULT_TRAVEL_IMAGE } from '../api/constants';
 import { useTranslation } from 'react-i18next';
+import { useTravelHighlights } from '../hooks/useTravelHighlights';
+import { useSettings } from '../hooks/useSettings';
 
 const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
   const navigate = useNavigate();
@@ -88,28 +88,12 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
 };
 
 const TravelHighlights: FC = () => {
-  const [locations, setLocations] = useState<MainPageLocation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { features } = useAppStore();
+  const { data: features, isLoading: isSettingsLoading } = useSettings();
+  const { data: locations = [], isLoading: isLocationsLoading } =
+    useTravelHighlights();
   const { t } = useTranslation();
 
-  useEffect(() => {
-    const loadSliders = async () => {
-      if (features?.travelHighlights === false) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const data = await fetchTravelHighlights();
-        if (data) setLocations(data);
-      } catch (error) {
-        console.error('Failed to fetch travel highlights:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadSliders();
-  }, [features?.travelHighlights]);
+  const loading = isSettingsLoading || isLocationsLoading;
 
   if (loading) {
     return null; // Or a loading spinner

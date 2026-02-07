@@ -65,6 +65,8 @@ const resources = {
           "Exploring the world's most remote locations in pursuit of the perfect cosmic capture.",
         adventureDate: 'ADVENTURE DATE',
         exploringCosmic: 'Exploring the cosmic wonders of',
+        error:
+          'Failed to load travel highlights. Please check the URL and try again.',
       },
       hero: {
         subtitle: 'Documenting the Cosmos',
@@ -154,11 +156,10 @@ const resources = {
       },
       programming: {
         title: 'Archiwum Projektów',
-        subtitle:
-          'Kolekcja projektów inżynierii oprogramowania, od mikroserwisów po kreatywne eksperymenty frontendowe.',
+        subtitle: 'Kolekcja projektów, od mikroserwisów po full stack.',
         source: 'Kod źródłowy',
         liveDemo: 'Demo Live',
-        empty: 'Archiwa wydają się być puste. Wróć później po nowe transmisje.',
+        empty: 'Kolekcja jest aktualnie pusta. Zapraszam wkrótce.',
       },
       footer: {
         rights: 'Łukasz Remkowicz © 2026',
@@ -181,6 +182,8 @@ const resources = {
           'Podróże do różnych zakątków świata, w poszukiwaniu idealnego ujęcia.',
         adventureDate: 'DATA PRZYGODY',
         exploringCosmic: 'Kosmiczna przygoda w',
+        error:
+          'Nie udało się załadować szczegółów podróży. Sprawdź URL i spróbuj ponownie.',
       },
       hero: {
         subtitle: 'Dokumentacja Kosmosu',

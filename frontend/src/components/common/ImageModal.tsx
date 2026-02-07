@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, Calendar, MapPin } from 'lucide-react';
 import styles from '../../styles/components/ImageModal.module.css';
 import { AstroImage, EquipmentItem } from '../../types';
-import { useAppStore } from '../../store/useStore';
+import { useAstroImageDetail } from '../../hooks/useAstroImageDetail';
 import { sanitizeHtml, slugify } from '../../utils/html';
 import { APP_ROUTES } from '../../api/constants';
 
@@ -19,10 +19,8 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
 
-  const activeImageDetail = useAppStore(state => state.activeImageDetail);
-  const loadImageDetail = useAppStore(state => state.loadImageDetail);
-  const clearActiveImage = useAppStore(state => state.clearActiveImage);
-  const isActiveImageLoading = useAppStore(state => state.isActiveImageLoading);
+  const { data: activeImageDetail, isLoading: isActiveImageLoading } =
+    useAstroImageDetail(image?.slug || null);
 
   const [isFullRes, setIsFullRes] = useState(false);
   const [scale, setScale] = useState(1);
@@ -35,15 +33,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
     null
   );
 
-  // Fetch full details when the image changes
-  useEffect(() => {
-    if (image?.slug) {
-      loadImageDetail(image.slug);
-    }
-    return () => {
-      clearActiveImage();
-    };
-  }, [image?.slug, loadImageDetail, clearActiveImage]);
+  // No longer need manual detail loading effect
 
   const closeFullRes = () => {
     setIsFullRes(false);

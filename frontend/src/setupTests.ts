@@ -81,6 +81,8 @@ jest.mock('react-i18next', () => ({
           'We use cookies to enhance your experience, analyze traffic, and personalize your journey through the cosmos. By using our site, you agree to our',
         'travel.adventureDate': 'ADVENTURE DATE',
         'travel.exploringCosmic': 'Exploring the cosmic wonders of',
+        'travel.error':
+          'Failed to load travel highlights. Please check the URL and try again.',
         'programming.title': 'Project Archive',
         'programming.subtitle':
           'A collection of software engineering projects, from microservices to creative frontend experiments.',
