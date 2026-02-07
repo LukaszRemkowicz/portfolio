@@ -1,0 +1,55 @@
+/* frontend/src/styles/components/LanguageSwitcher.module.css */
+.switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--text-secondary);
+}
+
+.switcher:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.icon {
+  width: 14px;
+  height: 14px;
+  color: var(--accent-color, #22d3ee);
+}
+
+.textContainer {
+  font-size: 12px;
+  font-weight: 700;
+  width: 40px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.lang {
+  transition: color 0.3s ease;
+  opacity: 0.5;
+}
+
+.active {
+  color: var(--text-primary, #f1f5f9);
+  opacity: 1;
+}
+
+.separator {
+  margin: 0 2px;
+  opacity: 0.3;
+}
+
+@media (max-width: 768px) {
+  .switcher {
+    padding: 4px 10px;
+  }
+}

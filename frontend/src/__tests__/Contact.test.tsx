@@ -27,11 +27,11 @@ describe('Contact Component', () => {
     render(<Contact />);
 
     expect(
-      await screen.findByRole('heading', { name: /Direct Inquiry/i })
+      await screen.findByRole('heading', { name: 'contact.title' })
     ).toBeInTheDocument();
-    expect(screen.getByText('Identity')).toBeInTheDocument();
+    expect(screen.getByText('contact.identity')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /Submit Inquiry/i })
+      screen.getByRole('button', { name: 'contact.submit' })
     ).toBeInTheDocument();
   });
 
@@ -51,18 +51,10 @@ describe('Contact Component', () => {
     const form = screen.getByRole('form');
     fireEvent.submit(form);
 
-    expect(
-      await screen.findByText(/Name must be at least 2 characters/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Please provide a valid email/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Subject must be at least 5 characters/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Message must be at least 10 characters/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText('contact.errors.name')).toBeInTheDocument();
+    expect(screen.getByText('contact.errors.email')).toBeInTheDocument();
+    expect(screen.getByText('contact.errors.subject')).toBeInTheDocument();
+    expect(screen.getByText('contact.errors.message')).toBeInTheDocument();
   });
 
   it('shows success message on successful submission', async () => {
@@ -71,27 +63,33 @@ describe('Contact Component', () => {
 
     render(<Contact />);
 
-    fireEvent.change(screen.getByPlaceholderText(/Your Name/i), {
+    fireEvent.change(screen.getByPlaceholderText('contact.namePlaceholder'), {
       target: { value: 'John Doe' },
     });
-    fireEvent.change(screen.getByPlaceholderText(/Email Address/i), {
+    fireEvent.change(screen.getByPlaceholderText('contact.emailPlaceholder'), {
       target: { value: 'john@example.com' },
     });
-    fireEvent.change(screen.getByPlaceholderText(/Subject/i), {
-      target: { value: 'Hello There' },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/How can I help you?/i), {
-      target: { value: 'This is a long message for testing.' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('contact.subjectPlaceholder'),
+      {
+        target: { value: 'Hello There' },
+      }
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText('contact.messagePlaceholder'),
+      {
+        target: { value: 'This is a long message for testing.' },
+      }
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: /Submit Inquiry/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'contact.submit' }));
 
-    expect(
-      await screen.findByText(/message has been sent successfully/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText('contact.success')).toBeInTheDocument();
 
     // Verify inputs are cleared
-    expect(screen.getByPlaceholderText(/Your Name/i)).toHaveValue('');
+    expect(screen.getByPlaceholderText('contact.namePlaceholder')).toHaveValue(
+      ''
+    );
   });
 
   it('displays server error message (e.g., 429 Throttling)', async () => {
@@ -103,20 +101,26 @@ describe('Contact Component', () => {
 
     render(<Contact />);
 
-    fireEvent.change(screen.getByPlaceholderText(/Your Name/i), {
+    fireEvent.change(screen.getByPlaceholderText('contact.namePlaceholder'), {
       target: { value: 'John Doe' },
     });
-    fireEvent.change(screen.getByPlaceholderText(/Email Address/i), {
+    fireEvent.change(screen.getByPlaceholderText('contact.emailPlaceholder'), {
       target: { value: 'john@example.com' },
     });
-    fireEvent.change(screen.getByPlaceholderText(/Subject/i), {
-      target: { value: 'Hello There' },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/How can I help you?/i), {
-      target: { value: 'This is a long message for testing.' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('contact.subjectPlaceholder'),
+      {
+        target: { value: 'Hello There' },
+      }
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText('contact.messagePlaceholder'),
+      {
+        target: { value: 'This is a long message for testing.' },
+      }
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: /Submit Inquiry/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'contact.submit' }));
 
     expect(
       await screen.findByText(/Too many requests. Wait 1 hour./i)
@@ -135,18 +139,24 @@ describe('Contact Component', () => {
 
     render(<Contact />);
 
-    fireEvent.change(screen.getByPlaceholderText(/Your Name/i), {
+    fireEvent.change(screen.getByPlaceholderText('contact.namePlaceholder'), {
       target: { value: 'John Doe' },
     });
-    fireEvent.change(screen.getByPlaceholderText(/Email Address/i), {
+    fireEvent.change(screen.getByPlaceholderText('contact.emailPlaceholder'), {
       target: { value: 'john@example.com' },
     });
-    fireEvent.change(screen.getByPlaceholderText(/Subject/i), {
-      target: { value: 'Hello There' },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/How can I help you?/i), {
-      target: { value: 'This is a long message for testing.' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('contact.subjectPlaceholder'),
+      {
+        target: { value: 'Hello There' },
+      }
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText('contact.messagePlaceholder'),
+      {
+        target: { value: 'This is a long message for testing.' },
+      }
+    );
 
     fireEvent.submit(screen.getByRole('form'));
 

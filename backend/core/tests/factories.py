@@ -16,3 +16,13 @@ class LandingPageSettingsFactory(DjangoModelFactory):
     lastimages_enabled = True
     meteors = factory.SubFactory(MeteorsMainPageConfigFactory)
     pk = 1
+
+
+class TranslationTaskFactory(DjangoModelFactory):
+    class Meta:
+        model = "translation.TranslationTask"
+
+    task_id = factory.Faker("uuid4")
+    language = "pl"
+    method = "translate_method"
+    status = "PENDING"

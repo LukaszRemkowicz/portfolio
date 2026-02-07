@@ -1,10 +1,19 @@
+import logging
+
 from django.contrib import admin
 
 from .models import ContactMessage
 
+logger = logging.getLogger(__name__)
+
 
 @admin.register(ContactMessage)
 class ContactMessageAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for managing contact form submissions.
+    Automatically marks messages as read when viewed.
+    """
+
     list_display = ["name", "email", "subject", "created_at", "is_read"]
     list_filter = ["is_read", "created_at"]
     search_fields = ["name", "email", "subject", "message"]
@@ -24,12 +33,14 @@ class ContactMessageAdmin(admin.ModelAdmin):
 
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         """
-        Override to automatically mark message as read when viewed
+        Overrides the change form view to automatically mark a message as read
+        when it's opened for viewing in the admin.
         """
         if object_id:
             try:
                 contact_message = ContactMessage.objects.get(id=object_id)
                 if not contact_message.is_read:
+                    logger.info(f"Marking ContactMessage {object_id} as read.")
                     contact_message.is_read = True
                     contact_message.save()
             except ContactMessage.DoesNotExist:

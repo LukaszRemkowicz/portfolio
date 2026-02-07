@@ -8,7 +8,12 @@ import { NavbarProps } from '../types';
 import { useAppStore } from '../store/useStore';
 import { APP_ROUTES } from '../api/constants';
 
+import LanguageSwitcher from './common/LanguageSwitcher';
+
+import { useTranslation } from 'react-i18next';
+
 const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
+  const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const { features } = useAppStore();
@@ -41,7 +46,7 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
               });
             }}
           >
-            Home
+            {t('nav.home')}
           </NavLink>
           <NavLink
             to={APP_ROUTES.ASTROPHOTOGRAPHY}
@@ -49,7 +54,7 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
               `${styles.link} ${isActive ? styles.active : ''}`
             }
           >
-            Astrophotography
+            {t('nav.astrophotography')}
           </NavLink>
           {isProgrammingEnabled && (
             <NavLink
@@ -58,31 +63,34 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
                 `${styles.link} ${isActive ? styles.active : ''}`
               }
             >
-              Programming
+              {t('nav.programming')}
             </NavLink>
           )}
           <Link
             to={`${APP_ROUTES.HOME}#about`}
             className={`${styles.link} ${location.hash === '#about' ? styles.active : ''}`}
           >
-            About
+            {t('nav.about')}
           </Link>
           <Link
             to={`${APP_ROUTES.HOME}#contact`}
             className={`${styles.link} ${location.hash === '#contact' ? styles.active : ''}`}
           >
-            Contact
+            {t('nav.contact')}
           </Link>
         </div>
 
-        <button
-          className={styles.menuTrigger}
-          onClick={toggleMenu}
-          aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={isMenuOpen}
-        >
-          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        <div className={styles.controls}>
+          <LanguageSwitcher />
+          <button
+            className={styles.menuTrigger}
+            onClick={toggleMenu}
+            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={isMenuOpen}
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </nav>
 
       {isMenuOpen && (
@@ -109,14 +117,14 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
                   isActive && !location.hash ? styles.active : ''
                 }
               >
-                Home
+                {t('nav.home')}
               </NavLink>
               <NavLink
                 to={APP_ROUTES.ASTROPHOTOGRAPHY}
                 onClick={toggleMenu}
                 className={({ isActive }) => (isActive ? styles.active : '')}
               >
-                Astrophotography
+                {t('nav.astrophotography')}
               </NavLink>
               {isProgrammingEnabled && (
                 <NavLink
@@ -124,7 +132,7 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
                   onClick={toggleMenu}
                   className={({ isActive }) => (isActive ? styles.active : '')}
                 >
-                  Programming
+                  {t('nav.programming')}
                 </NavLink>
               )}
               <Link
@@ -132,14 +140,14 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
                 onClick={toggleMenu}
                 className={location.hash === '#about' ? styles.active : ''}
               >
-                About
+                {t('nav.about')}
               </Link>
               <Link
                 to={`${APP_ROUTES.HOME}#contact`}
                 onClick={toggleMenu}
                 className={location.hash === '#contact' ? styles.active : ''}
               >
-                Contact
+                {t('nav.contact')}
               </Link>
             </div>
           </div>

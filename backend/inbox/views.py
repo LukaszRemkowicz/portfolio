@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from core.throttling import ContactFormThrottle
+from common.throttling import ContactFormThrottle
 
 from .serializers import ContactMessageSerializer
 from .services import ContactSubmissionService, PayloadTooLarge

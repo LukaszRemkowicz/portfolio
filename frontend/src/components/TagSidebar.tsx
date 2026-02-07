@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tag } from '../types';
 import styles from '../styles/components/TagSidebar.module.css';
 import { Sliders } from 'lucide-react';
@@ -18,12 +19,13 @@ const TagSidebar: React.FC<TagSidebarProps> = ({
   isOpen = false,
   onToggle,
 }) => {
+  const { t } = useTranslation();
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''}`}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <Sliders size={16} className={styles.headerIcon} />
-          <h2 className={styles.title}>Tags</h2>
+          <h2 className={styles.title}>{t('common.tags')}</h2>
         </div>
         {onToggle && (
           <button
@@ -40,7 +42,7 @@ const TagSidebar: React.FC<TagSidebarProps> = ({
           className={`${styles.tagItem} ${!selectedTag ? styles.active : ''}`}
           onClick={() => onTagSelect(null)}
         >
-          All Tags
+          {t('common.allTags')}
         </button>
         {tags.map(tag => (
           <button

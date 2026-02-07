@@ -1,9 +1,15 @@
-from typing import Any
+"""
+Shared views and utility endpoints for the core application.
+"""
+
+from typing import Any, cast
 
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.request import Request
 from rest_framework.response import Response
+
+from django.http import Http404
 
 from core.models import LandingPageSettings
 from core.serializers import LandingPageSettingsSerializer
@@ -21,13 +27,11 @@ class SettingsView(generics.RetrieveAPIView):
     queryset = LandingPageSettings.objects.all()
 
     def get_object(self) -> LandingPageSettings:
-        from typing import cast
-
-        # Override get_object to return the singleton or raise 404
+        """
+        Returns the singleton LandingPageSettings instance or raises 404.
+        """
         obj = self.get_queryset().last()
         if not obj:
-            from django.http import Http404
-
             raise Http404("Landing Page Settings not initialized.")
         return cast(LandingPageSettings, obj)
 

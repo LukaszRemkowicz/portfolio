@@ -96,7 +96,23 @@ export default (env, argv) => {
           },
         },
         {
+          test: /\.module\.css$/,
+          use: [
+            'style-loader',
+            {
+              loader: 'css-loader',
+              options: {
+                modules: {
+                  exportLocalsConvention: 'camelCase',
+                  namedExport: false,
+                },
+              },
+            },
+          ],
+        },
+        {
           test: /\.css$/,
+          exclude: /\.module\.css$/,
           use: ['style-loader', 'css-loader'],
         },
         {

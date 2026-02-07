@@ -11,7 +11,6 @@ const mockImage: AstroImage = {
   url: 'test.jpg',
   description: 'A test nebula',
   capture_date: '2023-01-01',
-  location: 'Space',
   tags: ['nebula', 'space'],
 };
 

@@ -3,6 +3,7 @@
 import uuid
 
 import django_ckeditor_5.fields
+import parler.models
 
 import django.db.models.deletion
 from django.db import migrations, models
@@ -101,5 +102,6 @@ class Migration(migrations.Migration):
                 "verbose_name": "Project Image",
                 "verbose_name_plural": "Project Images",
             },
+            bases=(parler.models.TranslatableModel, models.Model),
         ),
     ]

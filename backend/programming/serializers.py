@@ -1,10 +1,27 @@
+from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
+
+from django.conf import settings
+
+from translation.services import TranslationService
 
 from .models import Project, ProjectImage
 
 
-class ProjectImageSerializer(serializers.ModelSerializer):
+class ProjectImageSerializer(TranslatableModelSerializer):
     """Serializer for project-specific images"""
+
+    def to_representation(self, instance: ProjectImage) -> dict:
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        lang = request.query_params.get("lang") if request else None
+
+        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
+            for field in ["name", "description"]:
+                if field in data:
+                    data[field] = TranslationService.get_translation(instance, field, lang)
+
+        return data  # type: ignore[no-any-return]
 
     class Meta:
         model = ProjectImage

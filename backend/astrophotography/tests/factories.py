@@ -1,3 +1,6 @@
+from collections.abc import Iterable
+from typing import Optional
+
 import factory
 from factory.django import DjangoModelFactory
 
@@ -9,10 +12,19 @@ from astrophotography.models import (
     Lens,
     MainPageBackgroundImage,
     MeteorsMainPageConfig,
+    Tag,
     Telescope,
     Tracker,
     Tripod,
 )
+
+
+class PlaceFactory(DjangoModelFactory):
+    class Meta:
+        model = "astrophotography.Place"
+
+    name = factory.Faker("city")
+    country = "PL"
 
 
 class AstroImageFactory(DjangoModelFactory):
@@ -24,14 +36,14 @@ class AstroImageFactory(DjangoModelFactory):
     description = factory.Faker("paragraph")
     path = factory.django.ImageField()
     capture_date = factory.LazyFunction(lambda: timezone.now().date())
-    location = "PL"
+    place = factory.SubFactory(PlaceFactory)
     exposure_details = "60x300s, Gain 100"
     processing_details = "PixInsight, BlurXTerminator"
     celestial_object = "Deep Sky"
     astrobin_url = factory.Faker("url")
 
     @factory.post_generation
-    def camera(self, create, extracted, **kwargs):
+    def camera(self, create: bool, extracted: Optional[Iterable[Camera]], **kwargs: dict) -> None:
         if not create:
             return
         if extracted:
@@ -39,7 +51,7 @@ class AstroImageFactory(DjangoModelFactory):
                 self.camera.add(cam)
 
     @factory.post_generation
-    def lens(self, create, extracted, **kwargs):
+    def lens(self, create: bool, extracted: Optional[Iterable[Lens]], **kwargs: dict) -> None:
         if not create:
             return
         if extracted:
@@ -47,7 +59,9 @@ class AstroImageFactory(DjangoModelFactory):
                 self.lens.add(lens_obj)
 
     @factory.post_generation
-    def telescope(self, create, extracted, **kwargs):
+    def telescope(
+        self, create: bool, extracted: Optional[Iterable[Telescope]], **kwargs: dict
+    ) -> None:
         if not create:
             return
         if extracted:
@@ -55,7 +69,7 @@ class AstroImageFactory(DjangoModelFactory):
                 self.telescope.add(tele)
 
     @factory.post_generation
-    def tracker(self, create, extracted, **kwargs):
+    def tracker(self, create: bool, extracted: Optional[Iterable[Tracker]], **kwargs: dict) -> None:
         if not create:
             return
         if extracted:
@@ -63,7 +77,7 @@ class AstroImageFactory(DjangoModelFactory):
                 self.tracker.add(track)
 
     @factory.post_generation
-    def tripod(self, create, extracted, **kwargs):
+    def tripod(self, create: bool, extracted: Optional[Iterable[Tripod]], **kwargs: dict) -> None:
         if not create:
             return
         if extracted:
@@ -114,25 +128,19 @@ class TripodFactory(DjangoModelFactory):
     model = factory.Faker("word")
 
 
-class PlaceFactory(DjangoModelFactory):
-    class Meta:
-        model = "astrophotography.Place"
-
-    name = factory.Faker("city")
-
-
 class MainPageLocationFactory(DjangoModelFactory):
     class Meta:
         model = "astrophotography.MainPageLocation"
         skip_postgeneration_save = True
 
-    country = factory.Iterator(["PL", "US", "NO", "CL"])
     place = factory.SubFactory(PlaceFactory)
     highlight_name = None
     is_active = True
 
     @factory.post_generation
-    def images(self, create, extracted, **kwargs):
+    def images(
+        self, create: bool, extracted: Optional[Iterable[AstroImage]], **kwargs: dict
+    ) -> None:
         if not create:
             return
         if extracted:
@@ -153,3 +161,10 @@ class MeteorsMainPageConfigFactory(DjangoModelFactory):
     star_opacity_range = [0.4, 0.8]
     bolid_opacity_range = [0.7, 1.0]
     smoke_opacity_range = [0.5, 0.8]
+
+
+class TagFactory(DjangoModelFactory):
+    class Meta:
+        model = Tag
+
+    name = factory.Faker("word")

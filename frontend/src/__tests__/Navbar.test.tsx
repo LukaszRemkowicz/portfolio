@@ -56,7 +56,7 @@ describe('Navbar Component', () => {
 
   it('handles mobile menu toggle', () => {
     renderWithRouter(<Navbar />);
-    const menuBtn = screen.getByRole('button');
+    const menuBtn = screen.getByRole('button', { name: /open menu/i });
     expect(menuBtn).toBeInTheDocument();
   });
 
