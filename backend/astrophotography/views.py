@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 
 from common.throttling import GalleryRateThrottle
 from common.utils.signing import validate_signed_url
+from common.utils.text import sanitize_for_log
 
 from .models import AstroImage, CelestialObjectChoices, MainPageBackgroundImage, MainPageLocation
 from .serializers import (
@@ -25,13 +26,6 @@ from .serializers import (
 from .services import GalleryQueryService
 
 logger = logging.getLogger(__name__)
-
-
-def _sanitize_for_log(value: str | None) -> str:
-    """Sanitizes a string for logging by removing control characters."""
-    if value is None:
-        return "None"
-    return str(value).replace("\n", "").replace("\r", "")
 
 
 class AstroImageViewSet(ReadOnlyModelViewSet):
@@ -107,12 +101,12 @@ class TravelHighlightsBySlugView(APIView):
                 try:
                     slider = MainPageLocation.objects.get(is_active=True, place_slug=country_slug)
                 except MainPageLocation.DoesNotExist:
-                    safe_slug = _sanitize_for_log(country_slug)
+                    safe_slug = sanitize_for_log(country_slug)
                     logger.warning(f"Travel highlight transition failed for slug: {safe_slug}")
                     raise Http404("No MainPageLocation matches the given query.")
             else:
-                safe_country = _sanitize_for_log(country_slug)
-                safe_place = _sanitize_for_log(place_slug)
+                safe_country = sanitize_for_log(country_slug)
+                safe_place = sanitize_for_log(place_slug)
                 logger.warning(f"Travel highlight not found: {safe_country}/{safe_place}")
                 raise Http404("No MainPageLocation matches the given query.")
         serializer = self.serializer_class(slider, context={"request": request})
@@ -132,10 +126,6 @@ class TagsView(ViewSet):
         category_filter = request.query_params.get("filter")
         lang = request.query_params.get("lang")
         tags = GalleryQueryService.get_tag_stats(category_filter, language_code=lang)
-
-        # Proactive Translation removed from view to prevent blocking the request thread.
-        # Translations are triggered on object save in the admin via AutomatedTranslationMixin.
-        # Future enhancement: Move this to a background Celery task.
 
         serializer = self.serializer_class(tags, many=True, context={"request": request})
         return Response(serializer.data)
@@ -167,7 +157,7 @@ class SecureMediaView(APIView):
     def get(self, request, slug):
         """Validates the signature and redirects to the protected media path."""
         # Sanitize slug for logging
-        safe_slug = _sanitize_for_log(slug)
+        safe_slug = sanitize_for_log(slug)
 
         # Validate signature
         signature = request.query_params.get("s")

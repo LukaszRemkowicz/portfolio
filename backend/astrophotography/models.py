@@ -1,4 +1,5 @@
 # backend/astrophotography/models.py
+import uuid
 
 from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
@@ -269,8 +270,6 @@ class AstroImage(BaseImage, TranslatableModel):
             self.slug = base_slug
             # If slug already exists, append a short UUID
             if AstroImage.objects.filter(slug=self.slug).exists():
-                import uuid
-
                 self.slug = f"{base_slug}-{str(uuid.uuid4())[:8]}"
         super().save(*args, **kwargs)
 

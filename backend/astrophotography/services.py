@@ -1,4 +1,5 @@
 # backend/astrophotography/services.py
+from functools import lru_cache
 from typing import Any, Dict, Optional, cast
 
 from django_countries import countries
@@ -14,17 +15,14 @@ class GalleryQueryService:
     Encapsulates QuerySet construction to adhere to SRP.
     """
 
-    _country_cache: Optional[Dict[str, Dict[str, str]]] = None
-
-    @classmethod
-    def _get_country_maps(cls) -> Dict[str, Dict[str, str]]:
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def _get_country_maps() -> Dict[str, Dict[str, str]]:
         """Returns cached country and code maps."""
-        if cls._country_cache is None:
-            cls._country_cache = {
-                "country_map": {name.lower(): code for code, name in dict(countries).items()},
-                "code_map": {code.lower(): code for code in dict(countries).keys()},
-            }
-        return cls._country_cache
+        return {
+            "country_map": {name.lower(): code for code, name in dict(countries).items()},
+            "code_map": {code.lower(): code for code in dict(countries).keys()},
+        }
 
     @staticmethod
     def get_filtered_images(params: Dict[str, Any]) -> QuerySet[AstroImage]:
@@ -75,10 +73,10 @@ class GalleryQueryService:
                     Q(place__translations__name__iexact=place) | Q(place__isnull=True)
                 )
 
-        return queryset
+        return cast(QuerySet[AstroImage], queryset)
 
     @staticmethod
-    def get_travel_highlight_images(slider: Any) -> QuerySet[AstroImage]:
+    def get_travel_highlight_images(slider: MainPageLocation) -> QuerySet[AstroImage]:
         """
         Retrieve images for a specific travel highlight slider.
         Optimized with prefetch_related and select_related.
@@ -100,12 +98,12 @@ class GalleryQueryService:
         )
         if slider.place:
             queryset = queryset.filter(place=slider.place)
-        return queryset.order_by("-created_at")
+        return cast(QuerySet[AstroImage], queryset.order_by("-created_at"))
 
     @staticmethod
     def get_tag_stats(
         category_filter: Optional[str] = None, language_code: Optional[str] = None
-    ) -> QuerySet:
+    ) -> QuerySet[Tag]:
         """
         Aggregate tag counts, optionally filtered by gallery category.
         Returns unique tag instances that have at least one associated image.
@@ -115,7 +113,7 @@ class GalleryQueryService:
             annotation_filter &= Q(images__celestial_object=category_filter)
 
         return cast(
-            QuerySet,
+            QuerySet[Tag],
             Tag.objects.prefetch_related("translations")
             .filter(images__isnull=False)
             .annotate(num_times=Count("images", filter=annotation_filter, distinct=True))

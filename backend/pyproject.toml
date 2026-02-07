@@ -133,11 +133,11 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = [
     "core.models",
-    "astrophotography.models",
-    "astrophotography.serializers",
+    "core.models",
     "programming.models",
     "programming.serializers",
     "users.models",
+    "astrophotography.models",
 ]
 disable_error_code = [
     "attr-defined",
@@ -152,12 +152,9 @@ disable_error_code = [
 [[tool.mypy.overrides]]
 module = [
     "translation.mixins",
-    "astrophotography.admin",
     "programming.admin",
-    "astrophotography.forms",
     "translation.services",
     "translation.tasks",
-    "astrophotography.services",
     "astrophotography.management.commands.fix_parler_language_codes",
     "users.admin",
 ]

@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
@@ -9,6 +9,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils import translation
 
+from common.serializers import TranslatedSerializerMixin
 from common.utils.signing import generate_signed_url_params
 from translation.services import TranslationService
 
@@ -23,56 +24,48 @@ from .models import (
 from .services import GalleryQueryService
 
 
-class TagSerializer(TranslatableModelSerializer):
+class TagSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
     name = serializers.SerializerMethodField()
     slug = serializers.SerializerMethodField()
     count = serializers.IntegerField(source="num_times", read_only=True)
 
     def get_name(self, instance: Tag) -> str:
-        request = self.context.get("request")
-        lang = request.query_params.get("lang") if request else None
-        return TranslationService.get_translation(instance, "name", lang)  # type: ignore[arg-type]
+        return self.get_translation(instance, "name")
 
     def get_slug(self, instance: Tag) -> str:
-        request = self.context.get("request")
-        lang = request.query_params.get("lang") if request else None
-        return TranslationService.get_translation(instance, "slug", lang)  # type: ignore[arg-type]
+        return self.get_translation(instance, "slug")
 
     class Meta:
         model = Tag
         fields = ["name", "slug", "count"]
 
 
-class BaseEquipmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = ["id", "model"]
-
-
-class PlaceSerializer(TranslatableModelSerializer):
+class PlaceSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
     country = serializers.CharField(source="country.name", read_only=True)
 
-    def to_representation(self, instance: Place) -> dict:
+    def to_representation(self, instance: Place) -> Dict[str, Any]:
         data = super().to_representation(instance)
+
+        # Helper from mixin
+        data = self.translate_fields(data, instance, ["name"])
+
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
         if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
-            # Translate place name using Parler service
-            data["name"] = TranslationService.get_translation(instance, "name", lang)
-
             # Translate country name using django-countries (native Django translation)
             with translation.override(lang):
                 if instance.country:
                     data["country"] = instance.country.name
 
-        return data  # type: ignore[no-any-return]
+        return data
 
     class Meta:
         model = Place
         fields = ["id", "name", "country"]
 
 
-class AstroImageBaseSerializer(TranslatableModelSerializer):
+class AstroImageBaseSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
     """
     Base serializer for AstroImage, containing shared logic for URLs, tags, and translations.
     """
@@ -94,23 +87,21 @@ class AstroImageBaseSerializer(TranslatableModelSerializer):
         return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
 
     def get_tags(self, obj: AstroImage) -> list[str]:
+        # Reuse TagSerializer's logic via mixin or direct service call with safe lang
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
-        return [TranslationService.get_translation(tag, "name", lang) for tag in obj.tags.all()]
+        safe_lang = str(lang) if lang else ""
+        return [
+            TranslationService.get_translation(tag, "name", safe_lang) for tag in obj.tags.all()
+        ]
 
-    def to_representation(self, instance: AstroImage) -> dict:
+    def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
         data = super().to_representation(instance)
-        request = self.context.get("request")
-        lang = request.query_params.get("lang") if request else None
-
-        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
-            # Translate fields common to both (or specific ones if they exist in data)
-            # We iterate over potential translatable fields.
-            for field in ["name", "description", "exposure_details", "processing_details"]:
-                if field in data:
-                    data[field] = TranslationService.get_translation(instance, field, lang)
-
-        return data  # type: ignore[no-any-return]
+        return self.translate_fields(
+            data,
+            instance,
+            ["name", "description", "exposure_details", "processing_details"],
+        )
 
     class Meta:
         model = AstroImage
@@ -145,11 +136,19 @@ class AstroImageSerializer(AstroImageBaseSerializer):
     Includes full technical specs, equipment, and descriptions.
     """
 
-    camera = serializers.StringRelatedField(many=True, read_only=True)
-    lens = serializers.StringRelatedField(many=True, read_only=True)
-    telescope = serializers.StringRelatedField(many=True, read_only=True)
-    tracker = serializers.StringRelatedField(many=True, read_only=True)
-    tripod = serializers.StringRelatedField(many=True, read_only=True)
+    camera: serializers.StringRelatedField = serializers.StringRelatedField(
+        many=True, read_only=True
+    )
+    lens: serializers.StringRelatedField = serializers.StringRelatedField(many=True, read_only=True)
+    telescope: serializers.StringRelatedField = serializers.StringRelatedField(
+        many=True, read_only=True
+    )
+    tracker: serializers.StringRelatedField = serializers.StringRelatedField(
+        many=True, read_only=True
+    )
+    tripod: serializers.StringRelatedField = serializers.StringRelatedField(
+        many=True, read_only=True
+    )
 
     class Meta(AstroImageBaseSerializer.Meta):
         fields = AstroImageBaseSerializer.Meta.fields + [
@@ -182,7 +181,7 @@ class AstroImageThumbnailSerializer(serializers.ModelSerializer):
         fields = ["pk", "slug", "url", "thumbnail_url", "description"]
 
 
-class MainPageLocationSerializer(TranslatableModelSerializer):
+class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
     place = PlaceSerializer(read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
     background_image = serializers.SerializerMethodField()
@@ -233,18 +232,9 @@ class MainPageLocationSerializer(TranslatableModelSerializer):
         # 20 Jan 2025 - 05 Jan 2026
         return f"{self.format_date(lower)} - {self.format_date(display_upper)}"
 
-    def to_representation(self, instance: MainPageLocation) -> dict:
+    def to_representation(self, instance: MainPageLocation) -> Dict[str, Any]:
         data = super().to_representation(instance)
-        request = self.context.get("request")
-        lang = request.query_params.get("lang") if request else None
-
-        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
-            # Translate fields
-            for field in ["highlight_name", "story"]:
-                if field in data:
-                    data[field] = TranslationService.get_translation(instance, field, lang)
-
-        return data  # type: ignore[no-any-return]
+        return self.translate_fields(data, instance, ["highlight_name", "story"])
 
     class Meta:
         model = MainPageLocation

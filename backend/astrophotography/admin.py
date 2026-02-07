@@ -59,11 +59,10 @@ class PlaceAdmin(
         qs = super().get_queryset(request)
         return qs.distinct()
 
+    @admin.display(description=_("Name"))
     def get_name(self, obj):
         """Returns the string representation of the place."""
         return str(obj)
-
-    get_name.short_description = _("Name")
 
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         """
@@ -111,10 +110,9 @@ class TagAdmin(
     def get_translation_kwargs(self, obj, form, change, should_trigger):
         return {"force": should_trigger}
 
+    @admin.display(description=_("Name"))
     def get_name(self, obj):
         return str(obj)
-
-    get_name.short_description = _("Name")
 
 
 @admin.register(Camera)
@@ -167,10 +165,14 @@ class AstroImageAdmin(
     list_display_links = ("get_name",)
     list_filter = ("celestial_object", "tags")
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related("place").prefetch_related("tags")
+
+    @admin.display(description=_("Name"))
     def get_name(self, obj):
         return str(obj)
 
-    get_name.short_description = _("Name")
     search_fields = (
         "translations__name",
         "translations__description",
@@ -309,10 +311,9 @@ class MainPageBackgroundImageAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
         ),
     )
 
+    @admin.display(description=_("Name"))
     def get_name(self, obj):
         return str(obj)
-
-    get_name.short_description = _("Name")
 
 
 class MainPageLocationForm(TranslatableModelForm):
