@@ -44,12 +44,18 @@ class TranslationService:
     def get_translation(cls, instance: Any, field_name: str, language_code: str) -> str:
         """Pure getter that retrieves an existing translation from the database."""
         if not language_code or language_code == settings.PARLER_DEFAULT_LANGUAGE_CODE:
-            return getattr(instance, field_name, "")
+            return str(getattr(instance, field_name, ""))
 
         if not isinstance(instance, TranslatableModel):
-            return getattr(instance, field_name, "")
+            return str(getattr(instance, field_name, ""))
 
-        return (
+        # Check if a translation record exists for this specific language in the DB.
+        # This ensures we only return translations that have been explicitly created.
+        if not instance.translations.filter(language_code=language_code).exists():
+            return ""
+
+        # Strictly get the translation for the specified language without fallback.
+        return str(
             instance.safe_translation_getter(
                 field_name, language_code=language_code, any_language=False
             )

@@ -3,7 +3,7 @@ from typing import Optional
 
 from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
-from rest_framework.serializers import ImageField, StringRelatedField
+from rest_framework.serializers import ImageField
 
 from django.conf import settings
 from django.urls import reverse
@@ -14,16 +14,11 @@ from translation.services import TranslationService
 
 from .models import (
     AstroImage,
-    Camera,
-    Lens,
     MainPageBackgroundImage,
     MainPageLocation,
     MeteorsMainPageConfig,
     Place,
     Tag,
-    Telescope,
-    Tracker,
-    Tripod,
 )
 from .services import GalleryQueryService
 
@@ -35,20 +30,12 @@ class TagSerializer(TranslatableModelSerializer):
 
     def get_name(self, instance: Tag) -> str:
         request = self.context.get("request")
-        lang = (
-            getattr(request, "query_params", getattr(request, "GET", {})).get("lang")
-            if request
-            else None
-        )
+        lang = request.query_params.get("lang") if request else None
         return TranslationService.get_translation(instance, "name", lang)  # type: ignore[arg-type]
 
     def get_slug(self, instance: Tag) -> str:
         request = self.context.get("request")
-        lang = (
-            getattr(request, "query_params", getattr(request, "GET", {})).get("lang")
-            if request
-            else None
-        )
+        lang = request.query_params.get("lang") if request else None
         return TranslationService.get_translation(instance, "slug", lang)  # type: ignore[arg-type]
 
     class Meta:
@@ -85,42 +72,15 @@ class PlaceSerializer(TranslatableModelSerializer):
         fields = ["id", "name", "country"]
 
 
-class CameraSerializer(BaseEquipmentSerializer):
-    class Meta(BaseEquipmentSerializer.Meta):
-        model = Camera
+class AstroImageBaseSerializer(TranslatableModelSerializer):
+    """
+    Base serializer for AstroImage, containing shared logic for URLs, tags, and translations.
+    """
 
-
-class LensSerializer(BaseEquipmentSerializer):
-    class Meta(BaseEquipmentSerializer.Meta):
-        model = Lens
-
-
-class TelescopeSerializer(BaseEquipmentSerializer):
-    class Meta(BaseEquipmentSerializer.Meta):
-        model = Telescope
-
-
-class TrackerSerializer(BaseEquipmentSerializer):
-    class Meta(BaseEquipmentSerializer.Meta):
-        model = Tracker
-
-
-class TripodSerializer(BaseEquipmentSerializer):
-    class Meta(BaseEquipmentSerializer.Meta):
-        model = Tripod
-
-
-class AstroImageSerializerList(TranslatableModelSerializer):
     url = serializers.SerializerMethodField()
-    thumbnail_url: ImageField = ImageField(source="thumbnail", read_only=True)
-    tags: StringRelatedField = StringRelatedField(many=True)
-    camera: StringRelatedField = StringRelatedField(many=True)
-    lens: StringRelatedField = StringRelatedField(many=True)
-    telescope: StringRelatedField = StringRelatedField(many=True)
-    tracker: StringRelatedField = StringRelatedField(many=True)
-    tripod: StringRelatedField = StringRelatedField(many=True)
-    place = PlaceSerializer(read_only=True)
+    tags = serializers.SerializerMethodField()
     process = serializers.BooleanField(source="zoom")
+    place = PlaceSerializer(read_only=True)
 
     def get_url(self, obj: AstroImage) -> str:
         request = self.context.get("request")
@@ -133,13 +93,19 @@ class AstroImageSerializerList(TranslatableModelSerializer):
         )
         return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
 
+    def get_tags(self, obj: AstroImage) -> list[str]:
+        request = self.context.get("request")
+        lang = request.query_params.get("lang") if request else None
+        return [TranslationService.get_translation(tag, "name", lang) for tag in obj.tags.all()]
+
     def to_representation(self, instance: AstroImage) -> dict:
         data = super().to_representation(instance)
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
         if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
-            # Translate fields
+            # Translate fields common to both (or specific ones if they exist in data)
+            # We iterate over potential translatable fields.
             for field in ["name", "description", "exposure_details", "processing_details"]:
                 if field in data:
                     data[field] = TranslationService.get_translation(instance, field, lang)
@@ -152,82 +118,50 @@ class AstroImageSerializerList(TranslatableModelSerializer):
             "pk",
             "slug",
             "name",
-            "description",
             "url",
-            "thumbnail_url",
             "tags",
-            "camera",
-            "lens",
-            "telescope",
-            "tracker",
-            "tripod",
-            "capture_date",
             "place",
-            "celestial_object",
-            "exposure_details",
-            "processing_details",
-            "astrobin_url",
-            "created_at",
+            "capture_date",
             "process",
+            "celestial_object",
         ]
 
 
-class AstroImageSerializer(TranslatableModelSerializer):
-    camera = CameraSerializer(many=True, read_only=True)
-    lens = LensSerializer(many=True, read_only=True)
-    telescope = TelescopeSerializer(many=True, read_only=True)
-    tracker = TrackerSerializer(many=True, read_only=True)
-    tripod = TripodSerializer(many=True, read_only=True)
+class AstroImageSerializerList(AstroImageBaseSerializer):
+    """
+    Lightweight serializer for the gallery feed.
+    Excludes heavy descriptions and technical details.
+    """
 
-    place = PlaceSerializer(read_only=True)
-    process = serializers.BooleanField(source="zoom")
+    thumbnail_url = ImageField(source="thumbnail", read_only=True)
 
-    # Override url field to use secure serving
-    url = serializers.SerializerMethodField()
+    class Meta(AstroImageBaseSerializer.Meta):
+        fields = AstroImageBaseSerializer.Meta.fields + ["thumbnail_url", "description"]
 
-    def get_url(self, obj: AstroImage) -> str:
-        request = self.context.get("request")
-        if request is None:
-            return ""
 
-        url_path = reverse("astroimages:secure-image-serve", kwargs={"slug": obj.slug})
-        params = generate_signed_url_params(
-            obj.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
-        )
-        return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
+class AstroImageSerializer(AstroImageBaseSerializer):
+    """
+    Detailed serializer for the modal/detail view.
+    Includes full technical specs, equipment, and descriptions.
+    """
 
-    def to_representation(self, instance: AstroImage) -> dict:
-        data = super().to_representation(instance)
-        request = self.context.get("request")
-        lang = request.query_params.get("lang") if request else None
+    camera = serializers.StringRelatedField(many=True, read_only=True)
+    lens = serializers.StringRelatedField(many=True, read_only=True)
+    telescope = serializers.StringRelatedField(many=True, read_only=True)
+    tracker = serializers.StringRelatedField(many=True, read_only=True)
+    tripod = serializers.StringRelatedField(many=True, read_only=True)
 
-        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
-            # Translate fields
-            for field in ["description", "exposure_details", "processing_details"]:
-                if field in data:
-                    data[field] = TranslationService.get_translation(instance, field, lang)
-
-        return data  # type: ignore[no-any-return]
-
-    class Meta:
-        model = AstroImage
-        fields = [
-            "pk",
-            "slug",
-            "capture_date",
-            "telescope",
+    class Meta(AstroImageBaseSerializer.Meta):
+        fields = AstroImageBaseSerializer.Meta.fields + [
+            "description",
             "camera",
+            "lens",
+            "telescope",
             "tracker",
             "tripod",
-            "lens",
-            "place",
             "exposure_details",
             "processing_details",
-            "celestial_object",
             "astrobin_url",
-            "description",
-            "process",
-            "url",
         ]
 
 

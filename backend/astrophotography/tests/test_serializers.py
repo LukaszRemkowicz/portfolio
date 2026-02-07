@@ -4,19 +4,14 @@ import pytest
 from psycopg2.extras import DateRange
 from pytest_mock import MockerFixture
 
-from astrophotography.models import MainPageLocation
+from astrophotography.models import MainPageLocation, Tag
 from astrophotography.serializers import (
     AstroImageSerializer,
     AstroImageSerializerList,
-    CameraSerializer,
-    LensSerializer,
     MainPageLocationSerializer,
     MeteorsMainPageConfigSerializer,
     PlaceSerializer,
     TagSerializer,
-    TelescopeSerializer,
-    TrackerSerializer,
-    TripodSerializer,
 )
 from astrophotography.tests.factories import (
     AstroImageFactory,
@@ -27,51 +22,6 @@ from astrophotography.tests.factories import (
 
 @pytest.mark.django_db
 class TestEquipmentSerializers:
-    def test_tracker_serializer_configuration(self) -> None:
-        """
-        Regression test: Ensure TrackerSerializer has 'fields' or 'exclude' defined.
-        Failed in production with AssertionError because Meta overrides parent
-        without defining fields.
-        """
-        try:
-            # initializing is enough? Accessing .fields triggers the introspection
-            serializer = TrackerSerializer()
-            # Access fields to trigger the validation logic inside DRF
-            _ = serializer.fields
-        except AssertionError as e:
-            pytest.fail(f"TrackerSerializer Configuration Error: {e}")
-
-    def test_tripod_serializer_configuration(self) -> None:
-
-        try:
-            serializer = TripodSerializer()
-            _ = serializer.fields
-        except AssertionError as e:
-            pytest.fail(f"TripodSerializer Configuration Error: {e}")
-
-    def test_camera_serializer_configuration(self) -> None:
-
-        try:
-            serializer = CameraSerializer()
-            _ = serializer.fields
-        except AssertionError as e:
-            pytest.fail(f"CameraSerializer Configuration Error: {e}")
-
-    def test_lens_serializer_configuration(self) -> None:
-
-        try:
-            serializer = LensSerializer()
-            _ = serializer.fields
-        except AssertionError as e:
-            pytest.fail(f"LensSerializer Configuration Error: {e}")
-
-    def test_telescope_serializer_configuration(self) -> None:
-
-        try:
-            serializer = TelescopeSerializer()
-            _ = serializer.fields
-        except AssertionError as e:
-            pytest.fail(f"TelescopeSerializer Configuration Error: {e}")
 
     def test_place_serializer_configuration(self) -> None:
 
@@ -147,8 +97,37 @@ class TestAstroImageSerializers:
         assert "zoom" not in data_zoom_true
 
         # Test AstroImageSerializerList
-        data_list_true = AstroImageSerializerList(image_zoom_true).data
-        assert data_list_true["process"] is True
+
+    def test_serializer_consolidation_fields(self) -> None:
+        """
+        Verify that AstroImageSerializerList is lightweight and AstroImageSerializer is detailed.
+        """
+        place = PlaceFactory()
+        image = AstroImageFactory(
+            place=place,
+            description="Detailed Description",
+            exposure_details="ISO 1600",
+            processing_details="Stacked in PixInsight",
+            astrobin_url="https://astrobin.com/123",
+        )
+
+        # List Serializer - Should NOT have heavy fields (except description)
+        list_data = AstroImageSerializerList(image).data
+        assert "description" in list_data
+        assert list_data["description"] == "Detailed Description"
+        assert "exposure_details" not in list_data
+        assert "processing_details" not in list_data
+        assert "astrobin_url" not in list_data
+        assert "camera" not in list_data  # Should not be present at all for list
+
+        # Detail Serializer - Should HAVE heavy fields
+        detail_data = AstroImageSerializer(image).data
+        assert "description" in detail_data
+        assert detail_data["description"] == "Detailed Description"
+        assert "exposure_details" in detail_data
+        assert "processing_details" in detail_data
+        assert "astrobin_url" in detail_data
+        assert "camera" in detail_data
 
 
 @pytest.mark.django_db
@@ -212,3 +191,64 @@ class TestTranslationSerializers:
 
         assert data["name"] == "Original"
         mock_translate.assert_not_called()
+
+
+@pytest.mark.django_db
+class TestTagTranslationSerializers:
+    def test_astro_image_serializer_returns_translated_tags(self, mocker: MockerFixture) -> None:
+        """Test that AstroImageSerializer returns translated tag names"""
+        mock_translate = mocker.patch("translation.services.TranslationService.get_translation")
+
+        # Setup mock behavior
+        def side_effect(instance, field, lang):
+            if lang == "pl":
+                return f"Translated {instance.name}"
+            return instance.name
+
+        mock_translate.side_effect = side_effect
+
+        request = mocker.MagicMock()
+        request.query_params.get.return_value = "pl"
+
+        place = PlaceFactory()
+        image = AstroImageFactory(place=place)
+        tag1 = Tag.objects.create(name="Stars")
+        tag2 = Tag.objects.create(name="Galaxy")
+        image.tags.add(tag1, tag2)
+
+        # Test AstroImageSerializer (Detail)
+        serializer = AstroImageSerializer(image, context={"request": request})
+        data = serializer.data
+
+        assert "tags" in data
+        assert "Translated Stars" in data["tags"]
+        assert "Translated Galaxy" in data["tags"]
+
+        # Test AstroImageSerializerList
+        serializer_list = AstroImageSerializerList(image, context={"request": request})
+        data_list = serializer_list.data
+
+        assert "tags" in data_list
+        assert "Translated Stars" in data_list["tags"]
+        assert "Translated Galaxy" in data_list["tags"]
+
+    def test_astro_image_serializer_tags_fallback_to_empty_on_missing_translation(
+        self, mocker: MockerFixture
+    ) -> None:
+        """Test that tags return empty string if translation is missing in non-default lang"""
+        # TranslationService already updated to return "" if fallback is False and lang matches
+        request = mocker.MagicMock()
+        request.query_params.get.return_value = "pl"
+
+        place = PlaceFactory()
+        image = AstroImageFactory(place=place)
+        tag = Tag.objects.create(name="No Translation")
+        image.tags.add(tag)
+
+        # Ensure no translation exists for 'pl'
+        # By default, Tag.objects.create only creates the default language translation.
+
+        serializer = AstroImageSerializer(image, context={"request": request})
+        # The serializer calls TranslationService.get_translation(tag, "name", "pl")
+        # which should return "" because no 'pl' translation exists.
+        assert serializer.data["tags"] == [""]

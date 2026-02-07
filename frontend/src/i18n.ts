@@ -183,7 +183,7 @@ const resources = {
         exploringCosmic: 'Kosmiczna przygoda w',
       },
       hero: {
-        subtitle: 'Dokumentowanie Kosmosu',
+        subtitle: 'Dokumentacja Kosmosu',
         titlePart1: 'Piękno Świata',
         titlePart2: 'sprzed milionów lat.',
         viewPortfolio: 'Zobacz Portfolio',

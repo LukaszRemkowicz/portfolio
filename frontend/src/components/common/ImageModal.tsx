@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, Calendar, MapPin } from 'lucide-react';
 import styles from '../../styles/components/ImageModal.module.css';
 import { AstroImage, EquipmentItem } from '../../types';
+import { useAppStore } from '../../store/useStore';
 import { sanitizeHtml, slugify } from '../../utils/html';
 import { APP_ROUTES } from '../../api/constants';
 
@@ -16,7 +17,12 @@ interface ImageModalProps {
 
 const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
+
+  const activeImageDetail = useAppStore(state => state.activeImageDetail);
+  const loadImageDetail = useAppStore(state => state.loadImageDetail);
+  const clearActiveImage = useAppStore(state => state.clearActiveImage);
+  const isActiveImageLoading = useAppStore(state => state.isActiveImageLoading);
 
   const [isFullRes, setIsFullRes] = useState(false);
   const [scale, setScale] = useState(1);
@@ -28,6 +34,16 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(
     null
   );
+
+  // Fetch full details when the image changes
+  useEffect(() => {
+    if (image?.slug) {
+      loadImageDetail(image.slug);
+    }
+    return () => {
+      clearActiveImage();
+    };
+  }, [image?.slug, loadImageDetail, clearActiveImage]);
 
   const closeFullRes = () => {
     setIsFullRes(false);
@@ -167,8 +183,20 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   );
 
   const renderEquipment = () => {
-    const source = image;
+    // Prefer the fully detailed image if available, otherwise fall back to the basic prop
+    // However, basic prop (from list) likely doesn't have equipment/specs anymore due to backend optimization.
+    const source = activeImageDetail || image;
     if (!source) return null;
+
+    if (isActiveImageLoading) {
+      return (
+        <div className={styles.specsLoading}>
+          <div className={styles.specsSkeleton} />
+          <div className={styles.specsSkeleton} />
+          <div className={styles.specsSkeleton} />
+        </div>
+      );
+    }
 
     const getEquipmentValue = (
       items: (EquipmentItem | string)[] | undefined,
@@ -419,16 +447,19 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
         </div>
         <div className={styles.descriptionWrapper}>
           {renderEquipment()}
-          <div className={styles.descriptionContent}>
-            <div
-              className={styles.modalDescription}
-              dangerouslySetInnerHTML={{
-                __html: sanitizeHtml(
-                  image.description || t('common.noDescription')
-                ),
-              }}
-            />
-          </div>
+          {/* Use activeImageDetail for description, as list item no longer has it */}
+          {(activeImageDetail?.description || image.description) && (
+            <div className={styles.descriptionContent}>
+              <div
+                className={styles.modalDescription}
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeHtml(
+                    activeImageDetail?.description || image.description || ''
+                  ),
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>,

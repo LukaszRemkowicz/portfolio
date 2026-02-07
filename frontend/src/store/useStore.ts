@@ -12,6 +12,7 @@ import {
   fetchProfile,
   fetchBackground,
   fetchAstroImages,
+  fetchAstroImageDetail,
   fetchSettings,
   fetchProjects,
   fetchTags,
@@ -37,16 +38,21 @@ interface AppState {
   imagesSessionId: string;
   projectsSessionId: string;
   tagsSessionId: string;
+  meteorConfig: MeteorConfig | null;
+
+  activeImageDetail: AstroImage | null;
+  isActiveImageLoading: boolean;
 
   // Actions
   loadInitialData: (force?: boolean) => Promise<void>;
   loadImages: (params?: FilterParams) => Promise<void>;
+  loadImageDetail: (slug: string) => Promise<void>;
+  clearActiveImage: () => void;
   loadProjects: () => Promise<void>;
   loadCategories: (force?: boolean) => Promise<void>;
   loadTags: (category?: string) => Promise<void>;
   loadMeteorConfig: () => Promise<void>;
   clearError: () => void;
-  meteorConfig: MeteorConfig | null;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -66,6 +72,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   projectsSessionId: '',
   tagsSessionId: '',
   meteorConfig: null,
+
+  activeImageDetail: null,
+  isActiveImageLoading: false,
 
   clearError: () => set({ error: null }),
 
@@ -130,6 +139,32 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       console.error('Store image load failure:', e);
     }
+  },
+
+  loadImageDetail: async (slug: string) => {
+    // Don't fetch if we already have the full details for this image
+    const currentDetail = get().activeImageDetail;
+    if (
+      currentDetail &&
+      currentDetail.slug === slug &&
+      currentDetail.telescope
+    ) {
+      return;
+    }
+
+    set({ isActiveImageLoading: true });
+    try {
+      const data = await fetchAstroImageDetail(slug);
+      set({ activeImageDetail: data, isActiveImageLoading: false });
+    } catch (e: unknown) {
+      console.error('Store image detail load failure:', e);
+      set({ isActiveImageLoading: false });
+      // We don't set global error here to avoid disrupting the gallery
+    }
+  },
+
+  clearActiveImage: () => {
+    set({ activeImageDetail: null });
   },
 
   loadProjects: async () => {
