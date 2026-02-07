@@ -9,8 +9,13 @@ import { APP_ROUTES, DEFAULT_TRAVEL_IMAGE } from '../api/constants';
 import { useTranslation } from 'react-i18next';
 import { useTravelHighlights } from '../hooks/useTravelHighlights';
 import { useSettings } from '../hooks/useSettings';
+import { useQueryClient } from '@tanstack/react-query';
+import { fetchTravelHighlightDetailBySlug } from '../api/services';
 
-const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
+const TravelCard: FC<{
+  location: MainPageLocation;
+  onMouseEnter?: () => void;
+}> = ({ location, onMouseEnter }) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const images = location.images.map(img => img.thumbnail_url || img.url);
@@ -54,6 +59,7 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
     <article
       className={styles.card}
       onClick={handleCardClick}
+      onMouseEnter={onMouseEnter}
       style={{ cursor: 'pointer' }}
     >
       <div className={styles.imageWrapper}>
@@ -91,7 +97,22 @@ const TravelHighlights: FC = () => {
   const { data: features, isLoading: isSettingsLoading } = useSettings();
   const { data: locations = [], isLoading: isLocationsLoading } =
     useTravelHighlights();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+
+  const handlePrefetch = (country: string, place?: string | null) => {
+    queryClient.prefetchQuery({
+      queryKey: [
+        'travelHighlightDetail',
+        country,
+        place || null,
+        i18n.language,
+      ],
+      queryFn: () =>
+        fetchTravelHighlightDetailBySlug(country, place || undefined),
+      staleTime: 1000 * 60 * 60, // 1 hour
+    });
+  };
 
   const loading = isSettingsLoading || isLocationsLoading;
 
@@ -116,7 +137,13 @@ const TravelHighlights: FC = () => {
 
       <div className={styles.grid}>
         {locations.map(location => (
-          <TravelCard key={location.pk} location={location} />
+          <TravelCard
+            key={location.pk}
+            location={location}
+            onMouseEnter={() =>
+              handlePrefetch(location.country_slug, location.place_slug)
+            }
+          />
         ))}
       </div>
     </section>

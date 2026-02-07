@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useProjects } from '../hooks/useProjects';
 import styles from '../styles/components/Programming.module.css';
 import { Github, ExternalLink, Code2 } from 'lucide-react';
-import LoadingScreen from './common/LoadingScreen';
+import Skeleton from './common/Skeleton';
+import ProjectSkeleton from './skeletons/ProjectSkeleton';
 
 const Programming: FC = () => {
   const { t } = useTranslation();
@@ -16,7 +17,28 @@ const Programming: FC = () => {
   const error = projectsError ? (projectsError as Error).message : null;
 
   if (loading) {
-    return <LoadingScreen message={t('common.compiling')} />;
+    return (
+      <section className={styles.section}>
+        <header className={styles.header}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1rem',
+            }}
+          >
+            <Skeleton variant='title' width='200px' height='40px' />
+            <Skeleton variant='text' width='300px' />
+          </div>
+        </header>
+        <div className={styles.grid}>
+          {[...Array(3)].map((_, i) => (
+            <ProjectSkeleton key={i} />
+          ))}
+        </div>
+      </section>
+    );
   }
 
   if (error) {
@@ -48,6 +70,7 @@ const Programming: FC = () => {
                       src={coverImage.url}
                       alt={project.name}
                       className={styles.cardImage}
+                      loading='lazy'
                     />
                   ) : (
                     <div className={styles.imagePlaceholder}>

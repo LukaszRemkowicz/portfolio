@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import styles from '../styles/components/AstroGallery.module.css';
 import { ASSETS } from '../api/routes';
 import { AstroImage, FilterType } from '../types';
@@ -9,13 +10,15 @@ import ImageModal from './common/ImageModal';
 import LoadingScreen from './common/LoadingScreen';
 import TagSidebar from './TagSidebar';
 import CategorySidebar from './CategorySidebar';
-import { Sliders, LayoutGrid } from 'lucide-react';
+import { LayoutGrid, Sliders } from 'lucide-react';
 import { useAstroImages } from '../hooks/useAstroImages';
+import GallerySkeleton from './skeletons/GallerySkeleton';
 import { useBackground } from '../hooks/useBackground';
 import { useCategories } from '../hooks/useCategories';
 import { useTags } from '../hooks/useTags';
 import { useProfile } from '../hooks/useProfile';
 import { useSettings } from '../hooks/useSettings';
+import { fetchAstroImageDetail } from '../api/services';
 
 const AstroGallery: React.FC = () => {
   // Local state
@@ -28,7 +31,7 @@ const AstroGallery: React.FC = () => {
   const selectedTag = searchParams.get('tag');
   const imgParam = searchParams.get('img');
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // Data Fetching (TanStack Query)
   const { data: background } = useBackground();
@@ -98,6 +101,16 @@ const AstroGallery: React.FC = () => {
   const toggleFilters = (): void => {
     setIsFiltersOpen(!isFiltersOpen);
     if (isTagsDrawerOpen) setIsTagsDrawerOpen(false);
+  };
+
+  const queryClient = useQueryClient();
+
+  const handlePrefetch = (slug: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ['astroImageDetail', slug, i18n.language],
+      queryFn: () => fetchAstroImageDetail(slug),
+      staleTime: 1000 * 60 * 60, // 1 hour
+    });
   };
 
   const handleImageClick = (image: AstroImage): void => {
@@ -200,15 +213,18 @@ const AstroGallery: React.FC = () => {
           <div ref={resultsRef} className={styles.scrollAnchor} />
           <div className={styles.grid}>
             {isImagesLoading ? (
-              <div className={styles.noResults}>
-                <p>{t('common.scanning')}</p>
-              </div>
+              <>
+                {[...Array(6)].map((_, i) => (
+                  <GallerySkeleton key={i} />
+                ))}
+              </>
             ) : images.length > 0 ? (
               images.map((image: AstroImage) => (
                 <GalleryCard
                   key={image.pk}
                   item={image}
                   onClick={handleImageClick}
+                  onMouseEnter={() => handlePrefetch(image.slug)}
                 />
               ))
             ) : (

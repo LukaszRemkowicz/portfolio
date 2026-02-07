@@ -1,5 +1,5 @@
 // frontend/src/components/common/ImageModal.tsx
-import { type FC, useEffect, useCallback, useState } from 'react';
+import { type FC, useEffect, useCallback, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -77,17 +77,29 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
     setIsDragging(false);
   };
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (!image || !isFullRes || image.process === false) return;
+  const overlayRef = useRef<HTMLDivElement>(null);
 
-    // Always prevent default to stop the background from scrolling while in lightbox
-    e.preventDefault();
+  useEffect(() => {
+    const element = overlayRef.current;
+    if (!element || !isFullRes) return;
 
-    // Standard scroll or Trackpad Pinch (ctrlKey)
-    const factor = e.ctrlKey ? 0.05 : 0.005;
-    const delta = -e.deltaY * factor;
-    setScale(prev => Math.min(Math.max(1, prev + delta), 4));
-  };
+    const onWheel = (e: WheelEvent) => {
+      if (!image || image.process === false) return;
+
+      // Always prevent default to stop the background from scrolling while in lightbox
+      e.preventDefault();
+
+      // Standard scroll or Trackpad Pinch (ctrlKey)
+      const factor = e.ctrlKey ? 0.05 : 0.005;
+      const delta = -e.deltaY * factor;
+      setScale(prev => Math.min(Math.max(1, prev + delta), 4));
+    };
+
+    element.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      element.removeEventListener('wheel', onWheel);
+    };
+  }, [isFullRes, image]);
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!image || image.process === false) return;
@@ -331,6 +343,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
         {isFullRes &&
           createPortal(
             <div
+              ref={overlayRef}
               className={styles.fullResOverlay}
               onMouseDown={() => {
                 setHasMoved(false);
@@ -343,7 +356,6 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
-              onWheel={handleWheel}
               onTouchStart={e => {
                 if (e.touches.length === 1) {
                   setDragStart({

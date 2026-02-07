@@ -5,8 +5,11 @@ import styles from '../styles/components/Gallery.module.css';
 import { AstroImage } from '../types';
 import { useAstroImages } from '../hooks/useAstroImages';
 import { useSettings } from '../hooks/useSettings';
+import { useQueryClient } from '@tanstack/react-query';
+import { fetchAstroImageDetail } from '../api/services';
 import ImageModal from './common/ImageModal';
 import GalleryCard from './common/GalleryCard';
+import GallerySkeleton from './skeletons/GallerySkeleton';
 
 const Gallery: React.FC = () => {
   const { t } = useTranslation();
@@ -31,6 +34,17 @@ const Gallery: React.FC = () => {
 
   // No longer need manual image loading effect
 
+  const queryClient = useQueryClient();
+  const { i18n } = useTranslation();
+
+  const handlePrefetch = (slug: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ['astroImageDetail', slug, i18n.language],
+      queryFn: () => fetchAstroImageDetail(slug),
+      staleTime: 1000 * 60 * 60, // 1 hour
+    });
+  };
+
   const filteredImages = useMemo(() => {
     if (filter === 'all') return images.slice(0, 9);
 
@@ -54,7 +68,6 @@ const Gallery: React.FC = () => {
 
   const handleImageClick = useCallback(
     (image: AstroImage): void => {
-      console.log('Card clicked!', image.name);
       // Use URL params for modal state to support browser back button
       searchParams.set('img', image.slug);
       setSearchParams(searchParams);
@@ -118,12 +131,21 @@ const Gallery: React.FC = () => {
 
       <div className={styles.grid}>
         {loading ? (
-          <div className={styles.loading}>{t('gallery.loading')}</div>
+          <>
+            {[...Array(6)].map((_, i) => (
+              <GallerySkeleton key={i} />
+            ))}
+          </>
         ) : error ? (
           <div className={styles.error}>{error}</div>
         ) : filteredImages.length > 0 ? (
           filteredImages.map(item => (
-            <GalleryCard key={item.pk} item={item} onClick={handleImageClick} />
+            <GalleryCard
+              key={item.pk}
+              item={item}
+              onClick={handleImageClick}
+              onMouseEnter={() => handlePrefetch(item.slug)}
+            />
           ))
         ) : (
           <div className={styles.noResults}>{t('gallery.empty')}</div>

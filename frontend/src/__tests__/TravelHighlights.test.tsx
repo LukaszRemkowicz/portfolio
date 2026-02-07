@@ -1,6 +1,8 @@
 import { act } from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '@testing-library/jest-dom';
 import TravelHighlights from '../components/TravelHighlights';
 import { useTravelHighlights } from '../hooks/useTravelHighlights';
 import { useSettings } from '../hooks/useSettings';
@@ -8,18 +10,37 @@ import { useSettings } from '../hooks/useSettings';
 // Mock Hooks
 jest.mock('../hooks/useTravelHighlights');
 jest.mock('../hooks/useSettings');
+jest.mock('../api/services', () => ({
+  fetchTravelHighlightDetailBySlug: jest.fn(),
+}));
 
 describe('TravelHighlights Component', () => {
   const mockUseTravelHighlights = useTravelHighlights as jest.Mock;
   const mockUseSettings = useSettings as jest.Mock;
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
+    queryClient.clear();
     mockUseSettings.mockReturnValue({
       data: { travelHighlights: true },
       isLoading: false,
     });
   });
+
+  const renderWithClient = (ui: React.ReactElement) => {
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>{ui}</MemoryRouter>
+      </QueryClientProvider>
+    );
+  };
 
   it('renders content when loaded with data', async () => {
     const mockLocations = [
@@ -47,11 +68,7 @@ describe('TravelHighlights Component', () => {
     });
 
     await act(async () => {
-      render(
-        <MemoryRouter>
-          <TravelHighlights />
-        </MemoryRouter>
-      );
+      renderWithClient(<TravelHighlights />);
     });
 
     expect(await screen.findByText('travel.title')).toBeInTheDocument();
@@ -65,7 +82,7 @@ describe('TravelHighlights Component', () => {
     });
 
     await act(async () => {
-      render(<TravelHighlights />);
+      renderWithClient(<TravelHighlights />);
     });
     expect(screen.queryByText('travel.title')).not.toBeInTheDocument();
   });
@@ -92,11 +109,7 @@ describe('TravelHighlights Component', () => {
 
     jest.useFakeTimers();
     await act(async () => {
-      render(
-        <MemoryRouter>
-          <TravelHighlights />
-        </MemoryRouter>
-      );
+      renderWithClient(<TravelHighlights />);
     });
 
     // Advance timers to allow initial render effect
@@ -105,8 +118,6 @@ describe('TravelHighlights Component', () => {
     });
 
     // Now we can find the text
-    // Use getBy instead of findBy since we advanced timers
-    // Use getAllByText because it appears in title and location
     expect(screen.getAllByText('Multi Image').length).toBeGreaterThan(0);
 
     const images = screen.getAllByRole('img');

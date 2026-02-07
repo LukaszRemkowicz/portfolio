@@ -46,6 +46,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
                 src={profile.about_me_image}
                 alt='About me'
                 className={styles.aboutImage}
+                loading='lazy'
                 draggable='false'
                 onContextMenu={e => e.preventDefault()}
               />

@@ -32,7 +32,7 @@ describe('Programming Component', () => {
     });
 
     render(<Programming />);
-    expect(screen.getByText(/Compiling projects/i)).toBeInTheDocument();
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
   it('renders projects list', () => {

@@ -186,11 +186,9 @@ describe('AstroGallery Component', () => {
       expect(screen.queryByTestId('loading-screen')).not.toBeInTheDocument();
     });
 
-    // Wait for images loading state to resolve (important for tests triggered by effects)
+    // Wait for images loading state to resolve
     await waitFor(() => {
-      expect(
-        screen.queryByText(/Scanning deep space sectors/i)
-      ).not.toBeInTheDocument();
+      expect(screen.queryAllByTestId('skeleton').length).toBe(0);
     });
 
     // Verify images were fetched

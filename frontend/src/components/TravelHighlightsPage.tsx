@@ -150,6 +150,7 @@ const TravelHighlightsPage: React.FC = () => {
                       src={image.url}
                       alt={image.name}
                       className={styles.viewerImage}
+                      loading='lazy'
                       onClick={() => handleImageClick(image)}
                       draggable='false'
                       onContextMenu={e => e.preventDefault()}

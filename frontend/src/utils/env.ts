@@ -25,8 +25,21 @@ export const getEnv = (key: string, defaultVal: string = ''): string => {
     // Ignore errors accessing import.meta
   }
 
-  // 2. Fallback to import.meta.env (Legacy/Vite direct)
-  // We use this as a string-based fallback to avoid parser issues in Node if possible
-  // In modern Vite projects, process.env replacement above is usually enough.
+  // 2. Fallback to import.meta.env (Vite native) - Wrapped in new Function to avoid Jest SyntaxError
+  try {
+    const metaEnv = new Function(
+      'try { return import.meta.env; } catch { return undefined; }'
+    )();
+    if (metaEnv) {
+      if (key === 'NODE_ENV') {
+        return metaEnv.MODE || defaultVal;
+      }
+      const val = metaEnv[`VITE_${key}`] || metaEnv[key];
+      return val !== undefined ? String(val) : defaultVal;
+    }
+  } catch {
+    // Ignore access errors
+  }
+
   return defaultVal;
 };
