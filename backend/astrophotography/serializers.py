@@ -1,79 +1,107 @@
 from datetime import date, timedelta
-from typing import Optional
+from typing import Any, Dict, Optional
 
+from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
-from rest_framework.serializers import CharField, ImageField, StringRelatedField
-from taggit.models import Tag
+from rest_framework.serializers import ImageField
+
+from django.conf import settings
+from django.urls import reverse
+from django.utils import translation
+
+from common.serializers import TranslatedSerializerMixin
+from common.utils.signing import generate_signed_url_params
+from translation.services import TranslationService
 
 from .models import (
     AstroImage,
-    Camera,
-    Lens,
     MainPageBackgroundImage,
     MainPageLocation,
     MeteorsMainPageConfig,
     Place,
-    Telescope,
-    Tracker,
-    Tripod,
+    Tag,
 )
 from .services import GalleryQueryService
 
 
-class TagSerializer(serializers.ModelSerializer):
+class TagSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
+    name = serializers.SerializerMethodField()
+    slug = serializers.SerializerMethodField()
     count = serializers.IntegerField(source="num_times", read_only=True)
+
+    def get_name(self, instance: Tag) -> str:
+        return self.get_translation(instance, "name")
+
+    def get_slug(self, instance: Tag) -> str:
+        return self.get_translation(instance, "slug")
 
     class Meta:
         model = Tag
         fields = ["name", "slug", "count"]
 
 
-class BaseEquipmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = ["id", "model"]
+class PlaceSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
+    country = serializers.CharField(source="country.name", read_only=True)
 
+    def to_representation(self, instance: Place) -> Dict[str, Any]:
+        data = super().to_representation(instance)
 
-class PlaceSerializer(serializers.ModelSerializer):
+        # Helper from mixin
+        data = self.translate_fields(data=data, instance=instance, fields=["name"])
+
+        request = self.context.get("request")
+        lang = request.query_params.get("lang") if request else None
+
+        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
+            # Translate country name using django-countries (native Django translation)
+            with translation.override(lang):
+                if instance.country:
+                    data["country"] = instance.country.name
+
+        return data
+
     class Meta:
         model = Place
-        fields = ["id", "name"]
+        fields = ["id", "name", "country"]
 
 
-class CameraSerializer(BaseEquipmentSerializer):
-    class Meta(BaseEquipmentSerializer.Meta):
-        model = Camera
+class AstroImageBaseSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
+    """
+    Base serializer for AstroImage, containing shared logic for URLs, tags, and translations.
+    """
 
+    url = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
+    process = serializers.BooleanField(source="zoom")
+    place = PlaceSerializer(read_only=True)
 
-class LensSerializer(BaseEquipmentSerializer):
-    class Meta(BaseEquipmentSerializer.Meta):
-        model = Lens
+    def get_url(self, obj: AstroImage) -> str:
+        request = self.context.get("request")
+        if request is None:
+            return ""
 
+        url_path = reverse("astroimages:secure-image-serve", kwargs={"slug": obj.slug})
+        params = generate_signed_url_params(
+            obj.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
+        )
+        return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
 
-class TelescopeSerializer(BaseEquipmentSerializer):
-    class Meta(BaseEquipmentSerializer.Meta):
-        model = Telescope
+    def get_tags(self, obj: AstroImage) -> list[str]:
+        # Reuse TagSerializer's logic via mixin or direct service call with safe lang
+        request = self.context.get("request")
+        lang = request.query_params.get("lang") if request else None
+        safe_lang = str(lang) if lang else ""
+        return [
+            TranslationService.get_translation(tag, "name", safe_lang) for tag in obj.tags.all()
+        ]
 
-
-class TrackerSerializer(BaseEquipmentSerializer):
-    class Meta(BaseEquipmentSerializer.Meta):
-        model = Tracker
-
-
-class TripodSerializer(BaseEquipmentSerializer):
-    class Meta(BaseEquipmentSerializer.Meta):
-        model = Tripod
-
-
-class AstroImageSerializerList(serializers.ModelSerializer):
-    url: ImageField = ImageField(source="path")
-    thumbnail_url: ImageField = ImageField(source="thumbnail", read_only=True)
-    tags: StringRelatedField = StringRelatedField(many=True)
-    camera: StringRelatedField = StringRelatedField(many=True)
-    lens: StringRelatedField = StringRelatedField(many=True)
-    telescope: StringRelatedField = StringRelatedField(many=True)
-    tracker: StringRelatedField = StringRelatedField(many=True)
-    tripod: StringRelatedField = StringRelatedField(many=True)
-    location: CharField = CharField(source="location.name")
+    def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
+        data = super().to_representation(instance)
+        return self.translate_fields(
+            data=data,
+            instance=instance,
+            fields=["name", "description", "exposure_details", "processing_details"],
+        )
 
     class Meta:
         model = AstroImage
@@ -81,51 +109,50 @@ class AstroImageSerializerList(serializers.ModelSerializer):
             "pk",
             "slug",
             "name",
-            "description",
             "url",
-            "thumbnail_url",
             "tags",
-            "camera",
-            "lens",
-            "telescope",
-            "tracker",
-            "tripod",
+            "place",
             "capture_date",
-            "location",
+            "process",
             "celestial_object",
-            "exposure_details",
-            "processing_details",
-            "astrobin_url",
-            "created_at",
         ]
 
 
-class AstroImageSerializer(serializers.ModelSerializer):
-    camera = CameraSerializer(many=True, read_only=True)
-    lens = LensSerializer(many=True, read_only=True)
-    telescope = TelescopeSerializer(many=True, read_only=True)
-    tracker = TrackerSerializer(many=True, read_only=True)
-    tripod = TripodSerializer(many=True, read_only=True)
+class AstroImageSerializerList(AstroImageBaseSerializer):
+    """
+    Lightweight serializer for the gallery feed.
+    Excludes heavy descriptions and technical details.
+    """
 
-    location = serializers.CharField(source="location.name", read_only=True)
+    thumbnail_url = ImageField(source="thumbnail", read_only=True)
 
-    class Meta:
-        model = AstroImage
-        fields = [
-            "pk",
-            "slug",
-            "capture_date",
-            "telescope",
+    class Meta(AstroImageBaseSerializer.Meta):
+        fields = AstroImageBaseSerializer.Meta.fields + ["thumbnail_url", "description"]
+
+
+class AstroImageSerializer(AstroImageBaseSerializer):
+    """
+    Detailed serializer for the modal/detail view.
+    Includes full technical specs, equipment, and descriptions.
+    """
+
+    camera = serializers.StringRelatedField(many=True, read_only=True)
+    lens = serializers.StringRelatedField(many=True, read_only=True)
+    telescope = serializers.StringRelatedField(many=True, read_only=True)
+    tracker = serializers.StringRelatedField(many=True, read_only=True)
+    tripod = serializers.StringRelatedField(many=True, read_only=True)
+
+    class Meta(AstroImageBaseSerializer.Meta):
+        fields = AstroImageBaseSerializer.Meta.fields + [
+            "description",
             "camera",
+            "lens",
+            "telescope",
             "tracker",
             "tripod",
-            "lens",
-            "location",
             "exposure_details",
             "processing_details",
-            "celestial_object",
             "astrobin_url",
-            "description",
         ]
 
 
@@ -146,9 +173,8 @@ class AstroImageThumbnailSerializer(serializers.ModelSerializer):
         fields = ["pk", "slug", "url", "thumbnail_url", "description"]
 
 
-class MainPageLocationSerializer(serializers.ModelSerializer):
-    place_name = serializers.CharField(source="place.name", read_only=True)
-    country_name = serializers.CharField(source="country.name", read_only=True)
+class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
+    place = PlaceSerializer(read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
     background_image = serializers.SerializerMethodField()
     background_image_thumbnail = serializers.SerializerMethodField()
@@ -160,21 +186,21 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
         return dt.strftime("%-d %b %Y")
 
     def get_background_image(self, obj: MainPageLocation) -> Optional[str]:
-        if bg := obj.background_image:
-            return str(bg.path.url)
+        if background := obj.background_image:
+            return str(background.path.url)
         return None
 
     def get_background_image_thumbnail(self, obj: MainPageLocation) -> Optional[str]:
-        if (bg := obj.background_image) and bg.thumbnail:
-            return str(bg.thumbnail.url)
+        if (background := obj.background_image) and background.thumbnail:
+            return str(background.thumbnail.url)
         return self.get_background_image(obj)
 
     def get_adventure_date(self, obj: MainPageLocation) -> Optional[str]:
-        if not (dr := obj.adventure_date):
+        if not (date_range := obj.adventure_date):
             return None
 
-        lower = dr.lower
-        upper = dr.upper
+        lower = date_range.lower
+        upper = date_range.upper
 
         if not lower:
             return None
@@ -198,15 +224,19 @@ class MainPageLocationSerializer(serializers.ModelSerializer):
         # 20 Jan 2025 - 05 Jan 2026
         return f"{self.format_date(lower)} - {self.format_date(display_upper)}"
 
+    def to_representation(self, instance: MainPageLocation) -> Dict[str, Any]:
+        data = super().to_representation(instance)
+        return self.translate_fields(
+            data=data, instance=instance, fields=["highlight_name", "story"]
+        )
+
     class Meta:
         model = MainPageLocation
         fields = [
             "pk",
-            "country",
-            "country_name",
-            "country_slug",
-            "place_name",
+            "place",
             "place_slug",
+            "country_slug",
             "highlight_name",
             "adventure_date",
             "story",
@@ -223,10 +253,7 @@ class TravelHighlightDetailSerializer(MainPageLocationSerializer):
     Includes full image metadata and dynamic image filtering.
     """
 
-    country = serializers.CharField(source="country.name", read_only=True)
-    country_code = serializers.CharField(source="country.code", read_only=True)
-    place = serializers.CharField(source="place.name", read_only=True, allow_null=True)
-    images = serializers.SerializerMethodField()  # type: ignore[assignment]
+    images = serializers.SerializerMethodField()
 
     def get_images(self, obj: MainPageLocation) -> list:
         queryset = GalleryQueryService.get_travel_highlight_images(obj)
@@ -234,7 +261,7 @@ class TravelHighlightDetailSerializer(MainPageLocationSerializer):
         return list(AstroImageSerializerList(queryset, many=True, context=self.context).data)
 
     class Meta(MainPageLocationSerializer.Meta):
-        fields = MainPageLocationSerializer.Meta.fields + ["country_code", "place"]
+        fields = MainPageLocationSerializer.Meta.fields
 
 
 class MeteorsMainPageConfigSerializer(serializers.ModelSerializer):

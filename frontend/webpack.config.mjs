@@ -49,6 +49,8 @@ export default (env, argv) => {
     process.env.API_URL ||
     (isDev ? 'https://api.portfolio.local' : '');
 
+  const enableGA = env.ENABLE_GA || process.env.ENABLE_GA || 'false';
+
   if (!apiUrl && !isDev) {
     console.error(
       '\x1b[31m%s\x1b[0m',
@@ -94,7 +96,23 @@ export default (env, argv) => {
           },
         },
         {
+          test: /\.module\.css$/,
+          use: [
+            'style-loader',
+            {
+              loader: 'css-loader',
+              options: {
+                modules: {
+                  exportLocalsConvention: 'camelCase',
+                  namedExport: false,
+                },
+              },
+            },
+          ],
+        },
+        {
           test: /\.css$/,
+          exclude: /\.module\.css$/,
           use: ['style-loader', 'css-loader'],
         },
         {
@@ -116,6 +134,16 @@ export default (env, argv) => {
         'process.env.NODE_ENV': JSON.stringify(argv.mode || 'development'),
         'process.env.GA_TRACKING_ID': JSON.stringify(
           env.GA_TRACKING_ID || process.env.GA_TRACKING_ID || ''
+        ),
+        'process.env.ENABLE_GA': JSON.stringify(enableGA),
+        'process.env.SENTRY_DSN_FE': JSON.stringify(
+          env.SENTRY_DSN_FE || process.env.SENTRY_DSN_FE || ''
+        ),
+        'process.env.ENVIRONMENT': JSON.stringify(
+          env.ENVIRONMENT ||
+            process.env.ENVIRONMENT ||
+            argv.mode ||
+            'development'
         ),
       }),
       // Only include the service worker plugin in production to avoid HMR issues

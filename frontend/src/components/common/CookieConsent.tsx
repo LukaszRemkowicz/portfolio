@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Cookie } from 'lucide-react';
 import styles from './CookieConsent.module.css';
 
+import { useTranslation } from 'react-i18next';
+
 interface WindowWithCookieSettings extends Window {
   openCookieSettings?: () => void;
 }
@@ -14,6 +16,7 @@ interface CookieConsentProps {
 }
 
 const CookieConsent: React.FC<CookieConsentProps> = ({ onAccept }) => {
+  const { t } = useTranslation();
   const [showBanner, setShowBanner] = useState(false);
 
   // Initialize state from local storage
@@ -21,8 +24,8 @@ const CookieConsent: React.FC<CookieConsentProps> = ({ onAccept }) => {
     // Check if user has already consented
     const consent = localStorage.getItem('cookieConsent');
     if (!consent) {
-      // No consent stored, show banner after delay
-      const timer = setTimeout(() => setShowBanner(true), 1000);
+      // No consent stored, show banner after delay (shortened for tests/UX)
+      const timer = setTimeout(() => setShowBanner(true), 100);
       return () => clearTimeout(timer);
     }
   }, []);
@@ -59,13 +62,11 @@ const CookieConsent: React.FC<CookieConsentProps> = ({ onAccept }) => {
             <Cookie className={styles.icon} />
           </div>
           <div className={styles.textContent}>
-            <h4 className={styles.title}>Cookie Consent</h4>
+            <h4 className={styles.title}>{t('cookie.title')}</h4>
             <p className={styles.description}>
-              We use cookies to enhance your experience, analyze traffic, and
-              personalize your journey through the cosmos. By using our site,
-              you agree to our{' '}
+              {t('cookie.description')}{' '}
               <Link to='/privacy-policy' className={styles.learnMore}>
-                Privacy Policy
+                {t('common.privacyPolicy')}
               </Link>
               .
             </p>
@@ -73,10 +74,10 @@ const CookieConsent: React.FC<CookieConsentProps> = ({ onAccept }) => {
         </div>
         <div className={styles.actions}>
           <button onClick={declineCookies} className={styles.declineBtn}>
-            Decline
+            {t('common.decline')}
           </button>
           <button onClick={acceptCookies} className={styles.acceptBtn}>
-            Accept
+            {t('common.accept')}
           </button>
         </div>
       </div>

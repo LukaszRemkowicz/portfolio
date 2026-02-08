@@ -36,6 +36,14 @@ export interface EquipmentItem {
   name?: string;
 }
 
+export interface Place {
+  id: number;
+  name: string;
+  country: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  translations?: any;
+}
+
 export interface AstroImage {
   pk: number;
   slug: string;
@@ -46,7 +54,7 @@ export interface AstroImage {
   description: string;
   created_at?: string;
   capture_date?: string;
-  location?: string;
+  place?: Place;
   telescope?: EquipmentItem[] | string[];
   camera?: EquipmentItem[] | string[];
   tracker?: EquipmentItem[] | string[];
@@ -56,6 +64,7 @@ export interface AstroImage {
   processing_details?: string;
   celestial_object?: string;
   astrobin_url?: string;
+  process?: boolean;
 }
 
 export interface Tag {
@@ -66,11 +75,9 @@ export interface Tag {
 
 export interface MainPageLocation {
   pk: number;
-  country: string;
-  country_name: string;
-  country_slug: string;
-  place_name: string | null;
+  place: Place;
   place_slug: string | null;
+  country_slug: string;
   highlight_name?: string;
   adventure_date?: string;
   story?: string;

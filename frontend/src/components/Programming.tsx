@@ -1,11 +1,13 @@
 // frontend/src/components/Programming.tsx
 import { type FC, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/useStore';
 import styles from '../styles/components/Programming.module.css';
 import { Github, ExternalLink, Code2 } from 'lucide-react';
 import LoadingScreen from './common/LoadingScreen';
 
 const Programming: FC = () => {
+  const { t, i18n } = useTranslation();
   const {
     projects,
     isProjectsLoading: loading,
@@ -15,10 +17,10 @@ const Programming: FC = () => {
 
   useEffect(() => {
     loadProjects();
-  }, [loadProjects]);
+  }, [loadProjects, i18n.language]);
 
   if (loading) {
-    return <LoadingScreen message='Compiling projects...' />;
+    return <LoadingScreen message={t('common.compiling')} />;
   }
 
   if (error) {
@@ -32,11 +34,8 @@ const Programming: FC = () => {
   return (
     <section className={styles.section}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Project Archive</h1>
-        <p className={styles.subtitle}>
-          A collection of software engineering projects, from microservices to
-          creative frontend experiments.
-        </p>
+        <h1 className={styles.title}>{t('programming.title')}</h1>
+        <p className={styles.subtitle}>{t('programming.subtitle')}</p>
       </header>
 
       <div className={styles.grid}>
@@ -83,7 +82,8 @@ const Programming: FC = () => {
                         rel='noopener noreferrer'
                         className={styles.actionLink}
                       >
-                        <Github className={styles.icon} /> Source
+                        <Github className={styles.icon} />{' '}
+                        {t('programming.source')}
                       </a>
                     )}
                     {project.live_url && (
@@ -93,7 +93,8 @@ const Programming: FC = () => {
                         rel='noopener noreferrer'
                         className={styles.actionLink}
                       >
-                        <ExternalLink className={styles.icon} /> Live Demo
+                        <ExternalLink className={styles.icon} />{' '}
+                        {t('programming.liveDemo')}
                       </a>
                     )}
                   </div>
@@ -103,10 +104,7 @@ const Programming: FC = () => {
           })
         ) : (
           <div className={styles.noResults}>
-            <p>
-              The archives appear to be empty. Check back later for new
-              transmissions.
-            </p>
+            <p>{t('programming.empty')}</p>
           </div>
         )}
       </div>

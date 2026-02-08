@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import styles from '../styles/components/TravelHighlightsPage.module.css';
 import { API_ROUTES, getMediaUrl, ASSETS } from '../api/routes';
@@ -11,6 +12,7 @@ import { useAppStore } from '../store/useStore';
 import { sanitizeHtml } from '../utils/html';
 
 const TravelHighlightsPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const { countrySlug, placeSlug } = useParams<{
     countrySlug: string;
     placeSlug?: string;
@@ -65,8 +67,11 @@ const TravelHighlightsPage: React.FC = () => {
         }
 
         // Set metadata with fallbacks
-        setCountry(data.country || '');
-        setPlace(data.place || null);
+        const placeName = data.place?.name || null;
+        const countryName = data.place?.country || '';
+
+        setCountry(countryName);
+        setPlace(placeName);
         setStory(data.story || null);
         setAdventureDate(data.adventure_date || null);
         setCreatedAt(data.created_at || null);
@@ -92,7 +97,7 @@ const TravelHighlightsPage: React.FC = () => {
       }
     };
     loadData();
-  }, [countrySlug, placeSlug]);
+  }, [countrySlug, placeSlug, i18n.language]);
 
   const handleImageClick = (image: AstroImage): void => {
     setModalImage(image);
@@ -104,6 +109,32 @@ const TravelHighlightsPage: React.FC = () => {
   // Display title: "Place, Country" or just "Country"
   const displayTitle =
     place && country ? `${place}, ${country}` : country || 'Travel Highlights';
+
+  const localizeAdventureDate = (dateStr: string | null, lang: string) => {
+    if (!dateStr) return null;
+    const months: Record<string, number> = {
+      Jan: 0,
+      Feb: 1,
+      Mar: 2,
+      Apr: 3,
+      May: 4,
+      Jun: 5,
+      Jul: 6,
+      Aug: 7,
+      Sep: 8,
+      Oct: 9,
+      Nov: 10,
+      Dec: 11,
+    };
+
+    return dateStr.replace(
+      /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g,
+      match => {
+        const dummyDate = new Date(2000, months[match], 1);
+        return dummyDate.toLocaleDateString(lang, { month: 'short' });
+      }
+    );
+  };
 
   return (
     <div className={styles.container}>
@@ -126,7 +157,7 @@ const TravelHighlightsPage: React.FC = () => {
       >
         <h1 className={styles.heroTitle}>{displayTitle}</h1>
         <p className={styles.heroSubtitle}>
-          Exploring the cosmic wonders of {displayTitle}
+          {t('travel.exploringCosmic')} {displayTitle}
         </p>
       </div>
 
@@ -136,12 +167,15 @@ const TravelHighlightsPage: React.FC = () => {
           <div className={styles.glassCard}>
             <header className={styles.metaInfo}>
               <span className={styles.badge}>
-                ADVENTURE DATE |{' '}
+                {t('travel.adventureDate')} |{' '}
                 {adventureDate
-                  ? adventureDate.toUpperCase()
+                  ? localizeAdventureDate(
+                      adventureDate,
+                      i18n.language
+                    )?.toUpperCase()
                   : createdAt
                     ? new Date(createdAt)
-                        .toLocaleDateString('en-US', {
+                        .toLocaleDateString(i18n.language, {
                           month: 'long',
                           year: 'numeric',
                         })
@@ -177,6 +211,8 @@ const TravelHighlightsPage: React.FC = () => {
                       alt={image.name}
                       className={styles.viewerImage}
                       onClick={() => handleImageClick(image)}
+                      draggable='false'
+                      onContextMenu={e => e.preventDefault()}
                     />
                   </div>
 
@@ -186,7 +222,7 @@ const TravelHighlightsPage: React.FC = () => {
                       className={styles.imageDescription}
                       dangerouslySetInnerHTML={{
                         __html: sanitizeHtml(
-                          image.description || 'No description available.'
+                          image.description || t('common.noDescription')
                         ),
                       }}
                     />

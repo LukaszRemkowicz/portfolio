@@ -1,7 +1,7 @@
 # backend/inbox/tests/test_admin.py
-from unittest.mock import MagicMock
 
 import pytest
+from pytest_mock import MockerFixture
 
 from django.contrib.admin.sites import AdminSite
 from django.test import RequestFactory
@@ -21,16 +21,18 @@ class TestContactMessageAdmin:
             name="Test", email="test@example.com", subject="Sub", message="Msg"
         )
 
-    def test_changeform_view_marks_as_read(self, request_factory: RequestFactory) -> None:
+    def test_changeform_view_marks_as_read(
+        self, request_factory: RequestFactory, mocker: MockerFixture
+    ) -> None:
         """Verify that viewing a message in admin marks it as read"""
         assert self.contact_message.is_read is False
 
         request_url = reverse("admin:inbox_contactmessage_change", args=[self.contact_message.pk])
         request = request_factory.get(request_url)
-        request.user = MagicMock()
-        request.session = MagicMock()
+        request.user = mocker.MagicMock()
+        request.session = mocker.MagicMock()
         # Mocking _messages for admin views that might use messages framework
-        request._messages = MagicMock()
+        request._messages = mocker.MagicMock()
 
         # Call changeform_view
         self.message_admin.changeform_view(request, object_id=str(self.contact_message.pk))
@@ -38,11 +40,13 @@ class TestContactMessageAdmin:
         self.contact_message.refresh_from_db()
         assert self.contact_message.is_read is True
 
-    def test_changeform_view_invalid_id(self, request_factory: RequestFactory) -> None:
+    def test_changeform_view_invalid_id(
+        self, request_factory: RequestFactory, mocker: MockerFixture
+    ) -> None:
         """Verify that invalid IDs don't cause errors"""
         request = request_factory.get("/")
-        request.user = MagicMock()
-        request.session = MagicMock()
-        request._messages = MagicMock()
+        request.user = mocker.MagicMock()
+        request.session = mocker.MagicMock()
+        request._messages = mocker.MagicMock()
         # Should not raise exception
         self.message_admin.changeform_view(request, object_id="999")

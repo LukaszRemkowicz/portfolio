@@ -1,0 +1,35 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block content %}
+{% if language_tabs %}
+<div class="parler-language-tabs{% if language_tabs.css_class %} {{ language_tabs.css_class }}{% endif %}">
+    {% for url, name, code, status in language_tabs %}
+    {% if status == "current" %}
+    <input type="hidden" class="language_button selected" name="{{ code }}" />
+    <span class="current">
+        {{ name }}
+        {% if language_tabs.current_is_translated %}
+        {% if language_tabs.allow_deletion %}
+        <a class="deletelink" href="./delete-translation/{{ code }}/"
+            title="{% trans 'Delete Translation' %}">&nbsp;</a>
+        {% endif %}
+        {% endif %}
+    </span>
+    {% else %}
+    <span class="{{ status }}">
+        <a href="{{ url }}">{{ name }}</a>
+        {% if status == "available" %}
+        {% if language_tabs.allow_deletion %}
+        <a class="deletelink" href="./delete-translation/{{ code }}/"
+            title="{% trans 'Delete Translation' %}">&nbsp;</a>
+        {% endif %}
+        {% endif %}
+    </span>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+{{ block.super }}
+{% endblock %}

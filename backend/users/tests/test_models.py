@@ -3,9 +3,8 @@
 Tests for users models
 """
 
-from unittest.mock import patch
-
 import pytest
+from pytest_mock import MockerFixture
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
@@ -25,7 +24,7 @@ def test_profile_creation(user: User):
     assert profile.user == user
     assert profile.type == Profile.ProfileType.PROGRAMMING
     assert profile.title == "Dev"
-    assert str(profile) == "Programming Profile"
+    assert str(profile) == "Programming Profile - Dev"
 
 
 @pytest.mark.django_db
@@ -41,19 +40,19 @@ def test_profile_type_uniqueness(user: User):
 def test_user_singleton_pattern_only_one_user_allowed() -> None:
     """Test that only one user can exist (singleton pattern)"""
     # Create first user - should succeed
-    UserFactory(email="first@example.com", first_name="First")
+    UserFactory()
     assert User.objects.count() == 1
 
     # Try to create second user - should raise ValueError
     # We use build() then save() to trigger the model's clean/save logic manually
     # or just another Factory call which calls save()
-    second_user = UserFactory.build(email="second@example.com", first_name="Second")
+    second_user = UserFactory.build()
     with pytest.raises(ValueError, match="Only one user is allowed"):
         second_user.save()
 
     # Verify only one user still exists
     assert User.objects.count() == 1
-    assert User.objects.first().email == "first@example.com"
+    assert User.objects.first().email == "admin@example.com"
 
 
 @pytest.mark.django_db
@@ -63,12 +62,12 @@ def test_user_get_user_method() -> None:
     assert User.get_user() is None
 
     # Create user
-    user = UserFactory(email="test@example.com", first_name="Test")
+    user = UserFactory()
 
     # get_user() should return the user
     retrieved_user = User.get_user()
     assert retrieved_user is not None
-    assert retrieved_user.email == "test@example.com"
+    assert retrieved_user.email == user.email
     assert retrieved_user.id == user.id
 
 
@@ -101,20 +100,20 @@ def test_user_str_method() -> None:
 
 
 @pytest.mark.django_db
-def test_user_save_integrity_error() -> None:
+def test_user_save_integrity_error(mocker: MockerFixture) -> None:
     """Test handling of IntegrityError in User.save()"""
     user = UserFactory.build(email="test@example.com")
-    with patch("django.db.models.Model.save") as mock_save:
-        mock_save.side_effect = IntegrityError("Duplicate entry")
-        with pytest.raises(ValueError, match="Failed to save user. Only one user is allowed."):
-            user.save()
+    mock_save = mocker.patch("django.db.models.Model.save")
+    mock_save.side_effect = IntegrityError("Duplicate entry")
+    with pytest.raises(ValueError, match="Failed to save user. Only one user is allowed."):
+        user.save()
 
 
 @pytest.mark.django_db
-def test_user_save_generic_exception() -> None:
+def test_user_save_generic_exception(mocker: MockerFixture) -> None:
     """Test handling of generic Exception in User.save()"""
     user = UserFactory.build(email="test@example.com")
-    with patch("django.db.models.Model.save") as mock_save:
-        mock_save.side_effect = Exception("Some other error")
-        with pytest.raises(Exception, match="Some other error"):
-            user.save()
+    mock_save = mocker.patch("django.db.models.Model.save")
+    mock_save.side_effect = Exception("Some other error")
+    with pytest.raises(Exception, match="Some other error"):
+        user.save()

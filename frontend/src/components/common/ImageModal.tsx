@@ -1,10 +1,12 @@
 // frontend/src/components/common/ImageModal.tsx
-import { type FC, useEffect, useCallback } from 'react';
+import { type FC, useEffect, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, Calendar, MapPin } from 'lucide-react';
 import styles from '../../styles/components/ImageModal.module.css';
 import { AstroImage, EquipmentItem } from '../../types';
+import { useAppStore } from '../../store/useStore';
 import { sanitizeHtml, slugify } from '../../utils/html';
 import { APP_ROUTES } from '../../api/constants';
 
@@ -15,15 +17,157 @@ interface ImageModalProps {
 
 const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+
+  const activeImageDetail = useAppStore(state => state.activeImageDetail);
+  const loadImageDetail = useAppStore(state => state.loadImageDetail);
+  const clearActiveImage = useAppStore(state => state.clearActiveImage);
+  const isActiveImageLoading = useAppStore(state => state.isActiveImageLoading);
+
+  const [isFullRes, setIsFullRes] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [dragStartTime, setDragStartTime] = useState(0);
+  const [hasMoved, setHasMoved] = useState(false);
+  const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(
+    null
+  );
+
+  // Fetch full details when the image changes
+  useEffect(() => {
+    if (image?.slug) {
+      loadImageDetail(image.slug);
+    }
+    return () => {
+      clearActiveImage();
+    };
+  }, [image?.slug, loadImageDetail, clearActiveImage]);
+
+  const closeFullRes = () => {
+    setIsFullRes(false);
+    setScale(1);
+    setPanPosition({ x: 0, y: 0 });
+    setLastTouchDistance(null);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!image || scale <= 1 || image.process === false) return;
+    e.preventDefault();
+    e.stopPropagation(); // Stop from hitting overlay
+    setIsDragging(true);
+    setHasMoved(false);
+    setDragStartTime(Date.now());
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || scale <= 1) return;
+
+    const dx = Math.abs(e.clientX - dragStart.x);
+    const dy = Math.abs(e.clientY - dragStart.y);
+
+    if (dx > 5 || dy > 5) {
+      setHasMoved(true);
+    }
+
+    const moveX = e.clientX - dragStart.x;
+    const moveY = e.clientY - dragStart.y;
+
+    setPanPosition((prev: { x: number; y: number }) => ({
+      x: prev.x + moveX / (scale * 250), // Increased speed (was 500)
+      y: prev.y + moveY / (scale * 250),
+    }));
+
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!image || !isFullRes || image.process === false) return;
+
+    // Always prevent default to stop the background from scrolling while in lightbox
+    e.preventDefault();
+
+    // Standard scroll or Trackpad Pinch (ctrlKey)
+    const factor = e.ctrlKey ? 0.05 : 0.005;
+    const delta = -e.deltaY * factor;
+    setScale(prev => Math.min(Math.max(1, prev + delta), 4));
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!image || image.process === false) return;
+    if (e.touches.length === 2) {
+      const distance = Math.hypot(
+        e.touches[0].pageX - e.touches[1].pageX,
+        e.touches[0].pageY - e.touches[1].pageY
+      );
+      setLastTouchDistance(distance);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!image || image.process === false) return;
+    if (e.touches.length === 2 && lastTouchDistance !== null) {
+      const distance = Math.hypot(
+        e.touches[0].pageX - e.touches[1].pageX,
+        e.touches[0].pageY - e.touches[1].pageY
+      );
+      const delta = (distance - lastTouchDistance) * 0.01;
+      setScale(prev => Math.min(Math.max(1, prev + delta), 4));
+      setLastTouchDistance(distance);
+    } else if (e.touches.length === 1 && scale > 1) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - dragStart.x;
+      const dy = touch.clientY - dragStart.y;
+
+      setPanPosition((prev: { x: number; y: number }) => ({
+        x: prev.x + dx / (scale * 250), // Increased speed (was 500)
+        y: prev.y + dy / (scale * 250),
+      }));
+
+      setDragStart({ x: touch.clientX, y: touch.clientY });
+    }
+  };
+
+  const toggleZoom = (e: React.MouseEvent) => {
+    if (!image || image.process === false) return;
+    e.stopPropagation();
+    const duration = Date.now() - dragStartTime;
+    if (hasMoved || duration > 200) return; // Ignore if moved or held for long
+
+    if (scale > 1) {
+      setScale(1.0);
+      setPanPosition({ x: 0, y: 0 });
+    } else {
+      setScale(2.0);
+      setPanPosition({ x: 0, y: 0 });
+    }
+  };
 
   useEffect(() => {
     if (!image) return;
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        if (isFullRes) {
+          if (scale > 1) {
+            setScale(1);
+            setPanPosition({ x: 0, y: 0 });
+          } else {
+            closeFullRes();
+          }
+        } else {
+          onClose();
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [image, onClose]);
+  }, [image, onClose, isFullRes, scale]);
 
   const handleTagClick = useCallback(
     (tag: string) => {
@@ -39,8 +183,20 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   );
 
   const renderEquipment = () => {
-    const source = image;
+    // Prefer the fully detailed image if available, otherwise fall back to the basic prop
+    // However, basic prop (from list) likely doesn't have equipment/specs anymore due to backend optimization.
+    const source = activeImageDetail || image;
     if (!source) return null;
+
+    if (isActiveImageLoading) {
+      return (
+        <div className={styles.specsLoading}>
+          <div className={styles.specsSkeleton} />
+          <div className={styles.specsSkeleton} />
+          <div className={styles.specsSkeleton} />
+        </div>
+      );
+    }
 
     const getEquipmentValue = (
       items: (EquipmentItem | string)[] | undefined,
@@ -109,25 +265,21 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
       {
         label: 'Exposure',
         value: source.exposure_details ? (
-          <>
-            {source.exposure_details
-              .replace(' Foreground:', '\nForeground:')
-              .split('\n')
-              .map((line: string, idx: number) => {
-                const parts = line.split(':');
-                if (parts.length > 1) {
-                  return (
-                    <div key={idx}>
-                      {parts[0]}:
-                      <span className={styles.lightWeight}>
-                        {parts.slice(1).join(':')}
-                      </span>
-                    </div>
-                  );
-                }
-                return <div key={idx}>{line}</div>;
-              })}
-          </>
+          <div
+            dangerouslySetInnerHTML={{
+              __html: sanitizeHtml(source.exposure_details),
+            }}
+          />
+        ) : null,
+      },
+      {
+        label: 'Processing',
+        value: source.processing_details ? (
+          <div
+            dangerouslySetInnerHTML={{
+              __html: sanitizeHtml(source.processing_details),
+            }}
+          />
         ) : null,
       },
     ].filter(item => item.value);
@@ -165,8 +317,95 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
         </button>
 
         <div className={styles.imageWrapper}>
-          <img src={image.url} alt={image.name} className={styles.modalImage} />
+          <img
+            src={image.url}
+            alt={image.name}
+            className={styles.modalImage}
+            onClick={() => {
+              if (image.process !== false) {
+                setIsFullRes(true);
+                setPanPosition({ x: 0, y: 0 });
+              }
+            }}
+            style={{ cursor: image.process !== false ? 'zoom-in' : 'default' }}
+            title={
+              image.process !== false
+                ? 'Click to view full resolution'
+                : undefined
+            }
+            draggable='false'
+            onContextMenu={e => e.preventDefault()}
+          />
         </div>
+
+        {isFullRes &&
+          createPortal(
+            <div
+              className={styles.fullResOverlay}
+              onMouseDown={() => {
+                setHasMoved(false);
+                setDragStartTime(Date.now());
+              }}
+              onClick={() => {
+                const duration = Date.now() - dragStartTime;
+                if (!hasMoved && duration < 200) closeFullRes();
+              }}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
+              onTouchStart={e => {
+                if (e.touches.length === 1) {
+                  setDragStart({
+                    x: e.touches[0].clientX,
+                    y: e.touches[0].clientY,
+                  });
+                }
+                handleTouchStart(e);
+              }}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={() => {
+                setIsDragging(false);
+                setLastTouchDistance(null);
+              }}
+            >
+              <button
+                className={styles.fullResClose}
+                onClick={e => {
+                  e.stopPropagation();
+                  closeFullRes();
+                }}
+              >
+                <X size={32} />
+              </button>
+              <img
+                src={image.url}
+                alt={image.name}
+                className={`${styles.fullResImage} ${
+                  scale > 1.01 ? styles.isZoomed : ''
+                }`}
+                onMouseDown={handleMouseDown}
+                onClick={toggleZoom}
+                style={{
+                  transform: `translate(${panPosition.x * 100}%, ${panPosition.y * 100}%) scale(${scale})`,
+                  transition: isDragging
+                    ? 'none'
+                    : 'transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)',
+                  cursor:
+                    image.process === false
+                      ? 'default'
+                      : scale > 1.01
+                        ? isDragging
+                          ? 'grabbing'
+                          : 'grab'
+                        : 'zoom-in',
+                }}
+                draggable='false'
+                onContextMenu={e => e.preventDefault()}
+              />
+            </div>,
+            document.body
+          )}
 
         <div className={styles.modalMetadata}>
           <div className={styles.metadataLeft}>
@@ -175,17 +414,21 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
               {image.capture_date && (
                 <span className={styles.metaItem}>
                   <Calendar size={14} className={styles.metaIcon} />
-                  {new Date(image.capture_date).toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+                  {new Date(image.capture_date).toLocaleDateString(
+                    i18n.language,
+                    {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    }
+                  )}
                 </span>
               )}
-              {image.location && (
+              {image.place?.name && (
                 <span className={styles.metaItem}>
                   <MapPin size={14} className={styles.metaIcon} />
-                  {image.location}
+                  {image.place.name}
+                  {image.place.country ? `, ${image.place.country}` : ''}
                 </span>
               )}
             </div>
@@ -204,24 +447,19 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
         </div>
         <div className={styles.descriptionWrapper}>
           {renderEquipment()}
-          <div className={styles.descriptionContent}>
-            {(image.description || 'No description available.')
-              .split(/\r?\n/)
-              .filter((para: string) => para.trim().length > 0)
-              .map((para: string, index: number) => (
-                <div
-                  key={index}
-                  className={
-                    index === 0
-                      ? styles.modalDescription
-                      : styles.descriptionParagraph
-                  }
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeHtml(para),
-                  }}
-                />
-              ))}
-          </div>
+          {/* Use activeImageDetail for description, as list item no longer has it */}
+          {(activeImageDetail?.description || image.description) && (
+            <div className={styles.descriptionContent}>
+              <div
+                className={styles.modalDescription}
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeHtml(
+                    activeImageDetail?.description || image.description || ''
+                  ),
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>,

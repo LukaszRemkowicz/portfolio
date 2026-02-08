@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-25 01:02+0000\n"
+"POT-Creation-Date: 2026-01-31 23:06+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,79 +20,86 @@ msgstr ""
 "(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
 "n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
 
-#: core/models.py:18
+#: core/models.py:19
 msgid "ID"
 msgstr "ID"
 
-#: core/models.py:20
+#: core/models.py:21
 msgid "Created At"
 msgstr "Utworzono"
 
-#: core/models.py:21
+#: core/models.py:22
 msgid "Updated At"
 msgstr "Zaktualizowano"
 
-#: core/models.py:24
+#: core/models.py:25
 msgid "Image File"
 msgstr "Plik zdjęcia"
 
-#: core/models.py:25
+#: core/models.py:26
 msgid "The actual image file to be displayed."
 msgstr "Faktyczny plik zdjęcia do wyświetlenia."
 
-#: core/models.py:28
+#: core/models.py:29
 msgid "Name"
 msgstr "Nazwa"
 
-#: core/models.py:28
+#: core/models.py:29
 msgid "A descriptive name for this image."
 msgstr "Opisowa nazwa tego zdjęcia."
 
-#: core/models.py:32
+#: core/models.py:33
 msgid "Description"
 msgstr "Opis"
 
-#: core/models.py:33
+#: core/models.py:34
 msgid "Optional detailed description of the image."
 msgstr "Opcjonalny szczegółowy opis zdjęcia."
 
-#: core/models.py:37
+#: core/models.py:38
 msgid "Thumbnail"
 msgstr ""
 
-#: core/models.py:103
+#: core/models.py:83
+#, python-format
+msgid "A singleton instance of %s already exists."
+msgstr ""
+
+#: core/models.py:97
 msgid "Contact Form Enabled"
 msgstr "Formularz Kontaktowy Włączony"
 
-#: core/models.py:105
+#: core/models.py:99
 msgid "Travel Highlights Enabled"
 msgstr ""
 
-#: core/models.py:108
+#: core/models.py:102
 msgid "Programming Section Enabled"
 msgstr "Sekcja Programowania Włączona"
 
-#: core/models.py:111
+#: core/models.py:105
 #, fuzzy
 #| msgid "Programming Section Enabled"
 msgid "Last Images Section Enabled"
 msgstr "Sekcja Programowania Włączona"
 
-#: core/models.py:113
-#, fuzzy
-#| msgid "Contact Form Enabled"
-msgid "Meteors Enabled"
-msgstr "Formularz Kontaktowy Włączony"
+#: core/models.py:112
+msgid "Meteors Configuration"
+msgstr ""
 
-#: core/models.py:116 core/models.py:117 core/models.py:120
+#: core/models.py:113
+msgid "Select the configuration to enable meteors. Leave empty to disable."
+msgstr ""
+
+#: core/models.py:117 core/models.py:118 core/models.py:121
 msgid "Landing Page Settings"
 msgstr "Ustawienia Strony Lądowania"
 
-#: core/settings.py:201
+#: core/settings.py:207
 msgid "English"
 msgstr "Angielski"
 
-#: core/settings.py:202
+#: core/settings.py:208
 msgid "Polish"
 msgstr "Polski"
 
@@ -137,3 +144,8 @@ msgstr ""
 #: users/models.py:116
 msgid "Astrophotography"
 msgstr ""
+
+#, fuzzy
+#~| msgid "Contact Form Enabled"
+#~ msgid "Meteors Enabled"
+#~ msgstr "Formularz Kontaktowy Włączony"

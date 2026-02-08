@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import styles from '../styles/components/AstroGallery.module.css';
 import { ASSETS } from '../api/routes';
 import { AstroImage, FilterType } from '../types';
@@ -45,17 +46,19 @@ const AstroGallery: React.FC = () => {
     loadCategories();
   }, [loadInitialData, loadCategories]);
 
+  const { t, i18n } = useTranslation();
+
   useEffect(() => {
     loadImages({
       ...(selectedFilter ? { filter: selectedFilter } : {}),
       ...(selectedTag ? { tag: selectedTag } : {}),
     });
-  }, [selectedFilter, selectedTag, loadImages]);
+  }, [selectedFilter, selectedTag, loadImages, i18n.language]);
 
   // Refresh tags when category changes
   useEffect(() => {
     loadTags(selectedFilter || undefined);
-  }, [selectedFilter, loadTags]);
+  }, [selectedFilter, loadTags, i18n.language]);
 
   // Smooth scroll to results on filter/tag change (Mobile only)
   useEffect(() => {
@@ -103,7 +106,7 @@ const AstroGallery: React.FC = () => {
 
   const handleImageClick = (image: AstroImage): void => {
     const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('img', image.slug || image.pk.toString());
+    nextParams.set('img', image.slug);
     setSearchParams(nextParams);
   };
 
@@ -124,12 +127,10 @@ const AstroGallery: React.FC = () => {
           backgroundImage: `url(${background || ASSETS.galleryFallback})`,
         }}
       >
-        <h1 className={styles.heroTitle}>Gallery</h1>
+        <h1 className={styles.heroTitle}>{t('common.gallery')}</h1>
       </div>
       <div className={styles.mainContent}>
-        <h3 className={styles.sidebarLabel}>
-          Filter by category or explore images using the tags below.
-        </h3>
+        <h3 className={styles.sidebarLabel}>{t('common.gallerySubtitle')}</h3>
 
         <div className={styles.mobileActions}>
           <button
@@ -138,7 +139,7 @@ const AstroGallery: React.FC = () => {
             aria-expanded={isTagsDrawerOpen}
           >
             <Sliders size={18} />
-            Explore Tags
+            {t('common.exploreTags')}
           </button>
 
           <button
@@ -147,7 +148,7 @@ const AstroGallery: React.FC = () => {
             aria-expanded={isFiltersOpen}
           >
             <LayoutGrid size={18} />
-            Categories
+            {t('common.categories')}
           </button>
         </div>
 
@@ -188,7 +189,7 @@ const AstroGallery: React.FC = () => {
                 onClick={() => handleFilterClick(filter)}
                 aria-pressed={isActive}
               >
-                {filter}
+                {t(`categories.${filter}`)}
               </button>
             );
           })}
@@ -199,7 +200,7 @@ const AstroGallery: React.FC = () => {
           <div className={styles.grid}>
             {isImagesLoading ? (
               <div className={styles.noResults}>
-                <p>Scanning deep space sectors...</p>
+                <p>{t('common.scanning')}</p>
               </div>
             ) : images.length > 0 ? (
               images.map((image: AstroImage) => (
@@ -211,9 +212,9 @@ const AstroGallery: React.FC = () => {
               ))
             ) : (
               <div className={styles.noResults}>
-                <p>No images found for this filter.</p>
+                <p>{t('common.noImagesFound')}</p>
                 <p className={styles.noResultsHint}>
-                  Try selecting a different category or tag to see more images.
+                  {t('common.noImagesHint')}
                 </p>
               </div>
             )}

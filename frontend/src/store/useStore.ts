@@ -12,12 +12,15 @@ import {
   fetchProfile,
   fetchBackground,
   fetchAstroImages,
+  fetchAstroImageDetail,
   fetchSettings,
   fetchProjects,
   fetchTags,
   fetchCategories,
 } from '../api/services';
 import { NetworkError, ServerError } from '../api/errors';
+
+import i18n from '../i18n';
 
 interface AppState {
   profile: UserProfile | null;
@@ -35,16 +38,21 @@ interface AppState {
   imagesSessionId: string;
   projectsSessionId: string;
   tagsSessionId: string;
+  meteorConfig: MeteorConfig | null;
+
+  activeImageDetail: AstroImage | null;
+  isActiveImageLoading: boolean;
 
   // Actions
-  loadInitialData: () => Promise<void>;
+  loadInitialData: (force?: boolean) => Promise<void>;
   loadImages: (params?: FilterParams) => Promise<void>;
+  loadImageDetail: (slug: string) => Promise<void>;
+  clearActiveImage: () => void;
   loadProjects: () => Promise<void>;
-  loadCategories: () => Promise<void>;
+  loadCategories: (force?: boolean) => Promise<void>;
   loadTags: (category?: string) => Promise<void>;
   loadMeteorConfig: () => Promise<void>;
   clearError: () => void;
-  meteorConfig: MeteorConfig | null;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -65,11 +73,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   tagsSessionId: '',
   meteorConfig: null,
 
+  activeImageDetail: null,
+  isActiveImageLoading: false,
+
   clearError: () => set({ error: null }),
 
-  loadInitialData: async () => {
+  loadInitialData: async (force = false) => {
     // Avoid double loading if already have data
-    if (get().profile && get().backgroundUrl) return;
+    if (!force && get().profile && get().backgroundUrl) return;
 
     const sessionId = crypto.randomUUID();
     set({ isInitialLoading: true, error: null, initialSessionId: sessionId });
@@ -130,6 +141,32 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  loadImageDetail: async (slug: string) => {
+    // Don't fetch if we already have the full details for this image
+    const currentDetail = get().activeImageDetail;
+    if (
+      currentDetail &&
+      currentDetail.slug === slug &&
+      currentDetail.telescope
+    ) {
+      return;
+    }
+
+    set({ isActiveImageLoading: true });
+    try {
+      const data = await fetchAstroImageDetail(slug);
+      set({ activeImageDetail: data, isActiveImageLoading: false });
+    } catch (e: unknown) {
+      console.error('Store image detail load failure:', e);
+      set({ isActiveImageLoading: false });
+      // We don't set global error here to avoid disrupting the gallery
+    }
+  },
+
+  clearActiveImage: () => {
+    set({ activeImageDetail: null });
+  },
+
   loadProjects: async () => {
     const sessionId = crypto.randomUUID();
     set({ isProjectsLoading: true, error: null, projectsSessionId: sessionId });
@@ -164,9 +201,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       console.error('Store tags load failure:', e);
     }
   },
-  loadCategories: async () => {
+  loadCategories: async (force = false) => {
     // Avoid double loading if already have data
-    if (get().categories.length > 0) return;
+    if (!force && get().categories.length > 0) return;
 
     try {
       const data = await fetchCategories();
@@ -185,3 +222,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 }));
+
+// Listen for language changes and refresh all data
+i18n.on('languageChanged', () => {
+  const store = useAppStore.getState();
+
+  // Refresh data that doesn't depend on complex state
+  store.loadInitialData(true);
+  store.loadProjects();
+  store.loadCategories(true);
+  store.loadTags();
+
+  // Note: loadImages is usually triggered by components (AstroGallery)
+  // via useEffect when they re-render on language change if we add i18n.language to deps
+});
