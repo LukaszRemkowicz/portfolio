@@ -128,7 +128,7 @@ class GalleryQueryService:
         Retrieve active MainPageLocation instances with optimized prefetching.
         Prevents N+1 queries for associated place, background image, and slider images.
         """
-        return (
+        return (  # type: ignore[no-any-return]
             MainPageLocation.objects.filter(is_active=True)
             .select_related("place", "background_image")
             .prefetch_related(

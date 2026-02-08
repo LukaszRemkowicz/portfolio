@@ -7,10 +7,13 @@ import parler.fields
 import parler.models
 
 import django.contrib.postgres.fields.ranges
+import django.core.validators
 import django.db.models.deletion
 from django.db import migrations, models
 
+import astrophotography.constants
 import astrophotography.models
+import core.models
 
 
 class Migration(migrations.Migration):
@@ -140,7 +143,7 @@ class Migration(migrations.Migration):
                 (
                     "star_path_range",
                     models.JSONField(
-                        default=astrophotography.models.default_star_path,
+                        default=astrophotography.constants.MeteorDefaults.star_path,
                         help_text="A list of two integers [min, max] representing the travel distance of a regular star in pixels. Example: [50, 500]",
                         verbose_name="Star Path Range (px)",
                     ),
@@ -148,7 +151,7 @@ class Migration(migrations.Migration):
                 (
                     "bolid_path_range",
                     models.JSONField(
-                        default=astrophotography.models.default_bolid_path,
+                        default=astrophotography.constants.MeteorDefaults.bolid_path,
                         help_text="A list of two integers [min, max] representing the travel distance of a bolid in pixels. Example: [50, 500]",
                         verbose_name="Bolid Path Range (px)",
                     ),
@@ -156,7 +159,7 @@ class Migration(migrations.Migration):
                 (
                     "star_streak_range",
                     models.JSONField(
-                        default=astrophotography.models.default_star_streak,
+                        default=astrophotography.constants.MeteorDefaults.star_streak,
                         help_text="A list of two integers [min, max] representing the visual length (streak) of a regular star. Example: [100, 200]",
                         verbose_name="Star Streak Range (px)",
                     ),
@@ -164,7 +167,7 @@ class Migration(migrations.Migration):
                 (
                     "bolid_streak_range",
                     models.JSONField(
-                        default=astrophotography.models.default_bolid_streak,
+                        default=astrophotography.constants.MeteorDefaults.bolid_streak,
                         help_text="A list of two integers [min, max] representing the visual length (streak) of a bolid. Example: [20, 100]",
                         verbose_name="Bolid Streak Range (px)",
                     ),
@@ -172,7 +175,7 @@ class Migration(migrations.Migration):
                 (
                     "star_duration_range",
                     models.JSONField(
-                        default=astrophotography.models.default_star_duration,
+                        default=astrophotography.constants.MeteorDefaults.star_duration,
                         help_text="A list of two floats [min, max] representing the duration (speed) of a regular star. Example: [0.4, 1.2]",
                         verbose_name="Star Duration Range (s)",
                     ),
@@ -180,7 +183,7 @@ class Migration(migrations.Migration):
                 (
                     "bolid_duration_range",
                     models.JSONField(
-                        default=astrophotography.models.default_bolid_duration,
+                        default=astrophotography.constants.MeteorDefaults.bolid_duration,
                         help_text="A list of two floats [min, max] representing the duration (speed) of a bolid. Example: [0.4, 0.9]",
                         verbose_name="Bolid Duration Range (s)",
                     ),
@@ -188,7 +191,7 @@ class Migration(migrations.Migration):
                 (
                     "star_opacity_range",
                     models.JSONField(
-                        default=astrophotography.models.default_star_opacity,
+                        default=astrophotography.constants.MeteorDefaults.star_opacity,
                         help_text="A list of two floats [min, max] between 0.0 and 1.0 for regular star brightness. Example: [0.4, 0.8]",
                         verbose_name="Star Opacity Range",
                     ),
@@ -196,7 +199,7 @@ class Migration(migrations.Migration):
                 (
                     "bolid_opacity_range",
                     models.JSONField(
-                        default=astrophotography.models.default_bolid_opacity,
+                        default=astrophotography.constants.MeteorDefaults.bolid_opacity,
                         help_text="A list of two floats [min, max] between 0.0 and 1.0 for bolid brightness. Example: [0.7, 1.0]",
                         verbose_name="Bolid Opacity Range",
                     ),
@@ -204,7 +207,7 @@ class Migration(migrations.Migration):
                 (
                     "smoke_opacity_range",
                     models.JSONField(
-                        default=astrophotography.models.default_smoke_opacity,
+                        default=astrophotography.constants.MeteorDefaults.smoke_opacity,
                         help_text="A list of two floats [min, max] between 0.0 and 1.0 for the smoke trail of a bolid. Example: [0.5, 0.8]",
                         verbose_name="Smoke Opacity Range",
                     ),

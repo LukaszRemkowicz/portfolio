@@ -47,7 +47,7 @@ class PlaceSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
         data = super().to_representation(instance)
 
         # Helper from mixin
-        data = self.translate_fields(data, instance, ["name"])
+        data = self.translate_fields(data=data, instance=instance, fields=["name"])
 
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
@@ -98,9 +98,9 @@ class AstroImageBaseSerializer(TranslatedSerializerMixin, TranslatableModelSeria
     def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
         data = super().to_representation(instance)
         return self.translate_fields(
-            data,
-            instance,
-            ["name", "description", "exposure_details", "processing_details"],
+            data=data,
+            instance=instance,
+            fields=["name", "description", "exposure_details", "processing_details"],
         )
 
     class Meta:
@@ -136,19 +136,11 @@ class AstroImageSerializer(AstroImageBaseSerializer):
     Includes full technical specs, equipment, and descriptions.
     """
 
-    camera: serializers.StringRelatedField = serializers.StringRelatedField(
-        many=True, read_only=True
-    )
-    lens: serializers.StringRelatedField = serializers.StringRelatedField(many=True, read_only=True)
-    telescope: serializers.StringRelatedField = serializers.StringRelatedField(
-        many=True, read_only=True
-    )
-    tracker: serializers.StringRelatedField = serializers.StringRelatedField(
-        many=True, read_only=True
-    )
-    tripod: serializers.StringRelatedField = serializers.StringRelatedField(
-        many=True, read_only=True
-    )
+    camera = serializers.StringRelatedField(many=True, read_only=True)
+    lens = serializers.StringRelatedField(many=True, read_only=True)
+    telescope = serializers.StringRelatedField(many=True, read_only=True)
+    tracker = serializers.StringRelatedField(many=True, read_only=True)
+    tripod = serializers.StringRelatedField(many=True, read_only=True)
 
     class Meta(AstroImageBaseSerializer.Meta):
         fields = AstroImageBaseSerializer.Meta.fields + [
@@ -194,21 +186,21 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
         return dt.strftime("%-d %b %Y")
 
     def get_background_image(self, obj: MainPageLocation) -> Optional[str]:
-        if bg := obj.background_image:
-            return str(bg.path.url)
+        if background := obj.background_image:
+            return str(background.path.url)
         return None
 
     def get_background_image_thumbnail(self, obj: MainPageLocation) -> Optional[str]:
-        if (bg := obj.background_image) and bg.thumbnail:
-            return str(bg.thumbnail.url)
+        if (background := obj.background_image) and background.thumbnail:
+            return str(background.thumbnail.url)
         return self.get_background_image(obj)
 
     def get_adventure_date(self, obj: MainPageLocation) -> Optional[str]:
-        if not (dr := obj.adventure_date):
+        if not (date_range := obj.adventure_date):
             return None
 
-        lower = dr.lower
-        upper = dr.upper
+        lower = date_range.lower
+        upper = date_range.upper
 
         if not lower:
             return None
@@ -234,7 +226,9 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
 
     def to_representation(self, instance: MainPageLocation) -> Dict[str, Any]:
         data = super().to_representation(instance)
-        return self.translate_fields(data, instance, ["highlight_name", "story"])
+        return self.translate_fields(
+            data=data, instance=instance, fields=["highlight_name", "story"]
+        )
 
     class Meta:
         model = MainPageLocation
@@ -259,7 +253,7 @@ class TravelHighlightDetailSerializer(MainPageLocationSerializer):
     Includes full image metadata and dynamic image filtering.
     """
 
-    images = serializers.SerializerMethodField()  # type: ignore[assignment]
+    images = serializers.SerializerMethodField()
 
     def get_images(self, obj: MainPageLocation) -> list:
         queryset = GalleryQueryService.get_travel_highlight_images(obj)

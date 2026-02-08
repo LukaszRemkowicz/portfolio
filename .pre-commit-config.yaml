@@ -59,6 +59,17 @@ repos:
         args: ["--toml-config", "backend/pyproject.toml"]
         additional_dependencies: [flake8-pyproject]
 
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: bash -c "cd backend && poetry run mypy ."
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
   # Security and Docker hooks - run manually when needed
   # detect-secrets scan --baseline .secrets.baseline
   # hadolint Dockerfile

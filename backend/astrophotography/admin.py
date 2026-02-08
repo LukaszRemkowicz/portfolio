@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from parler.admin import TranslatableAdmin
 from parler.forms import TranslatableModelForm
@@ -6,12 +7,17 @@ from parler.forms import TranslatableModelForm
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
-from django.contrib.postgres.forms import RangeWidget
-from django.http import HttpResponseRedirect
+from django.db.models.query import QuerySet
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from core.widgets import ReadOnlyMessageWidget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
+from core.widgets import (
+    RangeWidget,
+    ReadOnlyMessageWidget,
+    ThemedSelect2MultipleWidget,
+    ThemedSelect2Widget,
+)
 from translation.mixins import (
     AutomatedTranslationMixin,
     DynamicParlerStyleMixin,
@@ -36,14 +42,23 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-@admin.register(Place)
-class PlaceAdmin(
+class BaseTranslatableAdmin(
     AutomatedTranslationMixin, TranslationStatusMixin, DynamicParlerStyleMixin, TranslatableAdmin
 ):
     """
-    Admin configuration for geographical places.
-    Supports automated translation of place names into multiple languages.
+    Base admin for translatable models in the astrophotography module.
+    Shared complex logic includes:
+    - Automated GPT-powered translations on save (via AutomatedTranslationMixin)
+    - Dynamic Parler-style UI synchronization (via DynamicParlerStyleMixin)
+    - Translation status tracking and verification (via TranslationStatusMixin)
     """
+
+    pass
+
+
+@admin.register(Place)
+class PlaceAdmin(BaseTranslatableAdmin):
+    """Admin configuration for geographical places."""
 
     fields = ("name", "country")
     form = PlaceAdminForm
@@ -55,16 +70,22 @@ class PlaceAdmin(
     list_display_links = ("get_name",)
     search_fields = ("translations__name", "country")
 
-    def get_queryset(self, request):
+    def get_queryset(self, request: HttpRequest) -> QuerySet:
         qs = super().get_queryset(request)
-        return qs.distinct()
+        return qs.distinct()  # type: ignore[no-any-return]
 
     @admin.display(description=_("Name"))
-    def get_name(self, obj):
+    def get_name(self, obj: Place) -> str:
         """Returns the string representation of the place."""
         return str(obj)
 
-    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+    def changeform_view(
+        self,
+        request: HttpRequest,
+        object_id: Optional[str] = None,
+        form_url: str = "",
+        extra_context: Optional[Dict[str, Any]] = None,
+    ) -> HttpResponse:
         """
         Switch active language to the one currently being edited (via Parler tab)
         so that shared fields like CountryField display localized choices.
@@ -77,16 +98,15 @@ class PlaceAdmin(
             if hasattr(request, "LANGUAGE_CODE"):
                 request.LANGUAGE_CODE = lang_code
 
-        return super().changeform_view(request, object_id, form_url, extra_context)
-
-
-# Taggit admin unregistration removed as the library is being uninstalled.
+        return super().changeform_view(  # type: ignore[no-any-return]
+            request, object_id, form_url, extra_context
+        )
 
 
 @admin.register(Tag)
-class TagAdmin(
-    AutomatedTranslationMixin, TranslationStatusMixin, DynamicParlerStyleMixin, TranslatableAdmin
-):
+class TagAdmin(BaseTranslatableAdmin):
+    """Admin configuration for image tags."""
+
     translation_service_method = "translate_parler_tag"
     translation_trigger_fields = ["name"]
 
@@ -107,11 +127,13 @@ class TagAdmin(
         ),
     )
 
-    def get_translation_kwargs(self, obj, form, change, should_trigger):
+    def get_translation_kwargs(
+        self, obj: Tag, form: forms.ModelForm, change: bool, should_trigger: bool
+    ) -> Dict[str, Any]:
         return {"force": should_trigger}
 
     @admin.display(description=_("Name"))
-    def get_name(self, obj):
+    def get_name(self, obj: Tag) -> str:
         return str(obj)
 
 
@@ -146,14 +168,11 @@ class TripodAdmin(admin.ModelAdmin):
 
 
 @admin.register(AstroImage)
-class AstroImageAdmin(
-    AutomatedTranslationMixin, TranslationStatusMixin, DynamicParlerStyleMixin, TranslatableAdmin
-):
+class AstroImageAdmin(BaseTranslatableAdmin):
     """
-    Main admin for Astrophotography images.
-    Complex logic includes:
-    - Dynamic fieldsets (hiding technical fields in non-default languages)
-    - Automated GPT-powered translations on save
+    Main admin for astrophotography captures and related data.
+    Unique complex logic:
+    - Dynamic fieldsets mapping (hiding technical fields in non-default languages)
     - Dynamic filtering of equipment and locations
     """
 
@@ -165,12 +184,12 @@ class AstroImageAdmin(
     list_display_links = ("get_name",)
     list_filter = ("celestial_object", "tags")
 
-    def get_queryset(self, request):
+    def get_queryset(self, request: HttpRequest) -> QuerySet:
         qs = super().get_queryset(request)
-        return qs.select_related("place").prefetch_related("tags")
+        return qs.select_related("place").prefetch_related("tags")  # type: ignore[no-any-return]
 
     @admin.display(description=_("Name"))
-    def get_name(self, obj):
+    def get_name(self, obj: AstroImage) -> str:
         return str(obj)
 
     search_fields = (
@@ -239,7 +258,9 @@ class AstroImageAdmin(
         ),
     )
 
-    def get_fieldsets(self, request, obj=None):
+    def get_fieldsets(
+        self, request: HttpRequest, obj: Optional[AstroImage] = None
+    ) -> List[Union[Tuple[Optional[str], Dict[str, Any]], Any]]:
         """
         Dynamically hide non-translatable fields when editing a secondary language.
         """
@@ -252,7 +273,7 @@ class AstroImageAdmin(
 
         # If we are editing a specific language that is NOT the default, hide shared fields
         if current_language and current_language != default_language:
-            return (
+            return [
                 (
                     None,
                     {
@@ -270,22 +291,28 @@ class AstroImageAdmin(
                     },
                 ),
                 # You might want to show a read-only sections for context, but user asked to HIDE.
-            )
+            ]
 
-        return super().get_fieldsets(request, obj)
+        return super().get_fieldsets(request, obj)  # type: ignore[no-any-return]
 
-    def tag_list(self, obj):
+    def tag_list(self, obj: AstroImage) -> str:
         return ", ".join(o.name for o in obj.tags.all())
 
     ordering = ("-capture_date", "-created_at")
 
     @admin.display(boolean=True, description="Has Thumbnail")
-    def has_thumbnail(self, obj):
+    def has_thumbnail(self, obj: AstroImage) -> bool:
         return bool(obj.thumbnail)
 
     readonly_fields = ("created_at", "updated_at", "thumbnail")
 
-    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+    def changeform_view(
+        self,
+        request: HttpRequest,
+        object_id: Optional[str] = None,
+        form_url: str = "",
+        extra_context: Optional[Dict[str, Any]] = None,
+    ) -> HttpResponse:
         """
         Customizes the change form view to hide certain buttons.
 
@@ -295,11 +322,20 @@ class AstroImageAdmin(
         extra_context = extra_context or {}
         if object_id:
             extra_context["show_save_and_add_another"] = False
-        return super().changeform_view(request, object_id, form_url, extra_context)
+
+        return super().changeform_view(  # type: ignore[no-any-return]
+            request, object_id, form_url, extra_context
+        )
 
 
 @admin.register(MainPageBackgroundImage)
 class MainPageBackgroundImageAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
+    """
+    Admin for main page background images.
+    Features:
+    - Dynamic Parler-style UI synchronization for translations
+    """
+
     list_display = ("get_name", "path", "created_at")
     list_display_links = ("get_name",)
     readonly_fields = ("created_at", "updated_at")
@@ -312,7 +348,7 @@ class MainPageBackgroundImageAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
     )
 
     @admin.display(description=_("Name"))
-    def get_name(self, obj):
+    def get_name(self, obj: MainPageBackgroundImage) -> str:
         return str(obj)
 
 
@@ -402,9 +438,14 @@ class MainPageLocationForm(TranslatableModelForm):
 
 
 @admin.register(MainPageLocation)
-class MainPageLocationAdmin(
-    AutomatedTranslationMixin, TranslationStatusMixin, DynamicParlerStyleMixin, TranslatableAdmin
-):
+class MainPageLocationAdmin(BaseTranslatableAdmin):
+    """
+    Admin for main page highlight locations and stories.
+    Unique complex logic:
+    - Selection of related AstroImages filtered by place
+    - Synchronized ID-based URL slugs for SEO
+    """
+
     translation_service_method = "translate_main_page_location"
     translation_trigger_fields = ["highlight_name", "story"]
 
@@ -437,12 +478,21 @@ class MainPageLocationAdmin(
         "updated_at",
     )
 
-    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+    def changeform_view(
+        self,
+        request: HttpRequest,
+        object_id: Optional[str] = None,
+        form_url: str = "",
+        extra_context: Optional[Dict[str, Any]] = None,
+    ) -> HttpResponse:
         extra_context = extra_context or {}
         # Hide "Save and add another" button when editing (only show when adding)
         if object_id:
             extra_context["show_save_and_add_another"] = False
-        return super().changeform_view(request, object_id, form_url, extra_context)
+
+        return super().changeform_view(  # type: ignore[no-any-return]
+            request, object_id, form_url, extra_context
+        )
 
 
 @admin.register(MeteorsMainPageConfig)
@@ -505,25 +555,33 @@ class MeteorsMainPageConfigAdmin(admin.ModelAdmin):
         ),
     )
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request: HttpRequest) -> bool:
         # Only allow adding if no instance exists
         if self.model.objects.exists():
             return False
         return super().has_add_permission(request)
 
-    def has_delete_permission(self, request, obj=None):
+    def has_delete_permission(
+        self, request: HttpRequest, obj: Optional[MeteorsMainPageConfig] = None
+    ) -> bool:
         # Prevent deletion of the last configuration
         if self.model.objects.count() <= 1:
             return False
         return super().has_delete_permission(request, obj)
 
-    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+    def changeform_view(
+        self,
+        request: HttpRequest,
+        object_id: Optional[str] = None,
+        form_url: str = "",
+        extra_context: Optional[Dict[str, Any]] = None,
+    ) -> HttpResponse:
         extra_context = extra_context or {}
         extra_context["show_save_and_add_another"] = False
         extra_context["show_save_and_continue"] = False
         return super().changeform_view(request, object_id, form_url, extra_context)
 
-    def response_change(self, request, obj):
+    def response_change(self, request: HttpRequest, obj: MeteorsMainPageConfig) -> HttpResponse:
         opts = self.model._meta
         msg = _('The %(name)s "%(obj)s" was changed successfully.') % {
             "name": opts.verbose_name,
@@ -534,7 +592,12 @@ class MeteorsMainPageConfigAdmin(admin.ModelAdmin):
             reverse("admin:astrophotography_meteorsmainpageconfig_change", args=[obj.pk])
         )
 
-    def response_add(self, request, obj, post_url_continue=None):
+    def response_add(
+        self,
+        request: HttpRequest,
+        obj: MeteorsMainPageConfig,
+        post_url_continue: Optional[str] = None,
+    ) -> HttpResponse:
         opts = self.model._meta
         msg = _('The %(name)s "%(obj)s" was added successfully.') % {
             "name": opts.verbose_name,
@@ -545,7 +608,9 @@ class MeteorsMainPageConfigAdmin(admin.ModelAdmin):
             reverse("admin:astrophotography_meteorsmainpageconfig_change", args=[obj.pk])
         )
 
-    def changelist_view(self, request, extra_context=None):
+    def changelist_view(
+        self, request: HttpRequest, extra_context: Optional[Dict[str, Any]] = None
+    ) -> HttpResponse:
         """
         Redirects the changelist view directly to the singleton instance's change view
         (or add view if none exists), enforcing the singleton UX.

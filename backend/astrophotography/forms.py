@@ -5,7 +5,12 @@ from django import forms
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.utils.translation import gettext_lazy as _
 
-from core.widgets import CountrySelect2Widget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
+from core.widgets import (
+    CountrySelect2Widget,
+    RangeWidget,
+    ThemedSelect2MultipleWidget,
+    ThemedSelect2Widget,
+)
 
 from .models import AstroImage, MeteorsMainPageConfig, Place, Tag
 
@@ -23,22 +28,12 @@ class PlaceAdminForm(TranslatableModelForm):
         fields = "__all__"
 
 
-class RangeWidget(forms.MultiWidget):
-    def __init__(self, attrs=None, placeholder_min="", placeholder_max=""):
-        widgets = [
-            forms.NumberInput(attrs={"placeholder": placeholder_min}),
-            forms.NumberInput(attrs={"placeholder": placeholder_max}),
-        ]
-        super().__init__(widgets, attrs)
-
-    def decompress(self, value):
-        if value and isinstance(value, list) and len(value) == 2:
-            return value
-        return [None, None]
-
-
 class RangeField(forms.MultiValueField):
-    def __init__(self, field_class, placeholder_min, placeholder_max, *args, **kwargs):
+    """
+    A MultiValueField that uses RangeWidget to manage [min, max] pairs.
+    """
+
+    def __init__(self, field_class, placeholder_min="", placeholder_max="", *args, **kwargs):
         self.widget = RangeWidget(placeholder_min=placeholder_min, placeholder_max=placeholder_max)
         fields = (
             field_class(),
@@ -48,13 +43,16 @@ class RangeField(forms.MultiValueField):
 
     def compress(self, data_list):
         if data_list:
-            # Sort to ensure [min, max]
-            return sorted(data_list)
+            # Sort to ensure [min, max] if applicable
+            try:
+                return sorted(filter(lambda x: x is not None, data_list))
+            except TypeError:
+                return list(data_list)
         return list()
 
 
 class AstroImageForm(TranslatableModelForm):
-    tags = forms.ModelMultipleChoiceField(
+    tags = forms.ModelMultipleChoiceField(  # type: ignore[var-annotated]
         queryset=Tag.objects.all(),
         required=False,
         widget=FilteredSelectMultiple("Tags", is_stacked=False),
@@ -148,8 +146,6 @@ class AstroImageForm(TranslatableModelForm):
 
         if self.instance.pk:
             self.fields["tags"].initial = self.instance.tags.all()
-
-    # Removed custom save/save_m2m as standard ManyToMany handles this now
 
 
 class MeteorsMainPageConfigForm(forms.ModelForm):

@@ -13,54 +13,11 @@ from django.utils.translation import gettext_lazy as _
 
 from core.models import BaseImage, SingletonModel
 
-
-def default_star_path():
-    return [50, 500]
-
-
-def default_bolid_path():
-    return [50, 500]
-
-
-def default_star_streak():
-    return [100, 200]
-
-
-def default_bolid_streak():
-    return [20, 100]
-
-
-def default_star_opacity():
-    return [0.4, 0.8]
-
-
-def default_bolid_opacity():
-    return [0.7, 1.0]
-
-
-def default_smoke_opacity():
-    return [0.5, 0.8]
-
-
-def default_star_duration():
-    return [0.4, 1.2]
-
-
-def default_bolid_duration():
-    return [0.4, 0.9]
-
-
-CelestialObjectChoices = [
-    ("Landscape", _("Landscape")),
-    ("Deep Sky", _("Deep Sky")),
-    ("Startrails", _("Startrails")),
-    ("Solar System", _("Solar System")),
-    ("Milky Way", _("Milky Way")),
-    ("Northern Lights", _("Northern Lights")),
-]
+from .constants import CELESTIAL_OBJECT_CHOICES, MeteorDefaults
 
 
 class Place(TranslatableModel):
+    objects: TranslatableManager = TranslatableManager()
     translations = TranslatedFields(
         name=models.CharField(
             verbose_name=_("Name"),
@@ -79,10 +36,6 @@ class Place(TranslatableModel):
         return self.safe_translation_getter("name", any_language=True) or ""
 
 
-class TagManager(TranslatableManager):
-    pass
-
-
 class Tag(TranslatableModel, models.Model):
     translations = TranslatedFields(
         name=models.CharField(verbose_name=_("Name"), max_length=100),
@@ -94,7 +47,7 @@ class Tag(TranslatableModel, models.Model):
         ),
     )
 
-    objects = TagManager()
+    objects = TranslatableManager()
 
     class Meta:
         verbose_name = _("Tag")
@@ -227,10 +180,11 @@ class AstroImage(BaseImage, TranslatableModel):
     )
 
     celestial_object = models.CharField(
-        max_length=50,
-        choices=CelestialObjectChoices,
         verbose_name=_("Celestial Object"),
         help_text=_("The type of celestial object captured."),
+        max_length=50,
+        choices=CELESTIAL_OBJECT_CHOICES,
+        default="Landscape",
     )
     astrobin_url = models.URLField(
         max_length=200,
@@ -304,7 +258,8 @@ class MainPageBackgroundImage(BaseImage, TranslatableModel):
         return self.name
 
 
-class MainPageLocation(TranslatableModel, models.Model):  # type: ignore[django-manager-missing]
+class MainPageLocation(TranslatableModel):
+    objects: TranslatableManager = TranslatableManager()
     place = models.ForeignKey(
         Place,
         on_delete=models.SET_NULL,
@@ -427,7 +382,7 @@ class MeteorsMainPageConfig(SingletonModel):
         ),
     )
     star_path_range = models.JSONField(
-        default=default_star_path,
+        default=MeteorDefaults.star_path,
         verbose_name=_("Star Path Range (px)"),
         help_text=_(
             "A list of two integers [min, max] representing the travel distance of a "
@@ -435,7 +390,7 @@ class MeteorsMainPageConfig(SingletonModel):
         ),
     )
     bolid_path_range = models.JSONField(
-        default=default_bolid_path,
+        default=MeteorDefaults.bolid_path,
         verbose_name=_("Bolid Path Range (px)"),
         help_text=_(
             "A list of two integers [min, max] representing the travel distance of a "
@@ -443,7 +398,7 @@ class MeteorsMainPageConfig(SingletonModel):
         ),
     )
     star_streak_range = models.JSONField(
-        default=default_star_streak,
+        default=MeteorDefaults.star_streak,
         verbose_name=_("Star Streak Range (px)"),
         help_text=_(
             "A list of two integers [min, max] representing the visual length (streak) of a "
@@ -451,7 +406,7 @@ class MeteorsMainPageConfig(SingletonModel):
         ),
     )
     bolid_streak_range = models.JSONField(
-        default=default_bolid_streak,
+        default=MeteorDefaults.bolid_streak,
         verbose_name=_("Bolid Streak Range (px)"),
         help_text=_(
             "A list of two integers [min, max] representing the visual length (streak) of "
@@ -459,7 +414,7 @@ class MeteorsMainPageConfig(SingletonModel):
         ),
     )
     star_duration_range = models.JSONField(
-        default=default_star_duration,
+        default=MeteorDefaults.star_duration,
         verbose_name=_("Star Duration Range (s)"),
         help_text=_(
             "A list of two floats [min, max] representing the duration (speed) of a regular star. "
@@ -467,7 +422,7 @@ class MeteorsMainPageConfig(SingletonModel):
         ),
     )
     bolid_duration_range = models.JSONField(
-        default=default_bolid_duration,
+        default=MeteorDefaults.bolid_duration,
         verbose_name=_("Bolid Duration Range (s)"),
         help_text=_(
             "A list of two floats [min, max] representing the duration (speed) of a bolid. "
@@ -475,7 +430,7 @@ class MeteorsMainPageConfig(SingletonModel):
         ),
     )
     star_opacity_range = models.JSONField(
-        default=default_star_opacity,
+        default=MeteorDefaults.star_opacity,
         verbose_name=_("Star Opacity Range"),
         help_text=_(
             "A list of two floats [min, max] between 0.0 and 1.0 for regular star brightness. "
@@ -483,7 +438,7 @@ class MeteorsMainPageConfig(SingletonModel):
         ),
     )
     bolid_opacity_range = models.JSONField(
-        default=default_bolid_opacity,
+        default=MeteorDefaults.bolid_opacity,
         verbose_name=_("Bolid Opacity Range"),
         help_text=_(
             "A list of two floats [min, max] between 0.0 and 1.0 for bolid brightness. "
@@ -491,7 +446,7 @@ class MeteorsMainPageConfig(SingletonModel):
         ),
     )
     smoke_opacity_range = models.JSONField(
-        default=default_smoke_opacity,
+        default=MeteorDefaults.smoke_opacity,
         verbose_name=_("Smoke Opacity Range"),
         help_text=_(
             "A list of two floats [min, max] between 0.0 and 1.0 for the smoke trail of a bolid. "

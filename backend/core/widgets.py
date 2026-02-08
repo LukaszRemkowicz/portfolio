@@ -116,3 +116,26 @@ class CountrySelect2Widget(ThemedSelect2Widget):
                     option["label"] = f"{label} ({code})"
 
         return groups
+
+
+class RangeWidget(forms.MultiWidget):
+    """
+    A MultiWidget for range inputs (min/max).
+    Supports both simple NumberInputs (for JSON lists) and custom base widgets
+    (like DateInput for Postgres DateRangeFields).
+    """
+
+    def __init__(self, attrs=None, base_widget=None, placeholder_min="", placeholder_max=""):
+        if base_widget:
+            widgets = [base_widget, base_widget]
+        else:
+            widgets = [
+                forms.NumberInput(attrs={"placeholder": placeholder_min}),
+                forms.NumberInput(attrs={"placeholder": placeholder_max}),
+            ]
+        super().__init__(widgets, attrs)
+
+    def decompress(self, value):
+        if value and isinstance(value, (list, tuple)) and len(value) == 2:
+            return value
+        return [None, None]

@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict, List, Optional
 
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -7,6 +8,7 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
+from django.db.models import QuerySet
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 
@@ -14,7 +16,8 @@ from common.throttling import GalleryRateThrottle
 from common.utils.signing import validate_signed_url
 from common.utils.text import sanitize_for_log
 
-from .models import AstroImage, CelestialObjectChoices, MainPageBackgroundImage, MainPageLocation
+from .constants import CELESTIAL_OBJECT_CHOICES
+from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Tag
 from .serializers import (
     AstroImageSerializer,
     AstroImageSerializerList,
@@ -25,7 +28,7 @@ from .serializers import (
 )
 from .services import GalleryQueryService
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class AstroImageViewSet(ReadOnlyModelViewSet):
@@ -37,7 +40,7 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
     lookup_field = "slug"
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[AstroImage]:
         """Returns the filtered queryset of images."""
         return GalleryQueryService.get_filtered_images(self.request.query_params)
 
@@ -71,7 +74,7 @@ class MainPageLocationViewSet(ReadOnlyModelViewSet):
     serializer_class = MainPageLocationSerializer
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[MainPageLocation]:
         """Returns the optimized queryset for active locations."""
         return GalleryQueryService.get_active_locations()
 
@@ -85,10 +88,15 @@ class TravelHighlightsBySlugView(APIView):
     permission_classes = [AllowAny]  # Allow public access
     serializer_class = TravelHighlightDetailSerializer
 
-    def get(self, request, country_slug=None, place_slug=None):
+    def get(
+        self,
+        request: Request,
+        country_slug: Optional[str] = None,
+        place_slug: Optional[str] = None,
+    ) -> Response:
         """Retrieves a slider by country and optional place slugs."""
         # Query the slider by slugs
-        filter_kwargs = {"country_slug": country_slug}
+        filter_kwargs: Dict[str, Any] = {"country_slug": country_slug}
         if place_slug:
             filter_kwargs["place_slug"] = place_slug
         else:
@@ -101,12 +109,12 @@ class TravelHighlightsBySlugView(APIView):
                 try:
                     slider = MainPageLocation.objects.get(is_active=True, place_slug=country_slug)
                 except MainPageLocation.DoesNotExist:
-                    safe_slug = sanitize_for_log(country_slug)
+                    safe_slug: str = sanitize_for_log(country_slug)
                     logger.warning(f"Travel highlight transition failed for slug: {safe_slug}")
                     raise Http404("No MainPageLocation matches the given query.")
             else:
-                safe_country = sanitize_for_log(country_slug)
-                safe_place = sanitize_for_log(place_slug)
+                safe_country: str = sanitize_for_log(country_slug)
+                safe_place: str = sanitize_for_log(place_slug)
                 logger.warning(f"Travel highlight not found: {safe_country}/{safe_place}")
                 raise Http404("No MainPageLocation matches the given query.")
         serializer = self.serializer_class(slider, context={"request": request})
@@ -123,9 +131,9 @@ class TagsView(ViewSet):
 
     def list(self, request: Request) -> Response:
         """Returns tag statistics, optionally filtered by category."""
-        category_filter = request.query_params.get("filter")
-        lang = request.query_params.get("lang")
-        tags = GalleryQueryService.get_tag_stats(category_filter, language_code=lang)
+        category_filter: Optional[str] = request.query_params.get("filter")
+        lang: Optional[str] = request.query_params.get("lang")
+        tags: QuerySet[Tag] = GalleryQueryService.get_tag_stats(category_filter, language_code=lang)
 
         serializer = self.serializer_class(tags, many=True, context={"request": request})
         return Response(serializer.data)
@@ -141,7 +149,7 @@ class CelestialObjectCategoriesView(APIView):
 
     def get(self, request: Request) -> Response:
         """Returns the list of available categories."""
-        categories = [choice[0] for choice in CelestialObjectChoices]
+        categories: List[str] = [choice[0] for choice in CELESTIAL_OBJECT_CHOICES]
         return Response(categories)
 
 
@@ -154,14 +162,14 @@ class SecureMediaView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []  # Explicitly disable auth to avoid defaults causing redirects
 
-    def get(self, request, slug):
+    def get(self, request: Request, slug: str) -> HttpResponse:
         """Validates the signature and redirects to the protected media path."""
         # Sanitize slug for logging
-        safe_slug = sanitize_for_log(slug)
+        safe_slug: str = sanitize_for_log(slug)
 
         # Validate signature
-        signature = request.query_params.get("s")
-        expiration = request.query_params.get("e")
+        signature: Optional[str] = request.query_params.get("s")
+        expiration: Optional[str] = request.query_params.get("e")
         if not signature or not expiration:
             logger.warning(f"Missing signature for secure media request: {safe_slug}")
             return HttpResponse("Missing signature", status=403)
@@ -177,12 +185,12 @@ class SecureMediaView(APIView):
         # Note: image.path.name usually looks like 'images/my_photo.jpg'
         # We redirect to /protected_media/images/my_photo.jpg
         # which maps to /app/media/images/my_photo.jpg inside the container
-        file_path = image.path.name
-        response = HttpResponse()
         # The semicolon separates the header from the value in Nginx, but strictly
         # speaking for the header value, we just need the path.
+        file_path: str = image.path.name
+        response = HttpResponse()
         # This path must match the 'location /protected_media/' block in nginx.conf
-        redirect_uri = f"/protected_media/{file_path}"
+        redirect_uri: str = f"/protected_media/{file_path}"
         response["X-Accel-Redirect"] = redirect_uri
         response["Content-Type"] = ""  # Let Nginx determine the content type
         logger.info(f"Serving secure media via Nginx redirect: {redirect_uri}")

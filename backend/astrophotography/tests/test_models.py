@@ -1,8 +1,23 @@
-# backend/astrophotography/tests/test_models.py
+from io import BytesIO
+from typing import Any
+
 import pytest
+from PIL import Image
 from pytest_mock import MockerFixture
 
-from astrophotography.models import AstroImage
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db.models import QuerySet
+from django.utils.text import slugify
+
+from astrophotography.models import (
+    AstroImage,
+    Camera,
+    Lens,
+    MainPageBackgroundImage,
+    MainPageLocation,
+    Place,
+    Tag,
+)
 from astrophotography.tests.factories import (
     AstroImageFactory,
     MainPageBackgroundImageFactory,
@@ -17,52 +32,48 @@ from translation.services import TranslationService
 class TestAstroImageModel:
     def test_string_representation(self) -> None:
         """Test AstroImage string representation uses the name field"""
-        image = AstroImageFactory(name="Test Nebula")
+        image: AstroImage = AstroImageFactory(name="Test Nebula")
         assert str(image) == "Test Nebula"
 
     def test_default_ordering(self) -> None:
         """Test default ordering is by created_at descending (from BaseImage)"""
-        image1 = AstroImageFactory(name="Image 1")
-        image2 = AstroImageFactory(name="Image 2")
+        image1: AstroImage = AstroImageFactory(name="Image 1")
+        image2: AstroImage = AstroImageFactory(name="Image 2")
         # Verify ordering (newest first)
-        qs = AstroImage.objects.all()
+        qs: QuerySet[AstroImage] = AstroImage.objects.all()
         assert qs[0] == image2
         assert qs[1] == image1
 
     def test_thumbnail_generation(self) -> None:
         """Test that a thumbnail is automatically generated on save"""
-        image = AstroImageFactory(name="Test Nebula")
+        image: AstroImage = AstroImageFactory(name="Test Nebula")
         assert image.thumbnail is not None
         assert image.thumbnail.name.startswith("thumbnails/thumb_")
 
     def test_zoom_field_default(self) -> None:
         """Test that zoom field defaults to False"""
-        image = AstroImageFactory()
+        image: AstroImage = AstroImageFactory()
         assert image.zoom is False
 
     def test_zoom_field_persistence(self) -> None:
         """Test that zoom field can be set to False and persisted"""
-        image = AstroImageFactory(zoom=False)
+        image: AstroImage = AstroImageFactory(zoom=False)
         assert image.zoom is False
         image.refresh_from_db()
         assert image.zoom is False
 
     def test_slug_auto_generated(self) -> None:
         """Test that slug is automatically generated from name on creation"""
-        from django.utils.text import slugify
-
-        name = "Nebula in Orion"
-        image = AstroImageFactory(name=name, slug=None)
+        name: str = "Nebula in Orion"
+        image: AstroImage = AstroImageFactory(name=name, slug=None)
         assert bool(image.slug)
         assert image.slug == slugify(name)
 
     def test_slug_uniqueness(self) -> None:
         """Test that slugs are unique even if names are identical"""
-        from django.utils.text import slugify
-
-        name = "Same Name"
-        image1 = AstroImageFactory(name=name)
-        image2 = AstroImageFactory(name=name)
+        name: str = "Same Name"
+        image1: AstroImage = AstroImageFactory(name=name)
+        image2: AstroImage = AstroImageFactory(name=name)
 
         assert image1.slug != image2.slug
         assert slugify(name) in image1.slug
@@ -73,26 +84,20 @@ class TestAstroImageModel:
 class TestMainPageBackgroundImageModel:
     def test_string_representation(self) -> None:
         """Test MainPageBackgroundImage string representation"""
-        bg = MainPageBackgroundImageFactory(name="Test BG")
+        bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Test BG")
         assert str(bg) == "Test BG"
 
     def test_model_creation_and_translation(self) -> None:
         """Verify that MainPageBackgroundImage can be created with translations."""
-        from io import BytesIO
-
-        from PIL import Image
-
-        from django.core.files.uploadedfile import SimpleUploadedFile
-
-        img = Image.new("RGB", (1, 1), color="red")
-        img_io = BytesIO()
+        img: Image.Image = Image.new("RGB", (1, 1), color="red")
+        img_io: BytesIO = BytesIO()
         img.save(img_io, format="PNG")
         img_io.seek(0)
-        image_file = SimpleUploadedFile("test_bg.png", img_io.read(), content_type="image/png")
+        image_file: SimpleUploadedFile = SimpleUploadedFile(
+            "test_bg.png", img_io.read(), content_type="image/png"
+        )
 
-        from astrophotography.models import MainPageBackgroundImage
-
-        bg_image = MainPageBackgroundImage.objects.create(path=image_file)
+        bg_image: MainPageBackgroundImage = MainPageBackgroundImage.objects.create(path=image_file)
 
         bg_image.set_current_language("en")
         bg_image.name = "Test Background"
@@ -114,46 +119,42 @@ class TestMainPageBackgroundImageModel:
 @pytest.mark.django_db
 class TestPlaceModel:
     def test_string_representation(self) -> None:
-        place = PlaceFactory(name="Tenerife")
+        place: Place = PlaceFactory(name="Tenerife")
         assert str(place) == "Tenerife"
 
 
 @pytest.mark.django_db
 class TestCameraModel:
     def test_camera_str_method(self) -> None:
-        from astrophotography.models import Camera
-
-        camera = Camera.objects.create(model="Test Camera Z6")
+        camera: Camera = Camera.objects.create(model="Test Camera Z6")
         assert str(camera) == "Test Camera Z6"
 
 
 @pytest.mark.django_db
 class TestLensModel:
     def test_lens_str_method(self) -> None:
-        from astrophotography.models import Lens
-
-        lens = Lens.objects.create(model="Nikkor Z 20mm f/1.8")
+        lens: Lens = Lens.objects.create(model="Nikkor Z 20mm f/1.8")
         assert str(lens) == "Nikkor Z 20mm f/1.8"
 
 
 @pytest.mark.django_db
 class TestMainPageLocationModel:
     def test_string_representation(self) -> None:
-        place = PlaceFactory(name="Bieszczady", country="PL")
-        slider = MainPageLocationFactory(place=place)
+        place: Place = PlaceFactory(name="Bieszczady", country="PL")
+        slider: MainPageLocation = MainPageLocationFactory(place=place)
         assert str(slider) == "Poland - Bieszczady (Active)"
 
     def test_string_representation_with_highlight_name(self) -> None:
-        slider = MainPageLocationFactory(highlight_name="Magical Poland")
+        slider: MainPageLocation = MainPageLocationFactory(highlight_name="Magical Poland")
         assert str(slider) == "Magical Poland (Active)"
 
     def test_clean_method_validation_success(self) -> None:
         # Place for PL
-        place = PlaceFactory(country="PL")
+        place: Place = PlaceFactory(country="PL")
         # Slider for PL
-        slider = MainPageLocationFactory(place=place)
+        slider: MainPageLocation = MainPageLocationFactory(place=place)
         # Image in PL
-        image = AstroImageFactory(place=place)
+        image: AstroImage = AstroImageFactory(place=place)
 
         # Should not raise validation error
         slider.images.add(image)
@@ -163,14 +164,14 @@ class TestMainPageLocationModel:
 @pytest.mark.django_db
 class TestTagModel:
     def test_tag_creation_generates_slug(self) -> None:
-        tag = TagFactory(name="Deep Sky")
+        tag: Tag = TagFactory(name="Deep Sky")
         assert tag.slug == "deep-sky"
 
     def test_tag_translation_access(self) -> None:
         """
         Verify correct translation behavior for the 'name' field.
         """
-        tag = TagFactory(name="Stars")
+        tag: Tag = TagFactory(name="Stars")
 
         # Add Polish translation
         tag.set_current_language("pl")
@@ -194,10 +195,10 @@ class TestTagModel:
         Verify TranslationService.translate_parler_tag works with the new field structure.
         Only generates name via GPT, slug is synced locally.
         """
-        tag = TagFactory(name="Nebula")  # slug is "nebula"
+        tag: Tag = TagFactory(name="Nebula")  # slug is "nebula"
 
         # Mock the agent to avoid actual GPT calls
-        mock_agent = mocker.Mock()
+        mock_agent: Any = mocker.Mock()
         mock_agent.translate_tag.side_effect = lambda text, lang: f"TR_{text}"
 
         mocker.patch.object(TranslationService, "_get_agent", return_value=mock_agent)
@@ -207,8 +208,8 @@ class TestTagModel:
 
         # Verify results in DB
         tag.refresh_from_db()
-        saved_name = tag.safe_translation_getter("name", language_code="pl")
-        saved_slug = tag.safe_translation_getter("slug", language_code="pl")
+        saved_name: str | None = tag.safe_translation_getter("name", language_code="pl")
+        saved_slug: str | None = tag.safe_translation_getter("slug", language_code="pl")
 
         assert saved_name == "TR_Nebula"
         # Slug is generated from translated name ("TR_Nebula") -> "tr_nebula"
