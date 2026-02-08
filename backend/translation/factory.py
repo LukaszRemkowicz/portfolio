@@ -3,7 +3,7 @@ from typing import cast
 
 from django.conf import settings
 
-from .providers import LLMProvider
+from .protocols import LLMProvider
 
 
 def get_llm_provider() -> LLMProvider:

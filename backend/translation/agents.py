@@ -3,8 +3,7 @@ from typing import List, Optional
 
 from bs4 import BeautifulSoup
 
-from .protocols import TranslationAgentProtocol
-from .providers import LLMProvider
+from .protocols import LLMProvider, TranslationAgentProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -254,20 +253,3 @@ class TranslationAgent(TranslationAgentProtocol):
 
         # Restore original HTML tags
         return self._restore_all_tags(translated, tag_map)
-
-
-if __name__ == "__main__":
-    """TODO: Remove this block before production"""
-    import os
-
-    import django
-
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings.base")
-    django.setup()
-
-    from .factory import get_llm_provider
-
-    text = "some text"
-    provider = get_llm_provider()
-    agent = TranslationAgent(provider)
-    print(agent.translate_html(text, "pl"))

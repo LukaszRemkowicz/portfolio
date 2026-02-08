@@ -1,12 +1,10 @@
 import pytest
 from rest_framework import status
 
-from django.core.management import call_command
 from django.urls import reverse
 
 from astrophotography.models import MeteorsMainPageConfig
 from astrophotography.tests.factories import MeteorsMainPageConfigFactory
-from core.models import LandingPageSettings
 from core.tests.factories import LandingPageSettingsFactory
 
 
@@ -86,21 +84,3 @@ class TestSettingsView:
         assert response.data["lastimages"] is True
         assert response.data["meteors"]["randomShootingStars"] is True
         assert response.data["meteors"]["bolidChance"] == meteor_config.bolid_chance
-
-    def test_whats_enabled_default_values(self, api_client):
-        """Test that default values are True if no settings exist"""
-        # Ensure no settings record exists
-        LandingPageSettings.objects.all().delete()
-        MeteorsMainPageConfig.objects.all().delete()
-
-        # Run seeding (App Start simulation)
-        call_command("seed_settings")
-
-        response = api_client.get(self.url)
-        assert response.status_code == status.HTTP_200_OK
-        # Defaults in view should be True for all, and meteors should be auto-linked
-        assert response.data["programming"] is True
-        assert response.data["contactForm"] is True
-        assert response.data["travelHighlights"] is True
-        assert response.data["lastimages"] is True
-        assert response.data["meteors"]["randomShootingStars"] is True

@@ -160,17 +160,6 @@ class TestTaskService:
         assert len(expected_codes) > 0
         assert set(languages) == set(expected_codes)
 
-    def test_fetch_place_name_calls_agent_correctly(self, mocker: MockerFixture):
-        """Verify TranslationService.fetch_place_name calls TranslationAgent correctly."""
-        mock_get_agent = mocker.patch("translation.services.TranslationService._get_agent")
-        mock_agent = mock_get_agent.return_value
-        mock_agent.translate_place.return_value = "Hawaje"
-
-        result = TranslationService.fetch_place_name("Hawaii", "US", "pl")
-
-        assert result == "Hawaje"
-        mock_agent.translate_place.assert_called_once_with("Hawaii", "pl", "US")
-
     def test_is_empty_text_edge_cases(self):
         """Verify is_empty_text with various HTML and whitespace cases."""
         assert TranslationService.is_empty_text("") is True
@@ -367,11 +356,17 @@ class TestTranslateInstanceTask:
             method_name="translate_place",
         )
 
-        infra["task_model"].objects.update_or_create.assert_called_once()
-        _, kwargs = infra["task_model"].objects.update_or_create.call_args
-        assert kwargs["defaults"]["status"] == infra["task_model"].Status.RUNNING
+        assert infra["task_model"].objects.update_or_create.call_count == 2
+
+        # Verify RUNNING transition
+        call_running = infra["task_model"].objects.update_or_create.call_args_list[0]
+        assert call_running.kwargs["defaults"]["status"] == infra["task_model"].Status.RUNNING
+
+        # Verify COMPLETED transition
+        call_completed = infra["task_model"].objects.update_or_create.call_args_list[1]
+        assert call_completed.kwargs["defaults"]["status"] == infra["task_model"].Status.COMPLETED
+
         infra["service"].translate_place.assert_called_once_with(mock_instance, "pl")
-        assert mock_task_record.status == infra["task_model"].Status.COMPLETED
 
     def test_translate_instance_task_handles_missing_instance(
         self, mock_task_infrastructure, mocker: MockerFixture

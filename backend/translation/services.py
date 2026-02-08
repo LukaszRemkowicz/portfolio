@@ -152,7 +152,7 @@ class TranslationService:
         force: bool = False,
     ) -> str:
         """
-        Helper that runs the ceremony for a single field using a provided GPT handler.
+        Helper that runs the ceremony for a single field using a provided handler.
         """
         gen = cls._parler_ceremony(instance, field_name, language_code, force=force)
         source = next(gen)
@@ -163,7 +163,7 @@ class TranslationService:
                 instance.safe_translation_getter(field_name, language_code=language_code) or ""
             )
 
-        # Call the specialized GPT handler
+        # Call the specialized handler
         logger.info(f"Translating field '{field_name}' using {handler.__name__}")
         translated = handler(source, language_code)
 
@@ -176,40 +176,6 @@ class TranslationService:
             pass
 
         return str(translated)
-
-    @classmethod
-    def _bulk_sync_translations(
-        cls,
-        instance: TranslatableModel,
-        field_names: list[str],
-        language_code: str,
-        force: bool = False,
-    ) -> dict[str, str]:
-        """
-        A generic helper for multi-field translation.
-        Defaults to standard text translation if not overridden by specialized methods.
-        """
-        results = {}
-        modified = False
-
-        for field_name in field_names:
-            # Default to agent.translate
-            # Specialized methods (like translate_astro_image) should not call this
-            # if they need custom field-level logic (like HTML).
-            val = cls._run_parler_translation(
-                instance, field_name, language_code, cls._get_agent().translate, force=force
-            )
-            results[field_name] = val
-            modified = True
-
-        if modified:
-            try:
-                with transaction.atomic():
-                    instance.save_translations()
-            except Exception as e:
-                logger.exception(f"Failed to save translations for {instance}: {e}")
-
-        return results
 
     @staticmethod
     def is_empty_text(text: Any) -> bool:
@@ -364,7 +330,7 @@ class TranslationService:
     def translate_place(cls, instance: Any, language_code: str, force: bool = False) -> str:
         """
         Specialized translator for Place names.
-        Uses specialized GPT place agent with country context.
+        Uses specialized place translation logic with country context.
         """
         country_name = str(instance.country) if hasattr(instance, "country") else ""
 
@@ -392,20 +358,3 @@ class TranslationService:
         # Direct extraction from the global 'None' key in PARLER_LANGUAGES
         parler_langs = settings.PARLER_LANGUAGES.get(None, [])
         return [lang["code"] for lang in parler_langs if isinstance(lang, dict) and "code" in lang]
-
-    @classmethod
-    def fetch_place_name(cls, name: str, country: str, language_code: str) -> str | None:
-        """Public interface to fetch place translation (without a model instance)."""
-        return cls._gpt_fetch_place_translation(name, country, language_code)
-
-    @classmethod
-    def _gpt_fetch_place_translation(
-        cls, source_text: str, country: str, language_code: str
-    ) -> str:
-        """Fetches translation for a place name using GPT with country context."""
-        translated_text = cls._get_agent().translate_place(source_text, language_code, country)
-
-        if not translated_text:
-            translated_text = f"[TRANSLATION FAILED] {source_text}"
-
-        return translated_text

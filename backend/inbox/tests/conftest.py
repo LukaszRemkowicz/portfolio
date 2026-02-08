@@ -64,3 +64,23 @@ def valid_contact_serializer(valid_contact_data: dict[str, str]) -> ContactMessa
     serializer = ContactMessageSerializer(data=valid_contact_data)
     serializer.is_valid(raise_exception=True)
     return serializer
+
+
+@pytest.fixture
+def mock_inbox_send_mail(mocker: MockerFixture) -> MagicMock:
+    """Fixture to mock send_mail in inbox.tasks."""
+    return mocker.patch("inbox.tasks.send_mail")
+
+
+@pytest.fixture
+def mock_inbox_logger(mocker: MockerFixture) -> MagicMock:
+    """Fixture to mock logger in inbox.tasks or services."""
+    # Note: We might need separate ones if paths differ, but let's see.
+    # In test_services.py, it patches inbox.tasks.logger and inbox.services.logger
+    return mocker.patch("inbox.tasks.logger")
+
+
+@pytest.fixture
+def mock_inbox_service_logger(mocker: MockerFixture) -> MagicMock:
+    """Fixture to mock logger in inbox.services."""
+    return mocker.patch("inbox.services.logger")

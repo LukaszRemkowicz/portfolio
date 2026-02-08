@@ -40,19 +40,19 @@ def test_profile_type_uniqueness(user: User):
 def test_user_singleton_pattern_only_one_user_allowed() -> None:
     """Test that only one user can exist (singleton pattern)"""
     # Create first user - should succeed
-    UserFactory(email="first@example.com", first_name="First")
+    UserFactory()
     assert User.objects.count() == 1
 
     # Try to create second user - should raise ValueError
     # We use build() then save() to trigger the model's clean/save logic manually
     # or just another Factory call which calls save()
-    second_user = UserFactory.build(email="second@example.com", first_name="Second")
+    second_user = UserFactory.build()
     with pytest.raises(ValueError, match="Only one user is allowed"):
         second_user.save()
 
     # Verify only one user still exists
     assert User.objects.count() == 1
-    assert User.objects.first().email == "first@example.com"
+    assert User.objects.first().email == "admin@example.com"
 
 
 @pytest.mark.django_db
@@ -62,12 +62,12 @@ def test_user_get_user_method() -> None:
     assert User.get_user() is None
 
     # Create user
-    user = UserFactory(email="test@example.com", first_name="Test")
+    user = UserFactory()
 
     # get_user() should return the user
     retrieved_user = User.get_user()
     assert retrieved_user is not None
-    assert retrieved_user.email == "test@example.com"
+    assert retrieved_user.email == user.email
     assert retrieved_user.id == user.id
 
 

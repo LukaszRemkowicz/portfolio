@@ -1,8 +1,3 @@
-# backend/core/throttling.py
-"""
-Custom throttling classes for the portfolio backend
-"""
-
 import logging
 from typing import Any, Optional
 

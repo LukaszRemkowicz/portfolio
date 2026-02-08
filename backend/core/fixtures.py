@@ -1,14 +1,10 @@
-from typing import TYPE_CHECKING, Generator
+from typing import Generator
 
 import pytest
 from rest_framework.test import APIClient, APIRequestFactory
 
 from django.core.cache import cache as django_cache
 from django.test import Client, RequestFactory
-
-if TYPE_CHECKING:
-    # Removed redundant imports as they are now available globally
-    pass
 
 
 @pytest.fixture

@@ -1,33 +1,11 @@
-# backend/translation/providers.py
 import logging
-from typing import Optional, Protocol
+from typing import Optional
 
 from django.conf import settings
 
+from .protocols import LLMProvider
+
 logger = logging.getLogger(__name__)
-
-
-class LLMProvider(Protocol):
-    """Protocol for LLM providers (GPT, Gemini, Claude, etc.)."""
-
-    def ask_question(
-        self,
-        system_prompt: str,
-        user_message: str,
-        temperature: float = 0.0,
-    ) -> Optional[str]:
-        """
-        Ask the LLM a question with system and user prompts.
-
-        Args:
-            system_prompt: System-level instructions
-            user_message: User's actual content/question
-            temperature: Sampling temperature (0.0 = deterministic)
-
-        Returns:
-            LLM's response text, or None on failure
-        """
-        pass
 
 
 class GPTProvider(LLMProvider):

@@ -30,3 +30,27 @@ class TranslationAgentProtocol(Protocol):
         Translates HTML content, preserving tags.
         """
         pass
+
+
+@runtime_checkable
+class LLMProvider(Protocol):
+    """Protocol for LLM providers (GPT, Gemini, Claude, etc.)."""
+
+    def ask_question(
+        self,
+        system_prompt: str,
+        user_message: str,
+        temperature: float = 0.0,
+    ) -> Optional[str]:
+        """
+        Ask the LLM a question with system and user prompts.
+
+        Args:
+            system_prompt: System-level instructions
+            user_message: User's actual content/question
+            temperature: Sampling temperature (0.0 = deterministic)
+
+        Returns:
+            LLM's response text, or None on failure
+        """
+        pass

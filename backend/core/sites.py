@@ -18,7 +18,7 @@ class PortfolioAdminSite(AdminSite):
     site_title = "Portfolio Admin"
     index_title = "Home"
 
-    def get_app_list(  # noqa: C901
+    def get_app_list(
         self, request: HttpRequest, app_label: str | None = None
     ) -> List[Dict[str, Any]]:
         """
@@ -35,12 +35,21 @@ class PortfolioAdminSite(AdminSite):
         if not config:
             return app_list
 
+        app_lookup = self._build_app_lookup(app_list)
         new_app_list: List[Dict[str, Any]] = []
 
-        # Create a lookup for existing apps and models for O(1) access
-        # Structure: {'app_label': {'models': {'ModelName': model_dict, ...}, 'app_data': app_dict}}
-        app_lookup: Dict[str, Any] = {}
+        # Build new list based on configuration
+        for section in config:
+            if "app" in section:
+                new_app = self._process_section(section, app_lookup)
+                if new_app:
+                    new_app_list.append(new_app)
 
+        return new_app_list
+
+    def _build_app_lookup(self, app_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Creates a lookup for existing apps and models for O(1) access."""
+        app_lookup: Dict[str, Any] = {}
         for app in app_list:
             label = app["app_label"]
             models_lookup = {model["object_name"]: model for model in app.get("models", [])}
@@ -48,69 +57,52 @@ class PortfolioAdminSite(AdminSite):
                 "app": app,
                 "models": models_lookup,
             }
+        return app_lookup
 
-        # Build new list based on configuration
-        for section in config:
-            # handle 'app' or 'label' based sections
+    def _process_section(
+        self, section: Dict[str, Any], app_lookup: Dict[str, Any]
+    ) -> Dict[str, Any] | None:
+        """Processes an ADMIN_SITE_ORDERING section and returns a modified app dict."""
+        target_app_label = section["app"]
 
-            # If "app" key is present, we try to source from an existing app
-            if "app" in section:
-                target_app_label = section["app"]
+        # Check if this app exists in the original list
+        if target_app_label not in app_lookup:
+            return None
 
-                # Check if this app exists in the original list
-                # If not, skip (maybe permissions, or app doesn't exist)
-                if target_app_label not in app_lookup:
-                    continue
+        original_app_data = app_lookup[target_app_label]
+        new_app: Dict[str, Any] = original_app_data["app"].copy()
 
-                original_app_data = app_lookup[target_app_label]
+        # Override Label
+        if "label" in section:
+            new_app["name"] = section["label"]
 
-                # Copy the app dict structure
-                new_app = original_app_data["app"].copy()
+        # Filter/Reorder models
+        if "models" in section:
+            ordered_models = self._get_ordered_models(
+                section["models"], target_app_label, app_lookup
+            )
+            if not ordered_models:
+                return None
+            new_app["models"] = ordered_models
 
-                # Override Label
-                if "label" in section:
-                    new_app["name"] = section["label"]
-                    # Also update app_label to something unique if we are splitting
-                    # one app into two?
-                    # Django Admin Sidebar uses app_label as ID.
-                    # If we have two sections from 'astrophotography', they might conflict in
-                    # sidebar ID if not careful.
-                    # But get_app_list returns a list, order matters.
-                    # Let's hope Django frontend handles duplicate app_labels or we should fake it.
-                    # Fake it by appending a suffix if needed?
-                    # Actually, sidebar loops over app_list.
+        return new_app
 
-                # Filter/Reorder models
-                if "models" in section:
-                    ordered_models = []
-                    target_models = section["models"]
+    def _get_ordered_models(
+        self, target_models: List[str], target_app_label: str, app_lookup: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Returns a list of model dicts based on section['models'] configuration."""
+        ordered_models = []
 
-                    for target_model in target_models:
-                        # Parse 'app_label.ModelName' vs 'ModelName'
-                        if "." in target_model:
-                            t_app_label, t_model_name = target_model.split(".", 1)
-                        else:
-                            t_app_label, t_model_name = target_app_label, target_model
+        for target_model in target_models:
+            # Parse 'app_label.ModelName' vs 'ModelName'
+            if "." in target_model:
+                t_app_label, t_model_name = target_model.split(".", 1)
+            else:
+                t_app_label, t_model_name = target_app_label, target_model
 
-                        # Look up
-                        if (
-                            t_app_label in app_lookup
-                            and t_model_name in app_lookup[t_app_label]["models"]
-                        ):
-                            model_data = app_lookup[t_app_label]["models"][t_model_name]
-                            # We must use the original admin_url from the lookup
-                            ordered_models.append(model_data)
+            # Look up
+            if t_app_label in app_lookup and t_model_name in app_lookup[t_app_label]["models"]:
+                model_data = app_lookup[t_app_label]["models"][t_model_name]
+                ordered_models.append(model_data)
 
-                    # If we defined explicit models, overwrite the models list
-                    if ordered_models:
-                        new_app["models"] = ordered_models
-                    else:
-                        # If no models found (e.g. perms), skip this section completely
-                        continue
-
-                new_app_list.append(new_app)
-
-            # Custom generic section (not backed by a single app)?
-            # For now, only support app-backed sections as per ADMIN_REORDER config structure.
-
-        return new_app_list
+        return ordered_models

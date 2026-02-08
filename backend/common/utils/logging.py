@@ -1,17 +1,14 @@
-# backend/core/utils/logging.py
-from typing import Any
-
-
-def sanitize_for_logging(value: Any) -> str:
+def sanitize_for_logging(value: str | None) -> str:
     """
-    Sanitize a value for logging to prevent log injection (CRLF removal).
+    Sanitize a string for logging to prevent log injection (CRLF removal).
     Also truncates extremely long strings.
     """
-    if value is None:
+    if not value:
         return ""
 
     # Remove control characters that could be used for log injection
-    sanitized = str(value).replace("\n", " ").replace("\r", " ")
+    # Replace with space to preserve word separation
+    sanitized = value.replace("\n", " ").replace("\r", " ")
 
     # Truncate if too long (standard log safety)
     if len(sanitized) > 500:

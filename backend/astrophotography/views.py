@@ -13,8 +13,8 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 
 from common.throttling import GalleryRateThrottle
+from common.utils.logging import sanitize_for_logging
 from common.utils.signing import validate_signed_url
-from common.utils.text import sanitize_for_log
 
 from .constants import CELESTIAL_OBJECT_CHOICES
 from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Tag
@@ -109,12 +109,12 @@ class TravelHighlightsBySlugView(APIView):
                 try:
                     slider = MainPageLocation.objects.get(is_active=True, place_slug=country_slug)
                 except MainPageLocation.DoesNotExist:
-                    safe_slug: str = sanitize_for_log(country_slug)
+                    safe_slug: str = sanitize_for_logging(country_slug)
                     logger.warning(f"Travel highlight transition failed for slug: {safe_slug}")
                     raise Http404("No MainPageLocation matches the given query.")
             else:
-                safe_country: str = sanitize_for_log(country_slug)
-                safe_place: str = sanitize_for_log(place_slug)
+                safe_country: str = sanitize_for_logging(country_slug)
+                safe_place: str = sanitize_for_logging(place_slug)
                 logger.warning(f"Travel highlight not found: {safe_country}/{safe_place}")
                 raise Http404("No MainPageLocation matches the given query.")
         serializer = self.serializer_class(slider, context={"request": request})
@@ -165,7 +165,7 @@ class SecureMediaView(APIView):
     def get(self, request: Request, slug: str) -> HttpResponse:
         """Validates the signature and redirects to the protected media path."""
         # Sanitize slug for logging
-        safe_slug: str = sanitize_for_log(slug)
+        safe_slug: str = sanitize_for_logging(slug)
 
         # Validate signature
         signature: Optional[str] = request.query_params.get("s")

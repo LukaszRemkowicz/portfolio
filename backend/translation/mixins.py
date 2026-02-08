@@ -39,9 +39,7 @@ class AutomatedTranslationMixin:
     translation_service_method: Optional[str] = None
     translation_trigger_fields: list[str] = ["name"]
 
-    def save_model(  # noqa: C901
-        self, request: HttpRequest, obj: Any, form: Any, change: bool
-    ) -> None:
+    def save_model(self, request: HttpRequest, obj: Any, form: Any, change: bool) -> None:
         """
         Overrides save_model to trigger translations if:
         1. Translations don't exist for a language
@@ -52,81 +50,19 @@ class AutomatedTranslationMixin:
         if not self.translation_service_method:
             return
 
-        # Get the main language value for comparison
         default_lang = getattr(settings, "PARLER_DEFAULT_LANGUAGE_CODE", "en")
         supported_languages = TranslationService.get_available_languages()
-
-        # Pre-fetch ContentType to avoid repeated queries
         content_type = ContentType.objects.get_for_model(obj)
-        object_id = str(obj.pk)
-
         triggered_languages = []
 
         for lang_code in supported_languages:
             if lang_code == default_lang:
                 continue
 
-            should_translate = False
-
-            # Check if translation exists for this language
-            if hasattr(obj, "translations"):
-                # Get the BASE language translation to compare against
-                try:
-                    base_translation = obj.translations.get(language_code=default_lang)
-                except obj.translations.model.DoesNotExist:
-                    # BASE translation doesn't exist - skip this language
-                    continue
-
-                try:
-                    translation = obj.translations.get(language_code=lang_code)
-                    # Check if translation differs from BASE language
-                    # Compare the trigger fields between BASE and target language
-                    for field in self.translation_trigger_fields:
-                        base_value = getattr(base_translation, field, None)
-                        translated_value = getattr(translation, field, None)
-                        if base_value != translated_value:
-                            should_translate = True
-                            break
-                except obj.translations.model.DoesNotExist:
-                    # Translation doesn't exist - should translate
-                    should_translate = True
-            else:
-                # Not a translatable model, skip
-                continue
-
-            if should_translate:
-                # Clean up old completed/failed tasks for this language to avoid conflicts
-                TranslationTask.objects.filter(
-                    content_type=content_type,
-                    object_id=object_id,
-                    language=lang_code,
-                    status__in=[TranslationTask.Status.COMPLETED, TranslationTask.Status.FAILED],
-                ).delete()
-
-                # robustly determine method name if not explicitly set (fallback mechanism)
-                method_name = self.translation_service_method
-                kwargs = self.get_translation_kwargs(obj, form, change, should_translate)
-
-                # Dispatch async task
-                kwargs["force"] = True
-                task = translate_instance_task.delay(
-                    model_name=obj._meta.label,
-                    instance_pk=obj.pk,
-                    language_code=lang_code,
-                    method_name=method_name,
-                    **kwargs,
-                )
-
-                # Create/Update TranslationTask record tracking the Celery task ID
-                TranslationTask.objects.update_or_create(
-                    content_type=content_type,
-                    object_id=object_id,
-                    language=lang_code,
-                    defaults={
-                        "method": method_name,
-                        "task_id": task.id,
-                        "status": TranslationTask.Status.PENDING,
-                    },
+            if self._needs_translation(obj, lang_code, default_lang):
+                kwargs = self.get_translation_kwargs(obj, form, change, True)
+                self._trigger_translation(
+                    obj, lang_code, content_type, self.translation_service_method, **kwargs
                 )
                 triggered_languages.append(lang_code)
 
@@ -137,6 +73,69 @@ class AutomatedTranslationMixin:
                 f"Translations queued for {len(triggered_languages)} " f"languages ({lang_list})",
                 level=messages.SUCCESS,
             )
+
+    def _needs_translation(self, obj: Any, lang_code: str, default_lang: str) -> bool:
+        """Determines if the target language needs a translation based on trigger fields."""
+        if not hasattr(obj, "translations"):
+            return False
+
+        try:
+            base_translation = obj.translations.get(language_code=default_lang)
+        except obj.translations.model.DoesNotExist:
+            return False
+
+        try:
+            translation = obj.translations.get(language_code=lang_code)
+            # Compare the trigger fields between BASE and target language
+            for field in self.translation_trigger_fields:
+                if getattr(base_translation, field, None) != getattr(translation, field, None):
+                    return True
+        except obj.translations.model.DoesNotExist:
+            return True
+
+        return False
+
+    def _trigger_translation(
+        self,
+        obj: Any,
+        lang_code: str,
+        content_type: ContentType,
+        method_name: str,
+        **kwargs: Any,
+    ) -> str:
+        """Dispatches an async translation task and tracks it."""
+        object_id = str(obj.pk)
+
+        # Clean up old completed/failed tasks for this language to avoid conflicts
+        TranslationTask.objects.filter(
+            content_type=content_type,
+            object_id=object_id,
+            language=lang_code,
+            status__in=[TranslationTask.Status.COMPLETED, TranslationTask.Status.FAILED],
+        ).delete()
+
+        # Dispatch async task
+        kwargs["force"] = True
+        task = translate_instance_task.delay(
+            model_name=obj._meta.label,
+            instance_pk=obj.pk,
+            language_code=lang_code,
+            method_name=method_name,
+            **kwargs,
+        )
+
+        # Create/Update TranslationTask record tracking the Celery task ID
+        TranslationTask.objects.update_or_create(
+            content_type=content_type,
+            object_id=object_id,
+            language=lang_code,
+            defaults={
+                "method": method_name,
+                "task_id": task.id,
+                "status": TranslationTask.Status.PENDING,
+            },
+        )
+        return task.id
 
     def get_translation_kwargs(
         self, obj: Any, form: Any, change: bool, should_trigger: bool
