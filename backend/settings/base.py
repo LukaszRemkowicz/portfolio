@@ -4,6 +4,9 @@ from pathlib import Path
 from typing import Any, cast
 
 import environ
+import sentry_sdk
+from sentry_sdk.integrations.celery import CeleryIntegration
+from sentry_sdk.integrations.django import DjangoIntegration
 
 from django.utils.translation import gettext_lazy as _
 
@@ -14,6 +17,23 @@ env = environ.Env(DEBUG=(bool, False))
 # reading .env file
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
+# Sentry Configuration
+SENTRY_DSN = env("SENTRY_DSN", default="")
+if SENTRY_DSN and not (os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("TESTING")):
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+        ],
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        # We recommend adjusting this value in production.
+        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
+        # If you wish to associate users to errors (recommended)
+        send_default_pii=True,
+        environment=env("ENVIRONMENT", default="development"),
+    )
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
