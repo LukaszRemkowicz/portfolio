@@ -11,7 +11,10 @@ from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 from django.db.models import QuerySet
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
 
+from common.constants import INFINITE_CACHE_TIMEOUT
+from common.decorators.cache import cache_response
 from common.throttling import GalleryRateThrottle
 from common.utils.logging import sanitize_for_logging
 from common.utils.signing import validate_signed_url
@@ -31,6 +34,7 @@ from .services import GalleryQueryService
 logger: logging.Logger = logging.getLogger(__name__)
 
 
+@method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT), name="dispatch")
 class AstroImageViewSet(ReadOnlyModelViewSet):
     """
     ViewSet for listing and retrieving astrophotography images.
@@ -51,6 +55,7 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
         return AstroImageSerializer
 
 
+@method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT), name="dispatch")
 class MainPageBackgroundImageView(ViewSet):
     """View to retrieve the most recent background image for the main page."""
 
@@ -66,6 +71,7 @@ class MainPageBackgroundImageView(ViewSet):
         return Response({"url": None})
 
 
+@method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT), name="dispatch")
 class MainPageLocationViewSet(ReadOnlyModelViewSet):
     """
     ViewSet for listing active Main Page Location Sliders.
@@ -88,6 +94,7 @@ class TravelHighlightsBySlugView(APIView):
     permission_classes = [AllowAny]  # Allow public access
     serializer_class = TravelHighlightDetailSerializer
 
+    @method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT))
     def get(
         self,
         request: Request,
@@ -121,6 +128,7 @@ class TravelHighlightsBySlugView(APIView):
         return Response(serializer.data)
 
 
+@method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT), name="dispatch")
 class TagsView(ViewSet):
     """
     ViewSet to return all tags currently associated with AstroImages.
@@ -147,6 +155,7 @@ class CelestialObjectCategoriesView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
+    @method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT))
     def get(self, request: Request) -> Response:
         """Returns the list of available categories."""
         categories: List[str] = [choice[0] for choice in CELESTIAL_OBJECT_CHOICES]

@@ -176,6 +176,9 @@ markers = [
     "integration: marks tests as integration tests",
     "django_db: marks tests that require database access",
 ]
+filterwarnings = [
+    "ignore:Cache backend does not support delete_pattern:UserWarning",
+]
 
 [tool.coverage.run]
 omit = [

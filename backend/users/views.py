@@ -9,13 +9,15 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
 from django.contrib.auth import get_user_model
+from django.utils.decorators import method_decorator
 
+from common.constants import INFINITE_CACHE_TIMEOUT
+from common.decorators.cache import cache_response
 from common.throttling import APIRateThrottle
 
 from .serializers import UserSerializer
 
 User = get_user_model()
-
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,7 @@ class UserViewSet(viewsets.ViewSet):
     throttle_classes = [APIRateThrottle, UserRateThrottle]
     http_method_names = ["get", "head", "options"]
 
+    @method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT))
     @action(detail=False, methods=["get"])
     def profile(self, request: Request) -> Response:
         """Get the user profile (singleton pattern: only one user exists)"""
