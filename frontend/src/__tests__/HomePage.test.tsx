@@ -2,6 +2,7 @@ import { act } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import HomePage from '../HomePage';
 import { UserProfile } from '../types';
 import { useProfile } from '../hooks/useProfile';
@@ -61,9 +62,11 @@ describe('HomePage Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter>
-          <HomePage />
-        </MemoryRouter>
+        <HelmetProvider>
+          <MemoryRouter>
+            <HomePage />
+          </MemoryRouter>
+        </HelmetProvider>
       );
     });
 
@@ -87,9 +90,11 @@ describe('HomePage Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter>
-          <HomePage />
-        </MemoryRouter>
+        <HelmetProvider>
+          <MemoryRouter>
+            <HomePage />
+          </MemoryRouter>
+        </HelmetProvider>
       );
     });
 

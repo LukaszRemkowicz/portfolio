@@ -4,6 +4,7 @@ import { useProjects } from '../hooks/useProjects';
 import styles from '../styles/components/Programming.module.css';
 import { Github, ExternalLink, Code2 } from 'lucide-react';
 import Skeleton from './common/Skeleton';
+import SEO from './common/SEO';
 import ProjectSkeleton from './skeletons/ProjectSkeleton';
 
 const Programming: FC = () => {
@@ -51,6 +52,10 @@ const Programming: FC = () => {
 
   return (
     <section className={styles.section}>
+      <SEO
+        title={t('programming.title')}
+        description={t('programming.subtitle')}
+      />
       <header className={styles.header}>
         <h1 className={styles.title}>{t('programming.title')}</h1>
         <p className={styles.subtitle}>{t('programming.subtitle')}</p>

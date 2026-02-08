@@ -8,6 +8,7 @@ import { AstroImage, FilterType } from '../types';
 import GalleryCard from './common/GalleryCard';
 import ImageModal from './common/ImageModal';
 import LoadingScreen from './common/LoadingScreen';
+import SEO from './common/SEO';
 import TagSidebar from './TagSidebar';
 import CategorySidebar from './CategorySidebar';
 import { LayoutGrid, Sliders } from 'lucide-react';
@@ -135,6 +136,18 @@ const AstroGallery: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      <SEO
+        title={t('common.gallery')}
+        description={t('common.gallerySubtitle')}
+      />
+      {modalImage && (
+        <SEO
+          title={modalImage.name}
+          description={modalImage.description || modalImage.name}
+          image={modalImage.url}
+          type='article'
+        />
+      )}
       <div
         className={styles.hero}
         style={{

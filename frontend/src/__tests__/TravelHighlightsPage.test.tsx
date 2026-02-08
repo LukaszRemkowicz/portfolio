@@ -6,6 +6,7 @@ import { useTravelHighlightDetail } from '../hooks/useTravelHighlightDetail';
 import { useBackground } from '../hooks/useBackground';
 import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
 
 // Mock Hooks
 jest.mock('../hooks/useTravelHighlightDetail');
@@ -37,20 +38,22 @@ describe('TravelHighlightsPage', () => {
   const renderComponent = async (path = '/travel/iceland') => {
     await act(async () => {
       render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={[path]}>
-            <Routes>
-              <Route
-                path='/travel/:countrySlug'
-                element={<TravelHighlightsPage />}
-              />
-              <Route
-                path='/travel/:countrySlug/:placeSlug'
-                element={<TravelHighlightsPage />}
-              />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
+        <HelmetProvider>
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter initialEntries={[path]}>
+              <Routes>
+                <Route
+                  path='/travel/:countrySlug'
+                  element={<TravelHighlightsPage />}
+                />
+                <Route
+                  path='/travel/:countrySlug/:placeSlug'
+                  element={<TravelHighlightsPage />}
+                />
+              </Routes>
+            </MemoryRouter>
+          </QueryClientProvider>
+        </HelmetProvider>
       );
     });
   };

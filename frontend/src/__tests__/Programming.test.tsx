@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Programming from '../components/Programming';
 import { Project } from '../types';
 import { useProjects } from '../hooks/useProjects';
@@ -19,8 +20,12 @@ describe('Programming Component', () => {
     });
   });
 
+  const renderWithHelmet = (component: React.ReactNode) => {
+    return render(<HelmetProvider>{component}</HelmetProvider>);
+  };
+
   it('renders the Project Archive title', () => {
-    render(<Programming />);
+    renderWithHelmet(<Programming />);
     expect(screen.getByText(/Project Archive/i)).toBeInTheDocument();
   });
 
@@ -31,7 +36,7 @@ describe('Programming Component', () => {
       error: null,
     });
 
-    render(<Programming />);
+    renderWithHelmet(<Programming />);
     expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
@@ -57,7 +62,7 @@ describe('Programming Component', () => {
       error: null,
     });
 
-    render(<Programming />);
+    renderWithHelmet(<Programming />);
     expect(screen.getByText('Test Project')).toBeInTheDocument();
     expect(screen.getByText('Test Description')).toBeInTheDocument();
   });

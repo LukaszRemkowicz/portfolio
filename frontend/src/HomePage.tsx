@@ -16,6 +16,7 @@ import { useProfile } from './hooks/useProfile';
 import { useBackground } from './hooks/useBackground';
 import { useSettings } from './hooks/useSettings';
 import LoadingScreen from './components/common/LoadingScreen';
+import SEO from './components/common/SEO';
 
 const DEFAULT_PORTRAIT = '/portrait_default.png';
 
@@ -60,6 +61,11 @@ const HomePage: React.FC = () => {
           portraitUrl={profile?.avatar || DEFAULT_PORTRAIT}
           shortDescription={profile?.short_description || ''}
           backgroundUrl={backgroundUrl}
+        />
+        <SEO
+          title='Home'
+          description={profile?.short_description}
+          image={profile?.avatar || DEFAULT_PORTRAIT}
         />
         <Suspense
           fallback={

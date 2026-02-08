@@ -2,9 +2,45 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { resolve } from 'path';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [
+    react(),
+    tsconfigPaths(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['telescope.png', 'logo.png', 'robots.txt', 'sitemap.xml'],
+      manifest: {
+        short_name: 'Portfolio',
+        name: 'Łukasz Remkowicz - Software Developer & Astrophotographer',
+        description:
+          'Portfolio landing page with astrophotography gallery, built with React, TypeScript, and Zustand.',
+        icons: [
+          {
+            src: 'telescope.png',
+            sizes: '64x64 32x32 24x24 16x16',
+            type: 'image/png',
+          },
+          {
+            src: 'telescope.png',
+            type: 'image/png',
+            sizes: '192x192',
+            purpose: 'any maskable',
+          },
+          {
+            src: 'telescope.png',
+            type: 'image/png',
+            sizes: '512x512',
+          },
+        ],
+        start_url: '.',
+        display: 'standalone',
+        theme_color: '#02040a',
+        background_color: '#02040a',
+      },
+    }),
+  ],
   define: {
     // Inject process.env vars into import.meta.env for frontend access
     // Force empty API_URL to ensure we use valid relative paths for the proxy

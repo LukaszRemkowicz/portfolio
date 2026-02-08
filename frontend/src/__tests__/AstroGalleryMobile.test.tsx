@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import AstroGallery from '../components/AstroGallery';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
 import { useAstroImages } from '../hooks/useAstroImages';
 import { useBackground } from '../hooks/useBackground';
 import { useSettings } from '../hooks/useSettings';
@@ -82,13 +83,15 @@ describe('AstroGallery Mobile Navigation', () => {
   const renderGallery = async () => {
     await act(async () => {
       render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/']}>
-            <Routes>
-              <Route path='/' element={<AstroGallery />} />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
+        <HelmetProvider>
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter initialEntries={['/']}>
+              <Routes>
+                <Route path='/' element={<AstroGallery />} />
+              </Routes>
+            </MemoryRouter>
+          </QueryClientProvider>
+        </HelmetProvider>
       );
     });
 

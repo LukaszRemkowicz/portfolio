@@ -9,8 +9,9 @@ import {
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import AstroGallery from '../components/AstroGallery';
-import { AstroImage } from '../types';
+import { AstroImage, Tag } from '../types';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
 
 import { useAstroImages } from '../hooks/useAstroImages';
 import { useBackground } from '../hooks/useBackground';
@@ -26,8 +27,6 @@ jest.mock('../hooks/useSettings');
 jest.mock('../hooks/useCategories');
 jest.mock('../hooks/useTags');
 jest.mock('../hooks/useProfile');
-
-import { Tag } from '../types';
 
 /**
  * Test suite for the AstroGallery component
@@ -48,7 +47,6 @@ describe('AstroGallery Component', () => {
     },
   });
 
-  // No longer needed
   const resetStore = () => {};
 
   beforeEach(() => {
@@ -112,38 +110,34 @@ describe('AstroGallery Component', () => {
     resetStore();
   });
 
+  const renderWithProviders = async () => {
+    await act(async () => {
+      render(
+        <HelmetProvider>
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter initialEntries={['/']}>
+              <Routes>
+                <Route path='/' element={<AstroGallery />} />
+              </Routes>
+            </MemoryRouter>
+          </QueryClientProvider>
+        </HelmetProvider>
+      );
+    });
+  };
+
   it('shows loading state initially', async () => {
     mockUseAstroImages.mockReturnValue({ data: [], isLoading: true });
     mockUseProfile.mockReturnValue({ data: null, isLoading: true });
 
-    await act(async () => {
-      render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/']}>
-            <Routes>
-              <Route path='/' element={<AstroGallery />} />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
-      );
-    });
+    await renderWithProviders();
 
     expect(screen.getByTestId('loading-screen')).toBeInTheDocument();
     expect(screen.getByText(/Synchronizing/i)).toBeInTheDocument();
   });
 
   it('renders the gallery title and filter boxes after loading', async () => {
-    await act(async () => {
-      render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/']}>
-            <Routes>
-              <Route path='/' element={<AstroGallery />} />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
-      );
-    });
+    await renderWithProviders();
 
     // Wait for loading screen to be removed
     await waitFor(() => {
@@ -169,17 +163,7 @@ describe('AstroGallery Component', () => {
 
     mockUseAstroImages.mockReturnValue({ data: mockImages, isLoading: false });
 
-    await act(async () => {
-      render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/']}>
-            <Routes>
-              <Route path='/' element={<AstroGallery />} />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
-      );
-    });
+    await renderWithProviders();
 
     // Wait for initial loading screen to be removed
     await waitFor(() => {
@@ -218,17 +202,7 @@ describe('AstroGallery Component', () => {
       .spyOn(console, 'error')
       .mockImplementation(() => {});
 
-    await act(async () => {
-      render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/']}>
-            <Routes>
-              <Route path='/' element={<AstroGallery />} />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
-      );
-    });
+    await renderWithProviders();
 
     // Wait for loading screen to be removed first to ensure stable rendering
     await waitFor(() => {
@@ -258,17 +232,7 @@ describe('AstroGallery Component', () => {
 
     mockUseAstroImages.mockReturnValue({ data: mockImages, isLoading: false });
 
-    await act(async () => {
-      render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/']}>
-            <Routes>
-              <Route path='/' element={<AstroGallery />} />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
-      );
-    });
+    await renderWithProviders();
 
     // Wait for loading screen to be removed first to ensure stable rendering
     await waitFor(() => {
@@ -303,17 +267,7 @@ describe('AstroGallery Component', () => {
 
     mockUseAstroImages.mockReturnValue({ data: mockImages, isLoading: false });
 
-    await act(async () => {
-      render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/']}>
-            <Routes>
-              <Route path='/' element={<AstroGallery />} />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
-      );
-    });
+    await renderWithProviders();
 
     // Wait for loading screen to be removed first to ensure stable rendering
     await waitFor(() => {
@@ -353,17 +307,7 @@ describe('AstroGallery Component', () => {
     ];
     mockUseTags.mockReturnValue({ data: mockTags, isLoading: false });
 
-    await act(async () => {
-      render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/']}>
-            <Routes>
-              <Route path='/' element={<AstroGallery />} />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
-      );
-    });
+    await renderWithProviders();
 
     // Wait for loading screen to be removed first to ensure stable rendering
     await waitFor(() => {
@@ -394,17 +338,7 @@ describe('AstroGallery Component', () => {
   });
 
   it('refetches tags when category filter changes', async () => {
-    await act(async () => {
-      render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/']}>
-            <Routes>
-              <Route path='/' element={<AstroGallery />} />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
-      );
-    });
+    await renderWithProviders();
 
     // Wait for loading screen to be removed first to ensure stable rendering
     await waitFor(() => {

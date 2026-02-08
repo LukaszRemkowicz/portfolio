@@ -6,6 +6,7 @@ import { getMediaUrl, ASSETS } from '../api/routes';
 import { AstroImage } from '../types';
 import ImageModal from './common/ImageModal';
 import LoadingScreen from './common/LoadingScreen';
+import SEO from './common/SEO';
 import StarBackground from './StarBackground';
 import { useBackground } from '../hooks/useBackground';
 import { useTravelHighlightDetail } from '../hooks/useTravelHighlightDetail';
@@ -78,6 +79,15 @@ const TravelHighlightsPage: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      <SEO
+        title={displayTitle}
+        description={
+          story
+            ? sanitizeHtml(story).substring(0, 160)
+            : t('travel.exploringCosmic') + ' ' + displayTitle
+        }
+        image={getMediaUrl(locationBackgroundImage) || undefined}
+      />
       <StarBackground />
       <div
         className={styles.hero}
