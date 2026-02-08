@@ -206,20 +206,35 @@ should_keep() {
   return 1
 }
 
-for repo in portfolio-backend portfolio-frontend; do
-  mapfile -t tags < <(docker images "$repo" --format '{{.Tag}}' | sort -u)
-  for t in "${tags[@]}"; do
-    if should_keep "$t"; then
-      continue
-    fi
-    docker image rm -f "$repo:$t" >/dev/null 2>&1 || true
-  done
+
+# ===============================
+# 🧹 Cleanup images – keep last 5 versions (BE + FE)
+# ===============================
+
+KEEP_IMAGES=5
+REPOS=("portfolio-backend" "portfolio-frontend")
+
+echo "🧹 Cleaning up images (keeping last $KEEP_IMAGES versions)..."
+
+for repo in "${REPOS[@]}"; do
+  echo "➡️ Repo: $repo"
+
+  mapfile -t tags < <(
+    docker images "$repo" --format '{{.Tag}}' \
+    | grep -E '^v[0-9]+' \
+    | sort -V
+  )
+
+  if (( ${#tags[@]} > KEEP_IMAGES )); then
+    remove_count=$((${#tags[@]} - KEEP_IMAGES))
+    for ((i=0; i<remove_count; i++)); do
+      t="${tags[$i]}"
+      echo "🗑️ Removing old image: $repo:$t"
+      docker image rm -f "$repo:$t" >/dev/null 2>&1 || true
+    done
+  else
+    echo "✔️ Nothing to clean for $repo"
+  fi
 done
-
-KEEP_TAGS=("$TAG")
-[[ -n "$CURRENT_TAG" ]] && KEEP_TAGS+=("$CURRENT_TAG")
-[[ -n "$PREV_TAG" ]] && KEEP_TAGS+=("$PREV_TAG")
-
-docker image prune -f >/dev/null 2>&1 || true
 
 echo "🎉 Build completed successfully for tag: $TAG"
