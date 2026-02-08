@@ -1,31 +1,39 @@
 from django_countries import countries
-from taggit.models import Tag
+from parler.forms import TranslatableModelForm
 
 from django import forms
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.utils.translation import gettext_lazy as _
 
-from core.widgets import ThemedSelect2MultipleWidget, ThemedSelect2Widget
+from core.widgets import (
+    CountrySelect2Widget,
+    RangeWidget,
+    ThemedSelect2MultipleWidget,
+    ThemedSelect2Widget,
+)
 
-from .models import AstroImage, MeteorsMainPageConfig, Place
+from .models import AstroImage, MeteorsMainPageConfig, Place, Tag
 
 
-class RangeWidget(forms.MultiWidget):
-    def __init__(self, attrs=None, placeholder_min="", placeholder_max=""):
-        widgets = [
-            forms.NumberInput(attrs={"placeholder": placeholder_min}),
-            forms.NumberInput(attrs={"placeholder": placeholder_max}),
-        ]
-        super().__init__(widgets, attrs)
+class PlaceAdminForm(TranslatableModelForm):
+    """Custom form for Place admin to use Select2 widget for country field."""
 
-    def decompress(self, value):
-        if value and isinstance(value, list) and len(value) == 2:
-            return value
-        return [None, None]
+    # Explicitly define country field to override django-countries default widget
+    country = forms.ChoiceField(
+        choices=list(countries), widget=CountrySelect2Widget(), required=False, label=_("Country")
+    )
+
+    class Meta:
+        model = Place
+        fields = "__all__"
 
 
 class RangeField(forms.MultiValueField):
-    def __init__(self, field_class, placeholder_min, placeholder_max, *args, **kwargs):
+    """
+    A MultiValueField that uses RangeWidget to manage [min, max] pairs.
+    """
+
+    def __init__(self, field_class, placeholder_min="", placeholder_max="", *args, **kwargs):
         self.widget = RangeWidget(placeholder_min=placeholder_min, placeholder_max=placeholder_max)
         fields = (
             field_class(),
@@ -35,13 +43,16 @@ class RangeField(forms.MultiValueField):
 
     def compress(self, data_list):
         if data_list:
-            # Sort to ensure [min, max]
-            return sorted(data_list)
+            # Sort to ensure [min, max] if applicable
+            try:
+                return sorted(filter(lambda x: x is not None, data_list))
+            except TypeError:
+                return list(data_list)
         return list()
 
 
-class AstroImageForm(forms.ModelForm):
-    tags = forms.ModelMultipleChoiceField(
+class AstroImageForm(TranslatableModelForm):
+    tags = forms.ModelMultipleChoiceField(  # type: ignore[var-annotated]
         queryset=Tag.objects.all(),
         required=False,
         widget=FilteredSelectMultiple("Tags", is_stacked=False),
@@ -115,6 +126,10 @@ class AstroImageForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Fix duplicate places in dropdown by clearing ordering (which uses properties/joins)
+        if "place" in self.fields:
+            self.fields["place"].queryset = Place.objects.order_by("pk").distinct()
+
         # Enhance location (country) labels with codes for better searchability
         location_field = self.fields.get("location")
         if isinstance(location_field, forms.ChoiceField):
@@ -131,27 +146,6 @@ class AstroImageForm(forms.ModelForm):
 
         if self.instance.pk:
             self.fields["tags"].initial = self.instance.tags.all()
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-
-        def save_tags():
-            instance.tags.set(self.cleaned_data["tags"])
-
-        # Override save_m2m to handle taggit manager
-        old_save_m2m = self.save_m2m
-
-        def save_m2m():
-            old_save_m2m()
-            save_tags()
-
-        setattr(self, "save_m2m", save_m2m)
-
-        if commit:
-            instance.save()
-            self.save_m2m()
-
-        return instance
 
 
 class MeteorsMainPageConfigForm(forms.ModelForm):

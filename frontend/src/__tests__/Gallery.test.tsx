@@ -39,6 +39,7 @@ describe('Gallery Component', () => {
         url: 'test.jpg',
         thumbnail_url: 'thumb.jpg',
         tags: ['deepsky', 'galaxy'],
+        celestial_object: 'Galaxy',
         created_at: '2023-01-01',
       },
     ]);
@@ -52,7 +53,7 @@ describe('Gallery Component', () => {
     });
 
     // Wait for load to complete
-    expect(await screen.findByText('Latest images')).toBeInTheDocument();
+    expect(await screen.findByText('gallery.title')).toBeInTheDocument();
     expect(await screen.findByText('M31 Andromeda')).toBeInTheDocument();
   });
 
@@ -64,6 +65,7 @@ describe('Gallery Component', () => {
         name: 'Deep Sky Object',
         url: 'dso.jpg',
         tags: ['deepsky'],
+        celestial_object: 'Nebula',
         created_at: '2023-01-01',
       },
       {
@@ -72,6 +74,7 @@ describe('Gallery Component', () => {
         name: 'Landscape Object',
         url: 'lands.jpg',
         tags: ['astrolandscape'],
+        celestial_object: 'Landscape',
         created_at: '2023-01-02',
       },
     ]);
@@ -87,7 +90,7 @@ describe('Gallery Component', () => {
     expect(await screen.findByText('Deep Sky Object')).toBeInTheDocument();
     expect(screen.getByText('Landscape Object')).toBeInTheDocument();
 
-    const filterBtn = screen.getByText('Deep Sky');
+    const filterBtn = screen.getByRole('button', { name: 'Deep Sky' });
     fireEvent.click(filterBtn);
 
     // Filter logic is inside Gallery component using useMemo, not API call
@@ -106,6 +109,7 @@ describe('Gallery Component', () => {
         name: 'Test Image',
         url: 'test.jpg',
         tags: [],
+        celestial_object: 'Star',
       },
     ]);
 
@@ -139,6 +143,6 @@ describe('Gallery Component', () => {
       );
     });
 
-    expect(screen.queryByText('Latest images')).not.toBeInTheDocument();
+    expect(screen.queryByText('gallery.title')).not.toBeInTheDocument();
   });
 });

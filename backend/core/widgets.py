@@ -71,3 +71,71 @@ class ReadOnlyMessageWidget(forms.Widget):
     @property
     def media(self):
         return forms.Media(css={"all": ("core/css/select2_admin.css",)})
+
+
+class CountrySelect2Widget(ThemedSelect2Widget):
+    """
+    A Select2Widget specifically for country fields that allows searching by both
+    country name and country code (e.g., 'US', 'PL', 'GB').
+
+    This widget can be reused across any model that needs a country selection field.
+
+    Usage:
+        from core.widgets import CountrySelect2Widget
+
+        class MyForm(forms.Form):
+            country = forms.ChoiceField(
+                choices=list(countries),
+                widget=CountrySelect2Widget()
+            )
+    """
+
+    def __init__(self, *args, **kwargs):
+        # Set default placeholder for country selection
+        attrs = kwargs.get("attrs", {})
+        attrs.setdefault("data-placeholder", _("Select country..."))
+        attrs.setdefault("data-allow-clear", "true")
+        kwargs["attrs"] = attrs
+        super().__init__(*args, **kwargs)
+
+    def optgroups(self, name, value, attrs=None):
+        """
+        Override optgroups to add country codes to the option text for better searchability.
+        This allows users to search by typing either the country name or the 2-letter code.
+        """
+        groups = super().optgroups(name, value, attrs)
+
+        # Enhance each option with the country code in the display text
+        for group in groups:
+            for option in group[1]:
+                # option structure: (option_value, option_label, selected, index, attrs)
+                if option.get("value"):  # Skip empty option
+                    code = option["value"]
+                    label = option["label"]
+                    # Format: "United States (US)" for better searchability
+                    option["label"] = f"{label} ({code})"
+
+        return groups
+
+
+class RangeWidget(forms.MultiWidget):
+    """
+    A MultiWidget for range inputs (min/max).
+    Supports both simple NumberInputs (for JSON lists) and custom base widgets
+    (like DateInput for Postgres DateRangeFields).
+    """
+
+    def __init__(self, attrs=None, base_widget=None, placeholder_min="", placeholder_max=""):
+        if base_widget:
+            widgets = [base_widget, base_widget]
+        else:
+            widgets = [
+                forms.NumberInput(attrs={"placeholder": placeholder_min}),
+                forms.NumberInput(attrs={"placeholder": placeholder_max}),
+            ]
+        super().__init__(widgets, attrs)
+
+    def decompress(self, value):
+        if value and isinstance(value, (list, tuple)) and len(value) == 2:
+            return value
+        return [None, None]

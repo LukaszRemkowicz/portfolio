@@ -1,0 +1,14 @@
+{% extends "admin/parler/change_form.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+{% if dynamic_parler_css %}
+<style>
+    {
+            {
+            dynamic_parler_css|safe
+        }
+    }
+</style>
+{% endif %}
+{% endblock %}

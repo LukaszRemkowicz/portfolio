@@ -86,4 +86,4 @@ ENV WEB_CONCURRENCY=2 \
     GUNICORN_THREADS=1
 
 # Use sh -c to expand environment variables for workers and threads
-CMD ["sh", "-c", "gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers ${WEB_CONCURRENCY} --threads ${GUNICORN_THREADS} --log-level info"]
+CMD ["sh", "-c", "gunicorn settings.wsgi:application --bind 0.0.0.0:8000 --workers ${WEB_CONCURRENCY} --threads ${GUNICORN_THREADS} --log-level info"]

@@ -97,7 +97,7 @@ describe('HomePage Component', () => {
       { timeout: 3000 }
     );
 
-    expect(screen.getByText(/The Beauty of/i)).toBeInTheDocument();
+    expect(screen.getByText('hero.titlePart1')).toBeInTheDocument();
     expect(screen.getByText('This is a test bio')).toBeInTheDocument();
   });
 });

@@ -3,7 +3,7 @@ import uuid
 from io import BytesIO
 from typing import Any
 
-from django_ckeditor_5.fields import CKEditor5Field
+from parler.models import TranslatableModel
 from PIL import Image
 
 from django.core.exceptions import ValidationError
@@ -12,7 +12,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
-class BaseImage(models.Model):
+class BaseImage(TranslatableModel):
     """Base abstract model for images"""
 
     id = models.UUIDField(
@@ -25,15 +25,10 @@ class BaseImage(models.Model):
         verbose_name=_("Image File"),
         help_text=_("The actual image file to be displayed."),
     )
-    name = models.CharField(
-        max_length=255, verbose_name=_("Name"), help_text=_("A descriptive name for this image.")
-    )
-    description = CKEditor5Field(
-        blank=True,
-        verbose_name=_("Description"),
-        help_text=_("Optional detailed description of the image."),
-        config_name="default",
-    )
+
+    # Translations moved to concrete subclasses because BaseImage is abstract.
+    # See AstroImage and ProjectImage.
+
     thumbnail = models.ImageField(
         upload_to="thumbnails/", blank=True, null=True, editable=False, verbose_name=_("Thumbnail")
     )
@@ -48,7 +43,8 @@ class BaseImage(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
-        return self.name
+        name = self.safe_translation_getter("name", any_language=True)
+        return name if name else str(self.id)
 
     def make_thumbnail(self, image: Any, size: tuple[int, int] = (400, 400)) -> ContentFile:
         """Generates a thumbnail for the image."""

@@ -83,8 +83,10 @@ describe('TravelHighlightsPage', () => {
 
   test('renders content after successful fetch', async () => {
     const mockData = {
-      country: 'Iceland',
-      place: 'Reykjavik',
+      place: {
+        name: 'Reykjavik',
+        country: 'Iceland',
+      },
       story: '<p>Beautiful aurora</p>',
       adventure_date: 'Jan 2026',
       highlight_name: 'Northern Expedition',

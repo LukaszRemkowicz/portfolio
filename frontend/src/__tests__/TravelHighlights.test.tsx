@@ -27,7 +27,10 @@ describe('TravelHighlights Component', () => {
     const mockLocations = [
       {
         pk: 1,
-        country_name: 'Norway',
+        place: {
+          name: '',
+          country: 'Norway',
+        },
         country_slug: 'norway',
         highlight_name: 'Fjord Expedition',
         images: [
@@ -50,7 +53,7 @@ describe('TravelHighlights Component', () => {
       );
     });
 
-    expect(await screen.findByText('Travel Highlights')).toBeInTheDocument();
+    expect(await screen.findByText('travel.title')).toBeInTheDocument();
     expect(screen.getByText('Fjord Expedition')).toBeInTheDocument();
   });
 
@@ -62,14 +65,17 @@ describe('TravelHighlights Component', () => {
     await act(async () => {
       render(<TravelHighlights />);
     });
-    expect(screen.queryByText('Travel Highlights')).not.toBeInTheDocument();
+    expect(screen.queryByText('travel.title')).not.toBeInTheDocument();
   });
 
   it('cycles images automatically', async () => {
     const mockLocations = [
       {
         pk: 1,
-        country_name: 'Multi Image',
+        place: {
+          name: '',
+          country: 'Multi Image',
+        },
         country_slug: 'multi',
         images: [
           { url: 'img1.jpg', thumbnail_url: 'thumb1.jpg', description: '1' },
