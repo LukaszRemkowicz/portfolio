@@ -6,6 +6,8 @@ from pytest_mock import MockerFixture
 from django.test import RequestFactory, override_settings
 
 from astrophotography.models import Place
+from astrophotography.tests.factories import PlaceFactory
+from core.tests.factories import TranslationTaskFactory
 from translation.mixins import (
     AutomatedTranslationMixin,
     TranslationStatusMixin,
@@ -20,7 +22,7 @@ class TestTranslationStatusMixin:
         self.mixin = TranslationStatusMixin()
         self.mixin.model = Place  # Mock usage on Place model
         self.factory = RequestFactory()
-        self.place = Place.objects.create(name="Warsaw", country="PL")
+        self.place = PlaceFactory()
 
     def test_get_list_display_adds_column(self):
         """Ensure 'translation_status' is added to list_display."""
@@ -47,27 +49,19 @@ class TestTranslationStatusMixin:
 
     def test_translation_status_in_progress(self):
         """Status should be 'In Progress' if any task is PENDING or RUNNING."""
-        TranslationTask.objects.create(
-            content_object=self.place,
-            task_id="task1",
-            language="es",
-            status=TranslationTask.Status.PENDING,
-        )
+        TranslationTaskFactory(content_object=self.place)
         status_html = self.mixin.translation_status(self.place)
         assert "⏳ In Progress" in status_html
         assert "color:orange" in status_html
 
     def test_translation_status_completed(self):
         """Status should be 'Complete' if all tasks are COMPLETED."""
-        TranslationTask.objects.create(
+        TranslationTaskFactory(
             content_object=self.place,
-            task_id="task1",
-            language="es",
             status=TranslationTask.Status.COMPLETED,
         )
-        TranslationTask.objects.create(
+        TranslationTaskFactory(
             content_object=self.place,
-            task_id="task2",
             language="fr",
             status=TranslationTask.Status.COMPLETED,
         )
@@ -77,15 +71,12 @@ class TestTranslationStatusMixin:
 
     def test_translation_status_failed(self):
         """Status should be 'Failed' if any task FAILED."""
-        TranslationTask.objects.create(
+        TranslationTaskFactory(
             content_object=self.place,
-            task_id="task1",
-            language="es",
             status=TranslationTask.Status.COMPLETED,
         )
-        TranslationTask.objects.create(
+        TranslationTaskFactory(
             content_object=self.place,
-            task_id="task2",
             language="fr",
             status=TranslationTask.Status.FAILED,
         )
@@ -96,7 +87,9 @@ class TestTranslationStatusMixin:
 
 @pytest.mark.django_db
 class TestAutomatedTranslationMixin:
-    def test_save_model_triggers_tasks_and_creates_records(self, mocker: MockerFixture):
+    def test_save_model_triggers_tasks_and_creates_records(
+        self, mocker: MockerFixture, mock_translate_task, mock_get_available_languages
+    ):
         """Ensure save_model triggers celery tasks and creates TranslationTask records."""
 
         class BaseAdmin:
@@ -113,15 +106,10 @@ class TestAutomatedTranslationMixin:
             def get_translation_kwargs(self, obj, form, change, should_trigger):
                 return {"force": True}
 
-        place = Place.objects.create(name="Warsaw", country="PL")
+        place = PlaceFactory()
         admin_instance = MockAdmin()
 
-        # Mock dependencies
-        mock_task = mocker.patch("translation.mixins.translate_instance_task")
-        mocker.patch(
-            "translation.services.TranslationService.get_available_languages",
-            return_value=["en", "pl", "es"],
-        )
+        mock_get_available_languages.return_value = ["en", "pl", "es"]
         with override_settings(PARLER_DEFAULT_LANGUAGE_CODE="en"):
             # Setup mock task return value with unique IDs
             def side_effect(*args, **kwargs):
@@ -129,14 +117,14 @@ class TestAutomatedTranslationMixin:
                 m.id = str(uuid.uuid4())
                 return m
 
-            mock_task.delay.side_effect = side_effect
+            mock_translate_task.delay.side_effect = side_effect
 
             # Call save_model
             admin_instance.save_model(None, place, None, False)
 
         # Verify task calls
         # 'en' is default (skipped), 'pl' and 'es' should be called
-        assert mock_task.delay.call_count == 2
+        assert mock_translate_task.delay.call_count == 2
 
         # Verify TranslationTask records created
         tasks = TranslationTask.objects.filter(object_id=place.pk)
