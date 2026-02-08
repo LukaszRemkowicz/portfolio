@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchContact } from '../api/services';
-import { useAppStore } from '../store/useStore';
+import { useSettings } from '../hooks/useSettings';
 import styles from '../styles/components/Contact.module.css';
 import { ContactFormData, ValidationErrors, SubmitStatus } from '../types';
 import { AppError, ValidationError } from '../api/errors';
@@ -19,8 +20,9 @@ const Contact: React.FC = () => {
     {}
   );
   const [serverError, setServerError] = useState<string | null>(null);
-  const { features, isInitialLoading: isLoading } = useAppStore();
-  const isEnabled = features?.contactForm === true;
+  const { data: settings, isLoading } = useSettings();
+  const { t } = useTranslation();
+  const isEnabled = settings?.contactForm === true;
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
@@ -47,20 +49,20 @@ const Contact: React.FC = () => {
   const validateForm = useCallback((): boolean => {
     const errors: ValidationErrors = {};
     if (!formData.name || formData.name.trim().length < 2) {
-      errors.name = ['Name must be at least 2 characters long.'];
+      errors.name = [t('contact.errors.name')];
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email || !emailRegex.test(formData.email)) {
-      errors.email = ['Please provide a valid email address.'];
+      errors.email = [t('contact.errors.email')];
     }
     if (!formData.subject || formData.subject.trim().length < 5) {
-      errors.subject = ['Subject must be at least 5 characters long.'];
+      errors.subject = [t('contact.errors.subject')];
     }
     if (!formData.message || formData.message.trim().length < 10) {
-      errors.message = ['Message must be at least 10 characters long.'];
+      errors.message = [t('contact.errors.message')];
     }
     if (formData.website && formData.website.trim().length > 0) {
-      errors.name = ['Please correct the errors above and try again.'];
+      errors.name = [t('contact.errors.honeypot')];
     }
 
     if (Object.keys(errors).length > 0) {
@@ -69,7 +71,7 @@ const Contact: React.FC = () => {
       return false;
     }
     return true;
-  }, [formData]);
+  }, [formData, t]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
@@ -105,15 +107,13 @@ const Contact: React.FC = () => {
         } else {
           console.error('Unknown error:', error);
           setSubmitStatus('error');
-          setServerError(
-            'Transmission failure. Please check your signal or try again later.'
-          );
+          setServerError(t('contact.error'));
         }
       } finally {
         setIsSubmitting(false);
       }
     },
-    [formData, validateForm]
+    [formData, validateForm, t]
   );
 
   if (isLoading || isEnabled === false) {
@@ -124,17 +124,15 @@ const Contact: React.FC = () => {
     <section id='contact' className={styles.section}>
       <div className={styles.container}>
         <div className={styles.header}>
-          <h2 className={styles.title}>Direct Inquiry</h2>
-          <p className={styles.subtitle}>
-            Interested in prints or technical collaboration? Let&apos;s connect.
-          </p>
+          <h2 className={styles.title}>{t('contact.title')}</h2>
+          <p className={styles.subtitle}>{t('contact.subtitle')}</p>
         </div>
 
         <div className={styles.formWrapper}>
           <form
             onSubmit={handleSubmit}
             className={styles.contactForm}
-            aria-label='Contact Form'
+            aria-label={t('contact.title')}
           >
             {/* Honeypot field */}
             <input
@@ -150,7 +148,7 @@ const Contact: React.FC = () => {
             <div className={styles.formGrid}>
               <div className={styles.formField}>
                 <label className={styles.fieldLabel} htmlFor='name'>
-                  Identity
+                  {t('contact.identity')}
                 </label>
                 <input
                   id='name'
@@ -158,7 +156,7 @@ const Contact: React.FC = () => {
                   name='name'
                   value={formData.name}
                   onChange={handleChange}
-                  placeholder='Your Name'
+                  placeholder={t('contact.namePlaceholder')}
                   required
                   aria-required='true'
                   aria-invalid={!!validationErrors.name}
@@ -181,7 +179,7 @@ const Contact: React.FC = () => {
               </div>
               <div className={styles.formField}>
                 <label className={styles.fieldLabel} htmlFor='email'>
-                  Communication
+                  {t('contact.communication')}
                 </label>
                 <input
                   id='email'
@@ -189,7 +187,7 @@ const Contact: React.FC = () => {
                   name='email'
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder='Email Address'
+                  placeholder={t('contact.emailPlaceholder')}
                   required
                   aria-required='true'
                   aria-invalid={!!validationErrors.email}
@@ -212,7 +210,7 @@ const Contact: React.FC = () => {
               </div>
               <div className={styles.formField}>
                 <label className={styles.fieldLabel} htmlFor='subject'>
-                  Topic
+                  {t('contact.topic')}
                 </label>
                 <input
                   id='subject'
@@ -220,7 +218,7 @@ const Contact: React.FC = () => {
                   name='subject'
                   value={formData.subject}
                   onChange={handleChange}
-                  placeholder='Subject'
+                  placeholder={t('contact.subjectPlaceholder')}
                   required
                   aria-required='true'
                   aria-invalid={!!validationErrors.subject}
@@ -243,7 +241,7 @@ const Contact: React.FC = () => {
               </div>
               <div className={`${styles.formField} ${styles.fullWidth}`}>
                 <label className={styles.fieldLabel} htmlFor='message'>
-                  Transmission
+                  {t('contact.transmission')}
                 </label>
                 <textarea
                   id='message'
@@ -251,7 +249,7 @@ const Contact: React.FC = () => {
                   value={formData.message}
                   onChange={handleChange}
                   rows={5}
-                  placeholder='How can I help you?'
+                  placeholder={t('contact.messagePlaceholder')}
                   required
                   aria-required='true'
                   aria-invalid={!!validationErrors.message}
@@ -279,7 +277,7 @@ const Contact: React.FC = () => {
                 className={styles.submitBtn}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Sending...' : 'Submit Inquiry'}
+                {isSubmitting ? t('contact.sending') : t('contact.submit')}
               </button>
             </div>
 
@@ -289,18 +287,17 @@ const Contact: React.FC = () => {
                 role='status'
                 aria-live='polite'
               >
-                Thank you! Your message has been sent successfully.
+                {t('contact.success')}
               </p>
             )}
             {submitStatus === 'error' && (
               <p className={styles.errorMessage} role='alert'>
-                {serverError ||
-                  'Transmission failure. Please check your signal or try again later.'}
+                {serverError || t('contact.error')}
               </p>
             )}
             {submitStatus === 'validation_error' && (
               <p className={styles.errorMessage} role='alert'>
-                One or more details in your inquiry require adjustment.
+                {t('contact.validationError')}
               </p>
             )}
           </form>

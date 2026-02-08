@@ -1,13 +1,26 @@
 from django_countries import countries
-from taggit.models import Tag
+from parler.forms import TranslatableModelForm
 
 from django import forms
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.utils.translation import gettext_lazy as _
 
-from core.widgets import ThemedSelect2MultipleWidget, ThemedSelect2Widget
+from core.widgets import CountrySelect2Widget, ThemedSelect2MultipleWidget, ThemedSelect2Widget
 
-from .models import AstroImage, MeteorsMainPageConfig, Place
+from .models import AstroImage, MeteorsMainPageConfig, Place, Tag
+
+
+class PlaceAdminForm(TranslatableModelForm):
+    """Custom form for Place admin to use Select2 widget for country field."""
+
+    # Explicitly define country field to override django-countries default widget
+    country = forms.ChoiceField(
+        choices=list(countries), widget=CountrySelect2Widget(), required=False, label=_("Country")
+    )
+
+    class Meta:
+        model = Place
+        fields = "__all__"
 
 
 class RangeWidget(forms.MultiWidget):
@@ -40,7 +53,7 @@ class RangeField(forms.MultiValueField):
         return list()
 
 
-class AstroImageForm(forms.ModelForm):
+class AstroImageForm(TranslatableModelForm):
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
@@ -115,6 +128,10 @@ class AstroImageForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Fix duplicate places in dropdown by clearing ordering (which uses properties/joins)
+        if "place" in self.fields:
+            self.fields["place"].queryset = Place.objects.order_by("pk").distinct()
+
         # Enhance location (country) labels with codes for better searchability
         location_field = self.fields.get("location")
         if isinstance(location_field, forms.ChoiceField):
@@ -132,26 +149,7 @@ class AstroImageForm(forms.ModelForm):
         if self.instance.pk:
             self.fields["tags"].initial = self.instance.tags.all()
 
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-
-        def save_tags():
-            instance.tags.set(self.cleaned_data["tags"])
-
-        # Override save_m2m to handle taggit manager
-        old_save_m2m = self.save_m2m
-
-        def save_m2m():
-            old_save_m2m()
-            save_tags()
-
-        setattr(self, "save_m2m", save_m2m)
-
-        if commit:
-            instance.save()
-            self.save_m2m()
-
-        return instance
+    # Removed custom save/save_m2m as standard ManyToMany handles this now
 
 
 class MeteorsMainPageConfigForm(forms.ModelForm):

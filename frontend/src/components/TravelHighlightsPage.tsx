@@ -1,112 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import styles from '../styles/components/TravelHighlightsPage.module.css';
-import { API_ROUTES, getMediaUrl, ASSETS } from '../api/routes';
+import { getMediaUrl, ASSETS } from '../api/routes';
 import { AstroImage } from '../types';
-import { api } from '../api/api';
 import ImageModal from './common/ImageModal';
 import LoadingScreen from './common/LoadingScreen';
+import SEO from './common/SEO';
 import StarBackground from './StarBackground';
-import { useAppStore } from '../store/useStore';
+import { useBackground } from '../hooks/useBackground';
+import { useTravelHighlightDetail } from '../hooks/useTravelHighlightDetail';
 import { sanitizeHtml } from '../utils/html';
 
 const TravelHighlightsPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const { countrySlug, placeSlug } = useParams<{
     countrySlug: string;
     placeSlug?: string;
   }>();
 
-  const [images, setImages] = useState<AstroImage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<AstroImage | null>(null);
-  const [country, setCountry] = useState<string>('');
-  const [place, setPlace] = useState<string | null>(null);
-  const [story, setStory] = useState<string | null>(null);
-  const [adventureDate, setAdventureDate] = useState<string | null>(null);
-  const [createdAt, setCreatedAt] = useState<string | null>(null);
-  const [highlightName, setHighlightName] = useState<string | null>(null);
-  const [locationBackgroundImage, setLocationBackgroundImage] = useState<
-    string | null
-  >(null);
 
-  const { backgroundUrl, loadInitialData } = useAppStore();
+  const { data: backgroundUrl } = useBackground();
+  const {
+    data: locationData,
+    isLoading: loading,
+    error: queryError,
+  } = useTravelHighlightDetail(countrySlug, placeSlug);
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  const error = queryError ? (queryError as Error).message : null;
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (!countrySlug) {
-        setError('No location specified');
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-      try {
-        // Build slug-based URL
-        const slugPath = placeSlug
-          ? `${countrySlug}/${placeSlug}`
-          : `${countrySlug}`;
-
-        // Fetch from new slug-based endpoint
-        const response = await api.get(
-          `${API_ROUTES.travelBySlug}${slugPath}/`
-        );
-
-        const data = response.data;
-
-        // Validate response structure
-        if (!data || typeof data !== 'object') {
-          throw new Error('Invalid API response structure');
-        }
-
-        // Set metadata with fallbacks
-        setCountry(data.country || '');
-        setPlace(data.place || null);
-        setStory(data.story || null);
-        setAdventureDate(data.adventure_date || null);
-        setCreatedAt(data.created_at || null);
-        setHighlightName(data.highlight_name || null);
-        setLocationBackgroundImage(data.background_image || null);
-
-        // Process images with defensive checks
-        const imagesArray = Array.isArray(data.images) ? data.images : [];
-        const processedImages = imagesArray.map((image: AstroImage) => ({
-          ...image,
-          url: getMediaUrl(image.url) || '',
-          thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-        }));
-
-        setImages(processedImages);
-      } catch (err) {
-        console.error('Failed to load travel highlights:', err);
-        setError(
-          'Failed to load travel highlights. Please check the URL and try again.'
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, [countrySlug, placeSlug]);
+  // Metadata from locationData
+  const images = locationData?.images || [];
+  const country = locationData?.place?.country || '';
+  const place = locationData?.place?.name || null;
+  const story = locationData?.story || null;
+  const adventureDate = locationData?.adventure_date || null;
+  const createdAt = locationData?.created_at || null;
+  const highlightName = locationData?.highlight_name || null;
+  const locationBackgroundImage = locationData?.background_image || null;
 
   const handleImageClick = (image: AstroImage): void => {
     setModalImage(image);
   };
 
   if (loading) return <LoadingScreen />;
-  if (error) return <div className={styles.error}>{error}</div>;
+  if (error) return <div className={styles.error}>{t('travel.error')}</div>;
 
   // Display title: "Place, Country" or just "Country"
   const displayTitle =
     place && country ? `${place}, ${country}` : country || 'Travel Highlights';
 
+  const localizeAdventureDate = (dateStr: string | null, lang: string) => {
+    if (!dateStr) return null;
+    const months: Record<string, number> = {
+      Jan: 0,
+      Feb: 1,
+      Mar: 2,
+      Apr: 3,
+      May: 4,
+      Jun: 5,
+      Jul: 6,
+      Aug: 7,
+      Sep: 8,
+      Oct: 9,
+      Nov: 10,
+      Dec: 11,
+    };
+
+    return dateStr.replace(
+      /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g,
+      match => {
+        const dummyDate = new Date(2000, months[match], 1);
+        return dummyDate.toLocaleDateString(lang, { month: 'short' });
+      }
+    );
+  };
+
   return (
     <div className={styles.container}>
+      <SEO
+        title={displayTitle}
+        description={
+          story
+            ? sanitizeHtml(story).substring(0, 160)
+            : t('travel.exploringCosmic') + ' ' + displayTitle
+        }
+        image={getMediaUrl(locationBackgroundImage) || undefined}
+      />
       <StarBackground />
       <div
         className={styles.hero}
@@ -126,7 +107,7 @@ const TravelHighlightsPage: React.FC = () => {
       >
         <h1 className={styles.heroTitle}>{displayTitle}</h1>
         <p className={styles.heroSubtitle}>
-          Exploring the cosmic wonders of {displayTitle}
+          {t('travel.exploringCosmic')} {displayTitle}
         </p>
       </div>
 
@@ -136,12 +117,15 @@ const TravelHighlightsPage: React.FC = () => {
           <div className={styles.glassCard}>
             <header className={styles.metaInfo}>
               <span className={styles.badge}>
-                ADVENTURE DATE |{' '}
+                {t('travel.adventureDate')} |{' '}
                 {adventureDate
-                  ? adventureDate.toUpperCase()
+                  ? localizeAdventureDate(
+                      adventureDate,
+                      i18n.language
+                    )?.toUpperCase()
                   : createdAt
                     ? new Date(createdAt)
-                        .toLocaleDateString('en-US', {
+                        .toLocaleDateString(i18n.language, {
                           month: 'long',
                           year: 'numeric',
                         })
@@ -176,6 +160,7 @@ const TravelHighlightsPage: React.FC = () => {
                       src={image.url}
                       alt={image.name}
                       className={styles.viewerImage}
+                      loading='lazy'
                       onClick={() => handleImageClick(image)}
                       draggable='false'
                       onContextMenu={e => e.preventDefault()}
@@ -188,7 +173,7 @@ const TravelHighlightsPage: React.FC = () => {
                       className={styles.imageDescription}
                       dangerouslySetInnerHTML={{
                         __html: sanitizeHtml(
-                          image.description || 'No description available.'
+                          image.description || t('common.noDescription')
                         ),
                       }}
                     />

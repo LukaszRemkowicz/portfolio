@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "backend"
-version = "0.1.0"
+version = "1.1.0"
 description = "Portfolio backend with Django REST Framework"
 authors = ["l.remkowicz@gmail.com <l.remkowicz@gmail.com>"]
 readme = "README.md"
@@ -13,13 +13,13 @@ packages = [
 ]
 
 [tool.poetry.scripts]
-test = "core.scripts:test"
-test-cov = "core.scripts:test_cov"
-security = "core.scripts:security"
+test = "scripts:test"
+test-cov = "scripts:test_cov"
+security = "scripts:security"
 
 [tool.poetry.dependencies]
 python = ">=3.13,<4.0"
-django = ">=6.0.1"
+django = ">=6.0.2"
 djangorestframework = ">=3.14.0"
 pillow = ">=10.0.0"
 django-environ = ">=0.11.2"
@@ -27,11 +27,17 @@ django-cors-headers = ">=4.0.0"
 psycopg2-binary = ">=2.9.0"
 django-axes = ">=8.1.0"
 gunicorn = "^24.1.1"
-django-taggit = ">=6.1.0"
 django-countries = ">=8.2.0,<9.0.0"
 django-select2 = ">=8.4.8,<9.0.0"
 django-ckeditor-5 = ">=0.2.19"
 redis = ">=5.2.0"
+openai = "^1.0.0"
+django-extensions = "^3.2.0"
+django-parler = "^2.3"
+django-parler-rest = "^2.2"
+beautifulsoup4 = "^4.14.3"
+celery = {extras = ["redis"], version = "^5.4.0"}
+flower = "^2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.2"
@@ -49,6 +55,8 @@ safety = "^3.7.0"
 flake8-pyproject = "^1.2.4"
 factory-boy = "^3.3.0"
 Faker = "^37.0.0"
+watchdog = "^6.0.0"
+pytest-mock = "^3.15.1"
 
 [build-system]
 requires = ["poetry-core"]
@@ -78,7 +86,7 @@ profile = "black"
 multi_line_output = 3
 line_length = 100
 known_django = "django"
-known_first_party = ["astrophotography", "programming", "users", "inbox", "core"]
+known_first_party = ["astrophotography", "programming", "users", "inbox", "core", "common", "scripts", "settings"]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLDER"]
 
 [tool.mypy]
@@ -102,15 +110,15 @@ plugins = [
 ]
 
 [tool.django-stubs]
-django_settings_module = "core.settings"
+django_settings_module = "settings.base"
 
 [[tool.mypy.overrides]]
 module = [
-    "django.*",
-    "rest_framework.*",
     "PIL.*",
     "celery.*",
     "taggit.*",
+    "parler.*",
+    "parler_rest.*",
     "django_countries.*",
     "django_ckeditor_5.*",
     "django_select2.*",
@@ -122,8 +130,43 @@ ignore_missing_imports = true
 module = "*.tests.*"
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = [
+    "core.models",
+    "core.models",
+    "programming.models",
+    "programming.serializers",
+    "users.models",
+    "astrophotography.models",
+]
+disable_error_code = [
+    "attr-defined",
+    "var-annotated",
+    "misc",
+    "return-value",
+    "assignment",
+    "django-manager-missing",
+    "unused-ignore",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "translation.mixins",
+    "programming.admin",
+    "translation.services",
+    "translation.tasks",
+    "astrophotography.management.commands.fix_parler_language_codes",
+    "users.admin",
+]
+disable_error_code = [
+    "attr-defined",
+    "no-any-return",
+    "override",
+    "unused-ignore",
+]
+
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "core.test_settings"
+DJANGO_SETTINGS_MODULE = "settings.tests"
 pythonpath = ["."]
 addopts = "--tb=short --strict-markers --reuse-db"
 markers = [
@@ -163,6 +206,6 @@ exclude = [
 per-file-ignores = [
     "__init__.py:F401",
     "migrations/*:E501",
-    "core/test_settings.py:E402"
+    "settings/tests.py:E402"
 ]
 max-complexity = 10

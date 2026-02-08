@@ -1,24 +1,45 @@
-// frontend/src/components/Programming.tsx
-import { type FC, useEffect } from 'react';
-import { useAppStore } from '../store/useStore';
+import { type FC } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useProjects } from '../hooks/useProjects';
 import styles from '../styles/components/Programming.module.css';
 import { Github, ExternalLink, Code2 } from 'lucide-react';
-import LoadingScreen from './common/LoadingScreen';
+import Skeleton from './common/Skeleton';
+import SEO from './common/SEO';
+import ProjectSkeleton from './skeletons/ProjectSkeleton';
 
 const Programming: FC = () => {
+  const { t } = useTranslation();
   const {
-    projects,
-    isProjectsLoading: loading,
-    error,
-    loadProjects,
-  } = useAppStore();
+    data: projects = [],
+    isLoading: loading,
+    error: projectsError,
+  } = useProjects();
 
-  useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+  const error = projectsError ? (projectsError as Error).message : null;
 
   if (loading) {
-    return <LoadingScreen message='Compiling projects...' />;
+    return (
+      <section className={styles.section}>
+        <header className={styles.header}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1rem',
+            }}
+          >
+            <Skeleton variant='title' width='200px' height='40px' />
+            <Skeleton variant='text' width='300px' />
+          </div>
+        </header>
+        <div className={styles.grid}>
+          {[...Array(3)].map((_, i) => (
+            <ProjectSkeleton key={i} />
+          ))}
+        </div>
+      </section>
+    );
   }
 
   if (error) {
@@ -31,12 +52,13 @@ const Programming: FC = () => {
 
   return (
     <section className={styles.section}>
+      <SEO
+        title={t('programming.title')}
+        description={t('programming.subtitle')}
+      />
       <header className={styles.header}>
-        <h1 className={styles.title}>Project Archive</h1>
-        <p className={styles.subtitle}>
-          A collection of software engineering projects, from microservices to
-          creative frontend experiments.
-        </p>
+        <h1 className={styles.title}>{t('programming.title')}</h1>
+        <p className={styles.subtitle}>{t('programming.subtitle')}</p>
       </header>
 
       <div className={styles.grid}>
@@ -53,6 +75,7 @@ const Programming: FC = () => {
                       src={coverImage.url}
                       alt={project.name}
                       className={styles.cardImage}
+                      loading='lazy'
                     />
                   ) : (
                     <div className={styles.imagePlaceholder}>
@@ -83,7 +106,8 @@ const Programming: FC = () => {
                         rel='noopener noreferrer'
                         className={styles.actionLink}
                       >
-                        <Github className={styles.icon} /> Source
+                        <Github className={styles.icon} />{' '}
+                        {t('programming.source')}
                       </a>
                     )}
                     {project.live_url && (
@@ -93,7 +117,8 @@ const Programming: FC = () => {
                         rel='noopener noreferrer'
                         className={styles.actionLink}
                       >
-                        <ExternalLink className={styles.icon} /> Live Demo
+                        <ExternalLink className={styles.icon} />{' '}
+                        {t('programming.liveDemo')}
                       </a>
                     )}
                   </div>
@@ -103,10 +128,7 @@ const Programming: FC = () => {
           })
         ) : (
           <div className={styles.noResults}>
-            <p>
-              The archives appear to be empty. Check back later for new
-              transmissions.
-            </p>
+            <p>{t('programming.empty')}</p>
           </div>
         )}
       </div>

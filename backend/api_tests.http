@@ -194,3 +194,27 @@ Content-Type: {{contentType}}
 ### Test 24: Fetch Travel Highlights (MainPageLocationSlider)
 GET {{baseUrl}}/travel-highlights/
 Content-Type: {{contentType}}
+
+### ============================================================
+### TRANSLATION API TESTS
+### ============================================================
+
+### Test 25: Fetch Astro Images (Translated to Polish)
+### Expected: Fields like 'name', 'description' should start with "[TRANSLATED to pl]"
+GET {{baseUrl}}/image/?lang=pl
+Content-Type: {{contentType}}
+
+### Test 26: Fetch Travel Highlights (Translated to Polish)
+### Expected: 'highlight_name', 'story' should start with "[TRANSLATED to pl]"
+GET {{baseUrl}}/travel-highlights/?lang=pl
+Content-Type: {{contentType}}
+
+### Test 27: Fetch User Profile (Translated to Polish)
+### You may need to create a profile first if not exists, or check /users/me endpoints
+GET {{baseUrl}}/profile/?lang=pl
+Content-Type: {{contentType}}
+
+### Test 28: Fetch Current User (Translated to German)
+### Checking different language code
+GET {{baseUrl}}/auth/user/?lang=de
+Content-Type: {{contentType}}

@@ -3,7 +3,10 @@ import styles from '../styles/components/About.module.css';
 import { Camera } from 'lucide-react';
 import { AboutProps } from '../types';
 
+import { useTranslation } from 'react-i18next';
+
 const About: React.FC<AboutProps> = ({ profile }) => {
+  const { t } = useTranslation();
   // Gracefull degradation: If profile is missing, render with defaults instead of returning null
   // if (!profile) return null;
 
@@ -12,26 +15,26 @@ const About: React.FC<AboutProps> = ({ profile }) => {
       <div className={styles.container}>
         <div className={styles.info}>
           <h2 className={styles.title}>
-            Beyond the <br />
-            <span className={styles.titleAccent}>Atmosphere.</span>
+            {t('about.title').split(' ').slice(0, 2).join(' ')} <br />
+            <span className={styles.titleAccent}>
+              {t('about.title').split(' ').slice(2).join(' ')}
+            </span>
           </h2>
           <div className={styles.line}></div>
           <div
             className={styles.description}
             dangerouslySetInnerHTML={{
-              __html:
-                profile?.bio ||
-                'Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye.',
+              __html: profile?.bio || t('about.defaultBio'),
             }}
           />
           <div className={styles.stats}>
             <div className={styles.statItem}>
               <p className={styles.statValue}>Bortle 4</p>
-              <p className={styles.statLabel}>Site Quality</p>
+              <p className={styles.statLabel}>{t('about.siteQuality')}</p>
             </div>
             <div className={styles.statItem}>
               <p className={styles.statValue}>430mm</p>
-              <p className={styles.statLabel}>Primary Optics</p>
+              <p className={styles.statLabel}>{t('about.primaryOptics')}</p>
             </div>
           </div>
         </div>
@@ -43,6 +46,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
                 src={profile.about_me_image}
                 alt='About me'
                 className={styles.aboutImage}
+                loading='lazy'
                 draggable='false'
                 onContextMenu={e => e.preventDefault()}
               />

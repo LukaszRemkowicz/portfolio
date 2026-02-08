@@ -3,70 +3,95 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import AstroGallery from '../components/AstroGallery';
-import { useAppStore } from '../store/useStore';
-import {
-  fetchAstroImages,
-  fetchSettings,
-  fetchTags,
-  fetchCategories,
-} from '../api/services';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
+import { useAstroImages } from '../hooks/useAstroImages';
+import { useBackground } from '../hooks/useBackground';
+import { useSettings } from '../hooks/useSettings';
+import { useCategories } from '../hooks/useCategories';
+import { useTags } from '../hooks/useTags';
+import { useProfile } from '../hooks/useProfile';
 
-// Mock the API services
-jest.mock('../api/services', () => ({
-  fetchAstroImages: jest.fn(),
-  fetchBackground: jest.fn(),
-  fetchSettings: jest.fn(),
-  fetchTags: jest.fn(),
-  fetchCategories: jest.fn(),
-}));
+// Mock the hooks
+jest.mock('../hooks/useAstroImages');
+jest.mock('../hooks/useBackground');
+jest.mock('../hooks/useSettings');
+jest.mock('../hooks/useCategories');
+jest.mock('../hooks/useTags');
+jest.mock('../hooks/useProfile');
+
+// No longer mocking services directly
 
 describe('AstroGallery Mobile Navigation', () => {
-  const resetStore = () => {
-    useAppStore.setState({
-      profile: null,
-      backgroundUrl: null,
-      images: [],
-      projects: [],
-      categories: [],
-      tags: [],
-      features: null,
-      isInitialLoading: true,
-      isImagesLoading: true,
-      isProjectsLoading: false,
-      error: null,
-      initialSessionId: '',
-      imagesSessionId: '',
-      projectsSessionId: '',
-      tagsSessionId: '',
-      meteorConfig: null,
-    });
-  };
+  const mockUseAstroImages = useAstroImages as jest.Mock;
+  const mockUseCategories = useCategories as jest.Mock;
+  const mockUseTags = useTags as jest.Mock;
+  const mockUseSettings = useSettings as jest.Mock;
+  const mockUseProfile = useProfile as jest.Mock;
+  const mockUseBackground = useBackground as jest.Mock;
+
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  const resetStore = () => {};
 
   beforeEach(() => {
     jest.resetAllMocks();
-    (fetchSettings as jest.Mock).mockResolvedValue({
-      programming: true,
-      contactForm: true,
-      lastimages: true,
-      meteors: null,
+
+    mockUseSettings.mockReturnValue({
+      data: {
+        programming: true,
+        contactForm: true,
+        lastimages: true,
+        meteors: null,
+      },
+      isLoading: false,
     });
-    (fetchTags as jest.Mock).mockResolvedValue([
-      { name: 'Nebula', slug: 'nebula', count: 5 },
-      { name: 'Galaxy', slug: 'galaxy', count: 10 },
-    ]);
-    (fetchAstroImages as jest.Mock).mockResolvedValue([]);
-    (fetchCategories as jest.Mock).mockResolvedValue(['Landscape', 'Deep Sky']);
+
+    mockUseTags.mockReturnValue({
+      data: [
+        { name: 'Nebula', slug: 'nebula', count: 5 },
+        { name: 'Galaxy', slug: 'galaxy', count: 10 },
+      ],
+      isLoading: false,
+    });
+
+    mockUseAstroImages.mockReturnValue({ data: [], isLoading: false });
+
+    mockUseCategories.mockReturnValue({
+      data: ['Landscape', 'Deep Sky'],
+      isLoading: false,
+    });
+
+    mockUseProfile.mockReturnValue({
+      data: { first_name: 'John', last_name: 'Doe' },
+      isLoading: false,
+    });
+
+    mockUseBackground.mockReturnValue({
+      data: '/test-bg.jpg',
+      isLoading: false,
+    });
+
     resetStore();
   });
 
   const renderGallery = async () => {
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path='/' element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>
+        <HelmetProvider>
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter initialEntries={['/']}>
+              <Routes>
+                <Route path='/' element={<AstroGallery />} />
+              </Routes>
+            </MemoryRouter>
+          </QueryClientProvider>
+        </HelmetProvider>
       );
     });
 

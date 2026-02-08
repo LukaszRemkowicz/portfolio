@@ -10,7 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -28,8 +28,7 @@
       "@/api/*": ["src/api/*"],
       "@/data/*": ["src/data/*"]
     },
-    "typeRoots": ["./node_modules/@types"],
-    "types": ["node", "react", "react-dom", "jest", "dompurify"]
+    "types": ["node", "react", "react-dom", "jest", "vite/client"]
   },
   "include": [
     "src/**/*",

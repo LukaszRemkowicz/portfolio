@@ -1,5 +1,6 @@
 // frontend/src/components/Home.tsx
 import { type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import styles from '../styles/components/App.module.css';
 import { HomeProps } from '../types';
@@ -8,9 +9,11 @@ import { APP_ROUTES } from '../api/constants';
 
 const Home: FC<HomeProps> = ({
   portraitUrl,
-  shortDescription = 'I am a professional astrophotographer capturing the silent majesty of deep-space phenomena. My work bridges the gap between scientific observation and cinematic fine art.',
+  shortDescription,
   backgroundUrl,
 }) => {
+  const { t } = useTranslation();
+  const displayDescription = shortDescription || t('hero.defaultDescription');
   return (
     <section
       id='home'
@@ -27,12 +30,12 @@ const Home: FC<HomeProps> = ({
     >
       <ShootingStars />
       <div className={styles.heroContent}>
-        <span className={styles.heroSubtitle}>Documenting the Cosmos</span>
+        <span className={styles.heroSubtitle}>{t('hero.subtitle')}</span>
         <h1 className={styles.heroTitle}>
-          The Beauty of <br />
-          <span className={styles.heroTitleAccent}>Ancient Light.</span>
+          {t('hero.titlePart1')} <br />
+          <span className={styles.heroTitleAccent}>{t('hero.titlePart2')}</span>
         </h1>
-        <p className={styles.heroDescription}>{shortDescription}</p>
+        <p className={styles.heroDescription}>{displayDescription}</p>
 
         {portraitUrl && (
           <div className={styles.portraitWrapper}>
@@ -51,10 +54,10 @@ const Home: FC<HomeProps> = ({
 
         <div className={styles.heroActions}>
           <Link to={APP_ROUTES.ASTROPHOTOGRAPHY} className={styles.primaryBtn}>
-            View Portfolio
+            {t('hero.viewPortfolio')}
           </Link>
           <a href='#about' className={styles.secondaryBtn}>
-            About Me
+            {t('hero.aboutMe')}
           </a>
         </div>
       </div>

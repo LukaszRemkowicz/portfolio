@@ -2,10 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from '../styles/components/Footer.module.css';
 import { Sparkles } from 'lucide-react';
-import { useAppStore } from '../store/useStore';
+import { useProfile } from '../hooks/useProfile';
+import { useTranslation } from 'react-i18next';
 
 const Footer: React.FC = () => {
-  const { profile } = useAppStore();
+  const { t } = useTranslation();
+  const { data: profile } = useProfile();
 
   // Extract links from the ASTRO profile (or fallback to any found)
   const astroProfile = profile?.profiles?.find(p => p.type === 'ASTRO');
@@ -16,7 +18,7 @@ const Footer: React.FC = () => {
       <div className={styles.container}>
         <div className={styles.branding}>
           <Sparkles size={16} className={styles.logoIcon} />
-          <span className={styles.logoText}>Łukasz Remkowicz © 2026</span>
+          <span className={styles.logoText}>{t('footer.rights')}</span>
         </div>
         <div className={styles.links}>
           {igUrl && (
@@ -45,7 +47,7 @@ const Footer: React.FC = () => {
             </a>
           )}
           <Link to='/privacy' className={styles.link}>
-            Privacy Policy
+            {t('common.privacyPolicy')}
           </Link>
           <button
             onClick={() => {
@@ -57,7 +59,7 @@ const Footer: React.FC = () => {
             className={styles.link}
             style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            Cookie Settings
+            {t('common.cookieSettings')}
           </button>
         </div>
       </div>

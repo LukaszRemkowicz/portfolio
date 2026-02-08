@@ -10,7 +10,7 @@ from rest_framework.throttling import UserRateThrottle
 
 from django.contrib.auth import get_user_model
 
-from core.throttling import APIRateThrottle
+from common.throttling import APIRateThrottle
 
 from .serializers import UserSerializer
 

@@ -2,65 +2,71 @@ import { act } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import HomePage from '../HomePage';
 import { UserProfile } from '../types';
-import * as services from '../api/services';
-import { useAppStore } from '../store/useStore';
+import { useProfile } from '../hooks/useProfile';
+import { useBackground } from '../hooks/useBackground';
+import { useSettings } from '../hooks/useSettings';
+import { useTravelHighlights } from '../hooks/useTravelHighlights';
+import { useAstroImages } from '../hooks/useAstroImages';
 
-// Mock the API services
-jest.mock('../api/services');
+// Mock the hooks
+jest.mock('../hooks/useProfile');
+jest.mock('../hooks/useBackground');
+jest.mock('../hooks/useSettings');
+jest.mock('../hooks/useTravelHighlights');
+jest.mock('../hooks/useAstroImages');
 
 describe('HomePage Component', () => {
-  const mockFetchProfile = services.fetchProfile as jest.Mock;
-  const mockFetchBackground = services.fetchBackground as jest.Mock;
-  const mockFetchSettings = services.fetchSettings as jest.Mock;
-  const mockFetchTravelHighlights = services.fetchTravelHighlights as jest.Mock;
-  const mockFetchAstroImages = services.fetchAstroImages as jest.Mock;
+  const mockUseProfile = useProfile as jest.Mock;
+  const mockUseBackground = useBackground as jest.Mock;
+  const mockUseSettings = useSettings as jest.Mock;
+  const mockUseTravelHighlights = useTravelHighlights as jest.Mock;
+  const mockUseAstroImages = useAstroImages as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFetchBackground.mockResolvedValue('/test-bg.jpg');
-    mockFetchTravelHighlights.mockResolvedValue([]); // Prevent undefined crash
-    mockFetchAstroImages.mockResolvedValue([]); // Prevent undefined crash
-    mockFetchSettings.mockResolvedValue({
-      programming: true,
-      meteors: {
-        randomShootingStars: true,
-        bolidChance: 0.1,
-        bolidMinInterval: 60,
-        starPathRange: [50, 500],
-        bolidPathRange: [50, 500],
-        starStreakRange: [100, 200],
-        bolidStreakRange: [20, 100],
-        starDurationRange: [0.4, 1.2],
-        bolidDurationRange: [0.4, 0.9],
-        starOpacityRange: [0.4, 0.8],
-        bolidOpacityRange: [0.7, 1.0],
-        smokeOpacityRange: [0.5, 0.8],
-      },
-    });
 
-    // Reset Zustand store to initial state
-    useAppStore.setState({
-      profile: null,
-      backgroundUrl: null,
-      images: [],
-      features: null,
-      meteorConfig: null,
-      isInitialLoading: false,
-      isImagesLoading: false,
-      error: null,
+    // Default mock implementations
+    mockUseBackground.mockReturnValue({
+      data: '/test-bg.jpg',
+      isLoading: false,
+    });
+    mockUseTravelHighlights.mockReturnValue({ data: [], isLoading: false });
+    mockUseAstroImages.mockReturnValue({ data: [], isLoading: false });
+    mockUseSettings.mockReturnValue({
+      data: {
+        programming: true,
+        meteors: {
+          randomShootingStars: true,
+          bolidChance: 0.1,
+          bolidMinInterval: 60,
+          starPathRange: [50, 500],
+          bolidPathRange: [50, 500],
+          starStreakRange: [100, 200],
+          bolidStreakRange: [20, 100],
+          starDurationRange: [0.4, 1.2],
+          bolidDurationRange: [0.4, 0.9],
+          starOpacityRange: [0.4, 0.8],
+          bolidOpacityRange: [0.7, 1.0],
+          smokeOpacityRange: [0.5, 0.8],
+        },
+      },
+      isLoading: false,
     });
   });
 
   it('shows loading state initially', async () => {
-    mockFetchProfile.mockReturnValue(new Promise(() => {})); // Never resolves
+    mockUseProfile.mockReturnValue({ data: null, isLoading: true });
 
     await act(async () => {
       render(
-        <MemoryRouter>
-          <HomePage />
-        </MemoryRouter>
+        <HelmetProvider>
+          <MemoryRouter>
+            <HomePage />
+          </MemoryRouter>
+        </HelmetProvider>
       );
     });
 
@@ -80,13 +86,15 @@ describe('HomePage Component', () => {
       about_me_image2: null,
     };
 
-    mockFetchProfile.mockResolvedValue(mockProfile);
+    mockUseProfile.mockReturnValue({ data: mockProfile, isLoading: false });
 
     await act(async () => {
       render(
-        <MemoryRouter>
-          <HomePage />
-        </MemoryRouter>
+        <HelmetProvider>
+          <MemoryRouter>
+            <HomePage />
+          </MemoryRouter>
+        </HelmetProvider>
       );
     });
 
@@ -97,7 +105,7 @@ describe('HomePage Component', () => {
       { timeout: 3000 }
     );
 
-    expect(screen.getByText(/The Beauty of/i)).toBeInTheDocument();
+    expect(screen.getByText('hero.titlePart1')).toBeInTheDocument();
     expect(screen.getByText('This is a test bio')).toBeInTheDocument();
   });
 });

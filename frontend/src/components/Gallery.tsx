@@ -1,18 +1,27 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import styles from '../styles/components/Gallery.module.css';
 import { AstroImage } from '../types';
-import { useAppStore } from '../store/useStore';
+import { useAstroImages } from '../hooks/useAstroImages';
+import { useSettings } from '../hooks/useSettings';
+import { useQueryClient } from '@tanstack/react-query';
+import { fetchAstroImageDetail } from '../api/services';
 import ImageModal from './common/ImageModal';
 import GalleryCard from './common/GalleryCard';
+import GallerySkeleton from './skeletons/GallerySkeleton';
 
 const Gallery: React.FC = () => {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
-  const images = useAppStore(state => state.images);
-  const loading = useAppStore(state => state.isImagesLoading);
-  const error = useAppStore(state => state.error);
-  const loadImages = useAppStore(state => state.loadImages);
-  const features = useAppStore(state => state.features);
+  const {
+    data: images = [],
+    isLoading: loading,
+    error: queryError,
+  } = useAstroImages({ limit: 50 });
+  const { data: settings } = useSettings();
+  const error = queryError ? (queryError as Error).message : null;
+  const features = settings;
   const [searchParams, setSearchParams] = useSearchParams();
   const imgId = searchParams.get('img');
 
@@ -23,11 +32,18 @@ const Gallery: React.FC = () => {
     );
   }, [imgId, images]);
 
-  useEffect(() => {
-    if (features?.lastimages !== false) {
-      loadImages({ limit: 50 });
-    }
-  }, [loadImages, features]);
+  // No longer need manual image loading effect
+
+  const queryClient = useQueryClient();
+  const { i18n } = useTranslation();
+
+  const handlePrefetch = (slug: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ['astroImageDetail', slug, i18n.language],
+      queryFn: () => fetchAstroImageDetail(slug),
+      staleTime: 1000 * 60 * 60, // 1 hour
+    });
+  };
 
   const filteredImages = useMemo(() => {
     if (filter === 'all') return images.slice(0, 9);
@@ -52,7 +68,6 @@ const Gallery: React.FC = () => {
 
   const handleImageClick = useCallback(
     (image: AstroImage): void => {
-      console.log('Card clicked!', image.name);
       // Use URL params for modal state to support browser back button
       searchParams.set('img', image.slug);
       setSearchParams(searchParams);
@@ -73,7 +88,7 @@ const Gallery: React.FC = () => {
   return (
     <section id='gallery' className={styles.section}>
       <div className={styles.header}>
-        <h2 className={styles.title}>Latest images</h2>
+        <h2 className={styles.title}>{t('gallery.title')}</h2>
         <div className={styles.filters}>
           <button
             type='button'
@@ -82,7 +97,7 @@ const Gallery: React.FC = () => {
               filter === 'all' ? styles.active : ''
             }`}
           >
-            All Works
+            {t('gallery.all')}
           </button>
           <button
             type='button'
@@ -91,7 +106,7 @@ const Gallery: React.FC = () => {
               filter === 'deepsky' ? styles.active : ''
             }`}
           >
-            Deep Sky
+            {t('categories.Deep Sky')}
           </button>
           <button
             type='button'
@@ -100,7 +115,7 @@ const Gallery: React.FC = () => {
               filter === 'astrolandscape' ? styles.active : ''
             }`}
           >
-            Astrolandscape
+            {t('gallery.astrolandscape')}
           </button>
           <button
             type='button'
@@ -109,24 +124,31 @@ const Gallery: React.FC = () => {
               filter === 'timelapse' ? styles.active : ''
             }`}
           >
-            Timelapses
+            {t('gallery.timelapses')}
           </button>
         </div>
       </div>
 
       <div className={styles.grid}>
         {loading ? (
-          <div className={styles.loading}>Loading Portfolio...</div>
+          <>
+            {[...Array(6)].map((_, i) => (
+              <GallerySkeleton key={i} />
+            ))}
+          </>
         ) : error ? (
           <div className={styles.error}>{error}</div>
         ) : filteredImages.length > 0 ? (
           filteredImages.map(item => (
-            <GalleryCard key={item.pk} item={item} onClick={handleImageClick} />
+            <GalleryCard
+              key={item.pk}
+              item={item}
+              onClick={handleImageClick}
+              onMouseEnter={() => handlePrefetch(item.slug)}
+            />
           ))
         ) : (
-          <div className={styles.noResults}>
-            No works found in this category.
-          </div>
+          <div className={styles.noResults}>{t('gallery.empty')}</div>
         )}
       </div>
 

@@ -1,10 +1,15 @@
 // frontend/src/components/PrivacyPolicy.tsx
 import React from 'react';
+import SEO from './common/SEO';
 import styles from '../styles/components/PrivacyPolicy.module.css';
 
 const PrivacyPolicy: React.FC = () => {
   return (
     <div className={styles.container}>
+      <SEO
+        title='Privacy Policy'
+        description='Privacy Policy and Cookie Notice'
+      />
       <div className={styles.content}>
         <h1 className={styles.title}>Privacy Policy & Cookie Notice</h1>
         <p className={styles.lastUpdated}>Last updated: January 29, 2026</p>

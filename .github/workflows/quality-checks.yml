@@ -240,14 +240,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and Cache Docker Images
-        uses: docker/bake-action@v6.0.0
+      - name: Build and load for scanning
+        uses: docker/bake-action@v6.1.0
         with:
-          push: false
-          load: true
+          files: |
+            docker-compose.yml
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
+          load: true
 
   # Security Scanning
   security-scan:
@@ -273,7 +274,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           scan-type: "fs"
           scan-ref: "."

@@ -1,40 +1,43 @@
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Programming from '../components/Programming';
 import { Project } from '../types';
-import { useAppStore } from '../store/useStore';
+import { useProjects } from '../hooks/useProjects';
 
-// Mock the store
-jest.mock('../store/useStore');
+// Mock the hook
+jest.mock('../hooks/useProjects');
 
 describe('Programming Component', () => {
-  const mockLoadProjects = jest.fn();
+  const mockUseProjects = useProjects as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useAppStore as unknown as jest.Mock).mockReturnValue({
-      projects: [],
-      isProjectsLoading: false,
+    mockUseProjects.mockReturnValue({
+      data: [],
+      isLoading: false,
       error: null,
-      loadProjects: mockLoadProjects,
     });
   });
 
+  const renderWithHelmet = (component: React.ReactNode) => {
+    return render(<HelmetProvider>{component}</HelmetProvider>);
+  };
+
   it('renders the Project Archive title', () => {
-    render(<Programming />);
+    renderWithHelmet(<Programming />);
     expect(screen.getByText(/Project Archive/i)).toBeInTheDocument();
   });
 
   it('shows loading state correctly', () => {
-    (useAppStore as unknown as jest.Mock).mockReturnValue({
-      projects: [],
-      isProjectsLoading: true,
+    mockUseProjects.mockReturnValue({
+      data: [],
+      isLoading: true,
       error: null,
-      loadProjects: mockLoadProjects,
     });
 
-    render(<Programming />);
-    expect(screen.getByText(/Compiling projects/i)).toBeInTheDocument();
+    renderWithHelmet(<Programming />);
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
   it('renders projects list', () => {
@@ -53,14 +56,13 @@ describe('Programming Component', () => {
       },
     ];
 
-    (useAppStore as unknown as jest.Mock).mockReturnValue({
-      projects: mockProjects,
-      isProjectsLoading: false,
+    mockUseProjects.mockReturnValue({
+      data: mockProjects,
+      isLoading: false,
       error: null,
-      loadProjects: mockLoadProjects,
     });
 
-    render(<Programming />);
+    renderWithHelmet(<Programming />);
     expect(screen.getByText('Test Project')).toBeInTheDocument();
     expect(screen.getByText('Test Description')).toBeInTheDocument();
   });
