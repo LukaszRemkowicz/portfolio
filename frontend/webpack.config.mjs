@@ -136,6 +136,15 @@ export default (env, argv) => {
           env.GA_TRACKING_ID || process.env.GA_TRACKING_ID || ''
         ),
         'process.env.ENABLE_GA': JSON.stringify(enableGA),
+        'process.env.SENTRY_DSN_FE': JSON.stringify(
+          env.SENTRY_DSN_FE || process.env.SENTRY_DSN_FE || ''
+        ),
+        'process.env.ENVIRONMENT': JSON.stringify(
+          env.ENVIRONMENT ||
+            process.env.ENVIRONMENT ||
+            argv.mode ||
+            'development'
+        ),
       }),
       // Only include the service worker plugin in production to avoid HMR issues
       ...(argv.mode !== 'development'
