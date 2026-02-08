@@ -3,9 +3,12 @@ import { test, expect } from './fixtures';
 test.describe('Travel Highlights Page', () => {
   test.beforeEach(async ({ page }) => {
     // Override specific endpoint for travel detail
-    await page.route('**/v1/travel/iceland/', async route => {
+    await page.route('**/v1/travel/iceland/**', async route => {
       return route.fulfill({
         status: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        },
         contentType: 'application/json',
         body: JSON.stringify({
           country: 'Iceland',

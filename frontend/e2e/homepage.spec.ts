@@ -39,7 +39,7 @@ test.describe('Landing Page', () => {
     });
 
     // 2. Mock Contact Form endpoint
-    await page.route('**/v1/contact/', async route => {
+    await page.route('**/v1/contact/**', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -48,7 +48,7 @@ test.describe('Landing Page', () => {
     });
 
     // 3. Mock Feature Flags explicitly to ensure Contact Form is enabled
-    await page.route('**/v1/settings/', async route => {
+    await page.route('**/v1/settings/**', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

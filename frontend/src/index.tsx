@@ -13,7 +13,7 @@ const root = createRoot(rootElement);
 root.render(<App />);
 
 // Register service worker for offline support and PWA features
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = import.meta.env.PROD;
 if (isProd) {
   serviceWorkerRegistration.register();
 } else {

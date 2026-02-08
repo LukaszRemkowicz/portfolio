@@ -1,26 +1,45 @@
-// frontend/src/components/Programming.tsx
-import { type FC, useEffect } from 'react';
+import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAppStore } from '../store/useStore';
+import { useProjects } from '../hooks/useProjects';
 import styles from '../styles/components/Programming.module.css';
 import { Github, ExternalLink, Code2 } from 'lucide-react';
-import LoadingScreen from './common/LoadingScreen';
+import Skeleton from './common/Skeleton';
+import SEO from './common/SEO';
+import ProjectSkeleton from './skeletons/ProjectSkeleton';
 
 const Programming: FC = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const {
-    projects,
-    isProjectsLoading: loading,
-    error,
-    loadProjects,
-  } = useAppStore();
+    data: projects = [],
+    isLoading: loading,
+    error: projectsError,
+  } = useProjects();
 
-  useEffect(() => {
-    loadProjects();
-  }, [loadProjects, i18n.language]);
+  const error = projectsError ? (projectsError as Error).message : null;
 
   if (loading) {
-    return <LoadingScreen message={t('common.compiling')} />;
+    return (
+      <section className={styles.section}>
+        <header className={styles.header}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1rem',
+            }}
+          >
+            <Skeleton variant='title' width='200px' height='40px' />
+            <Skeleton variant='text' width='300px' />
+          </div>
+        </header>
+        <div className={styles.grid}>
+          {[...Array(3)].map((_, i) => (
+            <ProjectSkeleton key={i} />
+          ))}
+        </div>
+      </section>
+    );
   }
 
   if (error) {
@@ -33,6 +52,10 @@ const Programming: FC = () => {
 
   return (
     <section className={styles.section}>
+      <SEO
+        title={t('programming.title')}
+        description={t('programming.subtitle')}
+      />
       <header className={styles.header}>
         <h1 className={styles.title}>{t('programming.title')}</h1>
         <p className={styles.subtitle}>{t('programming.subtitle')}</p>
@@ -52,6 +75,7 @@ const Programming: FC = () => {
                       src={coverImage.url}
                       alt={project.name}
                       className={styles.cardImage}
+                      loading='lazy'
                     />
                   ) : (
                     <div className={styles.imagePlaceholder}>

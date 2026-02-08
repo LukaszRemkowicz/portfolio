@@ -155,20 +155,19 @@ export const fetchSettings = async (): Promise<EnabledFeatures> => {
   }
 };
 export const fetchProjects = async (): Promise<Project[]> => {
-  // const response: AxiosResponse<Project[]> = await api.get(API_ROUTES.projects);
-  // const data = handleResponse<Project[]>(response);
-  // if (Array.isArray(data)) {
-  //   return data.map(project => ({
-  //     ...project,
-  //     images: project.images.map(image => ({
-  //       ...image,
-  //       url: getMediaUrl(image.url) || '',
-  //       thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-  //     })),
-  //   }));
-  // }
-  // return data;
-  return [];
+  const response: AxiosResponse<Project[]> = await api.get(API_ROUTES.projects);
+  const data = handleResponse<Project[]>(response);
+  if (Array.isArray(data)) {
+    return data.map(project => ({
+      ...project,
+      images: project.images.map(image => ({
+        ...image,
+        url: getMediaUrl(image.url) || '',
+        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+      })),
+    }));
+  }
+  return data;
 };
 
 export const fetchTravelHighlights = async (): Promise<MainPageLocation[]> => {
@@ -188,6 +187,33 @@ export const fetchTravelHighlights = async (): Promise<MainPageLocation[]> => {
     }));
   }
   return [];
+};
+
+export const fetchTravelHighlightDetailBySlug = async (
+  countrySlug?: string,
+  placeSlug?: string
+): Promise<MainPageLocation> => {
+  if (!countrySlug) throw new Error('countrySlug is required');
+
+  const slugPath = placeSlug ? `${countrySlug}/${placeSlug}` : `${countrySlug}`;
+
+  const response = await api.get(`${API_ROUTES.travelBySlug}${slugPath}/`);
+  const data = handleResponse<MainPageLocation>(response);
+
+  if (data) {
+    return {
+      ...data,
+      background_image: data.background_image
+        ? getMediaUrl(data.background_image)
+        : null,
+      images: data.images.map(image => ({
+        ...image,
+        url: getMediaUrl(image.url) || '',
+        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+      })),
+    } as MainPageLocation;
+  }
+  return data;
 };
 
 export const fetchCategories = async (): Promise<string[]> => {

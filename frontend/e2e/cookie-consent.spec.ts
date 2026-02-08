@@ -3,15 +3,24 @@ import { test, expect } from './fixtures';
 
 test.beforeEach(async ({ page, context }) => {
   // 1. Mock endpoints
-  await page.route('**/v1/profile/', async route =>
-    route.fulfill({ status: 200, body: JSON.stringify({}) })
+  await page.route('**/v1/profile/**', async route =>
+    route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({}),
+    })
   );
-  await page.route('**/v1/background/', async route =>
-    route.fulfill({ status: 200, body: JSON.stringify({ url: '' }) })
+  await page.route('**/v1/background/**', async route =>
+    route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ url: '' }),
+    })
   );
-  await page.route('**/v1/settings/', async route => {
+  await page.route('**/v1/settings/**', async route => {
     await route.fulfill({
       status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({
         contactForm: true,
         programming: true,
@@ -42,6 +51,11 @@ test.describe('Cookie Consent & Privacy Policy', () => {
   test('hides banner and sets localStorage when Accept is clicked', async ({
     page,
   }) => {
+    // Wait for the function to be exposed
+    await page.waitForFunction(
+      () => typeof (window as any).openCookieSettings === 'function'
+    );
+
     // Force banner open to ensure deterministic test
     await page.evaluate(() => (window as any).openCookieSettings());
 
@@ -65,6 +79,11 @@ test.describe('Cookie Consent & Privacy Policy', () => {
   test('hides banner and sets localStorage when Decline is clicked', async ({
     page,
   }) => {
+    // Wait for the function to be exposed
+    await page.waitForFunction(
+      () => typeof (window as any).openCookieSettings === 'function'
+    );
+
     // Force banner open
     await page.evaluate(() => (window as any).openCookieSettings());
 
@@ -123,6 +142,11 @@ test.describe('Cookie Consent & Privacy Policy', () => {
   test('reopens banner when Cookie Settings is clicked in footer', async ({
     page,
   }) => {
+    // Wait for the function to be exposed
+    await page.waitForFunction(
+      () => typeof (window as any).openCookieSettings === 'function'
+    );
+
     // Force banner open initially so we can dismiss it
     await page.evaluate(() => (window as any).openCookieSettings());
 

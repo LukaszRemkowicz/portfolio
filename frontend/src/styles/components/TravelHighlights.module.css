@@ -49,6 +49,19 @@
 
   /* Mobile: full width */
   width: 100%;
+  animation: travelFadeIn 0.6s ease-out forwards;
+}
+
+@keyframes travelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (min-width: 768px) {

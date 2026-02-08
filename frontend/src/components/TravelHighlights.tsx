@@ -3,14 +3,19 @@ import { type FC, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../styles/components/TravelHighlights.module.css';
 import { MapPin } from 'lucide-react';
-import { fetchTravelHighlights } from '../api/services';
 import { MainPageLocation } from '../types';
-import { useAppStore } from '../store/useStore';
 import { stripHtml } from '../utils/html';
 import { APP_ROUTES, DEFAULT_TRAVEL_IMAGE } from '../api/constants';
 import { useTranslation } from 'react-i18next';
+import { useTravelHighlights } from '../hooks/useTravelHighlights';
+import { useSettings } from '../hooks/useSettings';
+import { useQueryClient } from '@tanstack/react-query';
+import { fetchTravelHighlightDetailBySlug } from '../api/services';
 
-const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
+const TravelCard: FC<{
+  location: MainPageLocation;
+  onMouseEnter?: () => void;
+}> = ({ location, onMouseEnter }) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const images = location.images.map(img => img.thumbnail_url || img.url);
@@ -54,6 +59,7 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
     <article
       className={styles.card}
       onClick={handleCardClick}
+      onMouseEnter={onMouseEnter}
       style={{ cursor: 'pointer' }}
     >
       <div className={styles.imageWrapper}>
@@ -88,28 +94,27 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
 };
 
 const TravelHighlights: FC = () => {
-  const [locations, setLocations] = useState<MainPageLocation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { features } = useAppStore();
-  const { t } = useTranslation();
+  const { data: features, isLoading: isSettingsLoading } = useSettings();
+  const { data: locations = [], isLoading: isLocationsLoading } =
+    useTravelHighlights();
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const loadSliders = async () => {
-      if (features?.travelHighlights === false) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const data = await fetchTravelHighlights();
-        if (data) setLocations(data);
-      } catch (error) {
-        console.error('Failed to fetch travel highlights:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadSliders();
-  }, [features?.travelHighlights]);
+  const handlePrefetch = (country: string, place?: string | null) => {
+    queryClient.prefetchQuery({
+      queryKey: [
+        'travelHighlightDetail',
+        country,
+        place || null,
+        i18n.language,
+      ],
+      queryFn: () =>
+        fetchTravelHighlightDetailBySlug(country, place || undefined),
+      staleTime: 1000 * 60 * 60, // 1 hour
+    });
+  };
+
+  const loading = isSettingsLoading || isLocationsLoading;
 
   if (loading) {
     return null; // Or a loading spinner
@@ -132,7 +137,13 @@ const TravelHighlights: FC = () => {
 
       <div className={styles.grid}>
         {locations.map(location => (
-          <TravelCard key={location.pk} location={location} />
+          <TravelCard
+            key={location.pk}
+            location={location}
+            onMouseEnter={() =>
+              handlePrefetch(location.country_slug, location.place_slug)
+            }
+          />
         ))}
       </div>
     </section>

@@ -11,6 +11,7 @@ declare global {
 const GA_TRACKING_ID = getEnv('GA_TRACKING_ID');
 const ENABLE_GA_VAL = getEnv('ENABLE_GA', 'false');
 const ENABLE_GA = ENABLE_GA_VAL.toLowerCase() === 'true';
+// Robust check for dev environment
 const IS_DEV = getEnv('NODE_ENV') === 'development';
 
 if (IS_DEV) {

@@ -8,66 +8,70 @@ import { stripHtml } from '../../utils/html';
 interface GalleryCardProps {
   item: AstroImage;
   onClick: (image: AstroImage) => void;
+  onMouseEnter?: () => void;
 }
 
-const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
-  const { t } = useTranslation();
-  const [isLoaded, setIsLoaded] = useState(false);
+const GalleryCard = memo(
+  ({ item, onClick, onMouseEnter }: GalleryCardProps) => {
+    const { t } = useTranslation();
+    const [isLoaded, setIsLoaded] = useState(false);
 
-  const isNew = (dateString?: string) => {
-    if (!dateString) return false;
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
-    return diffDays < 7;
-  };
+    const isNew = (dateString?: string) => {
+      if (!dateString) return false;
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      return diffDays < 7;
+    };
 
-  const description = useMemo(() => {
-    if (!item.description) return '';
-    const plainDescription = stripHtml(item.description);
-    return plainDescription.length > 80
-      ? `${plainDescription.substring(0, 80)}...`
-      : plainDescription;
-  }, [item.description]);
+    const description = useMemo(() => {
+      if (!item.description) return '';
+      const plainDescription = stripHtml(item.description);
+      return plainDescription.length > 80
+        ? `${plainDescription.substring(0, 80)}...`
+        : plainDescription;
+    }, [item.description]);
 
-  return (
-    <button
-      className={styles.card}
-      onClick={() => onClick(item)}
-      aria-label={`View details for ${item.name}`}
-      type='button'
-    >
-      {isNew(item.created_at) && <div className={styles.newBadge}>NEW</div>}
-      <div className={styles.imageWrapper} aria-hidden='true'>
-        <div
-          className={`${styles.placeholder} ${isLoaded ? styles.hide : ''}`}
-        />
-        <img
-          src={item.thumbnail_url || item.url}
-          alt=''
-          loading='lazy'
-          onLoad={() => setIsLoaded(true)}
-          className={`${styles.cardImage} ${isLoaded ? styles.show : ''}`}
-          draggable='false'
-          onContextMenu={e => e.preventDefault()}
-        />
-      </div>
-      <div className={styles.cardContent}>
-        <span className={styles.category}>
-          {t(`categories.${item.celestial_object}`)}
-        </span>
-        <h3 className={styles.cardTitle}>{item.name}</h3>
-        <p className={styles.cardLocation}>
-          <MapPin size={12} className={styles.metaIcon} />
-          {item.place?.name}
-        </p>
-        <p className={styles.cardDescription}>{description}</p>
-        <div className={styles.divider} aria-hidden='true'></div>
-      </div>
-    </button>
-  );
-});
+    return (
+      <button
+        className={styles.card}
+        onClick={() => onClick(item)}
+        onMouseEnter={onMouseEnter}
+        aria-label={`View details for ${item.name}`}
+        type='button'
+      >
+        {isNew(item.created_at) && <div className={styles.newBadge}>NEW</div>}
+        <div className={styles.imageWrapper} aria-hidden='true'>
+          <div
+            className={`${styles.placeholder} ${isLoaded ? styles.hide : ''}`}
+          />
+          <img
+            src={item.thumbnail_url || item.url}
+            alt=''
+            loading='lazy'
+            onLoad={() => setIsLoaded(true)}
+            className={`${styles.cardImage} ${isLoaded ? styles.show : ''}`}
+            draggable='false'
+            onContextMenu={e => e.preventDefault()}
+          />
+        </div>
+        <div className={styles.cardContent}>
+          <span className={styles.category}>
+            {t(`categories.${item.celestial_object}`)}
+          </span>
+          <h3 className={styles.cardTitle}>{item.name}</h3>
+          <p className={styles.cardLocation}>
+            <MapPin size={12} className={styles.metaIcon} />
+            {item.place?.name}
+          </p>
+          <p className={styles.cardDescription}>{description}</p>
+          <div className={styles.divider} aria-hidden='true'></div>
+        </div>
+      </button>
+    );
+  }
+);
 
 GalleryCard.displayName = 'GalleryCard';
 

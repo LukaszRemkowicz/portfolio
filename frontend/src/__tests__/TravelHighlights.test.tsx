@@ -1,27 +1,46 @@
 import { act } from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '@testing-library/jest-dom';
 import TravelHighlights from '../components/TravelHighlights';
-import { fetchTravelHighlights } from '../api/services';
-import { useAppStore } from '../store/useStore';
+import { useTravelHighlights } from '../hooks/useTravelHighlights';
+import { useSettings } from '../hooks/useSettings';
 
-// Mock Services
+// Mock Hooks
+jest.mock('../hooks/useTravelHighlights');
+jest.mock('../hooks/useSettings');
 jest.mock('../api/services', () => ({
-  fetchTravelHighlights: jest.fn().mockResolvedValue([]),
-  fetchProfile: jest.fn().mockResolvedValue({}),
-  fetchBackground: jest.fn().mockResolvedValue(null),
-  fetchEnabledFeatures: jest.fn().mockResolvedValue({}),
+  fetchTravelHighlightDetailBySlug: jest.fn(),
 }));
 
 describe('TravelHighlights Component', () => {
-  const mockedFetchTravelHighlights = fetchTravelHighlights as jest.Mock;
+  const mockUseTravelHighlights = useTravelHighlights as jest.Mock;
+  const mockUseSettings = useSettings as jest.Mock;
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
-    useAppStore.setState({
-      features: { travelHighlights: true },
+    queryClient.clear();
+    mockUseSettings.mockReturnValue({
+      data: { travelHighlights: true },
+      isLoading: false,
     });
   });
+
+  const renderWithClient = (ui: React.ReactElement) => {
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>{ui}</MemoryRouter>
+      </QueryClientProvider>
+    );
+  };
 
   it('renders content when loaded with data', async () => {
     const mockLocations = [
@@ -43,14 +62,13 @@ describe('TravelHighlights Component', () => {
         ],
       },
     ];
-    mockedFetchTravelHighlights.mockResolvedValue(mockLocations);
+    mockUseTravelHighlights.mockReturnValue({
+      data: mockLocations,
+      isLoading: false,
+    });
 
     await act(async () => {
-      render(
-        <MemoryRouter>
-          <TravelHighlights />
-        </MemoryRouter>
-      );
+      renderWithClient(<TravelHighlights />);
     });
 
     expect(await screen.findByText('travel.title')).toBeInTheDocument();
@@ -58,12 +76,13 @@ describe('TravelHighlights Component', () => {
   });
 
   it('renders nothing if feature is disabled', async () => {
-    useAppStore.setState({
-      features: { travelHighlights: false },
+    mockUseSettings.mockReturnValue({
+      data: { travelHighlights: false },
+      isLoading: false,
     });
 
     await act(async () => {
-      render(<TravelHighlights />);
+      renderWithClient(<TravelHighlights />);
     });
     expect(screen.queryByText('travel.title')).not.toBeInTheDocument();
   });
@@ -83,15 +102,14 @@ describe('TravelHighlights Component', () => {
         ],
       },
     ];
-    mockedFetchTravelHighlights.mockResolvedValue(mockLocations);
+    mockUseTravelHighlights.mockReturnValue({
+      data: mockLocations,
+      isLoading: false,
+    });
 
     jest.useFakeTimers();
     await act(async () => {
-      render(
-        <MemoryRouter>
-          <TravelHighlights />
-        </MemoryRouter>
-      );
+      renderWithClient(<TravelHighlights />);
     });
 
     // Advance timers to allow initial render effect
@@ -100,8 +118,6 @@ describe('TravelHighlights Component', () => {
     });
 
     // Now we can find the text
-    // Use getBy instead of findBy since we advanced timers
-    // Use getAllByText because it appears in title and location
     expect(screen.getAllByText('Multi Image').length).toBeGreaterThan(0);
 
     const images = screen.getAllByRole('img');

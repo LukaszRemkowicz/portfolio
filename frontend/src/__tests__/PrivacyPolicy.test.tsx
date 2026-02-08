@@ -1,11 +1,16 @@
 // frontend/src/__tests__/PrivacyPolicy.test.tsx
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import PrivacyPolicy from '../components/PrivacyPolicy';
 
 describe('PrivacyPolicy Component', () => {
   beforeEach(() => {
-    render(<PrivacyPolicy />);
+    render(
+      <HelmetProvider>
+        <PrivacyPolicy />
+      </HelmetProvider>
+    );
   });
 
   describe('Page Structure', () => {
