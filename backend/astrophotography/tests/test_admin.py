@@ -169,7 +169,7 @@ class TestPlaceAdmin:
     ) -> None:
         """Test that creating a new Place via Admin triggers translation task."""
 
-        with override_settings(PARLER_DEFAULT_LANGUAGE_CODE="en"):
+        with override_settings(DEFAULT_APP_LANGUAGE="en"):
 
             # Use mocker.MagicMock instead of importing MagicMock
             mock_translate_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
@@ -204,7 +204,7 @@ class TestPlaceAdmin:
     ) -> None:
         """Test that updating Place name via Admin triggers translation task."""
 
-        with override_settings(PARLER_DEFAULT_LANGUAGE_CODE="en"):
+        with override_settings(DEFAULT_APP_LANGUAGE="en"):
 
             mock_translate_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
                 id=str(uuid.uuid4())
@@ -258,9 +258,8 @@ class TestPlaceAdmin:
         response: HttpResponse = admin_client.post(url, data)
         assert response.status_code == 302
 
-        # Verify task WAS called because Polish translation differs from BASE
-        # New logic: compares target language against BASE, not field changes
-        mock_translate_task.delay.assert_called()
+        # Verify task WAS NOT called because name did not change
+        mock_translate_task.delay.assert_not_called()
 
     def test_country_field_is_translated(self, admin_client: Client) -> None:
         """

@@ -18,7 +18,7 @@ def admin_dynamic_parler_css_view(request: Request) -> HttpResponse:
     Returns dynamically generated CSS to hide the 'X' (delete) button
     for the configured default/fallback language in Django Admin.
     """
-    default_lang = getattr(settings, "PARLER_DEFAULT_LANGUAGE_CODE", "en")
+    default_lang = settings.DEFAULT_APP_LANGUAGE
 
     css = f"""
     /* Dynamic Parler CSS generated for default language: {default_lang} */

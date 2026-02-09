@@ -19,21 +19,35 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # Sentry Configuration
 SENTRY_DSN = env("SENTRY_DSN", default="")
-if SENTRY_DSN and not (os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("TESTING")):
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[
-            DjangoIntegration(),
-            CeleryIntegration(),
-        ],
-        # Set traces_sample_rate to 1.0 to capture 100%
-        # of transactions for performance monitoring.
-        # We recommend adjusting this value in production.
-        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
-        # If you wish to associate users to errors (recommended)
-        send_default_pii=True,
-        environment=env("ENVIRONMENT", default="development"),
+if SENTRY_DSN:
+    import sys
+
+    # Skip Sentry during tests to avoid noise and unexpected behavior
+    IS_TESTING = (
+        "test" in sys.argv
+        or any("pytest" in arg for arg in sys.argv)
+        or os.environ.get("PYTEST_CURRENT_TEST")
+        or os.environ.get("TESTING")
+        or os.environ.get("DJANGO_SETTINGS_MODULE", "").endswith(".tests")
+        or "manage.py" in sys.argv
+        and "test" in sys.argv
     )
+
+    if not IS_TESTING:
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[
+                DjangoIntegration(),
+                CeleryIntegration(),
+            ],
+            # Set traces_sample_rate to 1.0 to capture 100%
+            # of transactions for performance monitoring.
+            # We recommend adjusting this value in production.
+            traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
+            # If you wish to associate users to errors (recommended)
+            send_default_pii=True,
+            environment=env("ENVIRONMENT", default="development"),
+        )
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -230,11 +244,18 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-# --- Language Configuration ---
-# Change this ONE variable to switch default language (Order & Protection)
-PARLER_DEFAULT_LANGUAGE_CODE = "en"
 
-LANGUAGE_CODE = PARLER_DEFAULT_LANGUAGE_CODE
+# --- Language Configuration ---
+def get_default_language() -> str:
+    """Returns the default language for the application."""
+    return "en"
+
+
+DEFAULT_APP_LANGUAGE = get_default_language()
+
+# Change this ONE variable to switch default language (Order & Protection)
+PARLER_DEFAULT_LANGUAGE_CODE = DEFAULT_APP_LANGUAGE
+LANGUAGE_CODE = DEFAULT_APP_LANGUAGE
 
 # Supported languages
 LANGUAGES = [

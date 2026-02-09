@@ -9,7 +9,7 @@ from astrophotography.models import Place
 from astrophotography.tests.factories import PlaceFactory
 from core.tests.factories import TranslationTaskFactory
 from translation.mixins import (
-    AutomatedTranslationMixin,
+    AutomatedTranslationAdminMixin,
     TranslationStatusMixin,
 )
 from translation.models import TranslationTask
@@ -23,6 +23,8 @@ class TestTranslationStatusMixin:
         self.mixin.model = Place  # Mock usage on Place model
         self.factory = RequestFactory()
         self.place = PlaceFactory()
+        # Clear auto-triggered tasks to allow testing status in isolation
+        TranslationTask.objects.all().delete()
 
     def test_get_list_display_adds_column(self):
         """Ensure 'translation_status' is added to list_display."""
@@ -86,7 +88,7 @@ class TestTranslationStatusMixin:
 
 
 @pytest.mark.django_db
-class TestAutomatedTranslationMixin:
+class TestAutomatedTranslationAdminMixin:
     def test_save_model_triggers_tasks_and_creates_records(
         self, mocker: MockerFixture, mock_translate_task, mock_get_available_languages
     ):
@@ -99,26 +101,28 @@ class TestAutomatedTranslationMixin:
             def message_user(self, request, message, level):
                 pass
 
-        class MockAdmin(AutomatedTranslationMixin, BaseAdmin):
-            translation_service_method = "translate_place"
-            translation_trigger_fields = ["name"]
-
+        class MockAdmin(AutomatedTranslationAdminMixin, BaseAdmin):
             def get_translation_kwargs(self, obj, form, change, should_trigger):
                 return {"force": True}
 
+        mock_get_available_languages.return_value = ["en", "pl", "es"]
+
+        # Setup mock task return value with unique IDs BEFORE factory creation
+        def side_effect(*args, **kwargs):
+            m = mocker.MagicMock()
+            m.id = str(uuid.uuid4())
+            return m
+
+        mock_translate_task.delay.side_effect = side_effect
+
         place = PlaceFactory()
+        # Reset mocks after factory creation to test save_model in isolation
+        mock_translate_task.delay.reset_mock()
+        TranslationTask.objects.all().delete()
+
         admin_instance = MockAdmin()
 
-        mock_get_available_languages.return_value = ["en", "pl", "es"]
-        with override_settings(PARLER_DEFAULT_LANGUAGE_CODE="en"):
-            # Setup mock task return value with unique IDs
-            def side_effect(*args, **kwargs):
-                m = mocker.MagicMock()
-                m.id = str(uuid.uuid4())
-                return m
-
-            mock_translate_task.delay.side_effect = side_effect
-
+        with override_settings(DEFAULT_APP_LANGUAGE="en"):
             # Call save_model
             admin_instance.save_model(None, place, None, False)
 

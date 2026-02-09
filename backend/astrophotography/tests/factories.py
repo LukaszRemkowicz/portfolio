@@ -134,7 +134,7 @@ class MainPageLocationFactory(DjangoModelFactory):
         skip_postgeneration_save = True
 
     place = factory.SubFactory(PlaceFactory)
-    highlight_name = None
+    highlight_name = factory.Faker("city")
     is_active = True
 
     @factory.post_generation

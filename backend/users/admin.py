@@ -13,7 +13,7 @@ from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
 
 from translation.mixins import (
-    AutomatedTranslationMixin,
+    AutomatedTranslationAdminMixin,
     DynamicParlerStyleMixin,
     HideNonTranslatableFieldsMixin,
     TranslationStatusMixin,
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 @admin.register(User)
 class UserAdmin(  # type: ignore[misc]
-    AutomatedTranslationMixin,
+    AutomatedTranslationAdminMixin,
     TranslationStatusMixin,
     DynamicParlerStyleMixin,
     HideNonTranslatableFieldsMixin,
@@ -38,9 +38,6 @@ class UserAdmin(  # type: ignore[misc]
     Define admin model for custom User model with email as username.
     Singleton pattern: Only one user is allowed.
     """
-
-    translation_service_method = "translate_user"
-    translation_trigger_fields = ["short_description", "bio"]
 
     fieldsets = (
         (None, {"fields": ("email", "password")}),
@@ -105,7 +102,7 @@ class UserAdmin(  # type: ignore[misc]
         if not obj:
             return fieldsets
         current_language = request.GET.get("language")
-        default_language = getattr(settings, "PARLER_DEFAULT_LANGUAGE_CODE", "en")
+        default_language = settings.DEFAULT_APP_LANGUAGE
         if not current_language or current_language == default_language:
             fieldsets = list(fieldsets)
             for index, (name, opts) in enumerate(fieldsets):
@@ -206,15 +203,21 @@ class UserAdmin(  # type: ignore[misc]
 
 
 @admin.register(Profile)
-class ProfileAdmin(admin.ModelAdmin):
+class ProfileAdmin(
+    AutomatedTranslationAdminMixin,
+    TranslationStatusMixin,
+    DynamicParlerStyleMixin,
+    HideNonTranslatableFieldsMixin,
+    TranslatableAdmin,
+):
     """Admin interface for managing different user profiles"""
 
-    list_display = ("type", "title", "is_active", "updated_at")
+    list_display = ("type", "title", "translation_status", "is_active", "updated_at")
     list_filter = ("type", "is_active")
     search_fields = ("title", "specific_bio")
 
     fieldsets = (
-        (None, {"fields": ("type", "user", "is_active")}),
+        (None, {"fields": ("type", "user", "is_active", "translation_status")}),
         (
             "Content",
             {

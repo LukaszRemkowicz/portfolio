@@ -52,7 +52,7 @@ class PlaceSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
-        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
+        if lang and lang != settings.DEFAULT_APP_LANGUAGE:
             # Translate country name using django-countries (native Django translation)
             with translation.override(lang):
                 if instance.country:

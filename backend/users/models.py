@@ -11,6 +11,7 @@ from django.db import IntegrityError, models
 from django.utils.translation import gettext_lazy as _
 
 from core.models import SingletonModel
+from translation.mixins import AutomatedTranslationModelMixin
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +33,15 @@ class UserManager(TranslatableManager, BaseUserManager):
         return user
 
 
-class User(TranslatableModel, AbstractUser, SingletonModel):
+class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, SingletonModel):
     """
     Custom user model with email as username.
     Singleton pattern: Only one user instance is allowed in the database.
     """
+
+    # Translation trigger fields
+    translation_service_method = "translate_user"
+    translation_trigger_fields = ["short_description", "bio"]
 
     username = None  # type: ignore[assignment]  # Remove username field - use email instead
     email = models.EmailField(_("email address"), unique=True)
@@ -86,16 +91,21 @@ class User(TranslatableModel, AbstractUser, SingletonModel):
         super().clean()
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        """Enforce singleton on save"""
+        """Enforce singleton on save and trigger translations"""
         try:
             self.clean()
             super().save(*args, **kwargs)
+            self.trigger_translations()
         except IntegrityError as exc:
             raise ValueError("Failed to save user. Only one user is allowed.") from exc
 
 
-class Profile(TranslatableModel):
+class Profile(AutomatedTranslationModelMixin, TranslatableModel):
     """Admin interface for managing different user profiles"""
+
+    # Translation trigger fields
+    translation_service_method = "translate_profile"
+    translation_trigger_fields = ["title", "specific_bio"]
 
     class ProfileType(models.TextChoices):
         PROGRAMMING = "PROGRAMMING", _("Programming Profile")
@@ -121,10 +131,16 @@ class Profile(TranslatableModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = TranslatableManager()
+
     class Meta:
         verbose_name = "Profile"
         verbose_name_plural = "Profiles"
         unique_together = ("user", "type")
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.trigger_translations()
 
     def __str__(self) -> str:
         return f"{self.get_type_display()} - {self.title}"

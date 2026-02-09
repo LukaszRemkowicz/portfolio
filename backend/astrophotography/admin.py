@@ -19,7 +19,7 @@ from core.widgets import (
     ThemedSelect2Widget,
 )
 from translation.mixins import (
-    AutomatedTranslationMixin,
+    AutomatedTranslationAdminMixin,
     DynamicParlerStyleMixin,
     TranslationStatusMixin,
 )
@@ -43,7 +43,10 @@ logger = logging.getLogger(__name__)
 
 
 class BaseTranslatableAdmin(
-    AutomatedTranslationMixin, TranslationStatusMixin, DynamicParlerStyleMixin, TranslatableAdmin
+    AutomatedTranslationAdminMixin,
+    TranslationStatusMixin,
+    DynamicParlerStyleMixin,
+    TranslatableAdmin,
 ):
     """
     Base admin for translatable models in the astrophotography module.
@@ -62,9 +65,6 @@ class PlaceAdmin(BaseTranslatableAdmin):
 
     fields = ("name", "country")
     form = PlaceAdminForm
-
-    translation_service_method = "translate_place"
-    translation_trigger_fields = ["name"]
 
     list_display = ("id", "get_name", "country")
     list_display_links = ("get_name",)
@@ -107,9 +107,6 @@ class PlaceAdmin(BaseTranslatableAdmin):
 class TagAdmin(BaseTranslatableAdmin):
     """Admin configuration for image tags."""
 
-    translation_service_method = "translate_parler_tag"
-    translation_trigger_fields = ["name"]
-
     list_display = ("get_name", "slug", "id")
     list_display_links = ("get_name",)
     search_fields = ("translations__name", "slug")
@@ -126,11 +123,6 @@ class TagAdmin(BaseTranslatableAdmin):
             },
         ),
     )
-
-    def get_translation_kwargs(
-        self, obj: Tag, form: forms.ModelForm, change: bool, should_trigger: bool
-    ) -> Dict[str, Any]:
-        return {"force": should_trigger}
 
     @admin.display(description=_("Name"))
     def get_name(self, obj: Tag) -> str:
@@ -175,9 +167,6 @@ class AstroImageAdmin(BaseTranslatableAdmin):
     - Dynamic fieldsets mapping (hiding technical fields in non-default languages)
     - Dynamic filtering of equipment and locations
     """
-
-    translation_service_method = "translate_astro_image"
-    translation_trigger_fields = ["name", "description", "exposure_details", "processing_details"]
 
     form = AstroImageForm
     list_display = ("get_name", "capture_date", "place", "has_thumbnail", "tag_list")
@@ -269,7 +258,7 @@ class AstroImageAdmin(BaseTranslatableAdmin):
 
         # Get default language (fallback). Hardcoded 'en' or fetch from settings.
         # Ideally, use settings.PARLER_LANGUAGES['default']['fallback']
-        default_language = getattr(settings, "PARLER_DEFAULT_LANGUAGE_CODE", "en")
+        default_language = settings.DEFAULT_APP_LANGUAGE
 
         # If we are editing a specific language that is NOT the default, hide shared fields
         if current_language and current_language != default_language:
@@ -296,7 +285,7 @@ class AstroImageAdmin(BaseTranslatableAdmin):
         return super().get_fieldsets(request, obj)  # type: ignore[no-any-return]
 
     def tag_list(self, obj: AstroImage) -> str:
-        return ", ".join(o.name for o in obj.tags.all())
+        return ", ".join(tag.name for tag in obj.tags.all())
 
     ordering = ("-capture_date", "-created_at")
 
@@ -445,9 +434,6 @@ class MainPageLocationAdmin(BaseTranslatableAdmin):
     - Selection of related AstroImages filtered by place
     - Synchronized ID-based URL slugs for SEO
     """
-
-    translation_service_method = "translate_main_page_location"
-    translation_trigger_fields = ["highlight_name", "story"]
 
     form = MainPageLocationForm
     list_display = ("pk", "place", "highlight_name", "is_active")
