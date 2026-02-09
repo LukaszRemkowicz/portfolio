@@ -17,9 +17,25 @@ class CacheService:
         Clears all keys starting with the given prefix.
         Note: On Redis, this uses SCAN to avoid blocking.
         """
+        pattern = f"*{prefix}*"
+
         if hasattr(cache, "delete_pattern"):
             # django-redis specific helper
-            cache.delete_pattern(f"*{prefix}*")
+            cache.delete_pattern(pattern)
+        elif hasattr(cache, "_cache") and hasattr(cache._cache, "get_client"):
+            # Django's native RedisCache (Django 4.0+)
+            try:
+                client = cache._cache.get_client()
+                cursor = 0
+                while True:
+                    cursor, keys = client.scan(cursor=cursor, match=pattern, count=100)
+                    if keys:
+                        client.delete(*keys)
+                    if cursor == 0:
+                        break
+            except Exception as e:
+                logger.warning(f"Failed to scan and delete cache keys with pattern {pattern}: {e}")
+                cache.clear()
         else:
             # Fallback for other backends (less efficient)
             warnings.warn(

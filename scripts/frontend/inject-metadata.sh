@@ -7,8 +7,13 @@ mv dist/index.html dist/_index.html
 cp -r public/* dist/
 mv dist/_index.html dist/index.html
 
-# 2. Inject the Sitemap URL into robots.txt for SEO
-echo "Sitemap: https://${SITE_DOMAIN}/sitemap.xml" >> dist/robots.txt
-
-# 3. Replace the placeholder in sitemap.xml with the actual domain
-sed -i "s/__SITE_DOMAIN__/${SITE_DOMAIN}/g" dist/sitemap.xml
+# 2. Replace placeholders in all SEO and metadata files
+# We target index.html (for OG/Twitter/JSON-LD/Analytics), sitemap.xml, and robots.txt
+# Using a temp file approach for cross-platform 'sed' compatibility (Mac/Linux)
+for file in dist/index.html dist/sitemap.xml dist/robots.txt; do
+    if [ -f "$file" ]; then
+        echo "Updating placeholders in $file..."
+        sed "s/__SITE_DOMAIN__/${SITE_DOMAIN}/g" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+        sed "s/__GA_TRACKING_ID__/${GA_TRACKING_ID}/g" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+    fi
+done

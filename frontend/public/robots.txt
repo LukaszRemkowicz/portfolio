@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-# Sitemap injected during build
+
+Sitemap: https://__SITE_DOMAIN__/sitemap.xml

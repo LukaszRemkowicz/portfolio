@@ -1,15 +1,28 @@
-// frontend/src/utils/env.ts
+declare global {
+  interface Window {
+    _ENV_?: {
+      GA_TRACKING_ID?: string;
+    };
+  }
+}
 
 /**
- * Safely access environment variables defined by Webpack's DefinePlugin.
- * Prevents "ReferenceError: process is not defined" in the browser.
+ * Safely access environment variables defined by Webpack's DefinePlugin
+ * or injected at runtime via window._ENV_.
  */
 export const getEnv = (key: string, fallback: string = ''): string => {
-  try {
-    // In Webpack 5, process.env is often replaced literally.
-    // However, if it's not replaced, we need to handle the ReferenceError.
+  // 1. Check runtime configuration (Site Domain, Tracking ID, etc.)
+  if (typeof window !== 'undefined' && window._ENV_) {
+    const runtimeVal = (window._ENV_ as Record<string, string | undefined>)[
+      key
+    ];
+    if (runtimeVal && runtimeVal !== `__${key}__`) {
+      return runtimeVal;
+    }
+  }
 
-    // We use a switch with literal paths so DefinePlugin can easily find and replace them.
+  try {
+    // 2. Check build-time DefinePlugin configuration
     switch (key) {
       case 'API_URL':
         return process.env.API_URL || fallback;
@@ -23,7 +36,6 @@ export const getEnv = (key: string, fallback: string = ''): string => {
         return fallback;
     }
   } catch {
-    // If process is not defined, we'll hit this block
     return fallback;
   }
 };
