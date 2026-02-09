@@ -43,8 +43,8 @@ class TranslationService:
     @classmethod
     def get_translation(cls, instance: Any, field_name: str, language_code: str) -> str:
         """Pure getter that retrieves an existing translation from the database."""
-        if not language_code or language_code == settings.DEFAULT_APP_LANGUAGE:
-            return str(getattr(instance, field_name, ""))
+        if not language_code:
+            language_code = settings.DEFAULT_APP_LANGUAGE
 
         if not isinstance(instance, TranslatableModel):
             return str(getattr(instance, field_name, ""))
@@ -55,6 +55,7 @@ class TranslationService:
             return ""
 
         # Strictly get the translation for the specified language without fallback.
+        # This is critical to avoid returning the thread-active language during switching.
         return str(
             instance.safe_translation_getter(
                 field_name, language_code=language_code, any_language=False

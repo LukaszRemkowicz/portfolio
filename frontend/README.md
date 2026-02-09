@@ -20,6 +20,7 @@ Modern React + TypeScript frontend for a personal portfolio showcasing astrophot
 - **CSS Modules** - Scoped styling with design tokens
 - **Webpack 5** - Modern build system with hot reloading
 - **Jest Testing** - Unit testing setup with React Testing Library + TypeScript
+- **Error Tracking** - **Sentry (React)** integration for production crash reporting
 
 ## 🔌 API Integration
 
@@ -271,24 +272,19 @@ All component styles are organized in `styles/components/` directory:
 - ✅ **SPA Transition Tracking** - Accurate `page_view` events for subpage navigation
 - ✅ **Race Condition Guards** - Bulletproof initialization with `__ga_inited` and script load listeners
 - ✅ **Environment Awareness** - Automatic `debug_mode` gating based on environment
+- ✅ **Telemetry** - Production Sentry integration with build-time DSN injection
 
 ## 🌐 Deployment Checklist (Production)
 
-> [!IMPORTANT]
-> The current SEO and discovery files use `portfolio.local` for development. Before deploying to production, ensure the following manual updates are made:
+> [!NOTE]
+> All SEO and discovery files (`index.html`, `sitemap.xml`, `robots.txt`) are now **automatically configured** during the build process using the `inject-metadata.sh` script.
 
-- **`public/index.html`**:
-  - Update `<meta property="og:url" content="..." />`
-  - Update `<meta property="og:image" content="..." />`
-  - Update `<meta property="twitter:url" content="..." />`
-  - Update `<meta property="twitter:image" content="..." />`
-  - Update `<script type="application/ld+json">` (Update `@id`, `url`, and `sameAs` links)
-- **`public/sitemap.xml`**:
-  - Replace all instances of `https://portfolio.local/` with your actual production domain.
-- **`public/robots.txt`**:
-  - Update the `Sitemap:` directive link.
-- **Environment Variables**:
-  - Set `API_URL` to your production backend URL (e.g., `https://api.yourdomain.com`).
+To deploy to production, you only need to ensure the following environment variables are correctly set in your CI/CD or production `docker-compose.yml`:
+
+- **`SITE_DOMAIN`**: Your production domain (e.g., `yourdomain.com`). Used to inject OG tags, Twitter metadata, and generate the sitemap.
+- **`API_URL`**: Your production backend URL (e.g., `https://api.yourdomain.com`).
+- **`SENTRY_DSN_FE`**: Your frontend Sentry DSN for error tracking.
+- **`ENVIRONMENT`**: Set to `production` to enable production-only optimizations and telemetry.
 
 ---
 
