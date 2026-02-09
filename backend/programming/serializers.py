@@ -16,7 +16,7 @@ class ProjectImageSerializer(TranslatableModelSerializer):
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
-        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
+        if lang and lang != settings.DEFAULT_APP_LANGUAGE:
             for field in ["name", "description"]:
                 if field in data:
                     data[field] = TranslationService.get_translation(instance, field, lang)

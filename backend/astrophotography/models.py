@@ -6,24 +6,33 @@ from django_countries.fields import CountryField
 from parler.managers import TranslatableManager
 from parler.models import TranslatableModel, TranslatedFields
 
+from django.conf import settings
 from django.contrib.postgres.fields import DateRangeField
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import translation
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from core.models import BaseImage, SingletonModel
+from translation.mixins import AutomatedTranslationModelMixin
 
 from .constants import CELESTIAL_OBJECT_CHOICES, MeteorDefaults
 
 
-class Place(TranslatableModel):
+class Place(AutomatedTranslationModelMixin, TranslatableModel):
     objects: TranslatableManager = TranslatableManager()
+
+    # Translation trigger fields
+    translation_service_method = "translate_place"
+    translation_trigger_fields = ["name"]
+
     translations = TranslatedFields(
         name=models.CharField(
             verbose_name=_("Name"),
             max_length=100,
+            blank=True,
         ),
-        meta={"unique_together": [("language_code", "name")]},
     )
     country = CountryField(verbose_name=_("Country"))
 
@@ -32,13 +41,41 @@ class Place(TranslatableModel):
         verbose_name_plural = _("Places")
         ordering = ["pk"]
 
+    def clean(self):
+        """Custom uniqueness validation for Place names."""
+        super().clean()
+        lang = self.get_current_language()
+        current_name = self.safe_translation_getter("name", language_code=lang)
+
+        if current_name:
+            # Check for existing Place with same name in same language
+            duplicates = self.__class__.objects.translated(lang, name=current_name)
+            if self.pk:
+                duplicates = duplicates.exclude(pk=self.pk)
+
+            if duplicates.exists():
+                raise ValidationError(
+                    {"name": _("Place Translation with this Language and Name already exists.")}
+                )
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.trigger_translations()
+
     def __str__(self):
-        return self.safe_translation_getter("name", any_language=True) or ""
+        default_lang = settings.DEFAULT_APP_LANGUAGE
+        country_name = ""
+        with translation.override(default_lang):
+            if self.country:
+                country_name = self.country.name
+        return self.safe_translation_getter("name", any_language=True) or country_name
 
 
-class Tag(TranslatableModel, models.Model):
+class Tag(AutomatedTranslationModelMixin, TranslatableModel, models.Model):
+    translation_service_method = "translate_parler_tag"
+    translation_trigger_fields = ["name"]
     translations = TranslatedFields(
-        name=models.CharField(verbose_name=_("Name"), max_length=100),
+        name=models.CharField(verbose_name=_("Name"), max_length=100, blank=True),
         slug=models.SlugField(
             verbose_name=_("Slug"),
             unique=True,
@@ -53,6 +90,14 @@ class Tag(TranslatableModel, models.Model):
         verbose_name = _("Tag")
         verbose_name_plural = _("Tags")
 
+    def clean(self):
+        """Enforce that the name is required for the default language."""
+        super().clean()
+        default_lang = settings.DEFAULT_APP_LANGUAGE
+        name = self.safe_translation_getter("name", language_code=default_lang)
+        if not name:
+            raise ValidationError({"name": _("This field is required for the default language.")})
+
     def __str__(self):
         return self.safe_translation_getter("name", any_language=True) or f"Tag {self.pk}"
 
@@ -62,6 +107,7 @@ class Tag(TranslatableModel, models.Model):
         if source:
             self.slug = slugify(source, allow_unicode=True)
         super().save(*args, **kwargs)
+        self.trigger_translations()
 
 
 class AbstractEquipmentModel(models.Model):
@@ -109,8 +155,12 @@ class Tripod(AbstractEquipmentModel):
         verbose_name_plural = _("Tripods")
 
 
-class AstroImage(BaseImage, TranslatableModel):
+class AstroImage(AutomatedTranslationModelMixin, BaseImage, TranslatableModel):
     """Model for astrophotography images"""
+
+    # Translation trigger fields
+    translation_service_method = "translate_astro_image"
+    translation_trigger_fields = ["name", "description", "exposure_details", "processing_details"]
 
     capture_date = models.DateField(
         verbose_name=_("Capture Date"), help_text=_("The date when the photo was taken.")
@@ -158,6 +208,7 @@ class AstroImage(BaseImage, TranslatableModel):
             max_length=255,
             verbose_name=_("Name"),
             help_text=_("A descriptive name for this image."),
+            blank=True,
         ),
         description=CKEditor5Field(
             blank=True,
@@ -211,8 +262,15 @@ class AstroImage(BaseImage, TranslatableModel):
         verbose_name_plural = _("Astrophotography Images")
         ordering = ["-created_at"]
 
-    def __str__(self):
-        return str(self.safe_translation_getter("name", any_language=True) or _("Unnamed Image"))
+    def clean(self):
+        """Enforce that the name is required for the default language."""
+        super().clean()
+        default_lang = settings.DEFAULT_APP_LANGUAGE
+        # Use safe_translation_getter to check the current language's name if it's default
+        # or explicitly check the default language translation.
+        name = self.safe_translation_getter("name", language_code=default_lang)
+        if not name:
+            raise ValidationError({"name": _("This field is required for the default language.")})
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -226,9 +284,15 @@ class AstroImage(BaseImage, TranslatableModel):
             if AstroImage.objects.filter(slug=self.slug).exists():
                 self.slug = f"{base_slug}-{str(uuid.uuid4())[:8]}"
         super().save(*args, **kwargs)
+        self.trigger_translations()
 
 
-class MainPageBackgroundImage(BaseImage, TranslatableModel):
+class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage, TranslatableModel):
+
+    # Translation trigger fields
+    translation_service_method = "translate_main_page_background_image"
+    translation_trigger_fields = ["name", "description"]
+
     path = models.ImageField(
         upload_to="backgrounds/",
         verbose_name=_("Image File"),
@@ -240,6 +304,7 @@ class MainPageBackgroundImage(BaseImage, TranslatableModel):
             default="Background Image",
             verbose_name=_("Name"),
             help_text=_("Identifier for the background image."),
+            blank=True,
         ),
         description=CKEditor5Field(
             blank=True,
@@ -254,12 +319,29 @@ class MainPageBackgroundImage(BaseImage, TranslatableModel):
         verbose_name_plural = _("Main Page Background Images")
         ordering = ["-created_at"]
 
+    def clean(self):
+        """Enforce that the name is required for the default language."""
+        super().clean()
+        default_lang = settings.DEFAULT_APP_LANGUAGE
+        name = self.safe_translation_getter("name", language_code=default_lang)
+        if not name:
+            raise ValidationError({"name": _("This field is required for the default language.")})
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.trigger_translations()
+
     def __str__(self):
-        return self.name
+        name = self.safe_translation_getter("name", any_language=True)
+        return name or f"Main Page Background Image {self.pk}"
 
 
-class MainPageLocation(TranslatableModel):
+class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
     objects: TranslatableManager = TranslatableManager()
+
+    # Translation trigger fields
+    translation_service_method = "translate_main_page_location"
+    translation_trigger_fields = ["highlight_name", "story"]
     place = models.ForeignKey(
         Place,
         on_delete=models.SET_NULL,
@@ -273,6 +355,16 @@ class MainPageLocation(TranslatableModel):
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
+
+    def clean(self):
+        """Enforce that the highlight_name is required for the default language."""
+        super().clean()
+        default_lang = settings.DEFAULT_APP_LANGUAGE
+        name = self.safe_translation_getter("highlight_name", language_code=default_lang)
+        if not name:
+            raise ValidationError(
+                {"highlight_name": _("This field is required for the default language.")}
+            )
 
     adventure_date = DateRangeField(
         verbose_name=_("Adventure Date Range"),
@@ -351,6 +443,7 @@ class MainPageLocation(TranslatableModel):
             if not self.place_slug and self.place.name:
                 self.place_slug = slugify(self.place.name)
         super().save(*args, **kwargs)
+        self.trigger_translations()
 
 
 class MeteorsMainPageConfig(SingletonModel):

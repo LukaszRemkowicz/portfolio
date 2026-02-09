@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Optional
 
 from django.conf import settings
@@ -11,6 +12,8 @@ from django.utils.safestring import mark_safe
 from .models import TranslationTask
 from .services import TranslationService
 from .tasks import translate_instance_task
+
+logger = logging.getLogger(__name__)
 
 
 class DynamicParlerStyleMixin:
@@ -30,69 +33,99 @@ class DynamicParlerStyleMixin:
         return media + Media(css={"all": ("/admin/dynamic-parler-fixes.css",)})
 
 
-class AutomatedTranslationMixin:
+class AutomatedTranslationModelMixin:
     """
-    Mixin for ModelAdmin classes that automatically triggers GPT translations.
-    Requires 'translation_service_method' to be defined (e.g., 'translate_astro_image').
+    Mixin for models that automatically triggers GPT translations.
+    Requires 'translation_service_method' to be defined.
     """
 
     translation_service_method: Optional[str] = None
     translation_trigger_fields: list[str] = ["name"]
 
-    def save_model(self, request: HttpRequest, obj: Any, form: Any, change: bool) -> None:
+    def trigger_translations(self, **kwargs: Any) -> list[str]:
         """
-        Overrides save_model to trigger translations if:
-        1. Translations don't exist for a language
-        2. Existing translations differ from the main language value
+        Loops through supported languages and triggers translations if needed.
+        Returns a list of language codes that are now in PENDING/RUNNING state.
         """
-        super().save_model(request, obj, form, change)  # type: ignore[misc]
-
         if not self.translation_service_method:
-            return
+            return []
 
-        default_lang = getattr(settings, "PARLER_DEFAULT_LANGUAGE_CODE", "en")
+        default_lang = settings.DEFAULT_APP_LANGUAGE
         supported_languages = TranslationService.get_available_languages()
-        content_type = ContentType.objects.get_for_model(obj)
-        triggered_languages = []
+        content_type = ContentType.objects.get_for_model(self)  # type: ignore[arg-type]
+        active_languages = []
 
         for lang_code in supported_languages:
             if lang_code == default_lang:
                 continue
 
-            if self._needs_translation(obj, lang_code, default_lang):
-                kwargs = self.get_translation_kwargs(obj, form, change, True)
-                self._trigger_translation(
-                    obj, lang_code, content_type, self.translation_service_method, **kwargs
-                )
-                triggered_languages.append(lang_code)
+            # Check if already triggered
+            is_active = TranslationTask.objects.filter(
+                content_type=content_type,
+                object_id=str(self.pk),
+                language=lang_code,
+                status__in=[TranslationTask.Status.PENDING, TranslationTask.Status.RUNNING],
+            ).exists()
 
-        if triggered_languages:
-            lang_list = ", ".join(triggered_languages)
-            self.message_user(
-                request,
-                f"Translations queued for {len(triggered_languages)} " f"languages ({lang_list})",
-                level=messages.SUCCESS,
-            )
+            if is_active:
+                active_languages.append(lang_code)
+                continue
+
+            # Need to trigger?
+            if self._needs_translation(self, lang_code, default_lang):
+                self._trigger_translation(
+                    self, lang_code, content_type, self.translation_service_method, **kwargs
+                )
+                active_languages.append(lang_code)
+
+        return active_languages
 
     def _needs_translation(self, obj: Any, lang_code: str, default_lang: str) -> bool:
-        """Determines if the target language needs a translation based on trigger fields."""
-        if not hasattr(obj, "translations"):
+        """
+        Determines if the target language needs a translation.
+        Triggers if ANY of the trigger fields are effectively empty in the target
+        language, provided the source language (English) has content for that field.
+        """
+        if not hasattr(obj, "get_translation"):
             return False
 
-        try:
-            base_translation = obj.translations.get(language_code=default_lang)
-        except obj.translations.model.DoesNotExist:
+        # 0. Skip if a task is already PENDING or RUNNING for this object/language
+        content_type = ContentType.objects.get_for_model(obj)
+        if TranslationTask.objects.filter(
+            content_type=content_type,
+            object_id=str(obj.pk),
+            language=lang_code,
+            status__in=[TranslationTask.Status.PENDING, TranslationTask.Status.RUNNING],
+        ).exists():
+            logger.debug(
+                f"[_needs_translation] {obj} {lang_code}: Task already in progress. Skipping."
+            )
             return False
 
-        try:
-            translation = obj.translations.get(language_code=lang_code)
-            # Compare the trigger fields between BASE and target language
-            for field in self.translation_trigger_fields:
-                if getattr(base_translation, field, None) != getattr(translation, field, None):
+        for field in self.translation_trigger_fields:
+            # 1. Get Target Value (strictly for lang_code, no fallback)
+            try:
+                target_trans = obj.get_translation(lang_code)
+                target_val = getattr(target_trans, field, None)
+            except obj.translations.model.DoesNotExist:
+                target_val = None
+
+            if TranslationService.is_empty_text(target_val):
+                # 2. Target is empty. Check if Source has something to translate FROM.
+                try:
+                    source_trans = obj.get_translation(default_lang)
+                    source_val = getattr(source_trans, field, None)
+                except obj.translations.model.DoesNotExist:
+                    source_val = None
+
+                if not TranslationService.is_empty_text(source_val):
+                    logger.debug(
+                        f"[_needs_translation] {obj} {lang_code}: "
+                        f"Field '{field}' is empty (source has content). Triggering."
+                    )
                     return True
-        except obj.translations.model.DoesNotExist:
-            return True
 
+        logger.debug(f"[_needs_translation] {obj} {lang_code}: No fields need translation.")
         return False
 
     def _trigger_translation(
@@ -106,7 +139,7 @@ class AutomatedTranslationMixin:
         """Dispatches an async translation task and tracks it."""
         object_id = str(obj.pk)
 
-        # Clean up old completed/failed tasks for this language to avoid conflicts
+        # Clean up old completed/failed tasks
         TranslationTask.objects.filter(
             content_type=content_type,
             object_id=object_id,
@@ -115,7 +148,6 @@ class AutomatedTranslationMixin:
         ).delete()
 
         # Dispatch async task
-        kwargs["force"] = True
         task = translate_instance_task.delay(
             model_name=obj._meta.label,
             instance_pk=obj.pk,
@@ -124,7 +156,7 @@ class AutomatedTranslationMixin:
             **kwargs,
         )
 
-        # Create/Update TranslationTask record tracking the Celery task ID
+        # Create/Update TranslationTask record
         TranslationTask.objects.update_or_create(
             content_type=content_type,
             object_id=object_id,
@@ -136,6 +168,35 @@ class AutomatedTranslationMixin:
             },
         )
         return task.id
+
+
+class AutomatedTranslationAdminMixin:
+    """
+    Mixin for ModelAdmin classes that automatically triggers GPT translations.
+    This is now a wrapper around AutomatedTranslationModelMixin logic
+    to provide Admin-specific messaging.
+    """
+
+    def save_model(self, request: HttpRequest, obj: models.Model, form: Any, change: bool) -> None:
+        """
+        Overrides save_model to trigger translations and show messages.
+        """
+        # Ensure model is saved first
+        super().save_model(request, obj, form, change)  # type: ignore[misc]
+
+        # Trigger via model logic if available, otherwise do nothing (or fallback)
+        if hasattr(obj, "trigger_translations"):
+            kwargs = self.get_translation_kwargs(obj, form, change, True)
+            triggered_languages = obj.trigger_translations(**kwargs)
+
+            if triggered_languages:
+                lang_list = ", ".join(triggered_languages)
+                self.message_user(
+                    request,
+                    f"Translations queued for {len(triggered_languages)} "
+                    f"languages ({lang_list})",
+                    level=messages.SUCCESS,
+                )
 
     def get_translation_kwargs(
         self, obj: Any, form: Any, change: bool, should_trigger: bool
@@ -217,7 +278,7 @@ class HideNonTranslatableFieldsMixin:
         else:
             current_language = request.GET.get("language")
 
-        default_language = getattr(settings, "PARLER_DEFAULT_LANGUAGE_CODE", "en")
+        default_language = settings.DEFAULT_APP_LANGUAGE
 
         # If editing original content (default language) or no language set, show everything
         if not current_language or current_language == default_language:

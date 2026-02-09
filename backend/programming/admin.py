@@ -75,7 +75,7 @@ class ProjectImageAdmin(TranslatableAdmin):
         super().save_model(request, obj, form, change)
         supported_languages = TranslationService.get_available_languages()
         for lang_code in supported_languages:
-            if lang_code == settings.PARLER_DEFAULT_LANGUAGE_CODE:
+            if lang_code == settings.DEFAULT_APP_LANGUAGE:
                 continue
             logger.info(f"Triggering ProjectImage translations for '{obj.name}' into {lang_code}")
             # Generic parler translation trigger
