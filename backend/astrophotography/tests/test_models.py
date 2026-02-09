@@ -5,6 +5,7 @@ import pytest
 from PIL import Image
 from pytest_mock import MockerFixture
 
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import QuerySet
 from django.utils.text import slugify
@@ -122,6 +123,43 @@ class TestPlaceModel:
         place: Place = PlaceFactory(name="Tenerife")
         assert str(place) == "Tenerife"
 
+    def test_can_create_multiple_nameless_places(self) -> None:
+        """Verify that multiple places without names can coexist."""
+        p1 = Place.objects.create(country="PL")
+        p2 = Place.objects.create(country="FI")
+        assert p1.pk != p2.pk
+        assert (p1.safe_translation_getter("name", any_language=True) or "") == ""
+        assert (p2.safe_translation_getter("name", any_language=True) or "") == ""
+
+    def test_duplicate_name_same_language_failure(self) -> None:
+        """Verify that duplicate names in the same language raise ValidationError."""
+        Place.objects.create(name="Duplicate", country="PL")
+        p2 = Place(name="Duplicate", country="FI")
+        with pytest.raises(ValidationError) as exc:
+            p2.clean()
+        assert "Place Translation with this Language and Name already exists" in str(exc.value)
+
+    def test_duplicate_name_different_language_success(self) -> None:
+        """Verify that the same name can exist in different languages."""
+        Place.objects.create(name="Home", country="PL")
+
+        # Create another place and set its name to 'Home' in Polish
+        p2 = Place.objects.create(country="FI")
+        p2.set_current_language("pl")
+        p2.name = "Home"
+        # Should not raise any error
+        p2.clean()
+        p2.save()
+
+        assert Place.objects.translated("en", name="Home").count() == 1
+        assert Place.objects.translated("pl", name="Home").count() == 1
+
+    def test_updating_own_name_success(self) -> None:
+        """Verify that updating an existing record with its own name works."""
+        place = Place.objects.create(name="Unique", country="PL")
+        place.clean()  # Should not raise
+        place.save()
+
 
 @pytest.mark.django_db
 class TestCameraModel:
@@ -141,7 +179,7 @@ class TestLensModel:
 class TestMainPageLocationModel:
     def test_string_representation(self) -> None:
         place: Place = PlaceFactory(name="Bieszczady", country="PL")
-        slider: MainPageLocation = MainPageLocationFactory(place=place)
+        slider: MainPageLocation = MainPageLocationFactory(place=place, highlight_name=None)
         assert str(slider) == "Poland - Bieszczady (Active)"
 
     def test_string_representation_with_highlight_name(self) -> None:
@@ -152,7 +190,7 @@ class TestMainPageLocationModel:
         # Place for PL
         place: Place = PlaceFactory(country="PL")
         # Slider for PL
-        slider: MainPageLocation = MainPageLocationFactory(place=place)
+        slider: MainPageLocation = MainPageLocationFactory(place=place, highlight_name="Test")
         # Image in PL
         image: AstroImage = AstroImageFactory(place=place)
 

@@ -21,7 +21,7 @@ class TranslatedSerializerMixin(serializers.Serializer):
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
-        if not lang or lang == settings.PARLER_DEFAULT_LANGUAGE_CODE:
+        if not lang or lang == settings.DEFAULT_APP_LANGUAGE:
             # Return original value if no lang specified, or it's default
             return str(getattr(instance, field_name, ""))
 
@@ -37,7 +37,7 @@ class TranslatedSerializerMixin(serializers.Serializer):
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
-        if lang and lang != settings.PARLER_DEFAULT_LANGUAGE_CODE:
+        if lang and lang != settings.DEFAULT_APP_LANGUAGE:
             for field in fields:
                 if field in data:
                     data[field] = TranslationService.get_translation(instance, field, lang)

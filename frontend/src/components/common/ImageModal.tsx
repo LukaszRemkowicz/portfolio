@@ -424,11 +424,13 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
                   )}
                 </span>
               )}
-              {image.place?.name && (
+              {image.place && (
                 <span className={styles.metaItem}>
                   <MapPin size={14} className={styles.metaIcon} />
-                  {image.place.name}
-                  {image.place.country ? `, ${image.place.country}` : ''}
+                  {image.place.name || image.place.country}
+                  {image.place.name && image.place.country
+                    ? `, ${image.place.country}`
+                    : ''}
                 </span>
               )}
             </div>

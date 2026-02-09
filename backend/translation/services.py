@@ -43,7 +43,7 @@ class TranslationService:
     @classmethod
     def get_translation(cls, instance: Any, field_name: str, language_code: str) -> str:
         """Pure getter that retrieves an existing translation from the database."""
-        if not language_code or language_code == settings.PARLER_DEFAULT_LANGUAGE_CODE:
+        if not language_code or language_code == settings.DEFAULT_APP_LANGUAGE:
             return str(getattr(instance, field_name, ""))
 
         if not isinstance(instance, TranslatableModel):
@@ -96,7 +96,7 @@ class TranslationService:
         """
         return str(
             instance.safe_translation_getter(
-                field_name, language_code=settings.PARLER_DEFAULT_LANGUAGE_CODE
+                field_name, language_code=settings.DEFAULT_APP_LANGUAGE
             )
             or ""
         )
@@ -273,6 +273,79 @@ class TranslationService:
                 instance.save_translations()
         except Exception:
             logger.exception(f"Failed to save User translations for {instance}")
+
+        return results
+
+    @classmethod
+    def translate_profile(
+        cls, instance: Any, language_code: str, force: bool = False
+    ) -> dict[str, str]:
+        """Specific translator for Profile (title, specific_bio)."""
+        results = {}
+        fields = ["title", "specific_bio"]
+        for field in fields:
+            handler = (
+                cls._get_agent().translate_html
+                if field == "specific_bio"
+                else cls._get_agent().translate
+            )
+            results[field] = cls._run_parler_translation(
+                instance, field, language_code, handler, force=force
+            )
+        try:
+            with transaction.atomic():
+                instance.save_translations()
+        except Exception:
+            logger.exception("Failed to save Profile translations")
+        return results
+
+    @classmethod
+    def translate_main_page_background_image(
+        cls, instance: Any, language_code: str, force: bool = False
+    ) -> dict[str, str]:
+        """Specific translator for MainPageBackgroundImage (name, description)."""
+        results = {}
+        fields = ["name", "description"]
+        for field in fields:
+            handler = (
+                cls._get_agent().translate_html
+                if field == "description"
+                else cls._get_agent().translate
+            )
+            results[field] = cls._run_parler_translation(
+                instance, field, language_code, handler, force=force
+            )
+
+        try:
+            with transaction.atomic():
+                instance.save_translations()
+        except Exception:
+            logger.exception("Failed to save MainPageBackgroundImage translations")
+
+        return results
+
+    @classmethod
+    def translate_project_image(
+        cls, instance: Any, language_code: str, force: bool = False
+    ) -> dict[str, str]:
+        """Specific translator for ProjectImage (name, description)."""
+        results = {}
+        fields = ["name", "description"]
+        for field in fields:
+            handler = (
+                cls._get_agent().translate_html
+                if field == "description"
+                else cls._get_agent().translate
+            )
+            results[field] = cls._run_parler_translation(
+                instance, field, language_code, handler, force=force
+            )
+
+        try:
+            with transaction.atomic():
+                instance.save_translations()
+        except Exception:
+            logger.exception("Failed to save ProjectImage translations")
 
         return results
 

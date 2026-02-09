@@ -2,6 +2,7 @@ from django_countries import countries
 from parler.forms import TranslatableModelForm
 
 from django import forms
+from django.conf import settings
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.utils.translation import gettext_lazy as _
 
@@ -146,6 +147,13 @@ class AstroImageForm(TranslatableModelForm):
 
         if self.instance.pk:
             self.fields["tags"].initial = self.instance.tags.all()
+
+        # Enforce 'name' as required for the default language (English)
+        # since we added blank=True to the model to allow clearing translations.
+        current_lang = self.instance.get_current_language()
+        default_lang = settings.DEFAULT_APP_LANGUAGE
+        if current_lang == default_lang and "name" in self.fields:
+            self.fields["name"].required = True
 
 
 class MeteorsMainPageConfigForm(forms.ModelForm):

@@ -68,7 +68,7 @@ def translate_instance_task(
         return _task_result(model_name, instance_pk, language_code, method_name, result=result)
 
     except ObjectDoesNotExist:
-        logger.error("Instance not found: %s(pk=%s)", model_name, instance_pk)
+        logger.info("Instance not found: %s(pk=%s)", model_name, instance_pk)
         _handle_task_failure(model_name, instance_pk, language_code, "Instance not found")
         return _task_result(
             model_name, instance_pk, language_code, method_name, error="Instance not found"

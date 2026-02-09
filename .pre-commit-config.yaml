@@ -82,7 +82,8 @@ repos:
         entry: bash -c "cd backend && poetry run pytest"
         language: system
         pass_filenames: false
-        always_run: true
+        files: ^backend/
+        always_run: false
         stages: [pre-commit]
 
       - id: frontend-tests

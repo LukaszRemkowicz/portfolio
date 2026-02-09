@@ -73,7 +73,7 @@ class GalleryQueryService:
                     Q(place__translations__name__iexact=place) | Q(place__isnull=True)
                 )
 
-        return cast(QuerySet[AstroImage], queryset)
+        return cast(QuerySet[AstroImage], queryset.order_by("-capture_date"))
 
     @staticmethod
     def get_travel_highlight_images(slider: MainPageLocation) -> QuerySet[AstroImage]:
