@@ -67,6 +67,7 @@ set -euo pipefail
 : "${API_DOMAIN:?API_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
 : "${GA_TRACKING_ID:?GA_TRACKING_ID is required (inject via: doppler run -- ./build.sh)}"
 : "${SITE_DOMAIN:?SITE_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
+: "${SENTRY_DSN_FE:?SENTRY_DSN_FE is required (inject via: doppler run -- ./build.sh)}"
 
 echo "API_DOMAIN=${API_DOMAIN}"
 
@@ -148,6 +149,7 @@ docker build \
   --build-arg "SITE_DOMAIN=${SITE_DOMAIN}" \
   --build-arg "API_URL=https://${API_DOMAIN}" \
   --build-arg "GA_TRACKING_ID=${GA_TRACKING_ID}" \
+  --build-arg "SENTRY_DSN_FE=${SENTRY_DSN_FE}" \
   -t "portfolio-frontend:$TAG" \
   .
 echo "✅ Frontend image built"

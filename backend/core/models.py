@@ -38,6 +38,22 @@ class BaseImage(TranslatableModel):
         ordering = ["-created_at"]
 
     def save(self, *args: Any, **kwargs: Any) -> None:
+        if self.pk:
+            try:
+                # Get the existing instance from the database
+                old_instance = self.__class__.objects.only("path", "thumbnail").get(pk=self.pk)
+                if old_instance.path != self.path:
+                    # Path has changed, clear the thumbnail to force regeneration
+                    self.thumbnail = None
+
+                    # Delete old physical files
+                    if old_instance.thumbnail:
+                        old_instance.thumbnail.delete(save=False)
+                    if old_instance.path:
+                        old_instance.path.delete(save=False)
+            except self.__class__.DoesNotExist:
+                pass
+
         if self.path and not self.thumbnail:
             self.thumbnail = self.make_thumbnail(self.path)
         super().save(*args, **kwargs)

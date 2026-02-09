@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
+RUN addgroup --system appuser && adduser --system --group appuser
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1 \
@@ -59,10 +61,10 @@ RUN poetry install --no-root
 COPY . .
 RUN mkdir -p /app/media /app/staticfiles
 
-RUN addgroup --system appuser && adduser --system --group appuser && \
-    chown -R appuser:appuser /app
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-USER appuser
+ENTRYPOINT ["/entrypoint.sh"]
 EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
@@ -70,15 +72,17 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 FROM base AS production
 
 # Note: gettext NOT needed here because messages were compiled in builder
-RUN addgroup --system appuser && adduser --system --group appuser && \
-    mkdir -p /app/media /app/staticfiles && \
+RUN mkdir -p /app/media /app/staticfiles && \
     chown -R appuser:appuser /app
 
 # Copy virtualenv and app (already compiled) with correct ownership
 COPY --from=builder --chown=appuser:appuser $VIRTUAL_ENV $VIRTUAL_ENV
 COPY --from=builder --chown=appuser:appuser /app /app
 
-USER appuser
+COPY --from=builder /app/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 EXPOSE 8000
 
 # Provide environment variables with defaults for Gunicorn

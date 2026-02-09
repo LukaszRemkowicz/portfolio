@@ -2,8 +2,6 @@ from typing import Any, Dict, List
 
 from rest_framework import serializers
 
-from django.conf import settings
-
 from translation.services import TranslationService
 
 
@@ -14,18 +12,10 @@ class TranslatedSerializerMixin(serializers.Serializer):
     """
 
     def get_translation(self, instance: Any, field_name: str) -> str:
-        """
-        Helper to retrieve a translation for a specific field.
-        Uses the 'lang' query parameter from the request context.
-        """
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
-        if not lang or lang == settings.DEFAULT_APP_LANGUAGE:
-            # Return original value if no lang specified, or it's default
-            return str(getattr(instance, field_name, ""))
-
-        return TranslationService.get_translation(instance, field_name, lang)
+        return TranslationService.get_translation(instance, field_name, str(lang or ""))
 
     def translate_fields(
         self, data: Dict[str, Any], instance: Any, fields: List[str]
@@ -37,7 +27,7 @@ class TranslatedSerializerMixin(serializers.Serializer):
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
-        if lang and lang != settings.DEFAULT_APP_LANGUAGE:
+        if lang:
             for field in fields:
                 if field in data:
                     data[field] = TranslationService.get_translation(instance, field, lang)

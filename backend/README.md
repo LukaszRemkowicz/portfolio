@@ -39,8 +39,9 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
 ### Technical & Security Features
 - **Modern Stack** - Python 3.13, Django 6.0, and Poetry for dependency management.
 - **Caching** - **Redis-backed** caching for Django Select2 and internal performance.
-- **Security Hardening** - HSTS, secure cookies, and non-root execution in Docker.
+- **Security Hardening** - HSTS, secure cookies, and non-root execution in Docker with runtime volume mapping.
 - **Defense in Depth** - Advanced API rate limiting (**Django Axes** + DRF Throttling), payload size limits, and restricted HTTP verbs.
+- **Error Tracking** - **Sentry** integration for production monitoring and telemetry.
 - **Internationalization (i18n)** - Multi-language support (EN/PL) with automatic message compilation.
 - **Docker Integration** - Optimized multi-stage builds with automated static collection.
 
@@ -152,9 +153,7 @@ We provide specialized "God-Tier" scripts for automated database backups and res
 > [!TIP]
 > For detailed instructions on configuration (Doppler/Env), retention policies, and restore procedures, see the [Database Maintenance Guide](../scripts/db_backup/MAINTENANCE.md).
 
-## 📅 TODO - Backend Improvements
-
-## � TODO - Backend Improvements
+##  TODO - Backend Improvements
 
 ### 📸 Features & Processing
 - [ ] Implement image optimization pipeline (WebP conversion)
@@ -164,17 +163,19 @@ We provide specialized "God-Tier" scripts for automated database backups and res
 - [x] Automatic thumbnail generation
 
 ### 🚀 API & Reliability
+- [ ] **Dynamic Sitemap** - Implement automatic sitemap generation for images/projects
 - [ ] **API Documentation** - Add OpenAPI/Swagger documentation
 - [ ] **Structured Logging** - Implement JSON structured logs for production
+- [x] **Error Tracking** - Production Sentry integration with environment awareness
 - [x] **Rate Limiting** - Multi-layer DDoS protection implemented
 - [x] **Health Checks** - Django health endpoint configured
 
 ### 🗄️ Database & Performance
 - [x] **Backup** - Atomic DB backup and "God-Tier" restore verification scripts
-- [x] **Redis Caching** - Configured for Select2 and select views
+- [x] **Redis Caching** - Configured for Select2 and select views with SCAN-based invalidation
 - [x] **Automated Migrations** - Integrated into Docker startup
 
 ### 🔒 Security
-- [x] **Harden Container** - Non-root user with minimal permissions
+- [x] **Harden Container** - Non-root user with runtime volume permission mapping
 - [x] **Dependency Scanning** - GitHub Actions with Safety & Dependabot
 - [x] **ViewSet Hardening** - Minimalist ViewSets with strict method enforcement

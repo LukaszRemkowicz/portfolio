@@ -170,6 +170,7 @@ MIDDLEWARE = [
     # Check kill switch early (after security, before sessions)
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",  # Enable language selection
+    "common.middleware.QueryParameterLocaleMiddleware",  # Override with ?lang=
     "django.middleware.common.CommonMiddleware",
     "django.middleware.http.ConditionalGetMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
