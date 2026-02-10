@@ -8,16 +8,18 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
+from django.conf import settings
 from django.db.models import QuerySet
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 
 from common.constants import INFINITE_CACHE_TIMEOUT
 from common.decorators.cache import cache_response
 from common.throttling import GalleryRateThrottle
 from common.utils.logging import sanitize_for_logging
-from common.utils.signing import validate_signed_url
+from common.utils.signing import generate_signed_url_params, validate_signed_url
 
 from .constants import CELESTIAL_OBJECT_CHOICES
 from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Tag
@@ -39,6 +41,9 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
     """
     ViewSet for listing and retrieving astrophotography images.
     Supports filtering by celestial_object via 'filter' query parameter.
+
+    Note: Cache is safe because URL field was removed from serializers.
+    URLs are served separately via /v1/images/ endpoint.
     """
 
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
@@ -75,6 +80,8 @@ class MainPageBackgroundImageView(ViewSet):
 class MainPageLocationViewSet(ReadOnlyModelViewSet):
     """
     ViewSet for listing active Main Page Location Sliders.
+
+    Note: Cache is safe because nested images no longer include URL fields.
     """
 
     serializer_class = MainPageLocationSerializer
@@ -173,22 +180,26 @@ class SecureMediaView(APIView):
 
     def get(self, request: Request, slug: str) -> HttpResponse:
         """Validates the signature and redirects to the protected media path."""
-        # Sanitize slug for logging
-        safe_slug: str = sanitize_for_logging(slug)
-
         # Validate signature
         signature: Optional[str] = request.query_params.get("s")
         expiration: Optional[str] = request.query_params.get("e")
         if not signature or not expiration:
-            logger.warning(f"Missing signature for secure media request: {safe_slug}")
+            logger.warning(
+                f"Missing signature params for secure media. Slug: {slug}, "
+                f"S: {bool(signature)}, E: {bool(expiration)}"
+            )
             return HttpResponse("Missing signature", status=403)
+
         if not validate_signed_url(slug, signature, expiration):
-            logger.warning(f"Invalid or expired signature for secure media: {safe_slug}")
+            logger.warning(
+                f"Invalid or expired signature for secure media. Slug: {slug}, "
+                f"S: {signature[:8]}..., E: {expiration}"
+            )
             return HttpResponse("Invalid or expired signature", status=403)
         image = get_object_or_404(AstroImage, slug=slug)
         # Security check: Ensure the image actually has a file
         if not image.path:
-            logger.error(f"Image record found but file missing for slug: {safe_slug}")
+            logger.error(f"Image record found but file missing for slug: {slug}")
             raise Http404("Image file not found")
         # Construct the protected path for Nginx
         # Note: image.path.name usually looks like 'images/my_photo.jpg'
@@ -204,3 +215,45 @@ class SecureMediaView(APIView):
         response["Content-Type"] = ""  # Let Nginx determine the content type
         logger.info(f"Serving secure media via Nginx redirect: {redirect_uri}")
         return response
+
+
+class ImageURLViewSet(ViewSet):
+    """
+    Lightweight viewset that ONLY generates signed URLs for images.
+    No caching - always returns fresh signatures.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def list(self, request: Request) -> Response:
+        """
+        Returns {slug: signed_url} mapping for all active images.
+        """
+        images = AstroImage.objects.all().only("slug")
+        url_mapping = {}
+
+        for image in images:
+            url_path = reverse("astroimages:secure-image-serve", kwargs={"slug": image.slug})
+            params = generate_signed_url_params(
+                image.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
+            )
+            url_mapping[image.slug] = (
+                f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
+            )
+
+        return Response(url_mapping)
+
+    def retrieve(self, request: Request, pk: Optional[str] = None) -> Response:
+        """
+        Returns signed URL for a single image.
+        """
+        slug = pk
+        image = get_object_or_404(AstroImage, slug=slug)
+        url_path = reverse("astroimages:secure-image-serve", kwargs={"slug": image.slug})
+        params = generate_signed_url_params(
+            image.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
+        )
+        signed_url = f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
+
+        return Response({"url": signed_url})

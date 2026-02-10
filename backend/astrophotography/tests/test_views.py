@@ -46,7 +46,7 @@ class TestAstroImageViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
         assert response.data[0]["pk"] == str(astro_image.pk)
-        assert "url" in response.data[0]
+        # After Phase 2: URL field removed, served via /v1/images/
 
     def test_retrieve_astro_image(self, api_client: APIClient, astro_image: AstroImage) -> None:
         """Test retrieving a single image via the router generated URL"""

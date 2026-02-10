@@ -45,6 +45,7 @@ describe('AstroGallery Component', () => {
       profile: null,
       backgroundUrl: null,
       images: [],
+      imageUrls: {},
       projects: [],
       categories: [],
       tags: [],
@@ -150,7 +151,7 @@ describe('AstroGallery Component', () => {
       {
         pk: 1,
         slug: 'test-image-1',
-        url: '/test1.jpg',
+        thumbnail_url: '/test1-thumb.jpg',
         name: 'Test Image 1',
         description: 'Test description 1',
       },
@@ -235,7 +236,7 @@ describe('AstroGallery Component', () => {
       {
         pk: 1,
         slug: 'test-image-1',
-        url: '/test1.jpg',
+        thumbnail_url: '/test1-thumb.jpg',
         name: 'Test Image 1',
         description: 'Test description 1',
       },
@@ -278,7 +279,7 @@ describe('AstroGallery Component', () => {
       {
         pk: 1,
         slug: 'test-image-1',
-        url: '/test1.jpg',
+        thumbnail_url: '/test1-thumb.jpg',
         name: 'Test Image 1',
         description: 'Test description 1',
       },

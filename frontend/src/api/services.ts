@@ -93,7 +93,6 @@ export const fetchAstroImages = async (
   if (Array.isArray(data)) {
     return data.map(image => ({
       ...image,
-      url: getMediaUrl(image.url) || '',
       thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
     }));
   }
@@ -110,7 +109,6 @@ export const fetchAstroImageDetail = async (
   if (data) {
     return {
       ...data,
-      url: getMediaUrl(data.url) || '',
       thumbnail_url: getMediaUrl(data.thumbnail_url) || undefined,
     };
   }
@@ -182,7 +180,6 @@ export const fetchTravelHighlights = async (): Promise<MainPageLocation[]> => {
       ...slider,
       images: slider.images.map(image => ({
         ...image,
-        url: getMediaUrl(image.url) || '',
         thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
       })),
     }));

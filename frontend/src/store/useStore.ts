@@ -18,6 +18,7 @@ import {
   fetchTags,
   fetchCategories,
 } from '../api/services';
+import { fetchImageUrls } from '../api/imageUrlService';
 import { NetworkError, ServerError } from '../api/errors';
 
 import i18n from '../i18n';
@@ -26,6 +27,7 @@ interface AppState {
   profile: UserProfile | null;
   backgroundUrl: string | null;
   images: AstroImage[];
+  imageUrls: Record<string, string>;
   projects: Project[];
   categories: string[];
   tags: Tag[];
@@ -46,6 +48,7 @@ interface AppState {
   // Actions
   loadInitialData: (force?: boolean) => Promise<void>;
   loadImages: (params?: FilterParams) => Promise<void>;
+  loadImageUrls: () => Promise<void>;
   loadImageDetail: (slug: string) => Promise<void>;
   clearActiveImage: () => void;
   loadProjects: () => Promise<void>;
@@ -59,6 +62,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   profile: null,
   backgroundUrl: null,
   images: [],
+  imageUrls: {},
   projects: [],
   categories: [],
   tags: [],
@@ -138,6 +142,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         set({ error: message, isImagesLoading: false });
       }
       console.error('Store image load failure:', e);
+    }
+  },
+
+  loadImageUrls: async () => {
+    try {
+      const urls = await fetchImageUrls();
+      set({ imageUrls: urls });
+    } catch (e: unknown) {
+      console.error('Failed to load image URLs:', e);
+      // Don't set global error - images can still use thumbnails as fallback
     }
   },
 

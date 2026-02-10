@@ -21,6 +21,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
 
   const activeImageDetail = useAppStore(state => state.activeImageDetail);
   const loadImageDetail = useAppStore(state => state.loadImageDetail);
+  const imageUrls = useAppStore(state => state.imageUrls);
   const clearActiveImage = useAppStore(state => state.clearActiveImage);
   const isActiveImageLoading = useAppStore(state => state.isActiveImageLoading);
 
@@ -318,7 +319,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
 
         <div className={styles.imageWrapper}>
           <img
-            src={image.url}
+            src={imageUrls[image.slug] || image.thumbnail_url || ''}
             alt={image.name}
             className={styles.modalImage}
             onClick={() => {
@@ -379,7 +380,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
                 <X size={32} />
               </button>
               <img
-                src={image.url}
+                src={imageUrls[image.slug] || image.thumbnail_url || ''}
                 alt={image.name}
                 className={`${styles.fullResImage} ${
                   scale > 1.01 ? styles.isZoomed : ''
