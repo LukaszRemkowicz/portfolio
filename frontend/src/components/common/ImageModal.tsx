@@ -1,5 +1,5 @@
 // frontend/src/components/common/ImageModal.tsx
-import { type FC, useEffect, useCallback, useState } from 'react';
+import { type FC, useEffect, useCallback, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -27,14 +27,21 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
 
   const [isFullRes, setIsFullRes] = useState(false);
   const [scale, setScale] = useState(1);
-  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
+  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 }); // Pixels
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [dragStartTime, setDragStartTime] = useState(0);
   const [hasMoved, setHasMoved] = useState(false);
   const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(
     null
   );
+  const [imageDimensions, setImageDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+
+  // Use refs to avoid re-renders during drag
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
 
   // Fetch full details when the image changes
   useEffect(() => {
@@ -51,7 +58,34 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
     setScale(1);
     setPanPosition({ x: 0, y: 0 });
     setLastTouchDistance(null);
+    setImageDimensions(null);
   };
+
+  // Clamp pan position to prevent panning beyond image boundaries
+  const clampPanPosition = useCallback(
+    (position: { x: number; y: number }, currentScale: number) => {
+      if (!imageDimensions || currentScale <= 1) {
+        return { x: 0, y: 0 };
+      }
+
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Calculate the scaled image dimensions
+      const scaledWidth = imageDimensions.width * currentScale;
+      const scaledHeight = imageDimensions.height * currentScale;
+
+      // Calculate maximum pan offsets (how far we can pan before hitting edges)
+      const maxPanX = Math.max(0, (scaledWidth - viewportWidth) / 2);
+      const maxPanY = Math.max(0, (scaledHeight - viewportHeight) / 2);
+
+      return {
+        x: Math.max(-maxPanX, Math.min(maxPanX, position.x)),
+        y: Math.max(-maxPanY, Math.min(maxPanY, position.y)),
+      };
+    },
+    [imageDimensions]
+  );
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!image || scale <= 1 || image.process === false) return;
@@ -60,28 +94,38 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
     setIsDragging(true);
     setHasMoved(false);
     setDragStartTime(Date.now());
-    setDragStart({ x: e.clientX, y: e.clientY });
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || scale <= 1) return;
 
-    const dx = Math.abs(e.clientX - dragStart.x);
-    const dy = Math.abs(e.clientY - dragStart.y);
+    const dx = Math.abs(e.clientX - dragStartRef.current.x);
+    const dy = Math.abs(e.clientY - dragStartRef.current.y);
 
     if (dx > 5 || dy > 5) {
       setHasMoved(true);
     }
 
-    const moveX = e.clientX - dragStart.x;
-    const moveY = e.clientY - dragStart.y;
+    const moveX = e.clientX - dragStartRef.current.x;
+    const moveY = e.clientY - dragStartRef.current.y;
 
-    setPanPosition((prev: { x: number; y: number }) => ({
-      x: prev.x + moveX / (scale * 250), // Increased speed (was 500)
-      y: prev.y + moveY / (scale * 250),
-    }));
+    // Use requestAnimationFrame for smooth updates
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
 
-    setDragStart({ x: e.clientX, y: e.clientY });
+    rafRef.current = requestAnimationFrame(() => {
+      setPanPosition(prev => {
+        const newPosition = {
+          x: prev.x + moveX,
+          y: prev.y + moveY,
+        };
+        return clampPanPosition(newPosition, scale);
+      });
+    });
+
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
   };
 
   const handleMouseUp = () => {
@@ -94,9 +138,22 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
     // Always prevent default to stop the background from scrolling while in lightbox
     e.preventDefault();
 
+    // Normalize deltaY for cross-browser compatibility (especially Firefox)
+    let normalizedDelta = e.deltaY;
+
+    // Firefox uses different deltaMode values
+    if (e.deltaMode === 1) {
+      // DOM_DELTA_LINE
+      normalizedDelta *= 16; // Typical line height in pixels
+    } else if (e.deltaMode === 2) {
+      // DOM_DELTA_PAGE
+      normalizedDelta *= window.innerHeight;
+    }
+    // deltaMode === 0 is DOM_DELTA_PIXEL, use as-is
+
     // Standard scroll or Trackpad Pinch (ctrlKey)
-    const factor = e.ctrlKey ? 0.05 : 0.005;
-    const delta = -e.deltaY * factor;
+    const factor = e.ctrlKey ? 0.01 : 0.001;
+    const delta = -normalizedDelta * factor;
     setScale(prev => Math.min(Math.max(1, prev + delta), 4));
   };
 
@@ -113,6 +170,10 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!image || image.process === false) return;
+
+    // Prevent default scroll behavior
+    e.preventDefault();
+
     if (e.touches.length === 2 && lastTouchDistance !== null) {
       const distance = Math.hypot(
         e.touches[0].pageX - e.touches[1].pageX,
@@ -123,15 +184,18 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
       setLastTouchDistance(distance);
     } else if (e.touches.length === 1 && scale > 1) {
       const touch = e.touches[0];
-      const dx = touch.clientX - dragStart.x;
-      const dy = touch.clientY - dragStart.y;
+      const dx = touch.clientX - dragStartRef.current.x;
+      const dy = touch.clientY - dragStartRef.current.y;
 
-      setPanPosition((prev: { x: number; y: number }) => ({
-        x: prev.x + dx / (scale * 250), // Increased speed (was 500)
-        y: prev.y + dy / (scale * 250),
-      }));
+      setPanPosition(prev => {
+        const newPosition = {
+          x: prev.x + dx,
+          y: prev.y + dy,
+        };
+        return clampPanPosition(newPosition, scale);
+      });
 
-      setDragStart({ x: touch.clientX, y: touch.clientY });
+      dragStartRef.current = { x: touch.clientX, y: touch.clientY };
     }
   };
 
@@ -357,10 +421,10 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
               onWheel={handleWheel}
               onTouchStart={e => {
                 if (e.touches.length === 1) {
-                  setDragStart({
+                  dragStartRef.current = {
                     x: e.touches[0].clientX,
                     y: e.touches[0].clientY,
-                  });
+                  };
                 }
                 handleTouchStart(e);
               }}
@@ -387,11 +451,16 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
                 }`}
                 onMouseDown={handleMouseDown}
                 onClick={toggleZoom}
+                onLoad={e => {
+                  const img = e.currentTarget;
+                  setImageDimensions({
+                    width: img.naturalWidth,
+                    height: img.naturalHeight,
+                  });
+                }}
                 style={{
-                  transform: `translate(${panPosition.x * 100}%, ${panPosition.y * 100}%) scale(${scale})`,
-                  transition: isDragging
-                    ? 'none'
-                    : 'transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)',
+                  transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${scale})`,
+                  transition: 'none',
                   cursor:
                     image.process === false
                       ? 'default'

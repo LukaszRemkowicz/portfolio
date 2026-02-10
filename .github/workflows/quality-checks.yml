@@ -205,15 +205,8 @@ jobs:
         working-directory: ./backend
         run: poetry install --no-root --no-interaction
 
-      - name: Run Python linting
-        working-directory: ./backend
-        run: |
-          poetry run flake8 .
-          poetry run black --check .
-
-      - name: Run Python type checking
-        working-directory: ./backend
-        run: poetry run mypy .
+      - name: Run Pre-commit hooks
+        run: poetry run pre-commit run --all-files
 
       - name: Run tests
         working-directory: ./backend

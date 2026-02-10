@@ -180,20 +180,25 @@ class SecureMediaView(APIView):
 
     def get(self, request: Request, slug: str) -> HttpResponse:
         """Validates the signature and redirects to the protected media path."""
-        # Validate signature
+        # Sanitize inputs for logging
+        safe_slug = sanitize_for_logging(slug)
         signature: Optional[str] = request.query_params.get("s")
         expiration: Optional[str] = request.query_params.get("e")
+        safe_signature = sanitize_for_logging(signature)
+        safe_expiration = sanitize_for_logging(expiration)
+
+        # Validate signature
         if not signature or not expiration:
             logger.warning(
-                f"Missing signature params for secure media. Slug: {slug}, "
+                f"Missing signature params for secure media. Slug: {safe_slug}, "
                 f"S: {bool(signature)}, E: {bool(expiration)}"
             )
             return HttpResponse("Missing signature", status=403)
 
         if not validate_signed_url(slug, signature, expiration):
             logger.warning(
-                f"Invalid or expired signature for secure media. Slug: {slug}, "
-                f"S: {signature[:8]}..., E: {expiration}"
+                f"Invalid or expired signature for secure media. Slug: {safe_slug}, "
+                f"S: {safe_signature[:8]}..., E: {safe_expiration}"
             )
             return HttpResponse("Invalid or expired signature", status=403)
         image = get_object_or_404(AstroImage, slug=slug)

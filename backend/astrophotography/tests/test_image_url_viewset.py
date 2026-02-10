@@ -1,5 +1,6 @@
 # backend/astrophotography/tests/test_image_url_viewset.py
 """Tests for ImageURLViewSet - the /v1/images/ endpoint that serves signed URLs."""
+
 from urllib.parse import parse_qs, urlparse
 
 import pytest

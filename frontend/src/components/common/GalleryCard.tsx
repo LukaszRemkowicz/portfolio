@@ -44,7 +44,7 @@ const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
           className={`${styles.placeholder} ${isLoaded ? styles.hide : ''}`}
         />
         <img
-          src={item.thumbnail_url || item.url}
+          src={item.thumbnail_url || ''}
           alt=''
           loading='lazy'
           onLoad={() => setIsLoaded(true)}
