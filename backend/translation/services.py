@@ -207,6 +207,9 @@ class TranslationService:
         results["highlight_name"] = cls._run_parler_translation(
             instance, "highlight_name", language_code, cls._get_agent().translate, force=force
         )
+        results["highlight_title"] = cls._run_parler_translation(
+            instance, "highlight_title", language_code, cls._get_agent().translate, force=force
+        )
         results["story"] = cls._run_parler_translation(
             instance, "story", language_code, cls._get_agent().translate_html, force=force
         )

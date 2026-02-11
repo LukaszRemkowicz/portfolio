@@ -341,7 +341,7 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
 
     # Translation trigger fields
     translation_service_method = "translate_main_page_location"
-    translation_trigger_fields = ["highlight_name", "story"]
+    translation_trigger_fields = ["highlight_name", "highlight_title", "story"]
     place = models.ForeignKey(
         Place,
         on_delete=models.SET_NULL,
@@ -411,6 +411,13 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
             max_length=100,
             verbose_name=_("Highlight Name"),
             help_text=_("Optional custom name for the travel highlight (overrides Country/Place)."),
+            null=True,
+            blank=True,
+        ),
+        highlight_title=models.CharField(
+            max_length=255,
+            verbose_name=_("Highlight Title"),
+            help_text=_("Custom title for the highlights page."),
             null=True,
             blank=True,
         ),

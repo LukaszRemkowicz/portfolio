@@ -213,7 +213,9 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
     def to_representation(self, instance: MainPageLocation) -> Dict[str, Any]:
         data = super().to_representation(instance)
         return self.translate_fields(
-            data=data, instance=instance, fields=["highlight_name", "story"]
+            data=data,
+            instance=instance,
+            fields=["highlight_name", "highlight_title", "story"],
         )
 
     class Meta:
@@ -224,6 +226,7 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
             "place_slug",
             "country_slug",
             "highlight_name",
+            "highlight_title",
             "adventure_date",
             "story",
             "background_image",

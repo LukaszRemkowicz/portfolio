@@ -233,9 +233,22 @@ class ImageURLViewSet(ViewSet):
 
     def list(self, request: Request) -> Response:
         """
-        Returns {slug: signed_url} mapping for all active images.
+        Returns {slug: signed_url} mapping for requested images.
+        Supports query param 'ids' (comma-separated list of PKs).
         """
-        images = AstroImage.objects.all().only("slug")
+        queryset = AstroImage.objects.all().only("slug", "pk")
+
+        # Filter by IDs if provided
+        ids_param = request.query_params.get("ids")
+        if ids_param:
+            try:
+                ids = [int(x) for x in ids_param.split(",") if x.strip().isdigit()]
+                if ids:
+                    queryset = queryset.filter(pk__in=ids)
+            except ValueError:
+                pass  # Ignore invalid format. For now, ignore filter.
+
+        images = queryset
         url_mapping = {}
 
         for image in images:

@@ -447,11 +447,14 @@ class MainPageLocationAdmin(BaseTranslatableAdmin):
             "all": (
                 "core/css/select2_admin.css",
                 "core/css/admin_date_clean.css",
+                "core/css/admin_expandable.css",
             )
         }
+        js = ("core/js/admin_expandable_fields.js",)
 
     fields = (
         "highlight_name",
+        "highlight_title",
         "place",
         "adventure_date",
         "country_slug",

@@ -1,0 +1,15 @@
+/*
+ * styles for expandable inputs in Django Admin
+ * Target specific highlight fields
+ */
+
+.field-highlight_name input[type="text"],
+.field-highlight_title input[type="text"] {
+    /* Initial width handled by JS but set sane default */
+    width: 100px;
+    min-width: 100px;
+    transition: width 0.7s ease 0s;
+    -webkit-transition: width 0.7s ease 0s;
+    -moz-transition: width 0.7s ease 0s;
+    -o-transition: width 0.7s ease 0s;
+}
