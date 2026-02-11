@@ -11,7 +11,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils.text import slugify
 
-from .protocols import TranslationAgentProtocol
+from common.llm.protocols import TranslationAgentProtocol
 
 if TYPE_CHECKING:
     from .agents import TranslationAgent
@@ -31,8 +31,9 @@ class TranslationService:
             TranslationAgent: Configured translation agent instance
         """
         if cls.agent is None:
+            from common.llm.factory import get_llm_provider
+
             from .agents import TranslationAgent
-            from .factory import get_llm_provider
 
             provider = get_llm_provider()
             cls.agent = TranslationAgent(provider)

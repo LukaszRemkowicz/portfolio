@@ -16,22 +16,14 @@ class GPTProvider(LLMProvider):
 
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-    def ask_question(
+    def ask_question_with_usage(
         self,
         system_prompt: str,
         user_message: str,
         temperature: float = 0.0,
-    ) -> Optional[str]:
+    ) -> tuple[Optional[str], dict]:
         """
-        Ask GPT a question using OpenAI's chat completions API.
-
-        Args:
-            system_prompt: System-level instructions
-            user_message: User's actual content/question
-            temperature: Sampling temperature (0.0 = deterministic)
-
-        Returns:
-            GPT's response text, or None on failure
+        Ask GPT a question and return response + usage stats.
         """
         try:
             response = self.client.chat.completions.create(
@@ -44,8 +36,29 @@ class GPTProvider(LLMProvider):
                 top_p=1.0,
             )
             result = (response.choices[0].message.content or "").strip()
+            # Handle usage object safely
+            usage = {}
+            if response.usage:
+                # model_dump is standard pydantic v2, fallback to dict if needed
+                if hasattr(response.usage, "model_dump"):
+                    usage = response.usage.model_dump()
+                elif hasattr(response.usage, "to_dict"):
+                    usage = response.usage.to_dict()
+                else:
+                    usage = dict(response.usage)
+
             logger.debug(f"GPT response received (length: {len(result)})")
-            return result
+            return result, usage
         except Exception:
             logger.exception("GPT API call failed")
-            return None
+            return None, {}
+
+    def ask_question(
+        self,
+        system_prompt: str,
+        user_message: str,
+        temperature: float = 0.0,
+    ) -> Optional[str]:
+        """Wrapper for backward compatibility."""
+        content, _ = self.ask_question_with_usage(system_prompt, user_message, temperature)
+        return content

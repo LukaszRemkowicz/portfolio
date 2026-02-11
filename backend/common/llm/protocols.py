@@ -54,3 +54,17 @@ class LLMProvider(Protocol):
             LLM's response text, or None on failure
         """
         pass
+
+    def ask_question_with_usage(
+        self,
+        system_prompt: str,
+        user_message: str,
+        temperature: float = 0.0,
+    ) -> tuple[Optional[str], dict]:
+        """
+        Ask the LLM a question and return response + usage stats.
+
+        Returns:
+            Tuple of (response_text, usage_dict)
+        """
+        pass

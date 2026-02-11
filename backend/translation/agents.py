@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from bs4 import BeautifulSoup
 
-from .protocols import LLMProvider, TranslationAgentProtocol
+from common.llm.protocols import LLMProvider, TranslationAgentProtocol
 
 logger = logging.getLogger(__name__)
 

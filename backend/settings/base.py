@@ -5,6 +5,7 @@ from typing import Any, cast
 
 import environ
 import sentry_sdk
+from celery.schedules import crontab
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 
@@ -16,6 +17,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(DEBUG=(bool, False))
 # reading .env file
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
+
+# Project root (repository root where docker-compose.yml lives) for Docker Compose access
+PROJECT_ROOT = env.str("PROJECT_ROOT", default=str(BASE_DIR.parent))
+
 
 # Sentry Configuration
 SENTRY_DSN = env("SENTRY_DSN", default="")
@@ -156,6 +161,7 @@ INSTALLED_APPS = [
     "django_select2",
     "django_ckeditor_5",
     "translation.apps.TranslationConfig",
+    "monitoring.apps.MonitoringConfig",
     "core.apps.CoreConfig",
 ]
 
@@ -546,7 +552,37 @@ ADMIN_SITE_ORDERING = (
         "label": "Translations",
         "models": ("translation.TranslationTask",),
     },
+    {
+        "app": "monitoring",
+        "label": "Monitoring",
+        "models": ("monitoring.LogAnalysis",),
+    },
 )
+
+# ===========================
+# Celery Beat (Periodic Tasks)
+# ===========================
+
+
+CELERY_BEAT_SCHEDULE = {
+    "daily-log-analysis": {
+        "task": "monitoring.tasks.daily_log_analysis_task",
+        "schedule": crontab(hour=2, minute=0),  # 2:00 AM UTC daily
+        "options": {
+            "expires": 3600,  # Task expires after 1 hour
+        },
+    },
+    "weekly-log-cleanup": {
+        "task": "monitoring.tasks.cleanup_old_logs_task",
+        "schedule": crontab(hour=3, minute=0, day_of_week=0),  # 3:00 AM UTC every Sunday
+        "kwargs": {
+            "days_to_keep": 30,  # Keep last 30 days
+        },
+        "options": {
+            "expires": 1800,  # Task expires after 30 minutes
+        },
+    },
+}
 
 # ===========================
 # Celery Configuration
@@ -560,7 +596,16 @@ CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://redis:6379
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+
+# Task Routing
+# Route monitoring tasks to a specific queue so they can be picked up
+# ONLY by the host-based worker (which has access to docker CLI)
+CELERY_TASK_ROUTES = {
+    "monitoring.tasks.daily_log_analysis_task": {"queue": "monitoring"},
+    "monitoring.tasks.cleanup_old_logs_task": {"queue": "monitoring"},
+}
 
 # Task execution settings
 CELERY_TASK_TRACK_STARTED = True
