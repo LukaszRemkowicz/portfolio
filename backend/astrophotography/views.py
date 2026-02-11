@@ -204,7 +204,7 @@ class SecureMediaView(APIView):
         image = get_object_or_404(AstroImage, slug=slug)
         # Security check: Ensure the image actually has a file
         if not image.path:
-            logger.error(f"Image record found but file missing for slug: {slug}")
+            logger.error(f"Image record found but file missing for slug: {safe_slug}")
             raise Http404("Image file not found")
         # Construct the protected path for Nginx
         # Note: image.path.name usually looks like 'images/my_photo.jpg'
