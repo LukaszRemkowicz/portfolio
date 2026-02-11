@@ -15,7 +15,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.static import serve
 
-from core.views import SettingsView, api_404_view, health_check_view
+from core.views import SettingsView, api_404_view, health_check_view, root_view, v1_root_view
 
 admin.site.site_header = "Portfolio Administration"
 admin.site.site_title = "Portfolio Admin Portal"
@@ -23,6 +23,7 @@ admin.site.index_title = "Welcome to Portfolio Admin Portal"
 
 
 urlpatterns = [
+    path("v1/", v1_root_view, name="v1-root"),
     path("v1/", include("users.urls")),
     path("v1/", include("astrophotography.urls")),
     path("v1/", include("inbox.urls")),
@@ -32,12 +33,11 @@ urlpatterns = [
     path("select2/", include("django_select2.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),
     path("", include("translation.urls")),
+    path("admin/", admin.site.urls),
+    path("", root_view, name="root"),
 ]
 
 if settings.ADMIN_DOMAIN in settings.ALLOWED_HOSTS:
-    urlpatterns += [
-        path("", admin.site.urls),
-    ]
     urlpatterns += [
         path(
             f"{settings.MEDIA_URL.lstrip('/')}<path:path>",

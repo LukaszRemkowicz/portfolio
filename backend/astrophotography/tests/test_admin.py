@@ -11,12 +11,21 @@ from django.http import HttpResponse
 from django.test import Client, override_settings
 from django.urls import reverse
 
-from astrophotography.models import AstroImage, Camera, Lens, MainPageBackgroundImage, Place
+from astrophotography.admin import MainPageLocationAdmin
+from astrophotography.models import (
+    AstroImage,
+    Camera,
+    Lens,
+    MainPageBackgroundImage,
+    MainPageLocation,
+    Place,
+)
 from astrophotography.tests.factories import (
     AstroImageFactory,
     CameraFactory,
     LensFactory,
     MainPageBackgroundImageFactory,
+    MainPageLocationFactory,
     PlaceFactory,
 )
 
@@ -321,3 +330,105 @@ class TestAdminDebug:
         content: str = response.content.decode("utf-8")
 
         assert '<div class="parler-language-tabs">' in content
+
+
+@pytest.mark.django_db
+class TestMainPageLocationAdmin:
+    CHANGE_URL_NAME: str = "admin:astrophotography_mainpagelocation_change"
+
+    def test_admin_change_page_has_ui_enhancements(self, admin_client: Client) -> None:
+        """
+        Verify that the MainPageLocation change page includes the expandable CSS/JS
+        and date range widgets.
+        """
+        location: MainPageLocation = MainPageLocationFactory()
+        url: str = reverse(self.CHANGE_URL_NAME, args=[location.pk])
+
+        response: HttpResponse = admin_client.get(url)
+        assert response.status_code == 200
+
+        content: str = response.content.decode("utf-8")
+
+        # 1. Check for Expandable Inputs config
+        assert "core/css/admin_expandable.css" in content
+        assert "core/js/admin_expandable_fields.js" in content
+        assert 'id="id_highlight_name"' in content
+        assert 'id="id_highlight_title"' in content
+
+        # 2. Check for Date Range Widget (Themed)
+        assert "core/css/admin_date_clean.css" in content
+        assert 'name="adventure_date_0"' in content
+        assert 'name="adventure_date_1"' in content
+
+        # Verify placeholders ("example" text) and types are correctly rendered
+        assert 'placeholder="Start Date"' in content
+        assert 'placeholder="End Date"' in content
+        assert 'type="date"' in content
+        assert 'onclick="this.showPicker()"' in content
+
+        # 3. Verify Parler integration (tabs)
+        assert '<div class="parler-language-tabs">' in content
+
+    def test_adventure_date_uses_themed_range_widget(self, admin_user):
+        """
+        Verify that the adventure_date field in the MainPageLocationAdmin form
+        uses the ThemedRangeWidget correctly.
+        """
+        from django.contrib.admin.sites import site
+        from django.test import RequestFactory
+
+        from core.widgets import ThemedRangeWidget
+
+        factory = RequestFactory()
+        request = factory.get("/")
+        request.user = admin_user
+
+        admin = MainPageLocationAdmin(MainPageLocation, site)
+        form_class = admin.get_form(request)
+        form = form_class()
+
+        widget = form.fields["adventure_date"].widget
+        assert isinstance(
+            widget, ThemedRangeWidget
+        ), f"Expected ThemedRangeWidget, got {type(widget)}"
+
+        # Verify base_widget inside the range widget
+        base_w = widget.widgets[0]
+        assert base_w.input_type == "date"
+        assert base_w.attrs.get("onclick") == "this.showPicker()"
+
+    def test_save_model_triggers_translation_for_highlight_title(
+        self,
+        admin_client: Client,
+        mocker,
+        mock_translate_task,
+        mock_get_available_languages,
+    ):
+        """
+        Verify that saving a MainPageLocation with a highlight_title triggers the translation task.
+        """
+        place = PlaceFactory()
+        # Reset mock after Place creation to ignore translate_place calls
+        mock_translate_task.delay.reset_mock()
+
+        url = reverse("admin:astrophotography_mainpagelocation_add")
+        data = {
+            "place": place.pk,
+            "highlight_name": "Original Name",
+            "highlight_title": "Original Title",
+            "is_active": "on",
+            "_save": "Save",
+        }
+
+        # Global mock in conftest.py handles the return value for us now
+        response = admin_client.post(url, data)
+        assert response.status_code == 302
+
+        # Check if task was called with correct parameters
+        assert mock_translate_task.delay.called
+        # Find the call for 'pl'
+        pl_call = next(
+            c for c in mock_translate_task.delay.call_args_list if c.kwargs["language_code"] == "pl"
+        )
+        assert pl_call.kwargs["method_name"] == "translate_main_page_location"
+        assert pl_call.kwargs["model_name"] == "astrophotography.MainPageLocation"

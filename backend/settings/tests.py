@@ -60,3 +60,4 @@ CELERY_RESULT_BACKEND = "cache+memory://"
 
 # Disable logging during tests
 LOGGING_CONFIG = None
+ENABLE_SENTRY = False

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio API v1 - Deep Space Connection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #02040a;
+            --accent-color: #5d5dff;
+            --text-color: #ffffff;
+            --secondary-text: #94a3b8;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Celestial background effect */
+        .stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #111827 0%, #02040a 100%);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 600px;
+            padding: 2.5rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+            background: linear-gradient(135deg, #fff 0%, #5d5dff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 600;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--secondary-text);
+            font-weight: 400;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        p {
+            line-height: 1.6;
+            color: var(--secondary-text);
+            margin: 1.5rem 0;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border-radius: 99px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #10b981;
+        }
+
+        .endpoints {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            text-align: left;
+        }
+
+        .endpoint-card {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .endpoint-card strong {
+            display: block;
+            color: var(--accent-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .footer {
+            margin-top: 2.5rem;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="stars"></div>
+    <div class="container">
+        <div class="logo">PORTFOLIO.</div>
+        <h1>API v1 Interface</h1>
+        <p>
+            Welcome to the heartbeat of the Portfolio engine. This API provides the high-fidelity
+            data that powers the celestial gallery, professional showcase, and secure contact vectors.
+        </p>
+
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            SYSTEMS OPERATIONAL
+        </div>
+
+        <div class="endpoints">
+            <div class="endpoint-card">
+                <strong>/v1/astroimages/</strong>
+                Captured celestial objects and metadata.
+            </div>
+            <div class="endpoint-card">
+                <strong>/v1/images/</strong>
+                Secure, signed media distribution.
+            </div>
+            <div class="endpoint-card">
+                <strong>/v1/travel-highlights/</strong>
+                Expedition journals and locations.
+            </div>
+            <div class="endpoint-card">
+                <strong>/v1/settings/</strong>
+                Global configuration and features.
+            </div>
+        </div>
+
+        <div class="footer">
+            &copy; 2026 Portfolio Engine &bull; Secure Data Transmission Enabled
+        </div>
+    </div>
+</body>
+
+</html>

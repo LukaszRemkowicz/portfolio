@@ -8,7 +8,7 @@ const mockImage: AstroImage = {
   pk: 1,
   slug: 'test-image',
   name: 'Test Image',
-  url: 'test.jpg',
+  thumbnail_url: 'test.jpg',
   description: 'A test nebula',
   capture_date: '2023-01-01',
   tags: ['nebula', 'space'],

@@ -6,9 +6,9 @@ from django.conf import settings
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.utils.translation import gettext_lazy as _
 
+from core.forms import RangeField
 from core.widgets import (
     CountrySelect2Widget,
-    RangeWidget,
     ThemedSelect2MultipleWidget,
     ThemedSelect2Widget,
 )
@@ -27,29 +27,6 @@ class PlaceAdminForm(TranslatableModelForm):
     class Meta:
         model = Place
         fields = "__all__"
-
-
-class RangeField(forms.MultiValueField):
-    """
-    A MultiValueField that uses RangeWidget to manage [min, max] pairs.
-    """
-
-    def __init__(self, field_class, placeholder_min="", placeholder_max="", *args, **kwargs):
-        self.widget = RangeWidget(placeholder_min=placeholder_min, placeholder_max=placeholder_max)
-        fields = (
-            field_class(),
-            field_class(),
-        )
-        super().__init__(fields, *args, **kwargs)
-
-    def compress(self, data_list):
-        if data_list:
-            # Sort to ensure [min, max] if applicable
-            try:
-                return sorted(filter(lambda x: x is not None, data_list))
-            except TypeError:
-                return list(data_list)
-        return list()
 
 
 class AstroImageForm(TranslatableModelForm):

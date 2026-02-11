@@ -24,8 +24,8 @@ class Project(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Project"
-        verbose_name_plural = "Projects"
+        verbose_name = _("Project")
+        verbose_name_plural = _("Projects")
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
@@ -60,8 +60,8 @@ class ProjectImage(AutomatedTranslationModelMixin, BaseImage):
     objects = TranslatableManager()
 
     class Meta:
-        verbose_name = "Project Image"
-        verbose_name_plural = "Project Images"
+        verbose_name = _("Project Image")
+        verbose_name_plural = _("Project Images")
 
     def clean(self):
         """Enforce that the name is required for the default language."""

@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const images = location.images.map(img => img.thumbnail_url || img.url);
+  const images = location.images.map(img => img.thumbnail_url || '');
 
   useEffect(() => {
     if (images.length <= 1) return;

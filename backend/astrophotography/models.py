@@ -341,7 +341,7 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
 
     # Translation trigger fields
     translation_service_method = "translate_main_page_location"
-    translation_trigger_fields = ["highlight_name", "story"]
+    translation_trigger_fields = ["highlight_name", "highlight_title", "story"]
     place = models.ForeignKey(
         Place,
         on_delete=models.SET_NULL,
@@ -414,6 +414,13 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
             null=True,
             blank=True,
         ),
+        highlight_title=models.CharField(
+            max_length=255,
+            verbose_name=_("Highlight Title"),
+            help_text=_("Custom title for the highlights page."),
+            null=True,
+            blank=True,
+        ),
         story=CKEditor5Field(
             verbose_name=_("Story/Blog Text"),
             help_text=_("Optional story or blog text to display above the images."),
@@ -467,11 +474,10 @@ class MeteorsMainPageConfig(SingletonModel):
         default=60,
         verbose_name=_("Bolid Minimum Interval"),
         help_text=_(
-            "The minimum wait time (in seconds) between two bolid spawns to prevent cluster "
-            "sightings. Duration ranges (in seconds) on screen depends on path distance. "
-            "Speed = PathDistance / Duration. "
-            "- Smaller duration + Larger distance = High speed. "
-            "- Larger duration + Smaller distance = Low speed."
+            "Minimum wait time (in seconds) between consecutive bolid sightings to prevent "
+            "clusters. "
+            "Note: Bolid speed is calculated as Path Distance / Duration. "
+            "(Smaller duration + Larger distance = High speed)."
         ),
     )
     star_path_range = models.JSONField(
@@ -551,3 +557,6 @@ class MeteorsMainPageConfig(SingletonModel):
     class Meta:
         verbose_name = _("Meteors Main Page Configuration")
         verbose_name_plural = _("Meteors Main Page Configuration")
+
+    def __str__(self) -> str:
+        return str(_("Meteors Configuration"))
