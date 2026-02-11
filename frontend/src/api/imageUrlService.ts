@@ -2,8 +2,14 @@
 import { API_BASE_URL } from './routes';
 import { API_V1 } from './constants';
 
-export async function fetchImageUrls(): Promise<Record<string, string>> {
-  const response = await fetch(`${API_BASE_URL}${API_V1}/images/`);
+export async function fetchImageUrls(
+  ids?: number[]
+): Promise<Record<string, string>> {
+  let url = `${API_BASE_URL}${API_V1}/images/`;
+  if (ids && ids.length > 0) {
+    url += `?ids=${ids.join(',')}`;
+  }
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error('Failed to fetch image URLs');
   }

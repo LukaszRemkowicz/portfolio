@@ -1,5 +1,11 @@
 import { act } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import TravelHighlightsPage from '../components/TravelHighlightsPage';
 import { api } from '../api/api';
@@ -15,7 +21,24 @@ jest.mock('../api/services', () => ({
   fetchProfile: jest.fn(),
   fetchBackground: jest.fn(),
   fetchSettings: jest.fn(),
+  fetchAstroImageDetail: jest.fn(() => Promise.resolve({})),
 }));
+
+jest.mock('../api/imageUrlService', () => ({
+  fetchImageUrls: jest.fn((_ids?: number[]) => Promise.resolve({})),
+}));
+
+jest.mock('../api/routes', () => ({
+  API_ROUTES: {
+    travelBySlug: '/api/v1/travel/',
+  },
+  ASSETS: {
+    galleryFallback: '/test-fallback.jpg',
+  },
+  getMediaUrl: (path: string) => path, // Return path as-is for tests
+}));
+
+import * as imageUrlService from '../api/imageUrlService';
 
 describe('TravelHighlightsPage', () => {
   beforeEach(() => {
@@ -151,12 +174,13 @@ describe('TravelHighlightsPage', () => {
     consoleSpy.mockRestore();
   });
 
-  test('opens modal on image click', async () => {
+  test('opens modal on image click via URL parameter', async () => {
     const mockData = {
       country: 'Iceland',
       images: [
         {
           pk: 1,
+          slug: 'click-me',
           name: 'Click Me',
           url: '/click.jpg',
         },
@@ -187,12 +211,71 @@ describe('TravelHighlightsPage', () => {
       fireEvent.click(image);
     });
 
-    // Look for modal using the testid we added
+    // Modal should open (URL routing is handled by React Router in MemoryRouter)
     const modal = await screen.findByTestId(
       'image-modal',
       {},
       { timeout: 3000 }
     );
     expect(modal).toBeInTheDocument();
+  });
+  test('fetches and uses full-resolution image URLs', async () => {
+    const mockData = {
+      place: { name: 'Reykjavik', country: 'Iceland' },
+      images: [
+        {
+          pk: 1,
+          slug: 'aurora-borealis',
+          name: 'Aurora',
+          thumbnail_url: '/thumbs/aurora.jpg',
+          // Backend no longer sends 'url' directly for full-res
+        },
+      ],
+    };
+
+    const mockImageUrls = {
+      'aurora-borealis': 'https://cdn.example.com/full/aurora.jpg?s=signature',
+    };
+
+    mockedApi.get.mockResolvedValue({ data: mockData });
+    (imageUrlService.fetchImageUrls as jest.Mock).mockResolvedValue(
+      mockImageUrls
+    );
+
+    await renderComponent();
+
+    // 1. Verify thumbnail is rendered initially
+    const image = await screen.findByAltText('Aurora');
+    expect(image).toHaveAttribute(
+      'src',
+      expect.stringContaining('/thumbs/aurora.jpg')
+    );
+
+    // 2. Verify fetchImageUrls was called
+    expect(imageUrlService.fetchImageUrls).toHaveBeenCalledWith([1]);
+
+    // 3. Open modal and check for FULL RES url
+    await act(async () => {
+      fireEvent.click(image);
+    });
+
+    // Wait for the full resolution URL to appear
+    await waitFor(async () => {
+      // Scope to modal to avoid confusion with thumbnail
+      const modal = screen.getByTestId('image-modal');
+      // Use querySelector for direct element access if role fails, or within(modal)
+      // But verify modal exists first
+      expect(modal).toBeInTheDocument();
+
+      const modalImages = within(modal).getAllByRole('img');
+      // The modal usually has 1 image, maybe 2 if fullRes overlay is open?
+      // fullRes overlay is not open yet (isFullRes=false).
+      const modalImage = modalImages[0];
+
+      expect(modalImage).toHaveAttribute(
+        'src',
+        'https://cdn.example.com/full/aurora.jpg?s=signature'
+      );
+    });
   });
 });

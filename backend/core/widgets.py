@@ -127,7 +127,17 @@ class RangeWidget(forms.MultiWidget):
 
     def __init__(self, attrs=None, base_widget=None, placeholder_min="", placeholder_max=""):
         if base_widget:
-            widgets = [base_widget, base_widget]
+            import copy
+
+            w1 = copy.deepcopy(base_widget)
+            w2 = copy.deepcopy(base_widget)
+
+            if placeholder_min:
+                w1.attrs["placeholder"] = placeholder_min
+            if placeholder_max:
+                w2.attrs["placeholder"] = placeholder_max
+
+            widgets = [w1, w2]
         else:
             widgets = [
                 forms.NumberInput(attrs={"placeholder": placeholder_min}),
@@ -139,3 +149,13 @@ class RangeWidget(forms.MultiWidget):
         if value and isinstance(value, (list, tuple)) and len(value) == 2:
             return value
         return [None, None]
+
+
+class ThemedRangeWidget(RangeWidget):
+    """
+    A RangeWidget that automatically includes project-wide dark mode styling.
+    """
+
+    @property
+    def media(self):
+        return super().media + forms.Media(css={"all": ("core/css/admin_date_clean.css",)})
