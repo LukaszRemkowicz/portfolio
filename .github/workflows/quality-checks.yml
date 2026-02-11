@@ -206,6 +206,7 @@ jobs:
         run: poetry install --no-root --no-interaction
 
       - name: Run Pre-commit hooks
+        working-directory: ./backend
         run: poetry run pre-commit run --all-files
 
       - name: Run tests
