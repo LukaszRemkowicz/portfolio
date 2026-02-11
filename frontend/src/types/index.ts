@@ -47,7 +47,6 @@ export interface Place {
 export interface AstroImage {
   pk: number;
   slug: string;
-  url: string;
   thumbnail_url?: string;
   tags?: string[];
   name: string;

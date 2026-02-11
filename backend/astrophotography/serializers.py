@@ -6,11 +6,9 @@ from rest_framework import serializers
 from rest_framework.serializers import ImageField
 
 from django.conf import settings
-from django.urls import reverse
 from django.utils import translation
 
 from common.serializers import TranslatedSerializerMixin
-from common.utils.signing import generate_signed_url_params
 from translation.services import TranslationService
 
 from .models import (
@@ -67,24 +65,15 @@ class PlaceSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
 
 class AstroImageBaseSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
     """
-    Base serializer for AstroImage, containing shared logic for URLs, tags, and translations.
+    Base serializer for AstroImage, containing shared logic for tags and translations.
+
+    Note: URL field removed as part of URL separation architecture.
+    URLs are now served separately via /v1/images/ endpoint to allow caching.
     """
 
-    url = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
     process = serializers.BooleanField(source="zoom")
     place = PlaceSerializer(read_only=True)
-
-    def get_url(self, obj: AstroImage) -> str:
-        request = self.context.get("request")
-        if request is None:
-            return ""
-
-        url_path = reverse("astroimages:secure-image-serve", kwargs={"slug": obj.slug})
-        params = generate_signed_url_params(
-            obj.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
-        )
-        return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
 
     def get_tags(self, obj: AstroImage) -> list[str]:
         # Reuse TagSerializer's logic via mixin or direct service call with safe lang
@@ -109,7 +98,6 @@ class AstroImageBaseSerializer(TranslatedSerializerMixin, TranslatableModelSeria
             "pk",
             "slug",
             "name",
-            "url",
             "tags",
             "place",
             "capture_date",
@@ -164,13 +152,11 @@ class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
         fields = ["url"]
 
 
-class AstroImageThumbnailSerializer(serializers.ModelSerializer):
-    url = serializers.ImageField(source="path")
+class AstroImageThumbnailSerializer(AstroImageBaseSerializer):
     thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
 
-    class Meta:
-        model = AstroImage
-        fields = ["pk", "slug", "url", "thumbnail_url", "description"]
+    class Meta(AstroImageBaseSerializer.Meta):
+        fields = ["pk", "slug", "thumbnail_url", "description"]
 
 
 class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):

@@ -6,7 +6,7 @@ export { API_BASE_URL };
 export const API_ROUTES: ApiRoutes = {
   profile: `${API_V1}/profile/`,
   background: `${API_V1}/background/`,
-  astroImages: `${API_V1}/image/`,
+  astroImages: `${API_V1}/astroimages/`,
   contact: `${API_V1}/contact/`,
   settings: `${API_V1}/settings/`,
   projects: `${API_V1}/projects/`,

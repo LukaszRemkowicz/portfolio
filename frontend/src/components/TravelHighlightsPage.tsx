@@ -82,7 +82,6 @@ const TravelHighlightsPage: React.FC = () => {
         const imagesArray = Array.isArray(data.images) ? data.images : [];
         const processedImages = imagesArray.map((image: AstroImage) => ({
           ...image,
-          url: getMediaUrl(image.url) || '',
           thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
         }));
 
@@ -207,7 +206,7 @@ const TravelHighlightsPage: React.FC = () => {
                 <div className={styles.viewerFrame}>
                   <div className={styles.imageWrapper}>
                     <img
-                      src={image.url}
+                      src={image.thumbnail_url}
                       alt={image.name}
                       className={styles.viewerImage}
                       onClick={() => handleImageClick(image)}
