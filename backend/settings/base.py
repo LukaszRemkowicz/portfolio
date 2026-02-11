@@ -19,35 +19,23 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # Sentry Configuration
 SENTRY_DSN = env("SENTRY_DSN", default="")
-if SENTRY_DSN:
-    import sys
+ENABLE_SENTRY = env.bool("ENABLE_SENTRY", default=True)
 
-    # Skip Sentry during tests to avoid noise and unexpected behavior
-    IS_TESTING = (
-        "test" in sys.argv
-        or any("pytest" in arg for arg in sys.argv)
-        or os.environ.get("PYTEST_CURRENT_TEST")
-        or os.environ.get("TESTING")
-        or os.environ.get("DJANGO_SETTINGS_MODULE", "").endswith(".tests")
-        or "manage.py" in sys.argv
-        and "test" in sys.argv
+if SENTRY_DSN and ENABLE_SENTRY:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+        ],
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        # We recommend adjusting this value in production.
+        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
+        # If you wish to associate users to errors (recommended)
+        send_default_pii=True,
+        environment=env("ENVIRONMENT", default="development"),
     )
-
-    if not IS_TESTING:
-        sentry_sdk.init(
-            dsn=SENTRY_DSN,
-            integrations=[
-                DjangoIntegration(),
-                CeleryIntegration(),
-            ],
-            # Set traces_sample_rate to 1.0 to capture 100%
-            # of transactions for performance monitoring.
-            # We recommend adjusting this value in production.
-            traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
-            # If you wish to associate users to errors (recommended)
-            send_default_pii=True,
-            environment=env("ENVIRONMENT", default="development"),
-        )
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -499,7 +487,7 @@ if not DEBUG:
 ADMIN_SITE_ORDERING = (
     {
         "app": "astrophotography",
-        "label": "Astrophotography",
+        "label": _("Astrophotography"),
         "models": (
             "astrophotography.AstroImage",
             "astrophotography.MainPageLocation",
@@ -511,7 +499,7 @@ ADMIN_SITE_ORDERING = (
     },
     {
         "app": "astrophotography",
-        "label": "Equipment",
+        "label": _("Equipment"),
         "models": (
             "astrophotography.Camera",
             "astrophotography.Lens",
@@ -522,28 +510,28 @@ ADMIN_SITE_ORDERING = (
     },
     {
         "app": "inbox",
-        "label": "Inbox",
+        "label": _("Inbox"),
         "models": ("inbox.ContactMessage",),
     },
     {
         "app": "users",
-        "label": "Users & Access",
+        "label": _("Users & Access"),
         "models": ("users.User", "users.Profile", "auth.Group"),
     },
-    {"app": "axes", "label": "Security Logs"},
+    {"app": "axes", "label": _("Security Logs")},
     {
         "app": "programming",
-        "label": "Programming",
+        "label": _("Programming"),
         "models": ("programming.Project", "programming.ProjectImage"),
     },
     {
         "app": "core",
-        "label": "Core Settings",
+        "label": _("Core Settings"),
         "models": ("core.LandingPageSettings",),
     },
     {
         "app": "translation",
-        "label": "Translations",
+        "label": _("Translations"),
         "models": ("translation.TranslationTask",),
     },
 )

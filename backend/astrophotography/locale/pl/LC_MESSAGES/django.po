@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-31 23:06+0000\n"
+"POT-Creation-Date: 2026-02-11 15:31+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,481 +20,550 @@ msgstr ""
 "(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
 "n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
 
-#: astrophotography/admin.py:94
-msgid "Media"
-msgstr ""
+#: astrophotography/admin.py:77 astrophotography/admin.py:127
+#: astrophotography/admin.py:180 astrophotography/admin.py:339
+#: astrophotography/models.py:32 astrophotography/models.py:78
+#: astrophotography/models.py:209 astrophotography/models.py:305
+msgid "Name"
+msgstr "Nazwa"
 
-#: astrophotography/admin.py:100 astrophotography/models.py:66
-#: astrophotography/models.py:207
+#: astrophotography/admin.py:209
+msgid "Media"
+msgstr "Media"
+
+#: astrophotography/admin.py:215 astrophotography/models.py:91
+#: astrophotography/models.py:246
 msgid "Tags"
 msgstr "Tagi"
 
-#: astrophotography/admin.py:106
+#: astrophotography/admin.py:221
 msgid "Where image was taken?"
-msgstr ""
+msgstr "Gdzie wykonano zdjęcie?"
 
-#: astrophotography/admin.py:113
+#: astrophotography/admin.py:228
 msgid "Equipment"
 msgstr "Sprzęt"
 
-#: astrophotography/admin.py:120
+#: astrophotography/admin.py:235 astrophotography/admin.py:276
 msgid "Technical Details"
-msgstr ""
+msgstr "Informacje techniczne"
 
-#: astrophotography/admin.py:127 astrophotography/admin.py:413
+#: astrophotography/admin.py:242 astrophotography/admin.py:541
 msgid "Metadata"
-msgstr ""
+msgstr "Metadane"
 
-#: astrophotography/admin.py:177 astrophotography/models.py:266
+#: astrophotography/admin.py:349 astrophotography/models.py:402
 msgid "Images"
 msgstr "Zdjęcia"
 
-#: astrophotography/admin.py:179
+#: astrophotography/admin.py:351
 msgid ""
 "Select images to display in the slideshow for this location (filtered by "
-"country and place)."
+"place)."
 msgstr ""
-"Wybierz zdjęcia do wyświetlenia w pokazie slajdów dla tej lokalizacji "
-"(filtrowane po kraju i miejscu)."
+"Wybierz zdjęcia do wyświetlenia w sliderze dla tej lokalizacji (filtrowane "
+"po miejscu)."
 
-#: astrophotography/admin.py:238
-msgid "No matching items found for this country and place."
-msgstr "Nie znaleziono pasujących elementów dla tego kraju i miejsca."
+#: astrophotography/admin.py:382
+msgid "No matching items found for this place."
+msgstr "Nie znaleziono pasujących elementów dla tego miejsca."
 
-#: astrophotography/admin.py:241
-msgid ""
-"Please add images with these location details in the 'Astrophotography "
-"Images' section first."
-msgstr ""
-"Proszę najpierw dodać zdjęcia z tymi szczegółami lokalizacji w sekcji "
-"'Zdjęcia Astrofotograficzne'."
-
-#: astrophotography/admin.py:254
-msgid "Save the slider first to select images for this country."
-msgstr "Najpierw zapisz slider, aby wybrać zdjęcia dla tego kraju."
-
-#: astrophotography/admin.py:265 astrophotography/forms.py:59
+#: astrophotography/admin.py:397 astrophotography/forms.py:71
 msgid "Select or type place..."
 msgstr "Wybierz lub wpisz miejsce..."
 
-#: astrophotography/admin.py:271
-#, fuzzy
-#| msgid "The large background image file."
+#: astrophotography/admin.py:403
 msgid "Select background image..."
-msgstr "Duży plik zdjęcia tła."
+msgstr "Wybierz zdjęcie tła..."
 
-#: astrophotography/admin.py:299
-#, python-format
-msgid ""
-"Image '%(image)s' (%(location)s) does not match the slider's country "
-"(%(country)s)."
-msgstr ""
-"Zdjęcie '%(image)s' (%(location)s) nie pasuje do kraju slidera (%(country)s)."
+#: astrophotography/admin.py:409
+msgid "Start Date"
+msgstr "Data początkowa"
 
-#: astrophotography/admin.py:374
+#: astrophotography/admin.py:410
+msgid "End Date"
+msgstr "Data końcowa"
+
+#: astrophotography/admin.py:502
 msgid "General Settings"
-msgstr ""
+msgstr "Ustawienia ogólne"
 
-#: astrophotography/admin.py:378
+#: astrophotography/admin.py:506
 msgid ""
 "Control the basic behavior of shooting stars and their special 'bolid' "
 "variants."
-msgstr ""
+msgstr "Kontroluj podstawowe zachowanie gwiazd oraz bolidów "
 
-#: astrophotography/admin.py:384
+#: astrophotography/admin.py:512
 msgid "Standard Star Appearance"
-msgstr ""
+msgstr "Wygląd standardowej gwiazdy"
 
-#: astrophotography/admin.py:393
+#: astrophotography/admin.py:521
 msgid "Define the visual properties of regular (non-bolid) shooting stars. "
-msgstr ""
+msgstr "Definiuj właściwości wizualne zwykłych (nie-bolidowych) gwiazd."
 
-#: astrophotography/admin.py:398
+#: astrophotography/admin.py:526
 msgid "Bolid (Fireball) Appearance"
-msgstr ""
+msgstr "Pojawienie się pyłu po bolidzie."
 
-#: astrophotography/admin.py:408
+#: astrophotography/admin.py:536
 msgid ""
 "Configure the more dramatic bolid effects, including their smoke trails."
-msgstr ""
+msgstr "Konfiguruj bardziej dramatyczne efekty bolidów, w tym ich śladów pyłu."
 
-#: astrophotography/admin.py:441
+#: astrophotography/admin.py:577
 #, python-format
 msgid "The %(name)s \"%(obj)s\" was changed successfully."
-msgstr ""
+msgstr "Zmieniono pomyślnie %(name)s \"%(obj)s\"."
 
-#: astrophotography/admin.py:452
+#: astrophotography/admin.py:593
 #, python-format
 msgid "The %(name)s \"%(obj)s\" was added successfully."
-msgstr ""
+msgstr "Dodano pomyślnie %(name)s \"%(obj)s\"."
 
-#: astrophotography/forms.py:65
-#, fuzzy
-#| msgid "The large background image file."
+#: astrophotography/apps.py:8
+msgid "Astrophotography"
+msgstr "Astrofotografia"
+
+#: astrophotography/constants.py:7
+msgid "Landscape"
+msgstr "Krajobraz"
+
+#: astrophotography/constants.py:8
+msgid "Deep Sky"
+msgstr "Głębokie Niebo"
+
+#: astrophotography/constants.py:9
+msgid "Startrails"
+msgstr "Startrails"
+
+#: astrophotography/constants.py:10
+msgid "Solar System"
+msgstr "Układ Słoneczny"
+
+#: astrophotography/constants.py:11
+msgid "Milky Way"
+msgstr "Droga Mleczna"
+
+#: astrophotography/constants.py:12
+msgid "Northern Lights"
+msgstr "Zorza Polarna"
+
+#: astrophotography/forms.py:24 astrophotography/models.py:37
+msgid "Country"
+msgstr "Kraj"
+
+#: astrophotography/forms.py:77
 msgid "Select telescope(s)..."
-msgstr "Duży plik zdjęcia tła."
+msgstr "Wybierz teleskop(y)..."
 
-#: astrophotography/forms.py:70
-#, fuzzy
-#| msgid "The large background image file."
+#: astrophotography/forms.py:82
 msgid "Select camera(s)..."
-msgstr "Duży plik zdjęcia tła."
+msgstr "Wybierz aparat(y)..."
 
-#: astrophotography/forms.py:75
-#, fuzzy
-#| msgid "The large background image file."
+#: astrophotography/forms.py:87
 msgid "Select lens(es)..."
-msgstr "Duży plik zdjęcia tła."
+msgstr "Wybierz obiektyw(y)..."
 
-#: astrophotography/forms.py:80
-#, fuzzy
-#| msgid "The large background image file."
+#: astrophotography/forms.py:92
 msgid "Select mount/tracker(s)..."
-msgstr "Duży plik zdjęcia tła."
+msgstr "Wybierz montaż/tracker(y)..."
 
-#: astrophotography/forms.py:85
-#, fuzzy
-#| msgid "The large background image file."
+#: astrophotography/forms.py:97
 msgid "Select tripod(s)..."
-msgstr "Duży plik zdjęcia tła."
+msgstr "Wybierz statyw(y)..."
 
-#: astrophotography/forms.py:111
+#: astrophotography/forms.py:123
 msgid "Cannot have both telescope and lens. Please choose one or the other."
 msgstr ""
+"Nie można wybrać jednocześnie teleskopu i obiektywu. Wybierz jeden z nich."
 
-#: astrophotography/forms.py:165 astrophotography/forms.py:177
-#: astrophotography/forms.py:189 astrophotography/forms.py:201
+#: astrophotography/forms.py:167 astrophotography/forms.py:179
+#: astrophotography/forms.py:191 astrophotography/forms.py:203
 msgid "min in pixels"
-msgstr ""
+msgstr "minimalna w pikselach"
 
-#: astrophotography/forms.py:166 astrophotography/forms.py:178
-#: astrophotography/forms.py:190 astrophotography/forms.py:202
+#: astrophotography/forms.py:168 astrophotography/forms.py:180
+#: astrophotography/forms.py:192 astrophotography/forms.py:204
 msgid "max in pixels"
-msgstr ""
+msgstr "maksymalna w pikselach"
 
-#: astrophotography/forms.py:167
+#: astrophotography/forms.py:169
 msgid "Star Path"
-msgstr ""
+msgstr "Ścieżka gwiazdy"
 
-#: astrophotography/forms.py:169 astrophotography/models.py:403
+#: astrophotography/forms.py:171 astrophotography/models.py:487
 msgid ""
 "A list of two integers [min, max] representing the travel distance of a "
 "regular star in pixels. Example: [50, 500]"
 msgstr ""
+"Lista dwóch liczb całkowitych [min, max] reprezentująca odległość wykonywaną "
+"przez zwykłą gwiazdę w pikselach. Przykład: [50, 500]"
 
-#: astrophotography/forms.py:179
+#: astrophotography/forms.py:181
 msgid "Bolid Path"
-msgstr ""
+msgstr "Ścieżka bolidu"
 
-#: astrophotography/forms.py:181 astrophotography/models.py:411
+#: astrophotography/forms.py:183 astrophotography/models.py:495
 msgid ""
 "A list of two integers [min, max] representing the travel distance of a "
 "bolid in pixels. Example: [50, 500]"
 msgstr ""
+"Lista dwóch liczb całkowitych [min, max] reprezentująca odległość wykonywaną "
+"przez bolid w pikselach. Przykład: [50, 500]"
 
-#: astrophotography/forms.py:191
-#, fuzzy
-#| msgid "Startrails"
+#: astrophotography/forms.py:193
 msgid "Star Streak"
-msgstr "Startrails"
+msgstr "Smuga gwiazdy"
 
-#: astrophotography/forms.py:193 astrophotography/models.py:419
+#: astrophotography/forms.py:195 astrophotography/models.py:503
 msgid ""
 "A list of two integers [min, max] representing the visual length (streak) of "
 "a regular star. Example: [100, 200]"
 msgstr ""
+"Lista dwóch liczb całkowitych [min, max] reprezentująca długość wykonywaną "
+"przez zwykłą gwiazdę w pikselach. Przykład: [100, 200]"
 
-#: astrophotography/forms.py:203
-#, fuzzy
-#| msgid "Startrails"
+#: astrophotography/forms.py:205
 msgid "Bolid Streak"
-msgstr "Startrails"
+msgstr "Smuga bolidu"
 
-#: astrophotography/forms.py:205 astrophotography/models.py:427
+#: astrophotography/forms.py:207 astrophotography/models.py:511
 msgid ""
 "A list of two integers [min, max] representing the visual length (streak) of "
 "a bolid. Example: [20, 100]"
 msgstr ""
+"Lista dwóch liczb całkowitych [min, max] reprezentująca długość wykonywaną "
+"przez bolid w pikselach. Przykład: [20, 100]"
 
-#: astrophotography/forms.py:213 astrophotography/forms.py:225
+#: astrophotography/forms.py:215 astrophotography/forms.py:227
 msgid "min (s)"
-msgstr ""
+msgstr "min. (s)"
 
-#: astrophotography/forms.py:214 astrophotography/forms.py:226
+#: astrophotography/forms.py:216 astrophotography/forms.py:228
 msgid "max (s)"
-msgstr ""
+msgstr "maks. (s)"
 
-#: astrophotography/forms.py:215
-#, fuzzy
-#| msgid "Startrails"
+#: astrophotography/forms.py:217
 msgid "Star Duration"
-msgstr "Startrails"
+msgstr "Czas trwania gwiazdy"
 
-#: astrophotography/forms.py:217 astrophotography/models.py:435
+#: astrophotography/forms.py:219 astrophotography/models.py:519
 msgid ""
 "A list of two floats [min, max] representing the duration (speed) of a "
 "regular star. Example: [0.4, 1.2]"
 msgstr ""
+"Lista dwóch liczb zmiennoprzecinkowych [min, max] reprezentująca czas "
+"wykonywany przez zwykłą gwiazdę w sekundach. Przykład: [0.4, 1.2]"
 
-#: astrophotography/forms.py:227
+#: astrophotography/forms.py:229
 msgid "Bolid Duration"
-msgstr ""
+msgstr "Czas trwania bolidu"
 
-#: astrophotography/forms.py:229 astrophotography/models.py:443
+#: astrophotography/forms.py:231 astrophotography/models.py:527
 msgid ""
 "A list of two floats [min, max] representing the duration (speed) of a "
 "bolid. Example: [0.4, 0.9]"
 msgstr ""
+"Lista dwóch liczb zmiennoprzecinkowych [min, max] reprezentująca czas "
+"wykonywany przez bolid w sekundach. Przykład: [0.4, 0.9]"
 
-#: astrophotography/forms.py:237 astrophotography/forms.py:249
-#: astrophotography/forms.py:261
+#: astrophotography/forms.py:239 astrophotography/forms.py:251
+#: astrophotography/forms.py:263
 msgid "min (0.0-1.0)"
-msgstr ""
+msgstr "min. (0.0-1.0)"
 
-#: astrophotography/forms.py:238 astrophotography/forms.py:250
-#: astrophotography/forms.py:262
+#: astrophotography/forms.py:240 astrophotography/forms.py:252
+#: astrophotography/forms.py:264
 msgid "max (0.0-1.0)"
-msgstr ""
+msgstr "maks. (0.0-1.0)"
 
-#: astrophotography/forms.py:239
+#: astrophotography/forms.py:241
 msgid "Star Opacity"
-msgstr ""
+msgstr "Przezroczystość gwiazdy"
 
-#: astrophotography/forms.py:241 astrophotography/models.py:451
+#: astrophotography/forms.py:243 astrophotography/models.py:535
 msgid ""
 "A list of two floats [min, max] between 0.0 and 1.0 for regular star "
 "brightness. Example: [0.4, 0.8]"
 msgstr ""
+"Lista dwóch liczb zmiennoprzecinkowych [min, max] między 0.0 a 1.0 dla "
+"jasności zwykłej gwiazdy. Przykład: [0.4, 0.8]"
 
-#: astrophotography/forms.py:251
+#: astrophotography/forms.py:253
 msgid "Bolid Opacity"
-msgstr ""
+msgstr "Przezroczystość bolidu"
 
-#: astrophotography/forms.py:253 astrophotography/models.py:459
+#: astrophotography/forms.py:255 astrophotography/models.py:543
 msgid ""
 "A list of two floats [min, max] between 0.0 and 1.0 for bolid brightness. "
 "Example: [0.7, 1.0]"
 msgstr ""
+"Lista dwóch liczb zmiennoprzecinkowych [min, max] między 0.0 a 1.0 dla "
+"jasności bolidu. Przykład: [0.7, 1.0]"
 
-#: astrophotography/forms.py:263
+#: astrophotography/forms.py:265
 msgid "Smoke Opacity"
-msgstr ""
+msgstr "Przezroczystość dymu"
 
-#: astrophotography/forms.py:265 astrophotography/models.py:467
+#: astrophotography/forms.py:267 astrophotography/models.py:551
 msgid ""
 "A list of two floats [min, max] between 0.0 and 1.0 for the smoke trail of a "
 "bolid. Example: [0.5, 0.8]"
 msgstr ""
+"Lista dwóch liczb zmiennoprzecinkowych [min, max] między 0.0 a 1.0 dla śladu "
+"dymu bolidu. Przykład: [0.5, 0.8]"
 
-#: astrophotography/models.py:54
-msgid "Landscape"
-msgstr "Krajobraz"
-
-#: astrophotography/models.py:55
-msgid "Deep Sky"
-msgstr "Głębokie Niebo"
-
-#: astrophotography/models.py:56
-msgid "Startrails"
-msgstr "Startrails"
-
-#: astrophotography/models.py:57
-msgid "Solar System"
-msgstr "Układ Słoneczny"
-
-#: astrophotography/models.py:58
-msgid "Milky Way"
-msgstr "Droga Mleczna"
-
-#: astrophotography/models.py:59
-msgid "Northern Lights"
-msgstr "Zorza Polarna"
-
-#: astrophotography/models.py:65
-msgid "Tag"
-msgstr "Tag"
-
-#: astrophotography/models.py:73
-msgid "Model"
-msgstr ""
-
-#: astrophotography/models.py:74
-msgid "The model identifiers or name of the equipment."
-msgstr ""
-
-#: astrophotography/models.py:89 astrophotography/models.py:354
-msgid "Name"
-msgstr "Nazwa"
-
-#: astrophotography/models.py:90
-msgid "The name of the specific place or city."
-msgstr "Nazwa konkretnego miejsca lub miasta."
-
-#: astrophotography/models.py:97
+#: astrophotography/models.py:40
 msgid "Place"
 msgstr "Miejsce"
 
-#: astrophotography/models.py:98
+#: astrophotography/models.py:41
 msgid "Places"
 msgstr "Miejsca"
 
-#: astrophotography/models.py:104 astrophotography/models.py:155
-msgid "Telescope"
-msgstr ""
+#: astrophotography/models.py:58
+msgid "Place Translation with this Language and Name already exists."
+msgstr "Tłumaczenie miejsca dla tego języka i nazwy już istnieje."
 
-#: astrophotography/models.py:105
-msgid "Telescopes"
-msgstr ""
+#: astrophotography/models.py:80 astrophotography/models.py:251
+msgid "Slug"
+msgstr "Slug"
 
-#: astrophotography/models.py:110 astrophotography/models.py:161
-msgid "Camera"
-msgstr ""
+#: astrophotography/models.py:90
+msgid "Tag"
+msgstr "Tag"
 
-#: astrophotography/models.py:111
-msgid "Cameras"
-msgstr ""
-
-#: astrophotography/models.py:116 astrophotography/models.py:179
-msgid "Lens"
-msgstr ""
+#: astrophotography/models.py:99 astrophotography/models.py:273
+#: astrophotography/models.py:328 astrophotography/models.py:366
+msgid "This field is required for the default language."
+msgstr "To pole jest wymagane dla języka domyślnego."
 
 #: astrophotography/models.py:117
+msgid "Model"
+msgstr "Model"
+
+#: astrophotography/models.py:118
+msgid "The model identifiers or name of the equipment."
+msgstr "Identyfikatory modelu lub nazwa sprzętu."
+
+#: astrophotography/models.py:130 astrophotography/models.py:185
+msgid "Camera"
+msgstr "Aparat/Kamera"
+
+#: astrophotography/models.py:131
+msgid "Cameras"
+msgstr "Aparaty/Kamery"
+
+#: astrophotography/models.py:136 astrophotography/models.py:203
+msgid "Lens"
+msgstr "Obiektyw"
+
+#: astrophotography/models.py:137
 msgid "Lenses"
-msgstr ""
+msgstr "Obiektywy"
 
-#: astrophotography/models.py:122
+#: astrophotography/models.py:142 astrophotography/models.py:179
+msgid "Telescope"
+msgstr "Teleskop"
+
+#: astrophotography/models.py:143
+msgid "Telescopes"
+msgstr "Teleskopy"
+
+#: astrophotography/models.py:148
 msgid "Tracker"
-msgstr ""
+msgstr "Tracker/Montaż"
 
-#: astrophotography/models.py:123
+#: astrophotography/models.py:149
 msgid "Trackers"
-msgstr ""
+msgstr "Trackery/Montaże"
 
-#: astrophotography/models.py:128 astrophotography/models.py:173
+#: astrophotography/models.py:154 astrophotography/models.py:197
 msgid "Tripod"
-msgstr ""
+msgstr "Statyw"
 
-#: astrophotography/models.py:129
+#: astrophotography/models.py:155
 msgid "Tripods"
-msgstr ""
+msgstr "Statywy"
 
-#: astrophotography/models.py:136
+#: astrophotography/models.py:166
 msgid "Capture Date"
 msgstr "Data wykonania"
 
-#: astrophotography/models.py:136
+#: astrophotography/models.py:166
 msgid "The date when the photo was taken."
 msgstr "Data wykonania zdjęcia."
 
-#: astrophotography/models.py:141 astrophotography/models.py:252
-msgid "Country"
-msgstr "Kraj"
-
-#: astrophotography/models.py:142
-msgid "The country where the photo was taken."
-msgstr "Kraj, w którym wykonano zdjęcie."
-
-#: astrophotography/models.py:149 astrophotography/models.py:259
+#: astrophotography/models.py:173 astrophotography/models.py:350
 msgid "Place/City"
 msgstr "Miejsce/Miasto"
 
-#: astrophotography/models.py:150
+#: astrophotography/models.py:174
 msgid "Specific city or region (e.g. Hawaii, Tenerife)."
 msgstr "Konkretne miasto lub region (np. Hawaje, Teneryfa)."
 
-#: astrophotography/models.py:156
-msgid "Telescope model and specifications"
-msgstr ""
-
-#: astrophotography/models.py:162
-msgid "Camera model and specifications"
-msgstr ""
-
-#: astrophotography/models.py:167
-msgid "Tracker/Mount"
-msgstr ""
-
-#: astrophotography/models.py:168
-msgid "Star tracker or mount model"
-msgstr ""
-
-#: astrophotography/models.py:174
-msgid "Tripod model"
-msgstr ""
-
 #: astrophotography/models.py:180
-msgid "Lens model and focal length"
-msgstr ""
+msgid "Telescope model and specifications"
+msgstr "Model i specyfikacja teleskopu"
 
-#: astrophotography/models.py:185
+#: astrophotography/models.py:186
+msgid "Camera model and specifications"
+msgstr "Model i specyfikacja aparatu/kamery"
+
+#: astrophotography/models.py:191
+msgid "Tracker/Mount"
+msgstr "Tracker/Montaż"
+
+#: astrophotography/models.py:192
+msgid "Star tracker or mount model"
+msgstr "Model trackeru/montażu"
+
+#: astrophotography/models.py:198
+msgid "Tripod model"
+msgstr "Model statywu"
+
+#: astrophotography/models.py:204
+msgid "Lens model and focal length"
+msgstr "Model i ogniskowa obiektywu"
+
+#: astrophotography/models.py:210
+msgid "A descriptive name for this image."
+msgstr "Opisowa nazwa tego zdjęcia."
+
+#: astrophotography/models.py:215 astrophotography/models.py:311
+msgid "Description"
+msgstr "Opis"
+
+#: astrophotography/models.py:216 astrophotography/models.py:312
+msgid "Optional detailed description of the image."
+msgstr "Domyślny szczegółowy opis zdjęcia."
+
+#: astrophotography/models.py:222
 msgid "Exposure Details"
 msgstr "Szczegóły ekspozycji"
 
-#: astrophotography/models.py:186
+#: astrophotography/models.py:223
 msgid "Technical details of the exposure (gain, sub-exposures, total time)."
 msgstr "Dane techniczne ekspozycji (gain, sub-ekspozycje, łączny czas)."
 
-#: astrophotography/models.py:191
+#: astrophotography/models.py:228
 msgid "Processing Details"
 msgstr "Szczegóły obróbki"
 
-#: astrophotography/models.py:192
+#: astrophotography/models.py:229
 msgid "Software and techniques used for post-processing."
 msgstr "Oprogramowanie i techniki użyte do obróbki."
 
-#: astrophotography/models.py:197
+#: astrophotography/models.py:234
 msgid "Celestial Object"
-msgstr "Obiekt niebieski"
+msgstr "Obiekt na niebie"
 
-#: astrophotography/models.py:198
+#: astrophotography/models.py:235
 msgid "The type of celestial object captured."
-msgstr "Typ uchwyconego obiektu."
+msgstr "Typ obiektu na niebie."
 
-#: astrophotography/models.py:203
+#: astrophotography/models.py:243
 msgid "Astrobin URL"
 msgstr "Link Astrobin"
 
-#: astrophotography/models.py:204
+#: astrophotography/models.py:244
 msgid "Link to this image on Astrobin (e.g., https://www.astrobin.com/XXXXX/)"
 msgstr "Link do zdjęcia na Astrobin (np. https://www.astrobin.com/XXXXX/)"
 
-#: astrophotography/models.py:207
-msgid "Relevant tags for the image."
-msgstr "Tagi powiązane ze zdjęciem."
-
-#: astrophotography/models.py:214
-msgid "Slug"
-msgstr ""
-
-#: astrophotography/models.py:215
+#: astrophotography/models.py:252
 msgid "SEO friendly URL slug."
-msgstr ""
+msgstr "Slug URL do SEO."
 
-#: astrophotography/models.py:219
+#: astrophotography/models.py:256
 msgid "Zoom"
 msgstr "Zoom"
 
-#: astrophotography/models.py:220
+#: astrophotography/models.py:257
 msgid "Allow users to zoom this image in detail mode."
 msgstr "Pozwól użytkownikom przybliżać to zdjęcie w trybie szczegółowym."
 
-#: astrophotography/models.py:243
+#: astrophotography/models.py:261
 msgid "Astrophotography Image"
 msgstr "Zdjęcie Astrofotograficzne"
 
-#: astrophotography/models.py:244
+#: astrophotography/models.py:262
 msgid "Astrophotography Images"
 msgstr "Zdjęcia Astrofotograficzne"
 
-#: astrophotography/models.py:252
-msgid "The country for this travel highlights slider."
-msgstr "Kraj dla tego slidera podróżniczego."
+#: astrophotography/models.py:298
+msgid "Image File"
+msgstr "Plik zdjęcia"
 
-#: astrophotography/models.py:260
+#: astrophotography/models.py:299
+msgid "The large background image file."
+msgstr "Dobrej jakości zdjęcie tła."
+
+#: astrophotography/models.py:306
+msgid "Identifier for the background image."
+msgstr "Identyfikator zdjęcia tła."
+
+#: astrophotography/models.py:318
+msgid "Main Page Background Image"
+msgstr "Tło Strony Głównej"
+
+#: astrophotography/models.py:319
+msgid "Main Page Background Images"
+msgstr "Zdjęcia tła Strony Głównej"
+
+#: astrophotography/models.py:351
 msgid "Specific city or region (e.g. Hawaii, Tenerife)"
 msgstr "Konkretne miasto lub region (np. Hawaje, Teneryfa)"
 
-#: astrophotography/models.py:268
+#: astrophotography/models.py:354
+msgid "Is Active"
+msgstr "Aktywny"
+
+#: astrophotography/models.py:354
+msgid "Toggle visibility on the homepage."
+msgstr "Włącz widoczność na stronie głównej."
+
+#: astrophotography/models.py:356
+msgid "Created At"
+msgstr "Utworzono"
+
+#: astrophotography/models.py:357 astrophotography/models.py:555
+msgid "Updated At"
+msgstr "Zaktualizowano"
+
+#: astrophotography/models.py:370
+msgid "Adventure Date Range"
+msgstr "Zakres dat wyprawy"
+
+#: astrophotography/models.py:371
+msgid "The date range of the expedition."
+msgstr "Zakres dat wyprawy/ekspedycji."
+
+#: astrophotography/models.py:378
+msgid "Country Slug"
+msgstr "Slug kraju"
+
+#: astrophotography/models.py:379
+msgid "Auto-generated slug for the country."
+msgstr "Automatycznie wygenerowany slug dla kraju."
+
+#: astrophotography/models.py:384
+msgid "Place Slug"
+msgstr "Slug miejsca"
+
+#: astrophotography/models.py:385
+msgid "Auto-generated slug for the place."
+msgstr "Automatycznie wygenerowany slug dla miejsca."
+
+#: astrophotography/models.py:395
+msgid "Background Image"
+msgstr "Zdjęcie Tła"
+
+#: astrophotography/models.py:396
+msgid "Optional specific background image for this location's page."
+msgstr "Opcjonalne specyficzne zdjęcie tła dla strony tej lokalizacji."
+
+#: astrophotography/models.py:404
 msgid ""
 "Select images to display in the slideshow for this location (filtered by "
 "country)."
@@ -502,189 +571,134 @@ msgstr ""
 "Wybierz zdjęcia do wyświetlenia w sliderze dla tej lokalizacji (filtrowane "
 "po kraju)."
 
-#: astrophotography/models.py:272
-msgid "Is Active"
-msgstr "Aktywny"
-
-#: astrophotography/models.py:272
-msgid "Toggle visibility on the homepage."
-msgstr "Włącz widoczność na stronie głównej."
-
-#: astrophotography/models.py:274
-msgid "Created At"
-msgstr "Utworzono"
-
-#: astrophotography/models.py:275 astrophotography/models.py:471
-msgid "Updated At"
-msgstr "Zaktualizowano"
-
-#: astrophotography/models.py:281
+#: astrophotography/models.py:412
 msgid "Highlight Name"
-msgstr ""
+msgstr "Nazwa podróży"
 
-#: astrophotography/models.py:282
+#: astrophotography/models.py:413
 msgid ""
 "Optional custom name for the travel highlight (overrides Country/Place)."
 msgstr ""
+"Opcjonalna własna nazwa dla wyróżnienia podróży (nadpisuje Kraj/Miejsce)."
 
-#: astrophotography/models.py:287
-msgid "Adventure Date Range"
-msgstr ""
+#: astrophotography/models.py:419
+msgid "Highlight Title"
+msgstr "Tytuł podróży"
 
-#: astrophotography/models.py:288
-msgid "The date range of the expedition."
-msgstr ""
+#: astrophotography/models.py:420
+msgid "Custom title for the highlights page."
+msgstr "Własny tytuł dla strony wyróżnień."
 
-#: astrophotography/models.py:293
-#, fuzzy
-#| msgid "Country"
-msgid "Country Slug"
-msgstr "Kraj"
-
-#: astrophotography/models.py:294
-msgid "Auto-generated slug for the country."
-msgstr ""
-
-#: astrophotography/models.py:300
-#, fuzzy
-#| msgid "Place"
-msgid "Place Slug"
-msgstr "Miejsce"
-
-#: astrophotography/models.py:301
-msgid "Auto-generated slug for the place."
-msgstr ""
-
-#: astrophotography/models.py:306
+#: astrophotography/models.py:425
 msgid "Story/Blog Text"
-msgstr ""
+msgstr "Tekst historii/bloga"
 
-#: astrophotography/models.py:307
+#: astrophotography/models.py:426
 msgid "Optional story or blog text to display above the images."
-msgstr ""
+msgstr "Opcjonalna historia lub tekst bloga do wyświetlenia nad zdjęciami."
 
-#: astrophotography/models.py:317
-msgid "Background Image"
-msgstr "Zdjęcie Tła"
-
-#: astrophotography/models.py:318
-msgid "Optional specific background image for this location's page."
-msgstr ""
-
-#: astrophotography/models.py:342
-#, fuzzy
-#| msgid "Main Page Location Slider"
+#: astrophotography/models.py:434
 msgid "Main Page Location"
-msgstr "Slider Lokalizacji na Stronie Głównej"
+msgstr "Lokalizacja na stronie głównej"
 
-#: astrophotography/models.py:343
-#, fuzzy
-#| msgid "Main Page Location Sliders"
+#: astrophotography/models.py:435
 msgid "Main Page Locations"
-msgstr "Slidery Lokalizacji na Stronie Głównej"
+msgstr "Lokalizacje na stronie głównej"
 
-#: astrophotography/models.py:355
-msgid "Identifier for the background image."
-msgstr "Identyfikator zdjęcia tła."
+#: astrophotography/models.py:443
+msgid "Active"
+msgstr "Aktywny"
 
-#: astrophotography/models.py:359
-msgid "Image File"
-msgstr "Plik zdjęcia"
+#: astrophotography/models.py:443
+msgid "Inactive"
+msgstr "Nieaktywny"
 
-#: astrophotography/models.py:360
-msgid "The large background image file."
-msgstr "Duży plik zdjęcia tła."
+#: astrophotography/models.py:444
+msgid "Unnamed Location"
+msgstr "Lokalizacja bez nazwy"
 
-#: astrophotography/models.py:364
-msgid "Main Page Background Image"
-msgstr "Zdjęcie Tła Strony Głównej"
-
-#: astrophotography/models.py:365
-msgid "Main Page Background Images"
-msgstr "Zdjęcia Tła Strony Głównej"
-
-#: astrophotography/models.py:374
+#: astrophotography/models.py:459
 msgid "Random Shooting Stars"
-msgstr ""
+msgstr "Losowe spadające gwiazdy"
 
-#: astrophotography/models.py:376
+#: astrophotography/models.py:461
 msgid ""
 "If enabled, shooting stars will have randomized flight angles (0-360°). If "
 "disabled, they will follow a fixed -45° diagonal path."
 msgstr ""
+"Jeśli włączona, spadające gwiazdy będą mieć losowe kąty lotu (0-360°). Jeśli "
+"wyłączona, będą one wykonywać stałą -45° diagonalna trasy."
 
-#: astrophotography/models.py:382
+#: astrophotography/models.py:467
 msgid "Bolid Chance"
-msgstr ""
+msgstr "Prawdopodobieństwo bolidu"
 
-#: astrophotography/models.py:384
-#, python-format
+#: astrophotography/models.py:469
+#, fuzzy, python-format
+#| msgid ""
+#| "The probability (0.0 to 1.0) of a regular shooting star being a 'bolid' "
+#| "(fireball). 0.1 means a 10% chance."
 msgid ""
 "The probability (0.0 to 1.0) of a regular shooting star being a 'bolid' "
 "(fireball). 0.1 means a 10% chance."
 msgstr ""
+"Prawdopodobieństwo (0.0 do 1.0) spadającego gwiazdy bycia 'bolidem' "
+"(fireball). 0.1 oznacza 10% szans."
 
-#: astrophotography/models.py:390
+#: astrophotography/models.py:475
 msgid "Bolid Minimum Interval"
-msgstr ""
+msgstr "Minimalny interval bolidu"
 
-#: astrophotography/models.py:392
+#: astrophotography/models.py:477
 msgid ""
-"The minimum wait time (in seconds) between two bolid spawns to prevent "
-"cluster sightings. Duration ranges (in seconds) on screen depends on path "
-"distance. Speed = PathDistance / Duration. - Smaller duration + Larger "
-"distance = High speed. - Larger duration + Smaller distance = Low speed."
+"Minimum wait time (in seconds) between consecutive bolid sightings to "
+"prevent clusters. Note: Bolid speed is calculated as Path Distance / "
+"Duration. (Smaller duration + Larger distance = High speed)."
 msgstr ""
+"Minimalny czas oczekiwania (w sekundach) między kolejnymi bolidami. Uwaga: "
+"Prędkość bolidu = Długość trasy / Czas trwania. (Krótszy czas + Dłuższa "
+"trasa = Wysoka prędkość)."
 
-#: astrophotography/models.py:401
+#: astrophotography/models.py:485
 msgid "Star Path Range (px)"
-msgstr ""
+msgstr "Długość trasy spadającej gwiazdy (px)"
 
-#: astrophotography/models.py:409
+#: astrophotography/models.py:493
 msgid "Bolid Path Range (px)"
-msgstr ""
+msgstr "Długość trasy bolidu (px)"
 
-#: astrophotography/models.py:417
+#: astrophotography/models.py:501
 msgid "Star Streak Range (px)"
-msgstr ""
+msgstr "Długość śladu spadającej gwiazdy (px)"
 
-#: astrophotography/models.py:425
+#: astrophotography/models.py:509
 msgid "Bolid Streak Range (px)"
-msgstr ""
+msgstr "Długość śladu bolidu (px)"
 
-#: astrophotography/models.py:433
+#: astrophotography/models.py:517
 msgid "Star Duration Range (s)"
-msgstr ""
+msgstr "Czas trwania spadającej gwiazdy (s)"
 
-#: astrophotography/models.py:441
+#: astrophotography/models.py:525
 msgid "Bolid Duration Range (s)"
-msgstr ""
+msgstr "Czas trwania bolidu (s)"
 
-#: astrophotography/models.py:449
+#: astrophotography/models.py:533
 msgid "Star Opacity Range"
-msgstr ""
+msgstr "Przezroczystość spadającej gwiazdy"
 
-#: astrophotography/models.py:457
+#: astrophotography/models.py:541
 msgid "Bolid Opacity Range"
-msgstr ""
+msgstr "Przezroczystość bolidu"
 
-#: astrophotography/models.py:465
+#: astrophotography/models.py:549
 msgid "Smoke Opacity Range"
-msgstr ""
+msgstr "Przezroczystość pyłu po bolidzie"
 
-#: astrophotography/models.py:477 astrophotography/models.py:478
-#, fuzzy
-#| msgid "Main Page Location Slider"
+#: astrophotography/models.py:558 astrophotography/models.py:559
 msgid "Meteors Main Page Configuration"
-msgstr "Slider Lokalizacji na Stronie Głównej"
+msgstr "Konfiguracja meteorów"
 
-#~ msgid "Thumbnail"
-#~ msgstr "Miniatura"
-
-#, fuzzy
-#~| msgid "Relevant tags for the image."
-#~ msgid "Equipment used for this image."
-#~ msgstr "Tagi powiązane ze zdjęciem."
-
-#~ msgid "Equipment used (telescope, camera, mount, filters, etc.)."
-#~ msgstr "Użyty sprzęt (teleskop, kamera, montaż, filtry itp.)."
+#: astrophotography/models.py:562
+msgid "Meteors Configuration"
+msgstr "Konfiguracja meteorów"

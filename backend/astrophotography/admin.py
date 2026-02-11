@@ -13,8 +13,8 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from core.widgets import (
-    RangeWidget,
     ReadOnlyMessageWidget,
+    ThemedRangeWidget,
     ThemedSelect2MultipleWidget,
     ThemedSelect2Widget,
 )
@@ -404,8 +404,10 @@ class MainPageLocationForm(TranslatableModelForm):
                     "data-allow-clear": "true",
                 },
             ),
-            "adventure_date": RangeWidget(
-                base_widget=forms.DateInput(attrs={"type": "date", "onclick": "this.showPicker()"})
+            "adventure_date": ThemedRangeWidget(
+                base_widget=forms.DateInput(attrs={"type": "date", "onclick": "this.showPicker()"}),
+                placeholder_min=_("Start Date"),
+                placeholder_max=_("End Date"),
             ),
         }
 

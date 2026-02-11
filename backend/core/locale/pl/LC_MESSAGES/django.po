@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-31 23:06+0000\n"
+"POT-Creation-Date: 2026-02-11 15:24+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,6 +19,10 @@ msgstr ""
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && "
 "(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
 "n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
+
+#: core/apps.py:8 settings/base.py:529
+msgid "Core Settings"
+msgstr "Ustawienia Główne"
 
 #: core/models.py:19
 msgid "ID"
@@ -40,68 +44,43 @@ msgstr "Plik zdjęcia"
 msgid "The actual image file to be displayed."
 msgstr "Faktyczny plik zdjęcia do wyświetlenia."
 
-#: core/models.py:29
-msgid "Name"
-msgstr "Nazwa"
-
-#: core/models.py:29
-msgid "A descriptive name for this image."
-msgstr "Opisowa nazwa tego zdjęcia."
-
 #: core/models.py:33
-msgid "Description"
-msgstr "Opis"
-
-#: core/models.py:34
-msgid "Optional detailed description of the image."
-msgstr "Opcjonalny szczegółowy opis zdjęcia."
-
-#: core/models.py:38
 msgid "Thumbnail"
-msgstr ""
+msgstr "Miniatura"
 
-#: core/models.py:83
+#: core/models.py:95
 #, python-format
 msgid "A singleton instance of %s already exists."
-msgstr ""
+msgstr "Instancja obiektu %s już istnieje."
 
-#: core/models.py:97
+#: core/models.py:109
 msgid "Contact Form Enabled"
 msgstr "Formularz Kontaktowy Włączony"
 
-#: core/models.py:99
+#: core/models.py:111
 msgid "Travel Highlights Enabled"
-msgstr ""
+msgstr "Wyświetlanie wybranych podróży włączone"
 
-#: core/models.py:102
+#: core/models.py:114
 msgid "Programming Section Enabled"
 msgstr "Sekcja Programowania Włączona"
 
-#: core/models.py:105
-#, fuzzy
-#| msgid "Programming Section Enabled"
+#: core/models.py:117
 msgid "Last Images Section Enabled"
-msgstr "Sekcja Programowania Włączona"
+msgstr "Sekcja ostatnich zdjęć włączona"
 
-#: core/models.py:112
+#: core/models.py:124
 msgid "Meteors Configuration"
-msgstr ""
+msgstr "Konfiguracja meteorów"
 
-#: core/models.py:113
+#: core/models.py:125
 msgid "Select the configuration to enable meteors. Leave empty to disable."
 msgstr ""
+"Wybierz konfigurację, aby włączyć meteory. Pozostaw puste, aby wyłączyć."
 
-#: core/models.py:117 core/models.py:118 core/models.py:121
+#: core/models.py:129 core/models.py:130 core/models.py:133
 msgid "Landing Page Settings"
 msgstr "Ustawienia Strony Lądowania"
-
-#: core/settings.py:207
-msgid "English"
-msgstr "Angielski"
-
-#: core/settings.py:208
-msgid "Polish"
-msgstr "Polski"
 
 #: core/widgets.py:18
 msgid "Select..."
@@ -111,41 +90,201 @@ msgstr "Wybierz..."
 msgid "Select images..."
 msgstr "Wybierz zdjęcia..."
 
-#: users/admin.py:22
+#: core/widgets.py:96
+#, fuzzy
+#| msgid "Select..."
+msgid "Select country..."
+msgstr "Wybierz..."
+
+#: inbox/apps.py:8 settings/base.py:513
+msgid "Inbox"
+msgstr "Skrzynka odbiorcza"
+
+#: inbox/models.py:20
+msgid "Contact Message"
+msgstr "Wiadomość kontaktowa"
+
+#: inbox/models.py:21
+msgid "Contact Messages"
+msgstr "Wiadomości kontaktowe"
+
+#: programming/apps.py:8 settings/base.py:524
+msgid "Programming"
+msgstr "Programowanie"
+
+#: programming/models.py:27
+msgid "Project"
+msgstr "Projekt"
+
+#: programming/models.py:28
+msgid "Projects"
+msgstr "Projekty"
+
+#: programming/models.py:48
+msgid "Name"
+msgstr "Nazwa"
+
+#: programming/models.py:49
+msgid "A descriptive name for this image."
+msgstr "Opisowa nazwa tego zdjęcia."
+
+#: programming/models.py:54
+msgid "Description"
+msgstr "Opis"
+
+#: programming/models.py:55
+msgid "Optional detailed description of the image."
+msgstr "Opcjonalny szczegółowy opis zdjęcia."
+
+#: programming/models.py:63
+msgid "Project Image"
+msgstr "Zdjęcie projektu"
+
+#: programming/models.py:64
+msgid "Project Images"
+msgstr "Zdjęcia projektów"
+
+#: programming/models.py:72
+msgid "This field is required for the default language."
+msgstr ""
+
+#: settings/base.py:251
+msgid "English"
+msgstr "Angielski"
+
+#: settings/base.py:252
+msgid "Polish"
+msgstr "Polski"
+
+#: settings/base.py:490
+msgid "Astrophotography"
+msgstr "Astrofotografia"
+
+#: settings/base.py:502
+msgid "Equipment"
+msgstr "Sprzęt"
+
+#: settings/base.py:518 users/apps.py:8
+msgid "Users & Access"
+msgstr "Użytkownicy i Dostęp"
+
+#: settings/base.py:521
+msgid "Security Logs"
+msgstr "Dzienniki bezpieczeństwa"
+
+#: settings/base.py:534
+msgid "Translations"
+msgstr "Tłumaczenia"
+
+#: translation/models.py:12
+msgid "Pending"
+msgstr "Oczekujące"
+
+#: translation/models.py:13
+msgid "Running"
+msgstr "W toku"
+
+#: translation/models.py:14
+msgid "Completed"
+msgstr "Zakończone"
+
+#: translation/models.py:15
+msgid "Failed"
+msgstr "Niepowodzenie"
+
+#: translation/models.py:17
+msgid "Celery Task ID"
+msgstr "ID taska Celery"
+
+#: translation/models.py:22
+msgid "Primary Key of the object (Int or UUID)"
+msgstr "UUID obiektu (Int lub UUID)"
+
+#: translation/models.py:26
+msgid "Target Language"
+msgstr "Język docelowy"
+
+#: translation/models.py:27
+msgid "Translation Method"
+msgstr "Metoda tłumaczenia"
+
+#: translation/models.py:33
+msgid "Task Status"
+msgstr "Status zadania"
+
+#: translation/models.py:35
+msgid "Error Message"
+msgstr "Komunikat błędu"
+
+#: translation/models.py:41
+msgid "Translation Task"
+msgstr "Zadanie tłumaczenia"
+
+#: translation/models.py:42
+msgid "Translation Tasks"
+msgstr "Zadania tłumaczeń"
+
+#: users/admin.py:45 users/admin.py:109
 msgid "Personal info"
-msgstr ""
+msgstr "Informacje osobiste"
 
-#: users/admin.py:37
+#: users/admin.py:60
 msgid "Permissions"
-msgstr ""
+msgstr "Uprawnienia"
 
-#: users/admin.py:49
+#: users/admin.py:73
 msgid "Important dates"
-msgstr ""
+msgstr "Ważne daty"
 
-#: users/models.py:41
+#: users/models.py:47
 msgid "email address"
-msgstr ""
+msgstr "adres e-mail"
 
-#: users/models.py:49
+#: users/models.py:63
 msgid ""
 "Hero section text. Split by the first period ('.'): the first segment will "
 "be large/bold, following text will be smaller."
-msgstr ""
+msgstr "Tekst sekcji hero. Podzielony kropką ('.'): pierwszy "
+"segment będzie pogrubiony, następny tekst będzie mniejszy."
 
-#: users/models.py:53
+#: users/models.py:67
 msgid "Bio"
-msgstr ""
+msgstr "Biografia"
 
-#: users/models.py:115
-msgid "Programming"
-msgstr ""
+#: users/models.py:76
+msgid "User"
+msgstr "Użytkownik"
 
-#: users/models.py:116
-msgid "Astrophotography"
-msgstr ""
+#: users/models.py:77
+msgid "Users"
+msgstr "Użytkownicy"
 
+#: users/models.py:111
 #, fuzzy
-#~| msgid "Contact Form Enabled"
+#| msgid "Programming Section Enabled"
+msgid "Programming Profile"
+msgstr "Sekcja Programowania Włączona"
+
+#: users/models.py:112
+#, fuzzy
+#| msgid "Astrophotography"
+msgid "Astrophotography Profile"
+msgstr "Profil Astrofotografii"
+
+#: users/models.py:137
+msgid "Profile"
+msgstr "Profil"
+
+#: users/models.py:138
+msgid "Profiles"
+msgstr "Profile"
+
+#: users/templates/admin/users/user/robust_change_form.html:15
+#: users/templates/admin/users/user/robust_change_form.html:25
+#, fuzzy
+#| msgid "Translations"
+msgid "Delete Translation"
+msgstr "Usuń tłumaczenie"
+
 #~ msgid "Meteors Enabled"
 #~ msgstr "Formularz Kontaktowy Włączony"

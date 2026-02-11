@@ -474,11 +474,10 @@ class MeteorsMainPageConfig(SingletonModel):
         default=60,
         verbose_name=_("Bolid Minimum Interval"),
         help_text=_(
-            "The minimum wait time (in seconds) between two bolid spawns to prevent cluster "
-            "sightings. Duration ranges (in seconds) on screen depends on path distance. "
-            "Speed = PathDistance / Duration. "
-            "- Smaller duration + Larger distance = High speed. "
-            "- Larger duration + Smaller distance = Low speed."
+            "Minimum wait time (in seconds) between consecutive bolid sightings to prevent "
+            "clusters. "
+            "Note: Bolid speed is calculated as Path Distance / Duration. "
+            "(Smaller duration + Larger distance = High speed)."
         ),
     )
     star_path_range = models.JSONField(
@@ -558,3 +557,6 @@ class MeteorsMainPageConfig(SingletonModel):
     class Meta:
         verbose_name = _("Meteors Main Page Configuration")
         verbose_name_plural = _("Meteors Main Page Configuration")
+
+    def __str__(self) -> str:
+        return str(_("Meteors Configuration"))

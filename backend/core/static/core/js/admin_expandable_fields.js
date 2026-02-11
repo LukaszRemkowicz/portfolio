@@ -51,16 +51,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     inputs.forEach(function (input) {
-        // Initialize
-        resizeInput(input);
+        // Initialize with a slight delay to ensure fonts/CSS are loaded
+        setTimeout(() => resizeInput(input), 100);
 
-        // Bind events
-        input.addEventListener('input', function () {
-            resizeInput(input);
+        // Bind events for live resizing
+        ['input', 'change', 'focus', 'blur'].forEach(evt => {
+            input.addEventListener(evt, function () {
+                resizeInput(input);
+            });
         });
 
-        // Optional: resize on focus just to be sure, or if we want a slight visual cue?
-        // User: "Expand should be for max text... If user starts to write, expand it more"
-        // So 'input' event is the key. 'focus' doesn't need to do anything special if empty.
+        // Also handle window resize for potential responsive changes
+        window.addEventListener('resize', () => resizeInput(input));
     });
 });
