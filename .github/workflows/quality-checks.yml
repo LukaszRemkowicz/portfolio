@@ -208,7 +208,7 @@ jobs:
       - name: Run Pre-commit hooks
         working-directory: ./backend
         env:
-          SKIP: prettier,eslint,frontend-tests
+          SKIP: prettier,eslint,frontend-tests,backend-tests
         run: poetry run pre-commit run --all-files
 
       - name: Run tests
