@@ -134,8 +134,8 @@ class Profile(AutomatedTranslationModelMixin, TranslatableModel):
     objects = TranslatableManager()
 
     class Meta:
-        verbose_name = "Profile"
-        verbose_name_plural = "Profiles"
+        verbose_name = _("Profile")
+        verbose_name_plural = _("Profiles")
         unique_together = ("user", "type")
 
     def save(self, *args, **kwargs):

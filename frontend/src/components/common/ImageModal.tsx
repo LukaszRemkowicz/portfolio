@@ -383,7 +383,9 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
 
         <div className={styles.imageWrapper}>
           <img
-            src={imageUrls[image.slug] || image.thumbnail_url || ''}
+            src={
+              imageUrls[image.slug] || image.url || image.thumbnail_url || ''
+            }
             alt={image.name}
             className={styles.modalImage}
             onClick={() => {
@@ -444,7 +446,12 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
                 <X size={32} />
               </button>
               <img
-                src={imageUrls[image.slug] || image.thumbnail_url || ''}
+                src={
+                  imageUrls[image.slug] ||
+                  image.url ||
+                  image.thumbnail_url ||
+                  ''
+                }
                 alt={image.name}
                 className={`${styles.fullResImage} ${
                   scale > 1.01 ? styles.isZoomed : ''

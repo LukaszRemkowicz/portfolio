@@ -48,7 +48,7 @@ interface AppState {
   // Actions
   loadInitialData: (force?: boolean) => Promise<void>;
   loadImages: (params?: FilterParams) => Promise<void>;
-  loadImageUrls: () => Promise<void>;
+  loadImageUrls: (ids?: number[]) => Promise<void>;
   loadImageDetail: (slug: string) => Promise<void>;
   clearActiveImage: () => void;
   loadProjects: () => Promise<void>;
@@ -145,10 +145,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  loadImageUrls: async () => {
+  loadImageUrls: async (ids?: number[]) => {
     try {
-      const urls = await fetchImageUrls();
-      set({ imageUrls: urls });
+      const urls = await fetchImageUrls(ids);
+      // Merge new URLs with existing ones
+      set(state => ({ imageUrls: { ...state.imageUrls, ...urls } }));
     } catch (e: unknown) {
       console.error('Failed to load image URLs:', e);
       // Don't set global error - images can still use thumbnails as fallback

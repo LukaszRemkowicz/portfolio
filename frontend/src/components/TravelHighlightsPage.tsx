@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import styles from '../styles/components/TravelHighlightsPage.module.css';
 import { API_ROUTES, getMediaUrl, ASSETS } from '../api/routes';
 import { AstroImage } from '../types';
@@ -11,6 +11,10 @@ import StarBackground from './StarBackground';
 import { useAppStore } from '../store/useStore';
 import { sanitizeHtml } from '../utils/html';
 
+interface ExtendedAstroImage extends AstroImage {
+  url?: string;
+}
+
 const TravelHighlightsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { countrySlug, placeSlug } = useParams<{
@@ -18,21 +22,24 @@ const TravelHighlightsPage: React.FC = () => {
     placeSlug?: string;
   }>();
 
-  const [images, setImages] = useState<AstroImage[]>([]);
+  const [images, setImages] = useState<ExtendedAstroImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [modalImage, setModalImage] = useState<AstroImage | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const imgParam = searchParams.get('img');
   const [country, setCountry] = useState<string>('');
   const [place, setPlace] = useState<string | null>(null);
   const [story, setStory] = useState<string | null>(null);
   const [adventureDate, setAdventureDate] = useState<string | null>(null);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [highlightName, setHighlightName] = useState<string | null>(null);
+  const [highlightTitle, setHighlightTitle] = useState<string | null>(null);
   const [locationBackgroundImage, setLocationBackgroundImage] = useState<
     string | null
   >(null);
 
-  const { backgroundUrl, loadInitialData } = useAppStore();
+  const { backgroundUrl, loadInitialData, loadImageUrls, imageUrls } =
+    useAppStore();
 
   useEffect(() => {
     loadInitialData();
@@ -76,16 +83,27 @@ const TravelHighlightsPage: React.FC = () => {
         setAdventureDate(data.adventure_date || null);
         setCreatedAt(data.created_at || null);
         setHighlightName(data.highlight_name || null);
+        setHighlightTitle(data.highlight_title || null);
         setLocationBackgroundImage(data.background_image || null);
 
         // Process images with defensive checks
         const imagesArray = Array.isArray(data.images) ? data.images : [];
-        const processedImages = imagesArray.map((image: AstroImage) => ({
-          ...image,
-          thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-        }));
+        const processedImages: ExtendedAstroImage[] = imagesArray.map(
+          (image: AstroImage) => ({
+            ...image,
+            thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+            url: undefined, // Initialize url clearly
+          })
+        );
 
         setImages(processedImages);
+
+        // Fetch full resolution URLs for all images
+        if (imagesArray.length > 0) {
+          const imageIds = imagesArray.map((img: AstroImage) => img.pk);
+          // Trigger store action to fetch URLs
+          loadImageUrls(imageIds);
+        }
       } catch (err) {
         console.error('Failed to load travel highlights:', err);
         setError(
@@ -96,10 +114,34 @@ const TravelHighlightsPage: React.FC = () => {
       }
     };
     loadData();
-  }, [countrySlug, placeSlug, i18n.language]);
+  }, [countrySlug, placeSlug, i18n.language, loadImageUrls]);
 
-  const handleImageClick = (image: AstroImage): void => {
-    setModalImage(image);
+  // Derive modal image from URL parameter
+  const modalImage = useMemo(() => {
+    if (!imgParam) return null;
+    const found = images.find(
+      i => i.slug === imgParam || i.pk.toString() === imgParam
+    );
+    if (!found) return null;
+
+    // Enhance with full-res URL if available
+    const fullResUrl = imageUrls[found.slug];
+    return {
+      ...found,
+      url: fullResUrl || found.url || found.thumbnail_url,
+    };
+  }, [imgParam, images, imageUrls]);
+
+  const handleImageClick = (image: ExtendedAstroImage): void => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('img', image.slug);
+    setSearchParams(nextParams);
+  };
+
+  const closeModal = (): void => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('img');
+    setSearchParams(nextParams);
   };
 
   if (loading) return <LoadingScreen />;
@@ -156,7 +198,7 @@ const TravelHighlightsPage: React.FC = () => {
       >
         <h1 className={styles.heroTitle}>{displayTitle}</h1>
         <p className={styles.heroSubtitle}>
-          {t('travel.exploringCosmic')} {displayTitle}
+          {highlightTitle || `${t('travel.exploringCosmic')} ${displayTitle}`}
         </p>
       </div>
 
@@ -238,7 +280,7 @@ const TravelHighlightsPage: React.FC = () => {
           </div>
         )}
       </div>
-      <ImageModal image={modalImage} onClose={() => setModalImage(null)} />
+      <ImageModal image={modalImage} onClose={closeModal} />
     </div>
   );
 };
