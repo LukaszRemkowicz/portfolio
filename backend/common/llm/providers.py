@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import Optional
 
 from django.conf import settings
@@ -6,6 +7,32 @@ from django.conf import settings
 from .protocols import LLMProvider
 
 logger = logging.getLogger(__name__)
+
+
+class MockLLMProvider(LLMProvider):
+    """Mock provider for testing purposes."""
+
+    def ask_question_with_usage(
+        self,
+        system_prompt: str,
+        user_message: str,
+        temperature: float = 0.0,
+    ) -> tuple[Optional[str], dict]:
+        """Mock LLM response for testing purposes."""
+        logger.info("Using mock LLM response for testing purposes.")
+        mock_path = Path(settings.BASE_DIR) / "monitoring/tests/llm_mock_response.json"
+        with open(mock_path, "r", encoding="utf-8") as f:
+            return f.read(), {}
+
+    def ask_question(
+        self,
+        system_prompt: str,
+        user_message: str,
+        temperature: float = 0.0,
+    ) -> Optional[str]:
+        """Wrapper for backward compatibility."""
+        content, _ = self.ask_question_with_usage(system_prompt, user_message, temperature)
+        return content
 
 
 class GPTProvider(LLMProvider):

@@ -1,7 +1,7 @@
 # backend/translation/factory.py
-from typing import cast
-
 from django.conf import settings
+
+from common.llm.providers import GPTProvider, MockLLMProvider
 
 from .protocols import LLMProvider
 
@@ -18,10 +18,12 @@ def get_llm_provider() -> LLMProvider:
     """
     backend = getattr(settings, "LLM_PROVIDER_BACKEND", "gpt")
 
-    if backend == "gpt":
-        from .providers import GPTProvider  # noqa: F811
+    if settings.DEBUG:
+        return MockLLMProvider()
 
-        return cast("GPTProvider", GPTProvider())  # type: ignore[redundant-cast]
+    if backend == "gpt":
+        return GPTProvider()
+
     # Future providers can be added here by extending this conditional
     # with additional backends and corresponding provider classes.
 

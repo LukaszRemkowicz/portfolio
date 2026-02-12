@@ -3,7 +3,7 @@ Services for managing translations and global state in the core application.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from parler.models import TranslatableModel
 
@@ -11,10 +11,10 @@ from django.conf import settings
 from django.db import transaction
 from django.utils.text import slugify
 
+from common.llm.factory import get_llm_provider
 from common.llm.protocols import TranslationAgentProtocol
 
-if TYPE_CHECKING:
-    from .agents import TranslationAgent
+from .agents import TranslationAgent
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +31,6 @@ class TranslationService:
             TranslationAgent: Configured translation agent instance
         """
         if cls.agent is None:
-            from common.llm.factory import get_llm_provider
-
-            from .agents import TranslationAgent
-
             provider = get_llm_provider()
             cls.agent = TranslationAgent(provider)
 

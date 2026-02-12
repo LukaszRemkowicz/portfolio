@@ -25,6 +25,7 @@ PROJECT_ROOT = env.str("PROJECT_ROOT", default=str(BASE_DIR.parent))
 # Sentry Configuration
 SENTRY_DSN = env("SENTRY_DSN", default="")
 ENABLE_SENTRY = env.bool("ENABLE_SENTRY", default=True)
+ENVIRONMENT = env("ENVIRONMENT", default="development")
 
 if SENTRY_DSN and ENABLE_SENTRY:
     sentry_sdk.init(
@@ -39,7 +40,7 @@ if SENTRY_DSN and ENABLE_SENTRY:
         traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
         # If you wish to associate users to errors (recommended)
         send_default_pii=True,
-        environment=env("ENVIRONMENT", default="development"),
+        environment=ENVIRONMENT,
     )
 
 # Quick-start development settings - unsuitable for production
@@ -562,7 +563,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     "weekly-log-cleanup": {
         "task": "monitoring.tasks.cleanup_old_logs_task",
-        "schedule": crontab(hour=3, minute=0, day_of_week=0),  # 3:00 AM UTC every Sunday
+        "schedule": crontab(hour=8, minute=0, day_of_week=0),  # 8:00 AM UTC every Sunday
         "kwargs": {
             "days_to_keep": 30,  # Keep last 30 days
         },

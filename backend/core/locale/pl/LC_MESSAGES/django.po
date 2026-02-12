@@ -288,3 +288,7 @@ msgstr "Usuń tłumaczenie"
 
 #~ msgid "Meteors Enabled"
 #~ msgstr "Formularz Kontaktowy Włączony"
+
+#: monitoring/apps.py:7 settings/base.py:545
+msgid "Monitoring"
+msgstr "Monitoring"

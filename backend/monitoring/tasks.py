@@ -3,7 +3,7 @@ from datetime import date
 
 from celery import shared_task
 
-from .services import LogCollectionService
+from .services import LogAnalysisEmailService, LogCollectionService
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,12 @@ logger = logging.getLogger(__name__)
 )
 def daily_log_analysis_task(self, analysis_date: str | None = None):
     """
-    Celery task for daily log analysis.
+    Orchestrator task for daily log analysis and email notification.
+
+    Flow:
+        1. Analyze logs and store results (synchronous)
+        2. Generate and send email (asynchronous via LogAnalysisEmailService)
+        3. Update email_sent flag
 
     Args:
         analysis_date: ISO date string (YYYY-MM-DD), defaults to today
@@ -27,9 +32,19 @@ def daily_log_analysis_task(self, analysis_date: str | None = None):
         else:
             date_obj = date.today()
 
-        logger.info(f"Starting daily log analysis for {date_obj}")
+        logger.info("Starting daily log analysis for %s", date_obj)
 
+        # Step 1: Analyze and store
         log_analysis = LogCollectionService.analyze_and_store(date_obj)
+
+        # Step 2: Generate and send email (delegates to EmailService)
+        LogAnalysisEmailService.generate_and_send(log_analysis.id)
+
+        # Step 3: Mark as sent (optimistic)
+        log_analysis.email_sent = True
+        log_analysis.save(update_fields=["email_sent"])
+
+        logger.info("Log analysis complete: %s", log_analysis.id)
 
         return {
             "status": "success",
@@ -39,7 +54,7 @@ def daily_log_analysis_task(self, analysis_date: str | None = None):
         }
 
     except Exception as exc:
-        logger.exception(f"Daily log analysis failed: {exc}")
+        logger.exception("Daily log analysis failed: %s", exc)
         raise self.retry(exc=exc)
 
 
@@ -55,7 +70,7 @@ def cleanup_old_logs_task(self, days_to_keep: int = 30):
         days_to_keep: Number of days to retain (default: 30)
     """
     try:
-        logger.info(f"Starting log cleanup (keeping last {days_to_keep} days)")
+        logger.info("Starting log cleanup (keeping last %d days)", days_to_keep)
 
         deleted_count = LogCollectionService.cleanup_old_logs(days_to_keep)
 
@@ -66,5 +81,5 @@ def cleanup_old_logs_task(self, days_to_keep: int = 30):
         }
 
     except Exception as exc:
-        logger.exception(f"Log cleanup failed: {exc}")
+        logger.exception("Log cleanup failed: %s", exc)
         raise self.retry(exc=exc)
