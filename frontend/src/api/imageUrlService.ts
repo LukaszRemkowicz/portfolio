@@ -3,7 +3,7 @@ import { API_BASE_URL } from './routes';
 import { API_V1 } from './constants';
 
 export async function fetchImageUrls(
-  ids?: number[]
+  ids?: string[]
 ): Promise<Record<string, string>> {
   let url = `${API_BASE_URL}${API_V1}/images/`;
   if (ids && ids.length > 0) {

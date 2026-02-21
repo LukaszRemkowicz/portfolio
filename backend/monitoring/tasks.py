@@ -3,7 +3,7 @@ from datetime import date
 
 from celery import shared_task
 
-from .services import LogAnalysisEmailService, LogCollectionService
+from .services import LogAnalysisEmailService, LogAnalysisOrchestrator, LogCleanupService
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +34,16 @@ def daily_log_analysis_task(self, analysis_date: str | None = None):
 
         logger.info("Starting daily log analysis for %s", date_obj)
 
-        # Step 1: Analyze and store
-        log_analysis = LogCollectionService.analyze_and_store(date_obj)
+        # Step 1: Analyze and store using orchestrator
+        orchestrator = LogAnalysisOrchestrator.create_default()
+        log_analysis = orchestrator.analyze_and_store(date_obj)
 
         # Step 2: Generate and send email (delegates to EmailService)
-        LogAnalysisEmailService.generate_and_send(log_analysis.id)
+        email_service = LogAnalysisEmailService(log_analysis)
+        email_service.send_email()
 
-        # Step 3: Mark as sent (optimistic)
-        log_analysis.email_sent = True
-        log_analysis.save(update_fields=["email_sent"])
+        # Step 3: Mark as sent
+        log_analysis.mark_email_sent()
 
         logger.info("Log analysis complete: %s", log_analysis.id)
 
@@ -72,7 +73,7 @@ def cleanup_old_logs_task(self, days_to_keep: int = 30):
     try:
         logger.info("Starting log cleanup (keeping last %d days)", days_to_keep)
 
-        deleted_count = LogCollectionService.cleanup_old_logs(days_to_keep)
+        deleted_count = LogCleanupService.cleanup_old_logs(days_to_keep)
 
         return {
             "status": "success",

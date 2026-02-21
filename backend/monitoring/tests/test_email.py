@@ -4,7 +4,7 @@ import pytest
 
 from django.template.loader import render_to_string
 
-from monitoring.services import LogAnalysisEmailService, LogCollectionService
+from monitoring.services import LogAnalysisEmailService
 
 
 @pytest.mark.django_db
@@ -44,13 +44,23 @@ class TestEmailNotifications:
         assert "@media (prefers-color-scheme: dark)" in html_content
         assert "u+.body" in html_content  # Gmail hack presence
 
-    def test_generate_email_content(self, log_analysis):
-        """Test that generate_email_content fetches from DB and returns correct subject and HTML."""
-
-        subject, html_content = LogCollectionService.generate_email_content(log_analysis.id)
+    def test_generate_email_content_via_model(self, log_analysis):
+        """Test that model methods generate correct subject and context."""
+        # Use model methods directly
+        subject = log_analysis.get_email_subject()
+        context = log_analysis.get_email_context()
 
         # Verify subject
         assert subject == f"[INFO] Daily Log Analysis - {date.today()}"
+
+        # Verify context
+        assert context["log_analysis"] == log_analysis
+        assert "environment" in context
+        assert "log_size_kb" in context
+        assert "execution_time" in context
+
+        # Render template with context
+        html_content = render_to_string("monitoring/email/log_analysis.html", context)
 
         # Verify body contains key info
         assert "System is healthy." in html_content
@@ -61,7 +71,7 @@ class TestEmailNotifications:
         """Test that LogAnalysisEmailService generates and sends email correctly."""
         mock_send_async = mocker.patch("common.services.EmailService.send_async")
 
-        LogAnalysisEmailService.generate_and_send(log_analysis.id)
+        LogAnalysisEmailService(log_analysis).send_email()
 
         # Verify send_async was called
         mock_send_async.assert_called_once()

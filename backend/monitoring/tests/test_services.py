@@ -1,3 +1,4 @@
+# backend/monitoring/tests/test_services.py
 from datetime import date
 from unittest.mock import mock_open
 
@@ -6,13 +7,19 @@ import pytest
 from django.test import override_settings
 
 from monitoring.models import LogAnalysis
-from monitoring.services import LogCollectionService
+from monitoring.services import (
+    DockerLogCollector,
+    LogAnalysisOrchestrator,
+    LogAnalyzer,
+    LogCleanupService,
+    LogStorageService,
+)
 from monitoring.tests.factories import LogAnalysisFactory
 
 
 @pytest.mark.django_db
-class TestLogCollectionService:
-    def test_get_docker_logs_success(self, mocker):
+class TestDockerLogCollector:
+    def test_collect_logs_success(self, mocker):
         """Test successful docker log retrieval."""
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.stdout = "Log content"
@@ -24,7 +31,7 @@ class TestLogCollectionService:
         mocker.patch("os.path.getsize", return_value=100)
 
         # Execute
-        logs = LogCollectionService.collect_docker_logs()
+        logs = DockerLogCollector.collect_logs()
 
         assert len(logs) == 2
         assert "backend" in logs[0]
@@ -32,33 +39,67 @@ class TestLogCollectionService:
         assert "logs" in mock_run.call_args[0][0]
         assert "--tail=2000" in mock_run.call_args[0][0]
 
+
+@pytest.mark.django_db
+class TestLogCleanupService:
     def test_cleanup_old_logs(self):
         """Test that old logs are deleted."""
         # Create some old and new logs using Factory
         old_log = LogAnalysisFactory.create(analysis_date=date(2020, 1, 1), summary="Old")
         new_log = LogAnalysisFactory.create(analysis_date=date.today(), summary="New")
 
-        # Override today for the test logic if needed, or just rely on date math
-        # simplistic: delete anything older than 365 days
-        LogCollectionService.cleanup_old_logs(days_to_keep=30)
+        # Delete anything older than 30 days
+        LogCleanupService.cleanup_old_logs(days_to_keep=30)
 
         assert LogAnalysis.objects.filter(pk=new_log.pk).exists()
         # The old log is definitely older than 30 days from now
         assert not LogAnalysis.objects.filter(pk=old_log.pk).exists()
 
+
+@pytest.mark.django_db
+class TestLogStorageService:
+    def test_create_or_replace_analysis_creates_new(self):
+        """Test creating a new analysis record."""
+        analysis = LogStorageService.create_or_replace_analysis(
+            analysis_date=date.today(),
+            summary="Test summary",
+            severity="INFO",
+        )
+
+        assert analysis is not None
+        assert analysis.summary == "Test summary"
+        assert analysis.severity == "INFO"
+        assert LogAnalysis.objects.count() == 1
+
+    def test_create_or_replace_analysis_replaces_existing(self):
+        """Test that creating analysis for same date replaces existing."""
+        # Create first record
+        LogAnalysisFactory.create(analysis_date=date.today(), summary="First")
+        assert LogAnalysis.objects.count() == 1
+
+        # Create second record for same date
+        analysis = LogStorageService.create_or_replace_analysis(
+            analysis_date=date.today(),
+            summary="Second",
+            severity="WARNING",
+        )
+
+        assert LogAnalysis.objects.count() == 1  # Still only 1
+        assert analysis.summary == "Second"
+        assert analysis.severity == "WARNING"
+
+
+@pytest.mark.django_db
+class TestLogAnalysisOrchestrator:
     def test_analyze_and_store_creates_record(self, mocker, mock_llm_response):
         """Test the full analysis flow creates a record."""
         # Override settings for this test
         with override_settings(ENVIRONMENT="test"):
             # Mocks
-            mock_get_logs = mocker.patch(
-                "monitoring.services.LogCollectionService.collect_docker_logs"
-            )
-            mock_agent = mocker.patch("monitoring.services.LogCollectionService.agent")
+            mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mock_agent = mocker.MagicMock()
 
-            mock_get_logs.return_value = ("/tmp/backend.log", "/tmp/frontend.log")
-
-            # Mock agent response using JSON file
+            mock_collector.return_value = ("/tmp/backend.log", "/tmp/frontend.log")
             mock_agent.analyze_logs_from_files.return_value = mock_llm_response
 
             # Mock file operations to prevent reading/writing real files in /tmp
@@ -67,7 +108,15 @@ class TestLogCollectionService:
             mocker.patch("os.path.exists", return_value=True)
             mocker.patch("os.path.getsize", return_value=100)
 
-            record = LogCollectionService.analyze_and_store(analysis_date=date.today())
+            # Create orchestrator with mocked dependencies
+            analyzer = LogAnalyzer(mock_agent)
+            orchestrator = LogAnalysisOrchestrator(
+                collector=DockerLogCollector(),
+                analyzer=analyzer,
+                storage=LogStorageService(),
+            )
+
+            record = orchestrator.analyze_and_store(analysis_date=date.today())
 
         assert record is not None
         assert record.summary == mock_llm_response["summary"]
@@ -80,12 +129,10 @@ class TestLogCollectionService:
         """Test that re-running analysis for same day replaces the record."""
         with override_settings(ENVIRONMENT="test"):
             # Mocks
-            mock_get_logs = mocker.patch(
-                "monitoring.services.LogCollectionService.collect_docker_logs"
-            )
-            mock_agent = mocker.patch("monitoring.services.LogCollectionService.agent")
+            mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mock_agent = mocker.MagicMock()
 
-            mock_get_logs.return_value = ("/tmp/backend.log", "/tmp/frontend.log")
+            mock_collector.return_value = ("/tmp/backend.log", "/tmp/frontend.log")
             mock_agent.analyze_logs_from_files.return_value = mock_llm_response
 
             mocker.patch("builtins.open", mock_open(read_data="Mock logs"))
@@ -93,10 +140,18 @@ class TestLogCollectionService:
             mocker.patch("os.path.exists", return_value=True)
             mocker.patch("os.path.getsize", return_value=100)
 
+            # Create orchestrator
+            analyzer = LogAnalyzer(mock_agent)
+            orchestrator = LogAnalysisOrchestrator(
+                collector=DockerLogCollector(),
+                analyzer=analyzer,
+                storage=LogStorageService(),
+            )
+
             # First run
-            LogCollectionService.analyze_and_store(date.today())
+            orchestrator.analyze_and_store(date.today())
             assert LogAnalysis.objects.count() == 1
 
             # Second run
-            LogCollectionService.analyze_and_store(date.today())
+            orchestrator.analyze_and_store(date.today())
             assert LogAnalysis.objects.count() == 1  # Should still be 1, not 2

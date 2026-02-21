@@ -1,8 +1,8 @@
-# backend/core/models.py
 import uuid
 from io import BytesIO
 from typing import Any
 
+from model_utils import FieldTracker
 from parler.models import TranslatableModel
 from PIL import Image
 
@@ -33,29 +33,27 @@ class BaseImage(TranslatableModel):
         upload_to="thumbnails/", blank=True, null=True, editable=False, verbose_name=_("Thumbnail")
     )
 
+    # Track changes to the 'path' field to trigger thumbnail regeneration
+    path_tracker = FieldTracker(fields=["path"])
+
     class Meta:
         abstract = True
         ordering = ["-created_at"]
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        if self.pk:
-            try:
-                # Get the existing instance from the database
-                old_instance = self.__class__.objects.only("path", "thumbnail").get(pk=self.pk)
-                if old_instance.path != self.path:
-                    # Path has changed, clear the thumbnail to force regeneration
-                    self.thumbnail = None
+        path_changed: bool = self.path_tracker.has_changed("path")
 
-                    # Delete old physical files
-                    if old_instance.thumbnail:
-                        old_instance.thumbnail.delete(save=False)
-                    if old_instance.path:
-                        old_instance.path.delete(save=False)
-            except self.__class__.DoesNotExist:
-                pass
-
-        if self.path and not self.thumbnail:
+        if self.path and (not self.thumbnail or path_changed):
             self.thumbnail = self.make_thumbnail(self.path)
+
+        if self.pk and path_changed:
+            old_path: Any = self.path_tracker.previous("path")
+            if old_path:
+                storage: Any = self.path.storage
+                old_path_str: str = str(old_path)
+                if old_path_str and storage.exists(old_path_str):
+                    storage.delete(old_path_str)
+
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -78,6 +76,12 @@ class BaseImage(TranslatableModel):
         img.save(thumb_io, "JPEG", quality=85)
         thumbnail_name = f"thumb_{getattr(image, 'name', 'unknown').split('/')[-1]}"
         return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
+
+    def get_thumbnail_url(self) -> str:
+        """Get thumbnail URL or placeholder."""
+        if self.thumbnail:
+            return self.thumbnail.url  # type: ignore[no-any-return]
+        return "/static/images/placeholder.jpg"
 
 
 class SingletonModel(models.Model):

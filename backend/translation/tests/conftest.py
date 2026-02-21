@@ -23,3 +23,31 @@ def mock_task_infrastructure(mocker: MockerFixture):
         "task_model": mock_task_model,
         "content_type": mock_content_type,
     }
+
+
+@pytest.fixture
+def astro_image_factory():
+    from astrophotography.tests.factories import AstroImageFactory
+
+    return AstroImageFactory
+
+
+@pytest.fixture
+def place_factory():
+    from astrophotography.tests.factories import PlaceFactory
+
+    return PlaceFactory
+
+
+@pytest.fixture
+def tag_factory():
+    from astrophotography.tests.factories import TagFactory
+
+    return TagFactory
+
+
+@pytest.fixture
+def user_factory():
+    from users.tests.factories import UserFactory
+
+    return UserFactory

@@ -133,6 +133,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",  # Required by auth
     "django.contrib.auth",  # Required for user model
     "core.admin_config.PortfolioAdminConfig",  # Custom AdminSite replacement
+    "core.apps.CoreConfig",  # Must be loaded before other Django apps for template overrides
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
@@ -151,7 +152,6 @@ INSTALLED_APPS = [
     "django_ckeditor_5",
     "translation.apps.TranslationConfig",
     "monitoring.apps.MonitoringConfig",
-    "core.apps.CoreConfig",
 ]
 
 # Security Settings (for Nginx SSL termination)
@@ -180,7 +180,7 @@ ROOT_URLCONF = "settings.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(BASE_DIR, "core", "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -200,8 +200,10 @@ WSGI_APPLICATION = "settings.wsgi.application"
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 
 # LLM Provider Configuration
-# Options: 'gpt' (default), 'gemini', etc.
-LLM_PROVIDER_BACKEND = env.str("LLM_PROVIDER_BACKEND", default="gpt")
+# Available providers: "gpt", "mock", "gemini", "claude", etc.
+# Each service can use a different provider
+TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
+MONITORING_LLM_PROVIDER = env.str("MONITORING_LLM_PROVIDER", default="gpt")
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -280,7 +282,7 @@ LOCALE_PATHS = [
     os.path.join(BASE_DIR, "astrophotography", "locale"),
 ]
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Warsaw"
 
 USE_I18N = True
 
@@ -310,6 +312,9 @@ CACHES = {
         "TIMEOUT": 3600,
     },
 }
+
+# 30 days is effectively infinite for this portfolio
+INFINITE_CACHE_TIMEOUT = 3600 * 24 * 30
 
 # Django Select2 Configuration
 SELECT2_CACHE_BACKEND = "select2"
@@ -381,6 +386,17 @@ REST_FRAMEWORK = {
         "gallery": "2000/hour",  # Gallery views - relaxed for browsing
     },
 }
+
+if DEBUG:
+    # Disable throttling (or make it very high) in DEBUG mode
+    # This prevents development/testing from hitting rate limits
+    REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
+        "anon": "10000/hour",
+        "user": "100000/hour",
+        "contact": "1000/hour",
+        "api": "10000/hour",
+        "gallery": "100000/hour",
+    }
 
 # Django Axes Configuration (Admin Login Protection)
 AXES_FAILURE_LIMIT = 5  # Number of failed login attempts before lockout

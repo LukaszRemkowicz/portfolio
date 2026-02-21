@@ -32,14 +32,9 @@ urlpatterns = [
     ),
     # Slug-based travel highlights endpoints (more specific routes first)
     path(
-        "travel/<slug:country_slug>/<slug:place_slug>/",
+        "travel/<slug:country_slug>/<slug:place_slug>/<slug:date_slug>/",
         TravelHighlightsBySlugView.as_view(),
-        name="travel-by-country-place",
-    ),
-    path(
-        "travel/<slug:country_slug>/",
-        TravelHighlightsBySlugView.as_view(),
-        name="travel-by-country",
+        name="travel-by-country-place-date",
     ),
     path(
         "categories/",

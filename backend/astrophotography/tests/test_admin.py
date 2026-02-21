@@ -1,14 +1,17 @@
 import uuid
+from datetime import date
 from io import BytesIO
 from unittest.mock import MagicMock
 
 import pytest
 from PIL import Image
+from psycopg2.extras import DateRange
 from pytest_mock import MockerFixture
 
+from django.contrib.admin.sites import site
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import HttpResponse
-from django.test import Client, override_settings
+from django.test import Client, RequestFactory, override_settings
 from django.urls import reverse
 
 from astrophotography.admin import MainPageLocationAdmin
@@ -28,6 +31,7 @@ from astrophotography.tests.factories import (
     MainPageLocationFactory,
     PlaceFactory,
 )
+from core.widgets import ThemedRangeWidget
 
 
 @pytest.mark.django_db
@@ -293,6 +297,104 @@ class TestPlaceAdmin:
         assert 'lang="pl"' in content
 
 
+class TestMainPageBackgroundImageAdminActions:
+    ADD_URL: str = reverse("admin:astrophotography_mainpagebackgroundimage_add")
+    CHANGE_URL_NAME: str = "admin:astrophotography_mainpagebackgroundimage_change"
+
+    def test_save_model_triggers_translation_on_create(
+        self,
+        admin_client: Client,
+        mocker: MockerFixture,
+        mock_translate_task: MagicMock,
+        mock_get_available_languages: MagicMock,
+    ) -> None:
+        with override_settings(DEFAULT_APP_LANGUAGE="en"):
+            mock_translate_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
+                id=str(uuid.uuid4())
+            )
+
+            img: Image.Image = Image.new("RGB", (1, 1), color="red")
+            img_io: BytesIO = BytesIO()
+            img.save(img_io, format="PNG")
+            img_io.seek(0)
+            image_file: SimpleUploadedFile = SimpleUploadedFile(
+                "test_bg.png", img_io.read(), content_type="image/png"
+            )
+
+            response: HttpResponse = admin_client.post(
+                self.ADD_URL, {"name": "Test Background", "path": image_file, "_save": "Save"}
+            )
+        assert response.status_code == 302  # Redirect on success
+
+        bg: MainPageBackgroundImage = MainPageBackgroundImage.objects.get(
+            translations__name="Test Background"
+        )
+
+        mock_translate_task.delay.assert_called_once()
+        args, kwargs = mock_translate_task.delay.call_args
+        assert kwargs["model_name"] == "astrophotography.MainPageBackgroundImage"
+        assert kwargs["instance_pk"] == bg.pk
+        assert kwargs["language_code"] == "pl"
+        assert kwargs["method_name"] == "translate_main_page_background_image"
+
+    def test_save_model_triggers_translation_on_name_change(
+        self,
+        admin_client: Client,
+        mocker: MockerFixture,
+        mock_translate_task: MagicMock,
+        mock_get_available_languages: MagicMock,
+    ) -> None:
+        """Test that updating MainPageBackgroundImage name via Admin triggers translation task."""
+
+        with override_settings(DEFAULT_APP_LANGUAGE="en"):
+            mock_translate_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
+                id=str(uuid.uuid4())
+            )
+
+            bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Old Name")
+
+            url: str = reverse(self.CHANGE_URL_NAME, args=[bg.pk])
+            data: dict[str, str] = {"name": "New Name", "_save": "Save"}
+
+            response: HttpResponse = admin_client.post(url, data)
+        assert response.status_code == 302
+
+        mock_translate_task.delay.assert_called_once()
+        args, kwargs = mock_translate_task.delay.call_args
+        assert kwargs["model_name"] == "astrophotography.MainPageBackgroundImage"
+        assert kwargs["instance_pk"] == bg.pk
+        assert kwargs["language_code"] == "pl"
+        assert kwargs["method_name"] == "translate_main_page_background_image"
+
+    def test_save_model_does_not_trigger_translation_if_no_name_change(
+        self, admin_client: Client, mocker: MockerFixture, mock_translate_task: MagicMock
+    ) -> None:
+        """Test that translation is NOT triggered when the name doesn't change."""
+
+        mock_translate_task.delay.return_value.id = str(uuid.uuid4())
+
+        bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Test BG")
+
+        bg.set_current_language("pl")
+        bg.name = "Testowe Tlo"
+        bg.save()
+
+        bg.set_current_language("en")
+        mock_translate_task.reset_mock()
+
+        url: str = reverse(self.CHANGE_URL_NAME, args=[bg.pk])
+
+        with override_settings(DEFAULT_APP_LANGUAGE="en"):
+            data: dict[str, str] = {
+                "name": "Test BG",  # Same name
+                "_save": "Save",
+            }
+            response: HttpResponse = admin_client.post(url, data)
+
+        assert response.status_code == 302
+        assert mock_translate_task.delay.call_count == 0
+
+
 @pytest.mark.django_db
 class TestAdminDebug:
     CHANGE_URL_NAME: str = "admin:astrophotography_astroimage_change"
@@ -374,11 +476,6 @@ class TestMainPageLocationAdmin:
         Verify that the adventure_date field in the MainPageLocationAdmin form
         uses the ThemedRangeWidget correctly.
         """
-        from django.contrib.admin.sites import site
-        from django.test import RequestFactory
-
-        from core.widgets import ThemedRangeWidget
-
         factory = RequestFactory()
         request = factory.get("/")
         request.user = admin_user
@@ -416,6 +513,8 @@ class TestMainPageLocationAdmin:
             "place": place.pk,
             "highlight_name": "Original Name",
             "highlight_title": "Original Title",
+            "adventure_date_0": "2025-01-01",
+            "adventure_date_1": "2025-01-31",
             "is_active": "on",
             "_save": "Save",
         }
@@ -432,3 +531,112 @@ class TestMainPageLocationAdmin:
         )
         assert pl_call.kwargs["method_name"] == "translate_main_page_location"
         assert pl_call.kwargs["model_name"] == "astrophotography.MainPageLocation"
+
+    def test_admin_add_page_loads(self, admin_client: Client) -> None:
+        """GET /admin/astrophotography/mainpagelocation/add/ must return 200."""
+        url: str = reverse("admin:astrophotography_mainpagelocation_add")
+        response: HttpResponse = admin_client.get(url)
+        assert response.status_code == 200
+        content: str = response.content.decode("utf-8")
+        assert 'id="id_highlight_name"' in content
+
+    def test_admin_add_creates_object(
+        self,
+        admin_client: Client,
+        mock_translate_task: MagicMock,
+        mock_get_available_languages: MagicMock,
+    ) -> None:
+        """
+        Regression test: POST to add view must persist a new MainPageLocation row.
+
+        This specifically guards against the Postgres sequence desync bug that
+        produces IntegrityError 'duplicate key value violates unique constraint
+        astrophotography_mainpagelocation_pkey' when a row was inserted with an
+        explicit id that the sequence hasn't advanced past yet.
+        """
+        place: Place = PlaceFactory()
+        mock_translate_task.delay.reset_mock()
+
+        url: str = reverse("admin:astrophotography_mainpagelocation_add")
+        data: dict = {
+            "place": place.pk,
+            "highlight_name": "New Location",
+            "adventure_date_0": "2025-01-01",
+            "adventure_date_1": "2025-01-31",
+            "is_active": "on",
+            "_save": "Save",
+        }
+
+        response: HttpResponse = admin_client.post(url, data)
+
+        # Must redirect (302) on successful creation, not show an error page.
+        assert response.status_code == 302, (
+            f"Expected 302 redirect after add, got {response.status_code}. "
+            "Possible sequence desync or validation error."
+        )
+
+        assert MainPageLocation.objects.filter(
+            translations__highlight_name="New Location"
+        ).exists(), "MainPageLocation was not saved to the database."
+
+    def test_admin_add_second_object_after_first(
+        self,
+        admin_client: Client,
+        mock_translate_task: MagicMock,
+        mock_get_available_languages: MagicMock,
+    ) -> None:
+        """
+        Regression test: creating a second MainPageLocation must not raise a
+        duplicate-key IntegrityError.  Reproduces the exact failure path: an
+        existing row with id=N exists, then we try to add another row which
+        Django should assign id=N+1 via the sequence.
+        """
+        place: Place = PlaceFactory()
+
+        # First object — inserted via factory so it has a concrete id in the DB.
+        existing: MainPageLocation = MainPageLocationFactory(place=place)
+        mock_translate_task.delay.reset_mock()
+
+        url: str = reverse("admin:astrophotography_mainpagelocation_add")
+        data: dict = {
+            "place": place.pk,
+            "highlight_name": "Second Location",
+            "adventure_date_0": "2026-01-01",
+            "adventure_date_1": "2026-01-31",
+            "is_active": "on",
+            "_save": "Save",
+        }
+
+        response: HttpResponse = admin_client.post(url, data)
+
+        assert response.status_code == 302, (
+            f"Adding a second MainPageLocation failed with status {response.status_code}. "
+            f"Possible sequence desync (existing id={existing.pk})."
+        )
+        assert MainPageLocation.objects.count() == 2
+
+    def test_admin_overlapping_date_range_validation(self, admin_client: Client) -> None:
+        """
+        Verify that the Admin form correctly handles overlapping date ranges.
+        """
+        place: Place = PlaceFactory()
+        # Existing: 2026-05-01 to 2026-05-15
+        MainPageLocationFactory(
+            place=place, adventure_date=DateRange(date(2026, 5, 1), date(2026, 5, 15))
+        )
+
+        url: str = reverse("admin:astrophotography_mainpagelocation_add")
+        # Overlapping: 2026-05-10 to 2026-05-20
+        data: dict = {
+            "place": place.pk,
+            "highlight_name": "Overlapping location",
+            "adventure_date_0": "2026-05-10",
+            "adventure_date_1": "2026-05-20",
+            "is_active": "on",
+            "_save": "Save",
+        }
+
+        response: HttpResponse = admin_client.post(url, data)
+        # Should stay on the same page (200 OK) with validation error
+        assert response.status_code == 200
+        assert "overlapping Date range already exists" in response.content.decode()

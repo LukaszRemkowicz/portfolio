@@ -2,9 +2,14 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+import openai as openai_module
+from openai import OpenAI
+
 from django.conf import settings
 
-from .protocols import LLMProvider
+from common.exceptions import LLMAuthenticationError
+from common.llm.protocols import LLMProvider
+from common.llm.registry import LLMProviderRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +44,7 @@ class GPTProvider(LLMProvider):
     """OpenAI GPT provider implementation."""
 
     def __init__(self) -> None:
-        from openai import OpenAI
-
+        self._openai = openai_module
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
     def ask_question_with_usage(
@@ -76,6 +80,9 @@ class GPTProvider(LLMProvider):
 
             logger.debug(f"GPT response received (length: {len(result)})")
             return result, usage
+        except self._openai.AuthenticationError as e:
+            logger.error("GPT Authentication failed (invalid API key)")
+            raise LLMAuthenticationError(str(e)) from e
         except Exception:
             logger.exception("GPT API call failed")
             return None, {}
@@ -89,3 +96,8 @@ class GPTProvider(LLMProvider):
         """Wrapper for backward compatibility."""
         content, _ = self.ask_question_with_usage(system_prompt, user_message, temperature)
         return content
+
+
+# Self-register providers (happens at import time)
+LLMProviderRegistry.register("gpt", GPTProvider)
+LLMProviderRegistry.register("mock", MockLLMProvider)

@@ -20,7 +20,7 @@ describe('Gallery Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useAppStore.setState({
-      images: [],
+      latestImages: [],
       isImagesLoading: false,
       error: null,
       features: { lastimages: true },
@@ -31,18 +31,22 @@ describe('Gallery Component', () => {
 
   it('renders the gallery using store data', async () => {
     // Mock API return
-    mockFetchAstroImages.mockResolvedValue([
-      {
-        pk: 1,
-        slug: 'm31-andromeda',
-        name: 'M31 Andromeda',
-        url: 'test.jpg',
-        thumbnail_url: 'thumb.jpg',
-        tags: ['deepsky', 'galaxy'],
-        celestial_object: 'Galaxy',
-        created_at: '2023-01-01',
-      },
-    ]);
+    mockFetchAstroImages.mockResolvedValue([]);
+    useAppStore.setState({
+      latestImages: [
+        {
+          pk: '1',
+          slug: 'm31-andromeda',
+          name: 'M31 Andromeda',
+          url: 'test.jpg',
+          thumbnail_url: 'thumb.jpg',
+          tags: ['deepsky', 'galaxy'],
+          celestial_object: 'Galaxy',
+          created_at: '2023-01-01',
+          description: '',
+        },
+      ],
+    });
 
     await act(async () => {
       render(
@@ -58,26 +62,31 @@ describe('Gallery Component', () => {
   });
 
   it('filters images when category is selected', async () => {
-    mockFetchAstroImages.mockResolvedValue([
-      {
-        pk: 1,
-        slug: 'deep-sky-object',
-        name: 'Deep Sky Object',
-        url: 'dso.jpg',
-        tags: ['deepsky'],
-        celestial_object: 'Nebula',
-        created_at: '2023-01-01',
-      },
-      {
-        pk: 2,
-        slug: 'landscape-object',
-        name: 'Landscape Object',
-        url: 'lands.jpg',
-        tags: ['astrolandscape'],
-        celestial_object: 'Landscape',
-        created_at: '2023-01-02',
-      },
-    ]);
+    mockFetchAstroImages.mockResolvedValue([]);
+    useAppStore.setState({
+      latestImages: [
+        {
+          pk: '1',
+          slug: 'deep-sky-object',
+          name: 'Deep Sky Object',
+          url: 'dso.jpg',
+          tags: ['deepsky'],
+          celestial_object: 'Nebula',
+          created_at: '2023-01-01',
+          description: '',
+        },
+        {
+          pk: '2',
+          slug: 'landscape-object',
+          name: 'Landscape Object',
+          url: 'lands.jpg',
+          tags: ['astrolandscape'],
+          celestial_object: 'Landscape',
+          created_at: '2023-01-02',
+          description: '',
+        },
+      ],
+    });
 
     await act(async () => {
       render(
@@ -102,16 +111,20 @@ describe('Gallery Component', () => {
   });
 
   it('opens modal when image clicked', async () => {
-    mockFetchAstroImages.mockResolvedValue([
-      {
-        pk: 1,
-        slug: 'test-image',
-        name: 'Test Image',
-        url: 'test.jpg',
-        tags: [],
-        celestial_object: 'Star',
-      },
-    ]);
+    mockFetchAstroImages.mockResolvedValue([]);
+    useAppStore.setState({
+      latestImages: [
+        {
+          pk: '1',
+          slug: 'test-image',
+          name: 'Test Image',
+          url: 'test.jpg',
+          tags: [],
+          celestial_object: 'Star',
+          description: '',
+        },
+      ],
+    });
 
     await act(async () => {
       render(
@@ -132,7 +145,7 @@ describe('Gallery Component', () => {
   it('renders nothing if feature disabled and no images', async () => {
     useAppStore.setState({
       features: { lastimages: false },
-      images: [],
+      latestImages: [],
     });
 
     await act(async () => {

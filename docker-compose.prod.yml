@@ -36,6 +36,8 @@ x-backend-defaults: &backend-defaults
     SENTRY_DSN: ${SENTRY_DSN}
     ENVIRONMENT: ${ENVIRONMENT:-production}
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
+    OPENAI_API_KEY: ${OPENAI_API_KEY}
+    SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
   depends_on:
     db:
       condition: service_healthy

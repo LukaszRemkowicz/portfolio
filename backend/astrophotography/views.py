@@ -1,6 +1,8 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
+from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -14,8 +16,8 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
 
-from common.constants import INFINITE_CACHE_TIMEOUT
 from common.decorators.cache import cache_response
 from common.throttling import GalleryRateThrottle
 from common.utils.logging import sanitize_for_logging
@@ -36,7 +38,7 @@ from .services import GalleryQueryService
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-@method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT), name="dispatch")
+@method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT), name="dispatch")
 class AstroImageViewSet(ReadOnlyModelViewSet):
     """
     ViewSet for listing and retrieving astrophotography images.
@@ -55,12 +57,20 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
 
     def get_serializer_class(self):
         """Determines which serializer to use based on the action."""
-        if self.action == "list":
+        if self.action in ["list", "latest"]:
             return AstroImageSerializerList
         return AstroImageSerializer
 
+    @method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT))
+    @action(detail=False, methods=["get"])
+    def latest(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Returns the 9 most recent images for the main page preview."""
+        queryset = self.get_queryset().latest()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
-@method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT), name="dispatch")
+
+@method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT), name="dispatch")
 class MainPageBackgroundImageView(ViewSet):
     """View to retrieve the most recent background image for the main page."""
 
@@ -76,7 +86,7 @@ class MainPageBackgroundImageView(ViewSet):
         return Response({"url": None})
 
 
-@method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT), name="dispatch")
+@method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT), name="dispatch")
 class MainPageLocationViewSet(ReadOnlyModelViewSet):
     """
     ViewSet for listing active Main Page Location Sliders.
@@ -94,48 +104,47 @@ class MainPageLocationViewSet(ReadOnlyModelViewSet):
 
 class TravelHighlightsBySlugView(APIView):
     """
-    Retrieve travel highlights by country and optional place slug.
-    Publicly accessible to support SEO-friendly URLs.
+    Retrieve travel highlights by country, place, and date slugs.
+    All three segments are required to support SEO-friendly, immutable URLs.
+    Publicly accessible.
+
+    URL pattern:
+      /travel/{country}/{place}/{date_slug}/
     """
 
-    permission_classes = [AllowAny]  # Allow public access
+    permission_classes = [AllowAny]
     serializer_class = TravelHighlightDetailSerializer
 
-    @method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT))
+    @method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT))
     def get(
         self,
         request: Request,
         country_slug: Optional[str] = None,
         place_slug: Optional[str] = None,
+        date_slug: Optional[str] = None,
     ) -> Response:
-        """Retrieves a slider by country and optional place slugs."""
-        # Query the slider by slugs
-        filter_kwargs: Dict[str, Any] = {"country_slug": country_slug}
-        if place_slug:
-            filter_kwargs["place_slug"] = place_slug
-        else:
-            filter_kwargs["place_slug__isnull"] = True
+        """
+        Retrieves highlight details by delegating to the model layer.
+        """
         try:
-            slider = MainPageLocation.objects.get(is_active=True, **filter_kwargs)
+            highlight = (
+                MainPageLocation.objects.active()
+                .by_slugs(country_slug, place_slug, date_slug)
+                .with_images()
+                .prefetch_related("translations")
+                .get()
+            )
         except MainPageLocation.DoesNotExist:
-            # Fallback: if only country_slug was provided, try matching it against place_slug
-            if not place_slug:
-                try:
-                    slider = MainPageLocation.objects.get(is_active=True, place_slug=country_slug)
-                except MainPageLocation.DoesNotExist:
-                    safe_slug: str = sanitize_for_logging(country_slug)
-                    logger.warning(f"Travel highlight transition failed for slug: {safe_slug}")
-                    raise Http404("No MainPageLocation matches the given query.")
-            else:
-                safe_country: str = sanitize_for_logging(country_slug)
-                safe_place: str = sanitize_for_logging(place_slug)
-                logger.warning(f"Travel highlight not found: {safe_country}/{safe_place}")
-                raise Http404("No MainPageLocation matches the given query.")
-        serializer = self.serializer_class(slider, context={"request": request})
+            return Response(
+                {"detail": _("No highlight found for these parameters.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = self.serializer_class(highlight, context={"request": request})
         return Response(serializer.data)
 
 
-@method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT), name="dispatch")
+@method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT), name="dispatch")
 class TagsView(ViewSet):
     """
     ViewSet to return all tags currently associated with AstroImages.
@@ -162,7 +171,7 @@ class CelestialObjectCategoriesView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
 
-    @method_decorator(cache_response(timeout=INFINITE_CACHE_TIMEOUT))
+    @method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT))
     def get(self, request: Request) -> Response:
         """Returns the list of available categories."""
         categories: List[str] = [choice[0] for choice in CELESTIAL_OBJECT_CHOICES]
@@ -241,12 +250,10 @@ class ImageURLViewSet(ViewSet):
         # Filter by IDs if provided
         ids_param = request.query_params.get("ids")
         if ids_param:
-            try:
-                ids = [int(x) for x in ids_param.split(",") if x.strip().isdigit()]
-                if ids:
-                    queryset = queryset.filter(pk__in=ids)
-            except ValueError:
-                pass  # Ignore invalid format. For now, ignore filter.
+            # Split comma-separated UUIDs
+            ids = [x.strip() for x in ids_param.split(",") if x.strip()]
+            if ids:
+                queryset = queryset.filter(pk__in=ids)
 
         images = queryset
         url_mapping = {}
@@ -256,7 +263,11 @@ class ImageURLViewSet(ViewSet):
             params = generate_signed_url_params(
                 image.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
             )
-            url_mapping[image.slug] = (
+            # Use PK as key to avoid language/translation mismatches
+            # Frontend uses default language slug? No, frontend uses localized slug.
+            # Backend iterates all objects (english default usually).
+            # Using PK (UUID) is safer.
+            url_mapping[str(image.pk)] = (
                 f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
             )
 

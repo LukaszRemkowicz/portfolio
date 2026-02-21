@@ -9,25 +9,33 @@ class TestMonitoringTasks:
     def test_daily_log_analysis_task_orchestration(self, mocker, log_analysis):
         """Test that the orchestrator task coordinates analysis and email sending."""
         # Setup mocks
-        mock_analyze = mocker.patch("monitoring.services.LogCollectionService.analyze_and_store")
-        mock_email_service = mocker.patch(
-            "monitoring.services.LogAnalysisEmailService.generate_and_send"
+        mock_orchestrator = mocker.MagicMock()
+        mock_create_default = mocker.patch(
+            "monitoring.services.LogAnalysisOrchestrator.create_default"
         )
+        mock_create_default.return_value = mock_orchestrator
+
+        mock_email_service_cls = mocker.patch("monitoring.tasks.LogAnalysisEmailService")
+        mock_email_service_instance = mock_email_service_cls.return_value
 
         # Ensure fixture state
         log_analysis.email_sent = False
         log_analysis.save()
 
-        mock_analyze.return_value = log_analysis
+        mock_orchestrator.analyze_and_store.return_value = log_analysis
 
         # Execute task
         result = daily_log_analysis_task()
 
-        # Verify analysis was called
-        mock_analyze.assert_called_once()
+        # Verify orchestrator was created
+        mock_create_default.assert_called_once()
 
-        # Verify email service was called with correct ID
-        mock_email_service.assert_called_once_with(log_analysis.id)
+        # Verify analysis was called
+        mock_orchestrator.analyze_and_store.assert_called_once()
+
+        # Verify email service was instantiated and called
+        mock_email_service_cls.assert_called_once_with(log_analysis)
+        mock_email_service_instance.send_email.assert_called_once()
 
         # Verify email_sent flag was updated in DB
         log_analysis.refresh_from_db()
@@ -39,7 +47,7 @@ class TestMonitoringTasks:
 
     def test_cleanup_old_logs_task(self, mocker):
         """Test that the cleanup task calls the service."""
-        mock_cleanup = mocker.patch("monitoring.services.LogCollectionService.cleanup_old_logs")
+        mock_cleanup = mocker.patch("monitoring.services.LogCleanupService.cleanup_old_logs")
         mock_cleanup.return_value = 5  # 5 records deleted
 
         # Execute task

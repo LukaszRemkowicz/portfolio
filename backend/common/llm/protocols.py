@@ -19,13 +19,15 @@ class TranslationAgentProtocol(Protocol):
         """
         pass
 
-    def translate(self, text: str, target_lang_code: str) -> Optional[str]:
+    def translate(self, text: str, target_lang_code: str, field_hint: str = "") -> Optional[str]:
         """
         Translates plain text.
         """
         pass
 
-    def translate_html(self, text: str, target_lang_code: str) -> Optional[str]:
+    def translate_html(
+        self, text: str, target_lang_code: str, field_hint: str = ""
+    ) -> Optional[str]:
         """
         Translates HTML content, preserving tags.
         """

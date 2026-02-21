@@ -1,0 +1,25 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+{% endblock %}
+
+{% block usertools %}
+<div style="display: flex; align-items: center; justify-content: flex-end;">
+    <span style="color: #ffc107; font-family: monospace; font-size: 14px; font-weight: bold; margin-right: 15px;"
+        id="admin-timer"></span>
+    <script>
+        function updateAdminTimer() {
+            const now = new Date();
+            document.getElementById('admin-timer').textContent = now.toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'medium' });
+        }
+        updateAdminTimer();
+        setInterval(updateAdminTimer, 1000);
+    </script>
+    {{ block.super }}
+</div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

@@ -34,3 +34,16 @@ export const sanitizeHtml = (html: string): string => {
   if (!html) return '';
   return DOMPurify.sanitize(html);
 };
+
+/**
+ * Returns true when an HTML string is visually empty —
+ * i.e. contains no meaningful text after stripping tags and common entities.
+ * Catches CKEditor empty states like "<p></p>" or "<p>&nbsp;</p>".
+ */
+export const isHtmlEmpty = (html: string | undefined | null): boolean => {
+  if (!html) return true;
+  const text = stripHtml(html)
+    .replace(/\u00a0/g, '')
+    .trim();
+  return text.length === 0;
+};

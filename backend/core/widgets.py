@@ -146,8 +146,11 @@ class RangeWidget(forms.MultiWidget):
         super().__init__(widgets, attrs)
 
     def decompress(self, value):
-        if value and isinstance(value, (list, tuple)) and len(value) == 2:
-            return value
+        if value:
+            if isinstance(value, (list, tuple)) and len(value) == 2:
+                return value
+            if hasattr(value, "lower") and hasattr(value, "upper"):
+                return [value.lower, value.upper]
         return [None, None]
 
 

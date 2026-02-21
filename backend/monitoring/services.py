@@ -1,17 +1,17 @@
+# backend/monitoring/services.py
 import logging
 import os
 import shutil
 import subprocess
 import time
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 from django.conf import settings
 from django.core.files import File
-from django.template.loader import render_to_string
 
-from common.llm.factory import get_llm_provider
-from common.services import EmailService
+from common.llm.registry import LLMProviderRegistry
+from common.services import BaseEmailService
 
 from .agents import LogAnalysisAgent
 from .models import LogAnalysis
@@ -19,16 +19,15 @@ from .models import LogAnalysis
 logger = logging.getLogger(__name__)
 
 
-class LogCollectionService:
-    """Service for collecting and analyzing Docker logs."""
+class DockerLogCollector:
+    """Collects logs from Docker containers."""
 
-    agent: Optional[LogAnalysisAgent] = None
     _docker_path: Optional[str] = None  # Cache docker executable path
 
     @classmethod
     def _get_docker_path(cls) -> str:
         """
-        Finds docker executable path with caching.
+        Find docker executable path with caching.
 
         Returns:
             str: Absolute path to docker executable
@@ -58,18 +57,17 @@ class LogCollectionService:
         return docker_path
 
     @classmethod
-    def _get_agent(cls) -> LogAnalysisAgent:
-        """Lazy-load log analysis agent with configured LLM provider."""
-        if cls.agent is None:
-            provider = get_llm_provider()
-            cls.agent = LogAnalysisAgent(provider)
-        return cls.agent
-
-    @classmethod
-    def collect_docker_logs(cls) -> tuple[str, str]:
+    def collect_logs(cls) -> tuple[str, str]:
         """
-        Collects logs from Docker containers and writes them to temp files.
-        Returns paths to the temporary log files.
+        Collect logs from Docker containers and write to temp files.
+
+        Returns:
+            Tuple of (backend_log_path, frontend_log_path)
+
+        Raises:
+            FileNotFoundError: If docker executable not found
+            subprocess.TimeoutExpired: If collection times out
+            subprocess.CalledProcessError: If docker command fails
         """
         logger.info("Collecting Docker logs to temporary files")
 
@@ -129,16 +127,138 @@ class LogCollectionService:
             logger.error("Docker command failed: %s", e)
             raise
 
-    @classmethod
-    def analyze_and_store(cls, analysis_date: Optional[date] = None) -> LogAnalysis:
+
+class LogAnalyzer:
+    """Analyzes logs using LLM agent."""
+
+    def __init__(self, agent: LogAnalysisAgent):
+        self.agent = agent
+
+    def analyze_logs_from_files(self, backend_log_path: str, frontend_log_path: str) -> dict:
         """
-        Main method: collect logs, analyze, and store results.
+        Analyze logs using LLM.
+
+        Args:
+            backend_log_path: Path to backend log file
+            frontend_log_path: Path to frontend log file
+
+        Returns:
+            Analysis result dict with keys: summary, severity, key_findings,
+            recommendations, gpt_tokens_used
+
+        Raises:
+            ValueError: If analysis returns empty result
+        """
+        result = self.agent.analyze_logs_from_files(backend_log_path, frontend_log_path)
+
+        if not result:
+            raise ValueError("LLM analysis returned empty result")
+
+        # Ensure findings is a list
+        findings = result.get("key_findings", [])
+        if isinstance(findings, str):
+            result["key_findings"] = [findings]
+
+        return result
+
+
+class LogStorageService:
+    """Stores log analysis results in database."""
+
+    @classmethod
+    def create_or_replace_analysis(cls, analysis_date: date, **kwargs) -> LogAnalysis:
+        """
+        Idempotent creation of LogAnalysis record.
+
+        Deletes any existing record for the same date before creating new one.
+
+        Args:
+            analysis_date: Date for the analysis
+            **kwargs: Fields to pass to LogAnalysis.objects.create()
+
+        Returns:
+            LogAnalysis: Created instance
+        """
+        existing_count = LogAnalysis.objects.for_date(analysis_date).count()
+        if existing_count > 0:
+            logger.info(
+                "Replacing %d existing analysis record(s) for %s", existing_count, analysis_date
+            )
+            LogAnalysis.objects.for_date(analysis_date).delete()
+        return LogAnalysis.objects.create(analysis_date=analysis_date, **kwargs)
+
+    @classmethod
+    def attach_log_files(
+        cls,
+        log_analysis: LogAnalysis,
+        backend_path: str,
+        frontend_path: str,
+        analysis_date: date,
+    ) -> None:
+        """
+        Attach log files to the analysis record.
+
+        Args:
+            log_analysis: LogAnalysis instance to attach files to
+            backend_path: Path to backend log file
+            frontend_path: Path to frontend log file
+            analysis_date: Date for filename generation
+        """
+        with open(backend_path, "rb") as f:
+            log_analysis.backend_logs.save(f"backend_{analysis_date}.log", File(f))
+
+        with open(frontend_path, "rb") as f:
+            log_analysis.frontend_logs.save(f"frontend_{analysis_date}.log", File(f))
+
+
+class LogCleanupService:
+    """Cleans up old log analysis records."""
+
+    @classmethod
+    def cleanup_old_logs(cls, days_to_keep: int = 30) -> int:
+        """
+        Delete log analysis records older than specified days.
+
+        Args:
+            days_to_keep: Number of days to retain (default: 30)
+
+        Returns:
+            Number of records deleted
+        """
+        deleted_count, _ = LogAnalysis.objects.older_than(days_to_keep).delete()
+
+        logger.info(
+            "Cleaned up %d log analysis records older than %d days", deleted_count, days_to_keep
+        )
+
+        return deleted_count
+
+
+class LogAnalysisOrchestrator:
+    """Orchestrates the log analysis workflow."""
+
+    def __init__(
+        self,
+        collector: DockerLogCollector,
+        analyzer: LogAnalyzer,
+        storage: LogStorageService,
+    ):
+        self.collector = collector
+        self.analyzer = analyzer
+        self.storage = storage
+
+    def analyze_and_store(self, analysis_date: Optional[date] = None) -> LogAnalysis:
+        """
+        Main workflow: collect logs, analyze, and store results.
 
         Args:
             analysis_date: Date for analysis (defaults to today)
 
         Returns:
             LogAnalysis instance
+
+        Raises:
+            Various exceptions from collector, analyzer, or storage
         """
         if analysis_date is None:
             analysis_date = date.today()
@@ -148,41 +268,34 @@ class LogCollectionService:
         frontend_log_path = None
 
         try:
-            # 1. Collect logs to files
-            backend_log_path, frontend_log_path = cls.collect_docker_logs()
-
+            # 1. Collect logs
+            backend_log_path, frontend_log_path = self.collector.collect_logs()
             log_size = os.path.getsize(backend_log_path) + os.path.getsize(frontend_log_path)
 
             if log_size == 0:
                 logger.warning("No logs collected from Docker containers")
 
-            # 2. Analyze with LLM (pass file paths)
-            agent = cls._get_agent()
-            analysis_result = agent.analyze_logs_from_files(backend_log_path, frontend_log_path)
-
-            if not analysis_result:
-                raise ValueError("LLM analysis returned empty result")
+            # 2. Analyze with LLM
+            analysis_result = self.analyzer.analyze_logs_from_files(
+                backend_log_path, frontend_log_path
+            )
 
             # 3. Store in database
-            # Ensure findings is a list
-            findings = analysis_result.get("key_findings", [])
-            if isinstance(findings, str):
-                findings = [findings]
-
-            # Create record using helper (idempotent)
-            log_analysis = cls._create_or_replace_analysis(
+            log_analysis = self.storage.create_or_replace_analysis(
                 analysis_date=analysis_date,
                 log_size_bytes=log_size,
                 summary=analysis_result.get("summary", "No summary provided"),
                 severity=analysis_result.get("severity", "INFO"),
-                key_findings=findings,
+                key_findings=analysis_result.get("key_findings", []),
                 recommendations=analysis_result.get("recommendations", ""),
                 execution_time_seconds=time.time() - start_time,
                 gpt_tokens_used=analysis_result.get("gpt_tokens_used", 0),
             )
 
-            # Attach log files
-            cls._attach_log_files(log_analysis, backend_log_path, frontend_log_path, analysis_date)
+            # 4. Attach log files
+            self.storage.attach_log_files(
+                log_analysis, backend_log_path, frontend_log_path, analysis_date
+            )
 
             logger.info(
                 "Log analysis complete for %s: record_id=%s, severity=%s",
@@ -194,8 +307,8 @@ class LogCollectionService:
 
         except Exception as e:
             logger.exception("Log analysis failed for date %s", analysis_date)
-            # Store error using helper
-            log_analysis = cls._create_or_replace_analysis(
+            # Store error
+            log_analysis = self.storage.create_or_replace_analysis(
                 analysis_date=analysis_date,
                 backend_logs=None,
                 frontend_logs=None,
@@ -213,104 +326,22 @@ class LogCollectionService:
                 os.remove(frontend_log_path)
 
     @classmethod
-    def cleanup_old_logs(cls, days_to_keep: int = 30) -> int:
-        """
-        Deletes log analysis records older than specified days.
+    def create_default(cls) -> "LogAnalysisOrchestrator":
+        """Factory method to create orchestrator with default dependencies."""
 
-        Args:
-            days_to_keep: Number of days to retain (default: 30)
+        # Fail-fast: No defaults, settings must be explicit
+        provider_name = settings.MONITORING_LLM_PROVIDER
+        provider = LLMProviderRegistry.get(provider_name)
+        agent = LogAnalysisAgent(provider)
 
-        Returns:
-            Number of records deleted
-        """
-        cutoff_date = date.today() - timedelta(days=days_to_keep)
-
-        deleted_count, _ = LogAnalysis.objects.filter(analysis_date__lt=cutoff_date).delete()
-
-        logger.info("Cleaned up %d log analysis records older than %s", deleted_count, cutoff_date)
-
-        return deleted_count
-
-    @classmethod
-    def _create_or_replace_analysis(cls, analysis_date: date, **kwargs) -> LogAnalysis:
-        """
-        Idempotent creation of LogAnalysis record.
-
-        Deletes any existing record for the same date before creating new one.
-
-        Args:
-            analysis_date: Date for the analysis
-            **kwargs: Fields to pass to LogAnalysis.objects.create()
-
-        Returns:
-            LogAnalysis: Created instance
-        """
-        existing_count = LogAnalysis.objects.filter(analysis_date=analysis_date).count()
-        if existing_count > 0:
-            logger.info(
-                "Replacing %d existing analysis record(s) for %s", existing_count, analysis_date
-            )
-            LogAnalysis.objects.filter(analysis_date=analysis_date).delete()
-        return LogAnalysis.objects.create(analysis_date=analysis_date, **kwargs)
-
-    @classmethod
-    def _attach_log_files(
-        cls, log_analysis: LogAnalysis, backend_path: str, frontend_path: str, analysis_date: date
-    ) -> None:
-        """
-        Attach log files to the analysis record.
-
-        Args:
-            log_analysis: LogAnalysis instance to attach files to
-            backend_path: Path to backend log file
-            frontend_path: Path to frontend log file
-            analysis_date: Date for filename generation
-        """
-        with open(backend_path, "rb") as f:
-            log_analysis.backend_logs.save(f"backend_{analysis_date}.log", File(f))
-
-        with open(frontend_path, "rb") as f:
-            log_analysis.frontend_logs.save(f"frontend_{analysis_date}.log", File(f))
-
-    @classmethod
-    def generate_email_content(cls, log_analysis_id: int) -> tuple[str, str]:
-        """Generate email subject and HTML content for log analysis report.
-
-        Fetches the LogAnalysis from database to ensure fresh data and
-        decouple from in-memory instances.
-
-        Args:
-            log_analysis_id: ID of the LogAnalysis record
-
-        Returns:
-            Tuple of (subject, html_content)
-
-        Raises:
-            LogAnalysis.DoesNotExist: If the record is not found
-        """
-        try:
-            log_analysis = LogAnalysis.objects.get(id=log_analysis_id)
-        except LogAnalysis.DoesNotExist:
-            logger.error("LogAnalysis %s not found for email generation", log_analysis_id)
-            raise
-
-        subject = f"[{log_analysis.severity}] Daily Log Analysis - {log_analysis.analysis_date}"
-
-        context = {
-            "environment": settings.ENVIRONMENT,
-            "log_analysis": log_analysis,
-            "log_size_kb": f"{log_analysis.log_size_bytes / 1024:.1f}",
-            "execution_time": f"{log_analysis.execution_time_seconds:.1f}",
-            "admin_domain": settings.ADMIN_DOMAIN,
-        }
-
-        html_content = render_to_string("monitoring/email/log_analysis.html", context)
-
-        logger.debug("Generated email content for analysis %s", log_analysis_id)
-        return subject, html_content
+        return cls(
+            collector=DockerLogCollector(),
+            analyzer=LogAnalyzer(agent),
+            storage=LogStorageService(),
+        )
 
 
-class LogAnalysisEmailService:
+class LogAnalysisEmailService(BaseEmailService):
     """
     Handles LogAnalysis-specific email generation and sending.
 
@@ -318,43 +349,23 @@ class LogAnalysisEmailService:
     including data fetching, context preparation, and template rendering.
     """
 
-    @classmethod
-    def generate_and_send(cls, log_analysis_id: int) -> None:
+    def __init__(self, log_analysis: LogAnalysis):
         """
-        Generate LogAnalysis email and send asynchronously.
+        Initialize with log analysis instance.
 
         Args:
-            log_analysis_id: ID of the LogAnalysis record
-
-        Raises:
-            LogAnalysis.DoesNotExist: If the record is not found
+            log_analysis: LogAnalysis instance to send email for
         """
-        try:
-            log_analysis = LogAnalysis.objects.get(id=log_analysis_id)
-        except LogAnalysis.DoesNotExist:
-            logger.error("LogAnalysis %s not found for email generation", log_analysis_id)
-            raise
+        self.log_analysis = log_analysis
 
-        # Prepare subject
-        subject = f"[{log_analysis.severity}] Daily Log Analysis - {log_analysis.analysis_date}"
+    def get_subject(self) -> str:
+        """Generate email subject line."""
+        return self.log_analysis.get_email_subject()
 
-        # Prepare context
-        context = {
-            "environment": settings.ENVIRONMENT,
-            "log_analysis": log_analysis,
-            "log_size_kb": f"{log_analysis.log_size_bytes / 1024:.1f}",
-            "execution_time": f"{log_analysis.execution_time_seconds:.1f}",
-            "admin_domain": settings.ADMIN_DOMAIN,
-        }
+    def get_context(self) -> dict:
+        """Generate template context dictionary."""
+        return self.log_analysis.get_email_context()
 
-        # Render template
-        html_content = render_to_string("monitoring/email/log_analysis.html", context)
-
-        logger.info(
-            "Sending log analysis email for %s (severity: %s)",
-            log_analysis.analysis_date,
-            log_analysis.severity,
-        )
-
-        # Send via common service
-        EmailService.send_async(subject, html_content)
+    def get_template_name(self) -> str:
+        """Return path to email template."""
+        return "monitoring/email/log_analysis.html"

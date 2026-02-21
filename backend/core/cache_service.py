@@ -53,6 +53,7 @@ class CacheService:
     @staticmethod
     def invalidate_astrophotography_cache() -> None:
         """Invalidates astrophotography-related API cache."""
+        CacheService.clear_prefix("api_cache:/v1/astroimages")
         CacheService.clear_prefix("api_cache:/v1/image")
         CacheService.clear_prefix("api_cache:/v1/tags")
         CacheService.clear_prefix("api_cache:/v1/categories")

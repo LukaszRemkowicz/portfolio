@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pytest
 
 from monitoring.tests.factories import LogAnalysisFactory
@@ -20,8 +23,6 @@ def log_analysis():
 @pytest.fixture
 def mock_llm_response():
     """Load mock response from JSON file."""
-    import json
-    from pathlib import Path
 
     json_path = Path(__file__).parent / "llm_mock_response.json"
     with open(json_path, "r") as f:

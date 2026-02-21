@@ -1,8 +1,10 @@
 from collections.abc import Iterable
+from datetime import date
 from typing import Optional
 
 import factory
 from factory.django import DjangoModelFactory
+from psycopg2.extras import DateRange
 
 from django.utils import timezone
 
@@ -136,6 +138,7 @@ class MainPageLocationFactory(DjangoModelFactory):
     place = factory.SubFactory(PlaceFactory)
     highlight_name = factory.Faker("city")
     is_active = True
+    adventure_date = factory.LazyFunction(lambda: DateRange(date(2025, 1, 1), date(2025, 1, 31)))
 
     @factory.post_generation
     def images(

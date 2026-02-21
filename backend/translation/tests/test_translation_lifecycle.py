@@ -1,4 +1,6 @@
 # backend/translation/tests/test_translation_lifecycle.py
+import uuid
+
 import pytest
 
 from django.conf import settings
@@ -7,13 +9,13 @@ from django.core.exceptions import ValidationError
 
 from astrophotography.tests.factories import AstroImageFactory, PlaceFactory, TagFactory
 from translation.models import TranslationTask
+from translation.services import TranslationService
 
 
 @pytest.mark.django_db
 class TestTranslationLifecycle:
     def setup_method(self):
         self.default_lang = settings.DEFAULT_APP_LANGUAGE
-        from translation.services import TranslationService
 
         supported = TranslationService.get_available_languages()
         self.target_lang = "pl" if "pl" in supported else supported[1]
@@ -22,7 +24,6 @@ class TestTranslationLifecycle:
         """1) Create AstroImage -> check translations task exists."""
         # Mock delay to produce unique IDs
         mock_delay = mocker.patch("translation.mixins.translate_instance_task.delay")
-        import uuid
 
         mock_delay.side_effect = lambda *args, **kwargs: mocker.Mock(id=str(uuid.uuid4()))
 
@@ -43,7 +44,6 @@ class TestTranslationLifecycle:
         """3) Clear field in translation, save model -> check if task started."""
         # Mock delay with unique IDs
         mock_delay = mocker.patch("translation.mixins.translate_instance_task.delay")
-        import uuid
 
         mock_delay.side_effect = lambda *args, **kwargs: mocker.Mock(id=str(uuid.uuid4()))
 
@@ -81,7 +81,6 @@ class TestTranslationLifecycle:
         """5) Core model field value change -> trans is started (if target empty)."""
         # Mock delay with unique IDs
         mock_delay = mocker.patch("translation.mixins.translate_instance_task.delay")
-        import uuid
 
         mock_delay.side_effect = lambda *args, **kwargs: mocker.Mock(id=str(uuid.uuid4()))
 
@@ -105,7 +104,6 @@ class TestTranslationLifecycle:
     def test_other_models_lifecycle(self, mocker):
         """Verify Tag and Place also queue translations."""
         mock_delay = mocker.patch("translation.mixins.translate_instance_task.delay")
-        import uuid
 
         mock_delay.side_effect = lambda *args, **kwargs: mocker.Mock(id=str(uuid.uuid4()))
 
@@ -125,7 +123,6 @@ class TestTranslationLifecycle:
         if target is populated.
         """
         mock_delay = mocker.patch("translation.mixins.translate_instance_task.delay")
-        import uuid
 
         mock_delay.side_effect = lambda *args, **kwargs: mocker.Mock(id=str(uuid.uuid4()))
 

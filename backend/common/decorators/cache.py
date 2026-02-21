@@ -6,15 +6,14 @@ import logging
 from functools import wraps
 from typing import Any, Callable
 
+from django.conf import settings
 from django.core.cache import cache
 from django.http import JsonResponse
-
-from common.constants import INFINITE_CACHE_TIMEOUT
 
 logger = logging.getLogger("core.cache")
 
 
-def cache_response(timeout: int = INFINITE_CACHE_TIMEOUT, key_prefix: str = "api_cache"):
+def cache_response(timeout: int | None = None, key_prefix: str = "api_cache"):
     """
     Decorator for DRF view actions/methods to cache response data.
     Supports ETags for 304 Not Modified responses.
@@ -23,6 +22,8 @@ def cache_response(timeout: int = INFINITE_CACHE_TIMEOUT, key_prefix: str = "api
     def decorator(view_func: Callable):
         @wraps(view_func)
         def _wrapped_view(request: Any, *args: Any, **kwargs: Any) -> Any:
+            default_timeout = settings.INFINITE_CACHE_TIMEOUT
+            actual_timeout = timeout if timeout is not None else default_timeout
             if request.method != "GET":
                 return view_func(request, *args, **kwargs)
 
@@ -71,7 +72,7 @@ def cache_response(timeout: int = INFINITE_CACHE_TIMEOUT, key_prefix: str = "api
                     etag = f'"{hashlib.md5(content).hexdigest()}"'
 
                     logger.debug(f"Caching Data [Key: {cache_key}]")
-                    cache.set(cache_key, {"data": data, "etag": etag}, timeout)
+                    cache.set(cache_key, {"data": data, "etag": etag}, actual_timeout)
 
                     response["ETag"] = etag
                 else:

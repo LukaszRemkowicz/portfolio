@@ -10,6 +10,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.db import models
 from django.http import HttpRequest
+from django.shortcuts import redirect
+from django.template.response import TemplateResponse
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from translation.mixins import (
@@ -150,8 +153,6 @@ class UserAdmin(  # type: ignore[misc]
         """
         response = super().render_change_form(request, context, add, change, form_url, obj)
 
-        from django.template.response import TemplateResponse
-
         if isinstance(response, TemplateResponse):
             response.template_name = self.change_form_template
 
@@ -195,9 +196,6 @@ class UserAdmin(  # type: ignore[misc]
         """
         user = User.get_user()
         if user and user.pk:
-            from django.shortcuts import redirect
-            from django.urls import reverse
-
             return redirect(reverse("admin:users_user_change", args=[user.pk]))
         return super().changelist_view(request, extra_context)
 

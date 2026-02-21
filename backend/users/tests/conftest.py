@@ -2,6 +2,8 @@ from typing import Any
 
 import pytest
 
+from users.tests.factories import UserFactory
+
 
 @pytest.fixture
 def user(db: Any) -> Any:
@@ -9,7 +11,6 @@ def user(db: Any) -> Any:
     Create the singleton admin user.
     In this app, there is only one user who is also the admin.
     """
-    from users.tests.factories import UserFactory
 
     return UserFactory()
 
