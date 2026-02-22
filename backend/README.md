@@ -163,7 +163,7 @@ We provide specialized "God-Tier" scripts for automated database backups and res
 - [x] Automatic thumbnail generation
 
 ### 🚀 API & Reliability
-- [ ] **Dynamic Sitemap** - Implement automatic sitemap generation for images/projects
+- [ ] **Dynamic Sitemap** - Implement automatic sitemap generation using `django.contrib.sitemaps` (moved from frontend)
 - [ ] **API Documentation** - Add OpenAPI/Swagger documentation
 - [ ] **Structured Logging** - Implement JSON structured logs for production
 - [x] **Error Tracking** - Production Sentry integration with environment awareness
