@@ -77,9 +77,9 @@
     height: auto !important;
     min-height: 28px !important;
     gap: 10px !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
     white-space: normal !important;
     max-width: none !important;
+    transition: all 0.2s ease;
 }
 
 /* "X" ON THE RIGHT SIDE */

@@ -1,22 +1,27 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import styles from '../styles/components/Gallery.module.css';
 import { AstroImage } from '../types';
-import { useAppStore } from '../store/useStore';
 import ImageModal from './common/ImageModal';
 import GalleryCard from './common/GalleryCard';
+import { useSettings } from '../hooks/useSettings';
+import { useLatestAstroImages } from '../hooks/useLatestAstroImages';
 
 const Gallery: React.FC = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
-  const images = useAppStore(state => state.latestImages);
-  const loading = useAppStore(state => state.isImagesLoading);
-  const error = useAppStore(state => state.error);
-  const loadLatestImages = useAppStore(state => state.loadLatestImages);
-  const features = useAppStore(state => state.features);
   const [searchParams, setSearchParams] = useSearchParams();
   const imgId = searchParams.get('img');
+
+  const { data: settings } = useSettings();
+  const features = settings; // Map settings back to features for consistency
+  const {
+    data: images = [],
+    isLoading: loading,
+    error: queryError,
+  } = useLatestAstroImages();
+  const error = queryError ? 'Failed to load latest images.' : null;
 
   const modalImage = useMemo(() => {
     if (!imgId) return null;
@@ -24,12 +29,6 @@ const Gallery: React.FC = () => {
       images.find(i => i.slug === imgId || i.pk.toString() === imgId) || null
     );
   }, [imgId, images]);
-
-  useEffect(() => {
-    if (features?.lastimages !== false) {
-      loadLatestImages();
-    }
-  }, [loadLatestImages, features, i18n.language]);
 
   const filteredImages = useMemo(() => {
     if (filter === 'all') return images.slice(0, 9);

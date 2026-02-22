@@ -112,3 +112,22 @@ jest.mock('react-i18next', () => ({
     init: jest.fn(),
   },
 }));
+
+// Mock React Query
+jest.mock('@tanstack/react-query', () => {
+  const originalModule = jest.requireActual('@tanstack/react-query');
+  return {
+    ...originalModule,
+    useQueryClient: () => ({
+      prefetchQuery: jest.fn(),
+      invalidateQueries: jest.fn(),
+    }),
+    useQuery: jest.fn().mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+      isFetching: false,
+      refetch: jest.fn(),
+    }),
+  };
+});

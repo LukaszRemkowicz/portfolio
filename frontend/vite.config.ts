@@ -13,6 +13,12 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     allowedHosts: ['portfolio.local', 'localhost'],
+    // HMR must go through Nginx reverse-proxy (wss://portfolio.local)
+    hmr: {
+      clientPort: 443,
+      protocol: 'wss',
+      host: 'portfolio.local',
+    },
     warmup: {
       clientFiles: ['./src/index.tsx'],
     },

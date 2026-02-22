@@ -3,6 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import ImageModal from '../components/common/ImageModal';
 import { AstroImage } from '../types';
+import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
+import { useImageUrls } from '../hooks/useImageUrls';
+
+jest.mock('../hooks/useAstroImageDetail');
+jest.mock('../hooks/useImageUrls');
 
 const mockImage: AstroImage = {
   pk: '1',
@@ -18,6 +23,16 @@ const renderModal = (
   image: AstroImage | null = mockImage,
   onClose = jest.fn()
 ) => {
+  (useAstroImageDetail as jest.Mock).mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    error: null,
+  });
+
+  (useImageUrls as jest.Mock).mockReturnValue({
+    data: {},
+  });
+
   return render(
     <BrowserRouter>
       <ImageModal image={image} onClose={onClose} />

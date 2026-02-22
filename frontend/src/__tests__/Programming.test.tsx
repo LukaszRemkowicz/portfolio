@@ -2,21 +2,17 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Programming from '../components/Programming';
 import { Project } from '../types';
-import { useAppStore } from '../store/useStore';
+import { useProjects } from '../hooks/useProjects';
 
-// Mock the store
-jest.mock('../store/useStore');
+jest.mock('../hooks/useProjects');
 
 describe('Programming Component', () => {
-  const mockLoadProjects = jest.fn();
-
   beforeEach(() => {
     jest.clearAllMocks();
-    (useAppStore as unknown as jest.Mock).mockReturnValue({
-      projects: [],
-      isProjectsLoading: false,
+    (useProjects as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
       error: null,
-      loadProjects: mockLoadProjects,
     });
   });
 
@@ -26,11 +22,10 @@ describe('Programming Component', () => {
   });
 
   it('shows loading state correctly', () => {
-    (useAppStore as unknown as jest.Mock).mockReturnValue({
-      projects: [],
-      isProjectsLoading: true,
+    (useProjects as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: true,
       error: null,
-      loadProjects: mockLoadProjects,
     });
 
     render(<Programming />);
@@ -53,11 +48,10 @@ describe('Programming Component', () => {
       },
     ];
 
-    (useAppStore as unknown as jest.Mock).mockReturnValue({
-      projects: mockProjects,
-      isProjectsLoading: false,
+    (useProjects as jest.Mock).mockReturnValue({
+      data: mockProjects,
+      isLoading: false,
       error: null,
-      loadProjects: mockLoadProjects,
     });
 
     render(<Programming />);

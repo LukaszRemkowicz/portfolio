@@ -1,23 +1,19 @@
 // frontend/src/components/Programming.tsx
-import { type FC, useEffect } from 'react';
+import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAppStore } from '../store/useStore';
+import { useProjects } from '../hooks/useProjects';
 import styles from '../styles/components/Programming.module.css';
 import { Github, ExternalLink, Code2 } from 'lucide-react';
 import LoadingScreen from './common/LoadingScreen';
 
 const Programming: FC = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const {
-    projects,
-    isProjectsLoading: loading,
-    error,
-    loadProjects,
-  } = useAppStore();
-
-  useEffect(() => {
-    loadProjects();
-  }, [loadProjects, i18n.language]);
+    data: projects = [],
+    isLoading: loading,
+    error: queryError,
+  } = useProjects();
+  const error = queryError ? 'Failed to compile projects.' : null;
 
   if (loading) {
     return <LoadingScreen message={t('common.compiling')} />;

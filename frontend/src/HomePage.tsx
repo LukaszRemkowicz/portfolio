@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import Home from './components/Home';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -12,21 +12,31 @@ const Contact = lazy(() => import('./components/Contact'));
 
 import ErrorBoundary from './components/common/ErrorBoundary';
 import styles from './styles/components/App.module.css';
-import { useAppStore } from './store/useStore';
 import LoadingScreen from './components/common/LoadingScreen';
+import { useProfile } from './hooks/useProfile';
+import { useBackground } from './hooks/useBackground';
 
 const DEFAULT_PORTRAIT = '/portrait_default.png';
 
 const HomePage: React.FC = () => {
-  const profile = useAppStore(state => state.profile);
-  const backgroundUrl = useAppStore(state => state.backgroundUrl);
-  const loading = useAppStore(state => state.isInitialLoading);
-  const error = useAppStore(state => state.error);
-  const loadInitialData = useAppStore(state => state.loadInitialData);
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+    error: profileError,
+  } = useProfile();
+  const {
+    data: backgroundUrl,
+    isLoading: isBackgroundLoading,
+    error: backgroundError,
+  } = useBackground();
+  const [isErrorDismissed, setIsErrorDismissed] = useState(false);
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  const loading = isProfileLoading || isBackgroundLoading;
+  const rawError = profileError || backgroundError;
+  const error =
+    !isErrorDismissed && rawError
+      ? 'The cosmic archives are temporarily unreachable.'
+      : null;
 
   if (loading) return <LoadingScreen />;
 
@@ -37,7 +47,7 @@ const HomePage: React.FC = () => {
         <div className={styles.errorBanner} role='alert'>
           {error}
           <button
-            onClick={() => useAppStore.getState().clearError()}
+            onClick={() => setIsErrorDismissed(true)}
             className={styles.dismissError}
             aria-label='Dismiss error'
           >
@@ -65,7 +75,7 @@ const HomePage: React.FC = () => {
             <Gallery />
           </ErrorBoundary>
           <ErrorBoundary>
-            <About profile={profile} />
+            <About profile={profile || null} />
           </ErrorBoundary>
           <ErrorBoundary>
             <Contact />

@@ -3,37 +3,35 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import Gallery from '../components/Gallery';
-import { useAppStore } from '../store/useStore';
-import { fetchAstroImages } from '../api/services';
+import { useSettings } from '../hooks/useSettings';
+import { useLatestAstroImages } from '../hooks/useLatestAstroImages';
+import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
 
-// Mock Services
-jest.mock('../api/services', () => ({
-  fetchAstroImages: jest.fn().mockResolvedValue([]),
-  fetchBackground: jest.fn().mockResolvedValue(null),
-  fetchEnabledFeatures: jest.fn().mockResolvedValue({}),
-  fetchProfile: jest.fn().mockResolvedValue({}),
-}));
+jest.mock('../hooks/useSettings');
+jest.mock('../hooks/useLatestAstroImages');
+jest.mock('../hooks/useAstroImageDetail');
 
 describe('Gallery Component', () => {
-  const mockFetchAstroImages = fetchAstroImages as jest.Mock;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    useAppStore.setState({
-      latestImages: [],
-      isImagesLoading: false,
-      error: null,
-      features: { lastimages: true },
+    (useSettings as jest.Mock).mockReturnValue({
+      data: { lastimages: true },
     });
-    // Default successful fetch to avoid unhandled rejections if store calls it
-    mockFetchAstroImages.mockResolvedValue([]);
+    (useLatestAstroImages as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+    (useAstroImageDetail as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
   });
 
   it('renders the gallery using store data', async () => {
     // Mock API return
-    mockFetchAstroImages.mockResolvedValue([]);
-    useAppStore.setState({
-      latestImages: [
+    (useLatestAstroImages as jest.Mock).mockReturnValue({
+      data: [
         {
           pk: '1',
           slug: 'm31-andromeda',
@@ -46,6 +44,7 @@ describe('Gallery Component', () => {
           description: '',
         },
       ],
+      isLoading: false,
     });
 
     await act(async () => {
@@ -62,9 +61,8 @@ describe('Gallery Component', () => {
   });
 
   it('filters images when category is selected', async () => {
-    mockFetchAstroImages.mockResolvedValue([]);
-    useAppStore.setState({
-      latestImages: [
+    (useLatestAstroImages as jest.Mock).mockReturnValue({
+      data: [
         {
           pk: '1',
           slug: 'deep-sky-object',
@@ -86,6 +84,7 @@ describe('Gallery Component', () => {
           description: '',
         },
       ],
+      isLoading: false,
     });
 
     await act(async () => {
@@ -102,7 +101,6 @@ describe('Gallery Component', () => {
     const filterBtn = screen.getByRole('button', { name: 'Deep Sky' });
     fireEvent.click(filterBtn);
 
-    // Filter logic is inside Gallery component using useMemo, not API call
     // Wait for update
     await waitFor(() => {
       expect(screen.getByText('Deep Sky Object')).toBeInTheDocument();
@@ -111,9 +109,8 @@ describe('Gallery Component', () => {
   });
 
   it('opens modal when image clicked', async () => {
-    mockFetchAstroImages.mockResolvedValue([]);
-    useAppStore.setState({
-      latestImages: [
+    (useLatestAstroImages as jest.Mock).mockReturnValue({
+      data: [
         {
           pk: '1',
           slug: 'test-image',
@@ -124,6 +121,7 @@ describe('Gallery Component', () => {
           description: '',
         },
       ],
+      isLoading: false,
     });
 
     await act(async () => {
@@ -143,9 +141,12 @@ describe('Gallery Component', () => {
   });
 
   it('renders nothing if feature disabled and no images', async () => {
-    useAppStore.setState({
-      features: { lastimages: false },
-      latestImages: [],
+    (useSettings as jest.Mock).mockReturnValue({
+      data: { lastimages: false },
+    });
+    (useLatestAstroImages as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
     });
 
     await act(async () => {
