@@ -43,6 +43,19 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
       : `Explore the cosmic wonders of ${location.place?.country}.`;
   }, [location.story, location.images, location.place?.country]);
 
+  // Check if the location is "new" (created within last 14 days)
+  const isNew = useMemo(() => {
+    if (!location.created_at) return false;
+    try {
+      const createdAtDate = new Date(location.created_at);
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+      return createdAtDate > fourteenDaysAgo;
+    } catch {
+      return false;
+    }
+  }, [location.created_at]);
+
   const handleCardClick = () => {
     // Generate the required date slug using the actual raw date range.
     const resolvedDateSlug =
@@ -61,6 +74,7 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
       onClick={handleCardClick}
       style={{ cursor: 'pointer' }}
     >
+      {isNew && <div className={styles.newBadge}>New!</div>}
       <div className={styles.imageWrapper}>
         {displayImages.map((img, index) => (
           <img

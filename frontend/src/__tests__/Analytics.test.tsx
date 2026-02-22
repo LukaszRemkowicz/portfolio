@@ -6,8 +6,8 @@ describe('Google Analytics Utility', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    process.env.GA_TRACKING_ID = GA_ID;
-    process.env.ENABLE_GA = 'true';
+    process.env.VITE_GA_TRACKING_ID = GA_ID;
+    process.env.VITE_ENABLE_GA = 'true';
 
     // Clear DOM and global state
     document.head.innerHTML = '';
@@ -23,8 +23,6 @@ describe('Google Analytics Utility', () => {
   });
 
   test('loadGoogleAnalytics injects the gtag script into the document head', () => {
-    // JSDOM (our test environment) does NOT load or execute external scripts by default.
-    // No real network requests are sent to Google during this test.
     analytics.loadGoogleAnalytics();
 
     const script = document.querySelector('script');
@@ -49,8 +47,6 @@ describe('Google Analytics Utility', () => {
 
     analytics.trackPageView(path);
 
-    // Verify that the call was captured in dataLayer (since it's a stub)
-    // The stub pushes the arguments object
     const lastEvent = Array.from(window.dataLayer[window.dataLayer.length - 1]);
     expect(lastEvent[0]).toBe('event');
     expect(lastEvent[1]).toBe('page_view');
@@ -69,14 +65,11 @@ describe('Google Analytics Utility', () => {
     analytics.loadGoogleAnalytics();
     const script = document.querySelector('script') as HTMLScriptElement;
 
-    // Manually trigger the onload event
     if (script.onload) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (script as any).onload();
     }
 
-    // Verify that dataLayer has the 'js' and 'config' calls
-    // Convert arguments objects to arrays for easier comparison
     const events = Array.from(window.dataLayer).map(arg =>
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       Array.from(arg as any)
@@ -90,7 +83,7 @@ describe('Google Analytics Utility', () => {
       'does not load GA when ENABLE_GA is "%s"',
       val => {
         jest.resetModules();
-        process.env.ENABLE_GA = val;
+        process.env.VITE_ENABLE_GA = val;
         let localAnalytics: typeof import('../utils/analytics');
         jest.isolateModules(() => {
           localAnalytics = require('../utils/analytics');
@@ -106,7 +99,7 @@ describe('Google Analytics Utility', () => {
       'enables GA when ENABLE_GA is "%s" (case-insensitive)',
       val => {
         jest.resetModules();
-        process.env.ENABLE_GA = val;
+        process.env.VITE_ENABLE_GA = val;
         let localAnalytics: typeof import('../utils/analytics');
         jest.isolateModules(() => {
           localAnalytics = require('../utils/analytics');

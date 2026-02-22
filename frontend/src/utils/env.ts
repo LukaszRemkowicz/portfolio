@@ -1,37 +1,26 @@
-declare global {
-  interface Window {
-    _ENV_?: {
-      GA_TRACKING_ID?: string;
-    };
-  }
-}
+// frontend/src/utils/env.ts
 
 /**
- * Safely access environment variables defined by Webpack's DefinePlugin
- * or injected at runtime via window._ENV_.
+ * Safely access environment variables via Vite's import.meta.env.
+ * All env vars must be prefixed with VITE_ in .env files.
  */
 export const getEnv = (key: string, fallback: string = ''): string => {
-  // 1. Check runtime configuration (Site Domain, Tracking ID, etc.)
-  if (typeof window !== 'undefined' && window._ENV_) {
-    const runtimeVal = (window._ENV_ as Record<string, string | undefined>)[
-      key
-    ];
-    if (runtimeVal && runtimeVal !== `__${key}__`) {
-      return runtimeVal;
-    }
-  }
-
   try {
-    // 2. Check build-time DefinePlugin configuration
     switch (key) {
       case 'API_URL':
-        return process.env.API_URL || fallback;
+        return import.meta.env.VITE_API_URL || fallback;
       case 'GA_TRACKING_ID':
-        return process.env.GA_TRACKING_ID || fallback;
+        return import.meta.env.VITE_GA_TRACKING_ID || fallback;
       case 'ENABLE_GA':
-        return process.env.ENABLE_GA || fallback;
+        return import.meta.env.VITE_ENABLE_GA || fallback;
       case 'NODE_ENV':
-        return process.env.NODE_ENV || fallback;
+        return import.meta.env.MODE || fallback;
+      case 'SENTRY_DSN_FE':
+        return import.meta.env.VITE_SENTRY_DSN_FE || fallback;
+      case 'ENVIRONMENT':
+        return (
+          import.meta.env.VITE_ENVIRONMENT || import.meta.env.MODE || fallback
+        );
       default:
         return fallback;
     }

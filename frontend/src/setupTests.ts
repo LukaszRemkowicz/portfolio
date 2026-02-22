@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 
-// Ensure API_URL is defined for tests to avoid constant initialization error
-process.env.API_URL = 'http://localhost:8000';
+// Ensure API_URL is defined for tests that directly use process.env (legacy paths)
+// Main env access is now via import.meta.env (shimmed in jest.config.js globals)
 
 // Mock window.matchMedia for components that use it (e.g., animations, responsive hooks)
 Object.defineProperty(window, 'matchMedia', {

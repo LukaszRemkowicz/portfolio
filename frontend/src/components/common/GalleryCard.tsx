@@ -38,7 +38,7 @@ const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
       aria-label={`View details for ${item.name}`}
       type='button'
     >
-      {isNew(item.created_at) && <div className={styles.newBadge}>NEW</div>}
+      {isNew(item.created_at) && <div className={styles.newBadge}>NEW!</div>}
       <div className={styles.imageWrapper} aria-hidden='true'>
         <div
           className={`${styles.placeholder} ${isLoaded ? styles.hide : ''}`}
