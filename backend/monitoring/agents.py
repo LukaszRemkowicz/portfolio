@@ -181,7 +181,6 @@ class LogAnalysisAgent:
 
             except Exception as e:
                 logger.error(f"Failed to parse JSON with regex/fallback: {e}")
-                pass
 
             logger.warning("Failed to parse JSON, using fallback")
             return {

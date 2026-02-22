@@ -149,7 +149,7 @@ describe('AstroGallery Component', () => {
   it('renders images from the API after loading', async () => {
     const mockImages: AstroImage[] = [
       {
-        pk: 1,
+        pk: '1',
         slug: 'test-image-1',
         thumbnail_url: '/test1-thumb.jpg',
         name: 'Test Image 1',
@@ -234,7 +234,7 @@ describe('AstroGallery Component', () => {
   it('filters images when filter is clicked', async () => {
     const mockImages: AstroImage[] = [
       {
-        pk: 1,
+        pk: '1',
         slug: 'test-image-1',
         thumbnail_url: '/test1-thumb.jpg',
         name: 'Test Image 1',
@@ -277,7 +277,7 @@ describe('AstroGallery Component', () => {
   it('opens modal when image is clicked', async () => {
     const mockImages: AstroImage[] = [
       {
-        pk: 1,
+        pk: '1',
         slug: 'test-image-1',
         thumbnail_url: '/test1-thumb.jpg',
         name: 'Test Image 1',

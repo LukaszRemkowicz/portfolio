@@ -5,7 +5,7 @@ import ImageModal from '../components/common/ImageModal';
 import { AstroImage } from '../types';
 
 const mockImage: AstroImage = {
-  pk: 1,
+  pk: '1',
   slug: 'test-image',
   name: 'Test Image',
   thumbnail_url: 'test.jpg',

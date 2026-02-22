@@ -308,7 +308,7 @@ class LogAnalysisOrchestrator:
         except Exception as e:
             logger.exception("Log analysis failed for date %s", analysis_date)
             # Store error
-            log_analysis = self.storage.create_or_replace_analysis(
+            self.storage.create_or_replace_analysis(
                 analysis_date=analysis_date,
                 backend_logs=None,
                 frontend_logs=None,

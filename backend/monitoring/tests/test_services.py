@@ -107,6 +107,7 @@ class TestLogAnalysisOrchestrator:
             mocker.patch("os.remove")
             mocker.patch("os.path.exists", return_value=True)
             mocker.patch("os.path.getsize", return_value=100)
+            mocker.patch("django.db.models.fields.files.FieldFile.save")
 
             # Create orchestrator with mocked dependencies
             analyzer = LogAnalyzer(mock_agent)
@@ -139,6 +140,7 @@ class TestLogAnalysisOrchestrator:
             mocker.patch("os.remove")
             mocker.patch("os.path.exists", return_value=True)
             mocker.patch("os.path.getsize", return_value=100)
+            mocker.patch("django.db.models.fields.files.FieldFile.save")
 
             # Create orchestrator
             analyzer = LogAnalyzer(mock_agent)

@@ -116,7 +116,7 @@ class AstroImageSerializerList(AstroImageBaseSerializer):
     thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
 
     def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
-        data = super(AstroImageBaseSerializer, self).to_representation(instance)
+        data = super().to_representation(instance)
         return self.translate_fields(
             data=data,
             instance=instance,
@@ -165,7 +165,7 @@ class AstroImageThumbnailSerializer(AstroImageBaseSerializer):
     thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
 
     def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
-        data = super(AstroImageBaseSerializer, self).to_representation(instance)
+        data = super().to_representation(instance)
         return self.translate_fields(
             data=data,
             instance=instance,
