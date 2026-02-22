@@ -1,3 +1,4 @@
+import re
 from datetime import date
 
 import pytest
@@ -32,7 +33,8 @@ class TestEmailNotifications:
         assert "System is healthy." in html_content
         assert "Database latency normal" in html_content
         assert "Monitor disk usage." in html_content
-        assert "https://admin.example.com/" in html_content
+        # CodeQL fix: Verify full href URL injection boundaries
+        assert re.search(r'href="https?://admin\.example\.com/?', html_content)
         assert "TESTING" in html_content  # Environment upper-cased
 
         # Check Responsive / Theme Classes
