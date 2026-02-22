@@ -3,6 +3,7 @@ import Home from './components/Home';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import StarBackground from './components/StarBackground';
+import SEO from './components/common/SEO';
 
 // Lazy load non-critical sections
 const Gallery = lazy(() => import('./components/Gallery'));
@@ -43,6 +44,7 @@ const HomePage: React.FC = () => {
   // Graceful degradation: If error occurs, render content anyway with a notification
   return (
     <div className={styles.appContainer}>
+      <SEO />
       {error && (
         <div className={styles.errorBanner} role='alert'>
           {error}

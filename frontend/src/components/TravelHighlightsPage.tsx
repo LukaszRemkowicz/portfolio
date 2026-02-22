@@ -9,6 +9,7 @@ import StarBackground from './StarBackground';
 import { sanitizeHtml } from '../utils/html';
 import { useBackground } from '../hooks/useBackground';
 import { useImageUrls } from '../hooks/useImageUrls';
+import SEO from './common/SEO';
 import {
   useTravelHighlightDetail,
   ExtendedAstroImage,
@@ -119,8 +120,24 @@ const TravelHighlightsPage: React.FC = () => {
     );
   };
 
+  // Derive SEO description safely
+  const seoDescription = String(
+    highlightTitle ||
+      (story ? story.substring(0, 160) : undefined) ||
+      `Travel highlights from ${fullLocation}`
+  );
+
   return (
     <div className={styles.container}>
+      <SEO
+        title={fullLocation}
+        description={seoDescription}
+        ogImage={
+          locationBackgroundImage
+            ? getMediaUrl(locationBackgroundImage)
+            : undefined
+        }
+      />
       <StarBackground />
       <div
         className={styles.hero}

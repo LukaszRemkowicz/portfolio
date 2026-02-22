@@ -126,7 +126,11 @@ describe('AstroGallery Component', () => {
       expect(screen.queryByTestId('loading-screen')).not.toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Gallery/i)).toBeInTheDocument();
+    // Match all 'Gallery' texts since Helmet injects one into the <title> tag
+    const galleryTitles = screen.getAllByText(/Gallery/i);
+    expect(galleryTitles.length).toBeGreaterThan(0);
+    expect(galleryTitles[0]).toBeInTheDocument();
+
     // Categories are rendered twice (Mobile Sidebar + Desktop List)
     expect(screen.getAllByText(/Landscape/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Deep Sky/i).length).toBeGreaterThan(0);

@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "vite",
     "start": "vite",
-    "build": "tsc --noEmit && vite build",
+    "generate-sitemap": "NODE_OPTIONS='--experimental-specifier-resolution=node --loader ts-node/esm' ts-node -O '{\"module\":\"CommonJS\",\"esModuleInterop\":true,\"types\":[\"node\"]}' scripts/generate-sitemap.ts",
+    "build": "tsc --noEmit && npm run generate-sitemap && vite build",
     "preview": "vite preview",
     "test": "jest",
     "test:coverage": "jest --coverage",
@@ -33,7 +34,7 @@
     "qs": "^6.15.0",
     "react": "^18.0.0",
     "react-dom": "^18.2.0",
-    "react-helmet-async": "^2.0.0",
+    "react-helmet-async": "^2.0.5",
     "react-i18next": "^16.5.4",
     "react-router-dom": "^6.22.3",
     "web-vitals": "^2.1.4",
@@ -50,7 +51,7 @@
     "@testing-library/react": "^14.0.0",
     "@types/babel__template": "^7.4.4",
     "@types/jest": "^29.5.14",
-    "@types/node": "^20.0.0",
+    "@types/node": "^20.19.33",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@vitejs/plugin-react": "^4.0.0",
@@ -66,10 +67,11 @@
     "jest-environment-jsdom": "^29.7.0",
     "prettier": "^3.0.0",
     "test-exclude": "^7.0.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.54.0",
     "vite": "^6.4.1",
-    "vite-plugin-pwa": "^0.21.0"
+    "vite-plugin-pwa": "^0.21.2"
   },
   "overrides": {
     "glob": "^11.0.0",

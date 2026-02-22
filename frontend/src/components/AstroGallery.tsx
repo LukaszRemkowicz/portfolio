@@ -7,9 +7,11 @@ import { AstroImage, FilterType } from '../types';
 import ImageModal from './common/ImageModal';
 import LoadingScreen from './common/LoadingScreen';
 import GalleryCard from './common/GalleryCard';
+import GallerySkeleton from './skeletons/GallerySkeleton';
 import TagSidebar from './TagSidebar';
 import CategorySidebar from './CategorySidebar';
 import { Sliders, LayoutGrid } from 'lucide-react';
+import SEO from './common/SEO';
 import { useAstroImages } from '../hooks/useAstroImages';
 import { useCategories } from '../hooks/useCategories';
 import { useTags } from '../hooks/useTags';
@@ -121,6 +123,7 @@ const AstroGallery: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      <SEO title={t('common.gallery')} />
       <div
         className={styles.hero}
         style={{
@@ -199,9 +202,7 @@ const AstroGallery: React.FC = () => {
           <div ref={resultsRef} className={styles.scrollAnchor} />
           <div className={styles.grid}>
             {isImagesLoading ? (
-              <div className={styles.noResults}>
-                <p>{t('common.scanning')}</p>
-              </div>
+              <GallerySkeleton count={9} />
             ) : images.length > 0 ? (
               images.map((image: AstroImage) => (
                 <GalleryCard

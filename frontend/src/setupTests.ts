@@ -43,6 +43,16 @@ console.warn = (...args) => {
   originalWarn(...args);
 };
 
+// Mock react-helmet-async
+jest.mock('react-helmet-async', () => {
+  return {
+    Helmet: ({ children }: { children?: React.ReactNode }) =>
+      children as React.ReactElement | null,
+    HelmetProvider: ({ children }: { children?: React.ReactNode }) =>
+      children as React.ReactElement | null,
+  };
+});
+
 // Mock react-i18next
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
