@@ -20,5 +20,5 @@ class ContactMessage(models.Model):
         verbose_name = _("Contact Message")
         verbose_name_plural = _("Contact Messages")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} - {self.subject} " f"({self.created_at.strftime('%Y-%m-%d %H:%M')})"

@@ -1,15 +1,19 @@
+from datetime import date
 from io import BytesIO
 from typing import Any
 
 import pytest
 from PIL import Image
+from psycopg2.extras import DateRange
 from pytest_mock import MockerFixture
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import IntegrityError
 from django.db.models import QuerySet
 from django.utils.text import slugify
 
+from astrophotography.forms import AstroImageForm
 from astrophotography.models import (
     AstroImage,
     Camera,
@@ -79,6 +83,16 @@ class TestAstroImageModel:
         assert image1.slug != image2.slug
         assert slugify(name) in image1.slug
         assert slugify(name) in image2.slug
+
+    def test_get_thumbnail_url_with_image(self) -> None:
+        """
+        Verify that get_thumbnail_url returns a valid URL when an image exists.
+        This tests the inherited logic from BaseImage.
+        """
+        image: AstroImage = AstroImageFactory()
+        url: str = image.get_thumbnail_url()
+        assert url
+        assert "/media/thumbnails/" in url or "/media/images/" in url
 
 
 @pytest.mark.django_db
@@ -198,6 +212,30 @@ class TestMainPageLocationModel:
         slider.images.add(image)
         slider.clean()
 
+    def test_overlapping_date_range_validation_failure(self) -> None:
+        place: Place = PlaceFactory(country="PL")
+        # 2025-01-01 to 2025-01-10
+        date_range1 = DateRange(date(2025, 1, 1), date(2025, 1, 10))
+        # 2025-01-05 to 2025-01-15 (Overlaps!)
+        date_range2 = DateRange(date(2025, 1, 5), date(2025, 1, 15))
+
+        # First location succeeds
+        MainPageLocationFactory(place=place, adventure_date=date_range1)
+
+        # Second location with overlapping date should fail DB-level enforcement
+        # Note: Python-level clean() check was removed as redundant with DB constraint.
+        with pytest.raises(IntegrityError):
+            MainPageLocationFactory(place=place, adventure_date=date_range2)
+
+    def test_disjoint_date_ranges_succeed(self) -> None:
+        place: Place = PlaceFactory(country="PL")
+        date_range1 = DateRange(date(2025, 1, 1), date(2025, 1, 10))
+        date_range2 = DateRange(date(2025, 1, 11), date(2025, 1, 20))
+
+        MainPageLocationFactory(place=place, adventure_date=date_range1)
+        # Should NOT raise any error
+        MainPageLocationFactory(place=place, adventure_date=date_range2)
+
 
 @pytest.mark.django_db
 class TestTagModel:
@@ -239,10 +277,11 @@ class TestTagModel:
         mock_agent: Any = mocker.Mock()
         mock_agent.translate_tag.side_effect = lambda text, lang: f"TR_{text}"
 
-        mocker.patch.object(TranslationService, "_get_agent", return_value=mock_agent)
+        # Instantiate service with mock agent
+        service = TranslationService(agent=mock_agent)
 
-        # Execute service method
-        TranslationService.translate_parler_tag(tag, "pl")
+        # Execute service instance method
+        service.translate_parler_tag(tag, "pl")
 
         # Verify results in DB
         tag.refresh_from_db()
@@ -252,3 +291,89 @@ class TestTagModel:
         assert saved_name == "TR_Nebula"
         # Slug is generated from translated name ("TR_Nebula") -> "tr_nebula"
         assert saved_slug == "tr_nebula"
+
+
+@pytest.mark.django_db
+class TestImageUpdateLogic:
+    def test_thumbnail_updates_when_image_changes(self) -> None:
+        """
+        Verify that the thumbnail is regenerated when the path (image file) changes.
+        """
+        # 1. Create initial image
+        img_data1 = BytesIO()
+        Image.new("RGB", (100, 100), color="red").save(img_data1, "JPEG")
+        file1 = SimpleUploadedFile("shared.jpg", img_data1.getvalue(), content_type="image/jpeg")
+
+        image: AstroImage = AstroImageFactory(path=file1)
+        initial_thumb_name = image.thumbnail.name
+        initial_thumb_content = image.thumbnail.read()
+
+        # 2. Update with NEW image but SAME filename
+        img_data2 = BytesIO()
+        Image.new("RGB", (100, 100), color="blue").save(img_data2, "JPEG")
+        file2 = SimpleUploadedFile("shared.jpg", img_data2.getvalue(), content_type="image/jpeg")
+
+        image.path = file2
+        image.save()
+
+        image.refresh_from_db()
+
+        # 3. Assertions
+        new_thumb_content = image.thumbnail.read()
+        assert new_thumb_content != initial_thumb_content, (
+            f"Thumbnail content should change! \n"
+            f"Initial thumb: {initial_thumb_name}\n"
+            f"New thumb: {image.thumbnail.name}"
+        )
+
+    def test_thumbnail_does_not_update_when_image_is_same(self) -> None:
+        """
+        Verify that the thumbnail is NOT regenerated if we save without changing the image.
+        """
+        image: AstroImage = AstroImageFactory(name="Stationary Image")
+        initial_thumb_name = image.thumbnail.name
+
+        # Save again without changing path
+        image.save()
+
+        image.refresh_from_db()
+        assert (
+            image.thumbnail.name == initial_thumb_name
+        ), "Thumbnail should NOT have been regenerated"
+
+    def test_update_via_form(self) -> None:
+        """
+        Simulate a Django Admin update using the actual model form.
+        """
+        # 1. Create initial
+        image: AstroImage = AstroImageFactory(name="Form Test")
+        old_path = image.path.name
+        old_thumb_name = image.thumbnail.name
+
+        # 2. Prepare form data with NEW image
+        img_data = BytesIO()
+        Image.new("RGB", (100, 100), color="green").save(img_data, "JPEG")
+        new_file = SimpleUploadedFile(
+            "new_image.jpg", img_data.getvalue(), content_type="image/jpeg"
+        )
+
+        # In Django Admin, we'd have name, description, etc.
+        data = {
+            "name": "Updated Name",
+            "capture_date": "2024-01-01",
+            "celestial_object": "Landscape",
+        }
+        files = {"path": new_file}
+
+        form = AstroImageForm(data=data, files=files, instance=image)
+        if not form.is_valid():
+            print(f"DEBUG Form errors: {form.errors}")
+        assert form.is_valid()
+
+        # 3. Save via form
+        form.save()
+
+        image.refresh_from_db()
+        assert image.path.name != old_path
+        assert image.thumbnail.name != old_thumb_name
+        assert image.name == "Updated Name"

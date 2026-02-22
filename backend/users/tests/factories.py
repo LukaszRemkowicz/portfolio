@@ -14,8 +14,13 @@ class UserFactory(DjangoModelFactory):
     last_name = "User"
     bio = "General bio"
     is_active = True
-    is_staff = True
-    is_superuser = True
+    is_staff = False
+    is_superuser = False
+
+    @classmethod
+    def create_superuser(cls, **kwargs):
+        """Helper to create a superuser."""
+        return cls.create(is_staff=True, is_superuser=True, **kwargs)
 
 
 class ProfileFactory(DjangoModelFactory):

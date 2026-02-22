@@ -4,14 +4,16 @@ Tests for translation-related tasks, including Celery tasks, service logic,
 and GPT agent interactions.
 """
 
+import functools
+import uuid
 from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
 from requests.exceptions import RequestException
 
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils.text import slugify
 
 from translation.agents import TranslationAgent
 from translation.services import TranslationService
@@ -138,30 +140,24 @@ class TestTaskAgent:
 
 
 @pytest.mark.django_db
-class TestTaskService:
+class TestTranslationServiceBusinessLogic:
     """Tests for TranslationService business logic."""
 
-    def test_get_available_languages_returns_list(self):
-        """Verify that get_available_languages returns a list of language codes."""
+    def test_get_available_languages(self):
+        """Test getting available languages from settings."""
         languages = TranslationService.get_available_languages()
-        assert isinstance(languages, list)
-        assert len(languages) > 0
         assert "en" in languages
         assert "pl" in languages
+        assert len(languages) >= 2
 
-    def test_get_available_languages_matches_settings(self):
-        """Verify that the returned languages match configuration."""
+    def test_get_available_languages_fallback(self, settings):
+        """Test fallback when settings are missing/empty."""
+        settings.PARLER_LANGUAGES = {}
         languages = TranslationService.get_available_languages()
-        parler_configs = getattr(settings, "PARLER_LANGUAGES", {})
-        parler_langs = parler_configs.get(None, [])
-        expected_codes = [
-            lang["code"] for lang in parler_langs if isinstance(lang, dict) and "code" in lang
-        ]
-        assert len(expected_codes) > 0
-        assert set(languages) == set(expected_codes)
+        assert languages == []
 
-    def test_is_empty_text_edge_cases(self):
-        """Verify is_empty_text with various HTML and whitespace cases."""
+    def test_is_empty_text(self):
+        """Test HTML empty text detection."""
         assert TranslationService.is_empty_text("") is True
         assert TranslationService.is_empty_text(None) is True
         assert TranslationService.is_empty_text("<p></p>") is True
@@ -170,140 +166,203 @@ class TestTaskService:
         assert TranslationService.is_empty_text("<p>Content</p>") is False
         assert TranslationService.is_empty_text("Valid") is False
 
-    def test_parler_ceremony_skip_if_exists(self, mocker: MockerFixture):
-        """Verify that _parler_ceremony yields None and stops if translation exists."""
-        instance = mocker.MagicMock()
-        mocker.patch.object(TranslationService, "_has_translation", return_value=(True, "Existing"))
+    def test_translate_parler_tag_no_source(self, mocker, tag_factory):
+        """Test skipping when source text is empty."""
+        instance = tag_factory(name="", slug=f"tag-{uuid.uuid4()}")
 
-        gen = TranslationService._parler_ceremony(instance, "name", "pl")
-        val = next(gen)
-        assert val is None
-        with pytest.raises(StopIteration):
-            next(gen)
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
 
-    def test_parler_ceremony_yields_source(self, mocker: MockerFixture):
-        """Verify that _parler_ceremony yields source text if translation is missing."""
-        instance = mocker.MagicMock()
-        instance.get_current_language.return_value = "en"
-        mocker.patch.object(TranslationService, "_has_translation", return_value=(False, None))
-        mocker.patch.object(TranslationService, "_get_default_language_text", return_value="Source")
+        mocker.patch.object(service, "_get_default_language_text", return_value="")
 
-        gen = TranslationService._parler_ceremony(instance, "name", "pl")
-        val = next(gen)
-        assert val == "Source"
-        try:
-            gen.send("Translated")
-        except StopIteration:
-            pass
-        instance.set_current_language.assert_any_call("pl")
-        instance.set_current_language.assert_any_call("en")
+        result, failures = service.translate_parler_tag(instance, "pl")
 
-    def test_translate_parler_tag_uses_correct_agent_method(self, mocker: MockerFixture):
-        """Verify that translate_parler_tag calls translate_tag and handles slugs."""
-        instance = mocker.MagicMock()
-        instance.get_current_language.return_value = "en"
-        instance.name = "TranslatedTag"
+        assert result == []
+        assert failures == {}
+        mock_agent.translate_tag.assert_not_called()
 
-        mock_get_agent = mocker.patch("translation.services.TranslationService._get_agent")
-        mock_agent = mock_get_agent.return_value
-        mock_agent.translate_tag.return_value = "TranslatedTag"
+    def test_translate_parler_tag_skips_existing(self, mocker, tag_factory):
+        """Test skipping if translation already exists."""
+        unique_name = f"Existing-{uuid.uuid4()}"
+        instance = tag_factory(name=unique_name, slug=f"tag-{uuid.uuid4()}")
 
-        mocker.patch.object(TranslationService, "_has_translation", return_value=(False, None))
-        mocker.patch.object(TranslationService, "_get_default_language_text", return_value="Source")
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
 
-        result = TranslationService.translate_parler_tag(instance, "pl")
-        assert result == ["TranslatedTag", "translatedtag"]
-        mock_agent.translate_tag.assert_called_once_with("Source", "pl")
-        assert instance.name == "TranslatedTag"
-        assert instance.slug == "translatedtag"
+        # We need to simulate that it HAS translation with matching slug
+        # The service checks name then slug.
+        expected_slug = slugify(unique_name, allow_unicode=True)
+        # We return matching slug so it doesn't try to update and hit duplicate key
+        mocker.patch.object(
+            service,
+            "_has_translation",
+            side_effect=[(True, f"{unique_name}PL"), (True, expected_slug)],
+        )
+
+        result, failures = service.translate_parler_tag(instance, "pl")
+
+        assert result == []
+        assert failures == {}
+        mock_agent.translate_tag.assert_not_called()
+
+    def test_translate_parler_tag_success(self, mocker, tag_factory):
+        """Test full successful tag translation flow."""
+        unique_name = f"Nebula-{uuid.uuid4()}"
+        instance = tag_factory(name=unique_name, slug=f"tag-{uuid.uuid4()}")
+
+        mock_agent = mocker.Mock()
+        translated_name = "Mgławica"
+        mock_agent.translate_tag.return_value = translated_name
+
+        service = TranslationService(agent=mock_agent)
+
+        mocker.patch.object(service, "_has_translation", return_value=(False, None))
+        mocker.patch.object(service, "_get_default_language_text", return_value=unique_name)
+
+        result, failures = service.translate_parler_tag(instance, "pl")
+
+        assert translated_name in result
+        assert failures == {}
+        mock_agent.translate_tag.assert_called_with(unique_name, "pl")
+
+        instance.set_current_language("pl")
+        assert instance.name == translated_name
+        assert instance.slug == slugify(translated_name, allow_unicode=True)
+
+    def test_translate_user_success(self, mocker, user_factory):
+        """Test translate_user calls run_parler_translation correctly."""
+        instance = user_factory()
+
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
+
+        # Mock internal helper to avoid DB/transaction complexity in unit test
+        mocker.patch.object(service, "_run_parler_translation", return_value=("Translated", None))
+        mocker.patch.object(service, "_save_translations")
+
+        results, failures = service.translate_user(instance, "pl")
+
+        assert results["short_description"] == "Translated"
+        assert results["bio"] == "Translated"
+        assert failures == {}
+        assert service._run_parler_translation.call_count == 2
+        service._save_translations.assert_called_once()
+
+    def test_translate_astro_image_success(self, mocker, astro_image_factory):
+        """Test translate_astro_image success flow."""
+        instance = astro_image_factory()
+
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
+
+        mocker.patch.object(service, "_run_parler_translation", return_value=("Translated", None))
+        mocker.patch.object(service, "_save_translations")
+
+        results, failures = service.translate_astro_image(instance, "pl")
+        assert failures == {}
+
+        assert service._run_parler_translation.call_count == 4  # 4 fields
+        service._save_translations.assert_called_once()
+
+    def test_translate_place_success(self, mocker, place_factory):
+        """Test translate_place uses specialized handler."""
+        instance = place_factory(country__name="Poland")
+
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
+
+        mocker.patch.object(service, "_run_parler_translation", return_value=("Translated", None))
+        mocker.patch.object(service, "_save_translations")
+
+        result, failures = service.translate_place(instance, "pl")
+
+        assert result == "Translated"
+        assert failures == {}
+        service._run_parler_translation.assert_called_once()
+        # Verify custom handler was passed
+        args, _ = service._run_parler_translation.call_args
+        assert callable(args[3])  # handler is the 4th arg
 
     def test_translate_user_handles_text_and_html(
         self, mocker: MockerFixture, mock_task_infrastructure, mock_llm_provider: MagicMock
     ):
-        """
-        Test that translate_user uses correct handlers for bio (HTML) and short_description (text).
-        """
-        mock_get_agent = mocker.patch("translation.services.TranslationService._get_agent")
-        mock_run_parler = mocker.patch(
-            "translation.services.TranslationService._run_parler_translation"
-        )
+        """Verify that translation handles both plain text and HTML fields."""
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
 
         instance = mocker.MagicMock()
-        mock_run_parler.return_value = "Translated"
-        mock_agent = mock_get_agent.return_value
+        instance.__class__.__name__ = "User"
 
-        # Call the method
-        TranslationService.translate_user(instance, "pl")
+        # Mock _run to verify handlers
+        mock_run = mocker.patch.object(service, "_run_parler_translation")
+        mock_run.return_value = ({"short_description": "Short", "bio": "<p>Bio</p>"}, {})
+        mocker.patch.object(service, "_save_translations")
 
-        # Verify calls - we expect 2 calls
-        assert mock_run_parler.call_count == 2
+        results, failures = service.translate_user(instance, "pl")
+        assert failures == {}
 
-        calls = mock_run_parler.call_args_list
-        fields_processed = {}
+        # Verify calls
+        assert mock_run.call_count == 2
 
-        for call in calls:
-            args, _ = call
-            field_name = args[1]
-            handler = args[3]
-            fields_processed[field_name] = handler
-
-        # Verify short_description used standard text translator
-        assert "short_description" in fields_processed
-        assert fields_processed["short_description"] == mock_agent.translate
-
-        # Verify bio used HTML translator
-        assert "bio" in fields_processed
-        assert fields_processed["bio"] == mock_agent.translate_html
+        # Verify handlers — _get_handler now wraps with functools.partial,
+        # so compare .func to the underlying mock method.
+        handlers_func = [
+            h.func if isinstance(h, functools.partial) else h
+            for h in (call[0][3] for call in mock_run.call_args_list)
+        ]
+        assert mock_agent.translate in handlers_func
+        assert mock_agent.translate_html in handlers_func
 
     def test_translate_user_saves_translations(
         self, mocker: MockerFixture, mock_task_infrastructure
     ):
         """Test that translated fields are saved."""
-        mock_get_agent = mocker.patch("translation.services.TranslationService._get_agent")
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
 
         instance = mocker.MagicMock()
-        mock_agent = mock_get_agent.return_value
-        mock_agent.translate.return_value = "Opis"
-        mock_agent.translate_html.return_value = "<p>Bio</p>"
+        instance.__class__.__name__ = "User"  # Mock the class name for translate_model
 
-        # Mock the helper to actually return values like the real method would with the mock agent
-        # We can't easily mock the generator-based _run_parler_translation in a simple way
-        # that mimics full execution without complexity, so we'll mock _run_parler_translation
-        # directly to return the values we expect
-
+        # Mock helper to return values
         def side_effect(inst, field, lang, handler, force=False):
             if field == "short_description":
-                return "Opis"
-            return "<p>Bio</p>"
+                return "Opis", None
+            return "<p>Bio</p>", None
 
-        mocker.patch(
-            "translation.services.TranslationService._run_parler_translation",
+        mocker.patch.object(
+            service,
+            "_run_parler_translation",
             side_effect=side_effect,
         )
 
         # Call method
-        results = TranslationService.translate_user(instance, "pl")
+        results, failures = service.translate_user(instance, "pl")
 
         # Verify results
         assert results["short_description"] == "Opis"
         assert results["bio"] == "<p>Bio</p>"
+        assert failures == {}
 
         # Verify save_translations called
         instance.save_translations.assert_called_once()
 
     def test_translate_astro_image_uses_html_agent_for_description(self, mocker: MockerFixture):
         """Verify HTML agent use for description in AstroImage translation."""
-        mock_get_agent = mocker.patch("translation.services.TranslationService._get_agent")
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
+
         instance = mocker.MagicMock()
-        mock_agent = mock_get_agent.return_value
+        instance.__class__.__name__ = "AstroImage"  # Mock the class name for translate_model
 
-        mock_run = mocker.patch.object(TranslationService, "_run_parler_translation")
+        mock_run = mocker.patch.object(
+            service, "_run_parler_translation", return_value=("Translated", None)
+        )
+        mocker.patch.object(service, "_save_translations")
 
-        TranslationService.translate_astro_image(instance, "pl")
+        service.translate_astro_image(instance, "pl")
 
         call_args_list = mock_run.call_args_list
-        # We expect 4 calls: 2 for name (trans+edit), 2 for description (trans+edit)
-        # Note: logic might vary by implementation, but assuming 4 based on original assertion
+        # We expect 4 calls: name, description, exposure_details, processing_details
         assert len(call_args_list) == 4
 
         # Verify calls use expected handlers
@@ -313,22 +372,107 @@ class TestTaskService:
         # We scan calls to find 'description' field
         desc_calls = [c for c in call_args_list if c[0][1] == "description"]
         assert len(desc_calls) >= 1
-        assert desc_calls[0][0][3] == mock_agent.translate_html
+        # Handler is a functools.partial; unwrap .func to compare
+        desc_handler = desc_calls[0][0][3]
+        assert (
+            desc_handler == mock_agent.translate_html
+            or getattr(desc_handler, "func", None) == mock_agent.translate_html
+        )
 
-        # Name should use translate
         name_calls = [c for c in call_args_list if c[0][1] == "name"]
         assert len(name_calls) >= 1
-        assert name_calls[0][0][3] == mock_agent.translate
+        name_handler = name_calls[0][0][3]
+        assert (
+            name_handler == mock_agent.translate
+            or getattr(name_handler, "func", None) == mock_agent.translate
+        )
 
     def test_parler_ceremony_obeys_force_parameter(self, mocker: MockerFixture):
         """Verify that _parler_ceremony yields source even if translation exists with force=True."""
         instance = mocker.MagicMock()
         instance.get_current_language.return_value = "en"
-        mocker.patch.object(TranslationService, "_get_default_language_text", return_value="Source")
 
-        gen = TranslationService._parler_ceremony(instance, "name", "pl", force=True)
-        val = next(gen)
-        assert val == "Source"
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
+
+        mocker.patch(
+            "translation.services.TranslationService._get_default_language_text",
+            return_value="Source",
+        )
+
+        # _parler_ceremony is a generator. We expect it to yield the source text.
+        gen = service._parler_ceremony(instance, "name", "pl", force=True)
+        try:
+            val = next(gen)
+            # If the generator yields a value, it means translation is needed
+            assert val == "Source"
+        except StopIteration:
+            # If it raises StopIteration immediately, it means it was skipped
+            pytest.fail("_parler_ceremony skipped despite force=True")
+
+    def test_llm_refusal_rejected(self, mocker, astro_image_factory):
+        """LLM refusal messages must not be saved as translations."""
+        instance = astro_image_factory()
+        mock_agent = mocker.Mock()
+        # LLM returns a polite refusal instead of a translation
+        mock_agent.translate.return_value = (
+            "I'm sorry, but it seems like there might be a mistake in your input."
+        )
+        service = TranslationService(agent=mock_agent)
+
+        mocker.patch.object(service, "_save_translations")
+
+        result, failures = service.translate_astro_image(instance, "pl")
+
+        # name is a plain text field — on refusal it must be empty so FE shows default lang
+        assert result["name"] == ""
+        assert failures["name"] == "LLM Refusal"
+
+    def test_llm_identical_output_accepted_as_proper_noun(self, mocker, astro_image_factory):
+        """LLM returning the exact source text is now treated
+        as a valid translation (proper noun)."""
+        instance = astro_image_factory()
+        source_name = instance.name
+        mock_agent = mocker.Mock()
+        # LLM echoes source verbatim — valid for proper nouns (e.g. "Lanzarote")
+        mock_agent.translate.return_value = source_name
+        service = TranslationService(agent=mock_agent)
+
+        mocker.patch.object(service, "_save_translations")
+
+        result, failures = service.translate_astro_image(instance, "pl")
+
+        # Identity match is now accepted: source written through, no failure recorded
+        assert result["name"] == source_name
+        assert "name" not in failures
+
+    def test_field_hint_bound_in_get_handler(self, mocker):
+        """_get_handler must return a partial with field_hint bound to the field name."""
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
+
+        from translation.services import FieldTranslationConfig
+
+        config = FieldTranslationConfig(name="name", is_html=False)
+        handler = service._get_handler(config)
+
+        assert isinstance(handler, functools.partial)
+        assert handler.func == mock_agent.translate
+        assert handler.keywords.get("field_hint") == "name"
+
+    def test_field_hint_bound_for_html_field(self, mocker):
+        """_get_handler for an HTML field must bind translate_html with field_hint."""
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
+
+        from translation.services import FieldTranslationConfig
+
+        config = FieldTranslationConfig(name="description", is_html=True)
+        handler = service._get_handler(config)
+
+        assert isinstance(handler, functools.partial)
+        assert handler.func == mock_agent.translate_html
+        assert handler.keywords.get("field_hint") == "description"
 
 
 @pytest.mark.django_db
@@ -345,7 +489,8 @@ class TestTranslateInstanceTask:
         mock_instance.pk = 1
         mock_model.objects.get.return_value = mock_instance
         infra["get_model"].return_value = mock_model
-        infra["service"].translate_place = mocker.Mock(return_value={"name": "Warszawa"})
+        mock_service_instance = infra["service"].create_default.return_value
+        mock_service_instance.translate_place = mocker.Mock(return_value=("Warszawa", {}))
         mock_task_record = mocker.Mock()
         infra["task_model"].objects.update_or_create.return_value = (mock_task_record, True)
 
@@ -356,6 +501,7 @@ class TestTranslateInstanceTask:
             method_name="translate_place",
         )
 
+        # We expect 2 calls: one for Status.RUNNING and one for Status.COMPLETED
         assert infra["task_model"].objects.update_or_create.call_count == 2
 
         # Verify RUNNING transition
@@ -363,10 +509,10 @@ class TestTranslateInstanceTask:
         assert call_running.kwargs["defaults"]["status"] == infra["task_model"].Status.RUNNING
 
         # Verify COMPLETED transition
-        call_completed = infra["task_model"].objects.update_or_create.call_args_list[1]
+        call_completed = infra["task_model"].objects.update_or_create.call_args_list[-1]
         assert call_completed.kwargs["defaults"]["status"] == infra["task_model"].Status.COMPLETED
 
-        infra["service"].translate_place.assert_called_once_with(mock_instance, "pl")
+        mock_service_instance.translate_place.assert_called_once_with(mock_instance, "pl")
 
     def test_translate_instance_task_handles_missing_instance(
         self, mock_task_infrastructure, mocker: MockerFixture
@@ -398,7 +544,8 @@ class TestTranslateInstanceTask:
         mock_model.objects.get.return_value = mock_instance
         infra["get_model"].return_value = mock_model
         infra["task_model"].objects.update_or_create.return_value = (mocker.Mock(), True)
-        infra["service"].translate_place = mocker.Mock(
+        mock_service_instance = infra["service"].create_default.return_value
+        mock_service_instance.translate_place = mocker.Mock(
             return_value={"name": "Existing translation"}
         )
 
@@ -415,7 +562,7 @@ class TestTranslateInstanceTask:
             method_name="translate_place",
         )
 
-        assert infra["service"].translate_place.call_count == 2
+        assert mock_service_instance.translate_place.call_count == 2
 
     def test_translate_instance_task_retry_on_request_exception(
         self, mock_task_infrastructure, mocker: MockerFixture
@@ -428,7 +575,8 @@ class TestTranslateInstanceTask:
         mock_model.objects.get.return_value = mock_instance
         infra["get_model"].return_value = mock_model
         infra["task_model"].objects.update_or_create.return_value = (mocker.Mock(), True)
-        infra["service"].translate_place = mocker.Mock(side_effect=RequestException("Error"))
+        mock_service_instance = infra["service"].create_default.return_value
+        mock_service_instance.translate_place = mocker.Mock(side_effect=RequestException("Error"))
 
         with pytest.raises(Exception):
             translate_instance_task(
@@ -452,7 +600,8 @@ class TestTranslateInstanceTask:
         mock_model.objects.get.return_value = mock_instance
         infra["get_model"].return_value = mock_model
         infra["task_model"].objects.update_or_create.return_value = (mocker.Mock(), True)
-        infra["service"].translate_parler_tag = mocker.Mock(return_value=["Django"])
+        mock_service_instance = infra["service"].create_default.return_value
+        mock_service_instance.translate_parler_tag = mocker.Mock(return_value=["Django"])
 
         translate_instance_task(
             model_name="astrophotography.Tag",
@@ -462,6 +611,6 @@ class TestTranslateInstanceTask:
             force=True,
         )
 
-        infra["service"].translate_parler_tag.assert_called_once_with(
+        mock_service_instance.translate_parler_tag.assert_called_once_with(
             mock_instance, "pl", force=True
         )

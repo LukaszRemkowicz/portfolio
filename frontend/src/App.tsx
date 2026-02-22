@@ -80,13 +80,14 @@ const App: React.FC = () => {
               }
             />
             <Route
-              path={`${APP_ROUTES.TRAVEL_HIGHLIGHTS}/:countrySlug/:placeSlug?`}
+              path={`${APP_ROUTES.TRAVEL_HIGHLIGHTS}/:countrySlug/:placeSlug/:dateSlug`}
               element={
                 <MainLayout>
                   <TravelHighlightsPage />
                 </MainLayout>
               }
             />
+
             <Route
               path={APP_ROUTES.PRIVACY}
               element={

@@ -5,6 +5,7 @@ from typing import Any, cast
 
 import environ
 import sentry_sdk
+from celery.schedules import crontab
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 
@@ -17,9 +18,14 @@ env = environ.Env(DEBUG=(bool, False))
 # reading .env file
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
+# Project root (repository root where docker-compose.yml lives) for Docker Compose access
+PROJECT_ROOT = env.str("PROJECT_ROOT", default=str(BASE_DIR.parent))
+
+
 # Sentry Configuration
 SENTRY_DSN = env("SENTRY_DSN", default="")
 ENABLE_SENTRY = env.bool("ENABLE_SENTRY", default=True)
+ENVIRONMENT = env("ENVIRONMENT", default="development")
 
 if SENTRY_DSN and ENABLE_SENTRY:
     sentry_sdk.init(
@@ -34,7 +40,7 @@ if SENTRY_DSN and ENABLE_SENTRY:
         traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
         # If you wish to associate users to errors (recommended)
         send_default_pii=True,
-        environment=env("ENVIRONMENT", default="development"),
+        environment=ENVIRONMENT,
     )
 
 # Quick-start development settings - unsuitable for production
@@ -127,6 +133,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",  # Required by auth
     "django.contrib.auth",  # Required for user model
     "core.admin_config.PortfolioAdminConfig",  # Custom AdminSite replacement
+    "core.apps.CoreConfig",  # Must be loaded before other Django apps for template overrides
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
@@ -144,7 +151,7 @@ INSTALLED_APPS = [
     "django_select2",
     "django_ckeditor_5",
     "translation.apps.TranslationConfig",
-    "core.apps.CoreConfig",
+    "monitoring.apps.MonitoringConfig",
 ]
 
 # Security Settings (for Nginx SSL termination)
@@ -173,7 +180,7 @@ ROOT_URLCONF = "settings.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(BASE_DIR, "core", "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -193,8 +200,10 @@ WSGI_APPLICATION = "settings.wsgi.application"
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 
 # LLM Provider Configuration
-# Options: 'gpt' (default), 'gemini', etc.
-LLM_PROVIDER_BACKEND = env.str("LLM_PROVIDER_BACKEND", default="gpt")
+# Available providers: "gpt", "mock", "gemini", "claude", etc.
+# Each service can use a different provider
+TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
+MONITORING_LLM_PROVIDER = env.str("MONITORING_LLM_PROVIDER", default="gpt")
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -273,7 +282,7 @@ LOCALE_PATHS = [
     os.path.join(BASE_DIR, "astrophotography", "locale"),
 ]
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Warsaw"
 
 USE_I18N = True
 
@@ -303,6 +312,9 @@ CACHES = {
         "TIMEOUT": 3600,
     },
 }
+
+# 30 days is effectively infinite for this portfolio
+INFINITE_CACHE_TIMEOUT = 3600 * 24 * 30
 
 # Django Select2 Configuration
 SELECT2_CACHE_BACKEND = "select2"
@@ -374,6 +386,17 @@ REST_FRAMEWORK = {
         "gallery": "2000/hour",  # Gallery views - relaxed for browsing
     },
 }
+
+if DEBUG:
+    # Disable throttling (or make it very high) in DEBUG mode
+    # This prevents development/testing from hitting rate limits
+    REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
+        "anon": "10000/hour",
+        "user": "100000/hour",
+        "contact": "1000/hour",
+        "api": "10000/hour",
+        "gallery": "100000/hour",
+    }
 
 # Django Axes Configuration (Admin Login Protection)
 AXES_FAILURE_LIMIT = 5  # Number of failed login attempts before lockout
@@ -534,7 +557,37 @@ ADMIN_SITE_ORDERING = (
         "label": _("Translations"),
         "models": ("translation.TranslationTask",),
     },
+    {
+        "app": "monitoring",
+        "label": "Monitoring",
+        "models": ("monitoring.LogAnalysis",),
+    },
 )
+
+# ===========================
+# Celery Beat (Periodic Tasks)
+# ===========================
+
+
+CELERY_BEAT_SCHEDULE = {
+    "daily-log-analysis": {
+        "task": "monitoring.tasks.daily_log_analysis_task",
+        "schedule": crontab(hour=2, minute=0),  # 2:00 AM UTC daily
+        "options": {
+            "expires": 3600,  # Task expires after 1 hour
+        },
+    },
+    "weekly-log-cleanup": {
+        "task": "monitoring.tasks.cleanup_old_logs_task",
+        "schedule": crontab(hour=8, minute=0, day_of_week=0),  # 8:00 AM UTC every Sunday
+        "kwargs": {
+            "days_to_keep": 30,  # Keep last 30 days
+        },
+        "options": {
+            "expires": 1800,  # Task expires after 30 minutes
+        },
+    },
+}
 
 # ===========================
 # Celery Configuration
@@ -549,6 +602,14 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+
+# Task Routing
+# Route monitoring tasks to a specific queue so they can be picked up
+# ONLY by the host-based worker (which has access to docker CLI)
+CELERY_TASK_ROUTES = {
+    "monitoring.tasks.daily_log_analysis_task": {"queue": "monitoring"},
+    "monitoring.tasks.cleanup_old_logs_task": {"queue": "monitoring"},
+}
 
 # Task execution settings
 CELERY_TASK_TRACK_STARTED = True

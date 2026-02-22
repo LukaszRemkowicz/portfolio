@@ -81,23 +81,82 @@ class GalleryQueryService:
         Retrieve images for a specific travel highlight slider.
         Optimized with prefetch_related and select_related.
         """
-        queryset = (
-            AstroImage.objects.select_related("place")
-            .prefetch_related(
-                "translations",
-                "place__translations",
-                "tags",
-                "tags__translations",
-                "camera",
-                "lens",
-                "telescope",
-                "tracker",
-                "tripod",
-            )
-            .filter(place__country=slider.place.country if slider.place else None)
+        queryset = AstroImage.objects.select_related("place").prefetch_related(
+            "translations",
+            "place__translations",
+            "tags",
+            "tags__translations",
+            "camera",
+            "lens",
+            "telescope",
+            "tracker",
+            "tripod",
         )
+
+        # If the user explicitly assigned images in the admin, we want to include them
+        explicit_image_ids = list(slider.images.values_list("id", flat=True))
+
+        # If the highlight has a specific place, filter by that place
+        # (or its sub-places if it's a region)
         if slider.place:
-            queryset = queryset.filter(place=slider.place)
+            if slider.place.is_region:
+                sub_place_ids = list(slider.place.sub_places.values_list("id", flat=True))
+                # For regions, we also require the date range to match so we don't pull
+                # images from an Iceland trip in 2022 when querying for an Iceland trip in 2025.
+                if slider.adventure_date:
+                    queryset = queryset.filter(
+                        Q(
+                            place_id__in=sub_place_ids,
+                            capture_date__range=(
+                                slider.adventure_date.lower,
+                                slider.adventure_date.upper,
+                            ),
+                        )
+                        | Q(id__in=explicit_image_ids)
+                    )
+                else:
+                    queryset = queryset.filter(
+                        Q(place_id__in=sub_place_ids) | Q(id__in=explicit_image_ids)
+                    )
+            else:
+                queryset = queryset.filter(Q(place=slider.place) | Q(id__in=explicit_image_ids))
+        # If it's a country-wide tour (place is null), filter by the slider's country_slug
+        else:
+            # We must map the slider's country_slug string back to a 2-letter iso code
+            # using the GalleryQueryService maps to compare against AstroImage.place.country
+            maps = GalleryQueryService._get_country_maps()
+            code_map = maps["code_map"]
+            country_map = maps["country_map"]
+
+            # Find the 2 letter ISO code based on the slug
+            iso_code = code_map.get(slider.country_slug) or country_map.get(slider.country_slug)
+
+            if iso_code:
+                queryset = queryset.filter(
+                    Q(place__country=iso_code) | Q(id__in=explicit_image_ids)
+                )
+            else:
+                # Fallback if slug formatting is weird
+                queryset = queryset.filter(
+                    Q(place__country__icontains=slider.country_slug) | Q(id__in=explicit_image_ids)
+                )
+
+            # A country tour should show all images taken in that country, even if the
+            # individual image has a more specific place assigned to it.
+
+            # We also need to restrict by the slider's date range to only show images
+            # taken during this specific adventure.
+            if slider.adventure_date:
+                queryset = queryset.filter(
+                    Q(
+                        capture_date__range=(
+                            slider.adventure_date.lower,
+                            slider.adventure_date.upper,
+                        )
+                    )
+                    | Q(id__in=explicit_image_ids)
+                )
+
         return cast(QuerySet[AstroImage], queryset.order_by("-created_at"))
 
     @staticmethod
@@ -129,15 +188,16 @@ class GalleryQueryService:
         Prevents N+1 queries for associated place, background image, and slider images.
         """
         return (  # type: ignore[no-any-return]
-            MainPageLocation.objects.filter(is_active=True)
-            .select_related("place", "background_image")
+            MainPageLocation.objects.active()
+            .with_place()
+            .select_related("background_image")
             .prefetch_related(
                 "translations",
                 "place__translations",
                 "background_image__translations",
-                "images",
-                "images__translations",
             )
+            .with_images()
+            .prefetch_related("images__translations")
             .order_by("-adventure_date")
         )
 

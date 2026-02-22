@@ -75,17 +75,15 @@ describe('TravelHighlightsPage', () => {
     });
   });
 
-  const renderComponent = async (path = '/travel/iceland') => {
+  const renderComponent = async (
+    path = '/travel/iceland/reykjavik/jan2024'
+  ) => {
     await act(async () => {
       render(
         <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route
-              path='/travel/:countrySlug'
-              element={<TravelHighlightsPage />}
-            />
-            <Route
-              path='/travel/:countrySlug/:placeSlug'
+              path='/travel/:countrySlug/:placeSlug/:dateSlug'
               element={<TravelHighlightsPage />}
             />
           </Routes>
@@ -106,6 +104,7 @@ describe('TravelHighlightsPage', () => {
 
   test('renders content after successful fetch', async () => {
     const mockData = {
+      full_location: 'Reykjavik, Iceland',
       place: {
         name: 'Reykjavik',
         country: 'Iceland',

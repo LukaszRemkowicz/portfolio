@@ -1,3 +1,4 @@
+import uuid
 from unittest.mock import MagicMock
 
 import pytest
@@ -7,7 +8,6 @@ from pytest_mock import MockerFixture
 @pytest.fixture
 def mock_translate_task(mocker: MockerFixture) -> MagicMock:
     """Fixture to mock translate_instance_task reliably across tests."""
-    import uuid
 
     class MockTaskResult:
         def __init__(self, task_id):

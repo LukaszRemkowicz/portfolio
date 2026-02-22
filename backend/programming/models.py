@@ -1,5 +1,7 @@
-# backend/programming/models.py
+from typing import Any
+
 from django_ckeditor_5.fields import CKEditor5Field
+from model_utils import FieldTracker
 from parler.managers import TranslatableManager
 from parler.models import TranslatedFields
 
@@ -34,6 +36,8 @@ class Project(models.Model):
 
 class ProjectImage(AutomatedTranslationModelMixin, BaseImage):
     """Model for programming project images"""
+
+    path_tracker = FieldTracker(fields=["path"])
 
     # Translation trigger fields
     translation_service_method = "translate_project_image"
@@ -71,7 +75,7 @@ class ProjectImage(AutomatedTranslationModelMixin, BaseImage):
         if not name:
             raise ValidationError({"name": _("This field is required for the default language.")})
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         super().save(*args, **kwargs)
         self.trigger_translations()
 

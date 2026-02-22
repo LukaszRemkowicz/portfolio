@@ -1,12 +1,17 @@
-# backend/astrophotography/models.py
+import calendar
 import uuid
+from datetime import date as dt_date
+from typing import Any, Optional
 
 from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
-from parler.managers import TranslatableManager
+from model_utils import FieldTracker
+from parler.managers import TranslatableManager, TranslatableQuerySet
 from parler.models import TranslatableModel, TranslatedFields
+from psycopg2.extras import DateRange as PG_DateRange
 
 from django.conf import settings
+from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import DateRangeField
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -14,8 +19,10 @@ from django.utils import translation
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
+from common.constants import FALLBACK_URL_SLUG
 from core.models import BaseImage, SingletonModel
 from translation.mixins import AutomatedTranslationModelMixin
+from translation.services import TranslationService
 
 from .constants import CELESTIAL_OBJECT_CHOICES, MeteorDefaults
 
@@ -34,7 +41,36 @@ class Place(AutomatedTranslationModelMixin, TranslatableModel):
             blank=True,
         ),
     )
-    country = CountryField(verbose_name=_("Country"))
+    country = CountryField(
+        verbose_name=_("Country"),
+        null=True,
+        blank=True,
+        help_text=_(
+            "Required for non-region places. Leave blank for multi-country regions "
+            "(e.g. Scandinavia which spans Norway, Sweden and Finland)."
+        ),
+    )
+    is_region = models.BooleanField(
+        default=False,
+        verbose_name=_("Is Region"),
+        help_text=_(
+            "Mark this place as a broad region (e.g. Hawaii, Scandinavia). "
+            "Set sub_places to restrict image filtering to specific sub-places. "
+            "Country is not required for multi-country regions."
+        ),
+    )
+    sub_places = models.ManyToManyField(
+        "self",
+        symmetrical=False,
+        blank=True,
+        verbose_name=_("Sub-Places"),
+        help_text=_(
+            "For regions: explicitly list the sub-places that belong to this region "
+            "(e.g. Hawaii → Oahu, Big Island; Scandinavia → Norway, Sweden, Finland). "
+            "Leave empty to fall back to all places in the same country."
+        ),
+        related_name="parent_regions",
+    )
 
     class Meta:
         verbose_name = _("Place")
@@ -58,11 +94,11 @@ class Place(AutomatedTranslationModelMixin, TranslatableModel):
                     {"name": _("Place Translation with this Language and Name already exists.")}
                 )
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         super().save(*args, **kwargs)
         self.trigger_translations()
 
-    def __str__(self):
+    def __str__(self) -> str:
         default_lang = settings.DEFAULT_APP_LANGUAGE
         country_name = ""
         with translation.override(default_lang):
@@ -78,7 +114,6 @@ class Tag(AutomatedTranslationModelMixin, TranslatableModel, models.Model):
         name=models.CharField(verbose_name=_("Name"), max_length=100, blank=True),
         slug=models.SlugField(
             verbose_name=_("Slug"),
-            unique=True,
             max_length=100,
             allow_unicode=True,
         ),
@@ -98,10 +133,22 @@ class Tag(AutomatedTranslationModelMixin, TranslatableModel, models.Model):
         if not name:
             raise ValidationError({"name": _("This field is required for the default language.")})
 
-    def __str__(self):
+        # Check for slug uniqueness manually and map error to 'name'
+        # to prevent "TagForm has no field named 'slug'" crashes.
+        current_name = self.safe_translation_getter("name")
+        if current_name:
+            proposed_slug = slugify(current_name, allow_unicode=True)
+            # Find any other tag that already has this slug in its translation
+            duplicates = Tag.objects.filter(translations__slug=proposed_slug)
+            if self.pk:
+                duplicates = duplicates.exclude(pk=self.pk)
+            if duplicates.exists():
+                raise ValidationError({"name": _("A tag with this name/slug already exists.")})
+
+    def __str__(self) -> str:
         return self.safe_translation_getter("name", any_language=True) or f"Tag {self.pk}"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         # Generate slug from translated name (auto-sync)
         source = self.safe_translation_getter("name")
         if source:
@@ -155,8 +202,19 @@ class Tripod(AbstractEquipmentModel):
         verbose_name_plural = _("Tripods")
 
 
-class AstroImage(AutomatedTranslationModelMixin, BaseImage, TranslatableModel):
+class AstroImageQuerySet(TranslatableQuerySet):
+    """Custom queryset for AstroImage model."""
+
+    def latest(self):
+        """Returns the 9 most recent images."""
+        return self.order_by("-capture_date", "-created_at")[:9]
+
+
+class AstroImage(AutomatedTranslationModelMixin, BaseImage):
     """Model for astrophotography images"""
+
+    # Track changes to the 'path' field (inherited from BaseImage)
+    path_tracker = FieldTracker(fields=["path"])
 
     # Translation trigger fields
     translation_service_method = "translate_astro_image"
@@ -262,6 +320,17 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage, TranslatableModel):
         verbose_name_plural = _("Astrophotography Images")
         ordering = ["-created_at"]
 
+    objects = AstroImageQuerySet.as_manager()
+
+    def __str__(self) -> str:
+        name = self.safe_translation_getter("name", any_language=True)
+        if not name:
+            for lang in self.get_available_languages():
+                name = self.safe_translation_getter("name", language_code=lang)
+                if name:
+                    break
+        return str(name) if name else str(self.id)
+
     def clean(self):
         """Enforce that the name is required for the default language."""
         super().clean()
@@ -272,7 +341,7 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage, TranslatableModel):
         if not name:
             raise ValidationError({"name": _("This field is required for the default language.")})
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         if not self.slug:
             # We use the English name (master/fallback) for slug generation
             base_slug = slugify(self.safe_translation_getter("name", any_language=True))
@@ -287,7 +356,10 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage, TranslatableModel):
         self.trigger_translations()
 
 
-class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage, TranslatableModel):
+class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
+    """Images used as full-page backgrounds on the main portal."""
+
+    path_tracker = FieldTracker(fields=["path"])
 
     # Translation trigger fields
     translation_service_method = "translate_main_page_background_image"
@@ -327,17 +399,64 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage, Transla
         if not name:
             raise ValidationError({"name": _("This field is required for the default language.")})
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         super().save(*args, **kwargs)
         self.trigger_translations()
 
-    def __str__(self):
+    def __str__(self) -> str:
         name = self.safe_translation_getter("name", any_language=True)
         return name or f"Main Page Background Image {self.pk}"
 
 
+class MainPageLocationQuerySet(TranslatableQuerySet):
+    """Custom queryset for MainPageLocation model."""
+
+    def active(self) -> "MainPageLocationQuerySet":
+        """Return only active locations."""
+        return self.filter(is_active=True)  # type: ignore[no-any-return]
+
+    def with_images(self) -> "MainPageLocationQuerySet":
+        """Prefetch related images for efficiency."""
+        return self.prefetch_related("images")  # type: ignore[no-any-return]
+
+    def with_place(self) -> "MainPageLocationQuerySet":
+        """Select related place for efficiency."""
+        return self.select_related("place")  # type: ignore[no-any-return]
+
+    def by_slugs(
+        self, country_slug: str, place_slug: str, date_slug: str
+    ) -> "MainPageLocationQuerySet":
+        """
+        Filter locations by country, place, and date slugs.
+        """
+        qs = self.all()
+
+        # 1. Country filter
+        if country_slug != FALLBACK_URL_SLUG:
+            qs = qs.filter(country_slug=country_slug)
+        else:
+            qs = qs.filter(country_slug="")
+
+        # 2. Place filter
+        if place_slug != FALLBACK_URL_SLUG:
+            qs = qs.filter(place_slug=place_slug)
+        else:
+            qs = qs.filter(place__isnull=True)
+
+        # 3. Date filter
+        if date_slug != FALLBACK_URL_SLUG:
+            date_range = MainPageLocation._parse_date_slug(date_slug)
+            if date_range:
+                qs = qs.filter(adventure_date__overlap=date_range)
+            else:
+                return self.none()  # type: ignore[no-any-return]
+
+        return qs  # type: ignore[no-any-return]
+
+
 class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
-    objects: TranslatableManager = TranslatableManager()
+    # Custom manager with translation support
+    objects = MainPageLocationQuerySet.as_manager()
 
     # Translation trigger fields
     translation_service_method = "translate_main_page_location"
@@ -357,7 +476,8 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
     def clean(self):
-        """Enforce that the highlight_name is required for the default language."""
+        """Enforce that the highlight_name is required for the default language,
+        and validate uniqueness."""
         super().clean()
         default_lang = settings.DEFAULT_APP_LANGUAGE
         name = self.safe_translation_getter("highlight_name", language_code=default_lang)
@@ -368,9 +488,9 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
 
     adventure_date = DateRangeField(
         verbose_name=_("Adventure Date Range"),
-        help_text=_("The date range of the expedition."),
-        null=True,
-        blank=True,
+        help_text=_("The date range of the expedition. Required for generating the URL slug."),
+        null=False,
+        blank=False,
     )
 
     country_slug = models.SlugField(
@@ -417,7 +537,10 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
         highlight_title=models.CharField(
             max_length=255,
             verbose_name=_("Highlight Title"),
-            help_text=_("Custom title for the highlights page."),
+            help_text=_(
+                "Custom title for the highlights page. Description visible for a given "
+                "location at the top of the page."
+            ),
             null=True,
             blank=True,
         ),
@@ -434,8 +557,21 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
         verbose_name = _("Main Page Location")
         verbose_name_plural = _("Main Page Locations")
         ordering = ["-adventure_date"]
+        constraints = [
+            ExclusionConstraint(
+                name="exclude_overlapping_adventure_dates",
+                expressions=[
+                    ("place", "="),
+                    ("adventure_date", "&&"),
+                ],
+                violation_error_message=_(
+                    "A travel highlight for this Place with an overlapping "
+                    "Date range already exists."
+                ),
+            )
+        ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         name = self.safe_translation_getter("highlight_name", any_language=True)
         if not name and self.place:
             name = f"{self.place.country.name} - {self.place.name}"
@@ -443,14 +579,94 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
         status_str = _("Active") if self.is_active else _("Inactive")
         return f"{name or _('Unnamed Location')} ({status_str})"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Always keep slugs up to date with the assigned Place.
         if self.place:
-            if not self.country_slug:
-                self.country_slug = slugify(self.place.country.name)
-            if not self.place_slug and self.place.name:
+            if self.place.is_region or not self.place.country:
+                self.country_slug = ""
+            else:
+                # Handle django-countries Country object
+                country_name = getattr(self.place.country, "name", str(self.place.country))
+                self.country_slug = slugify(country_name)
+            if self.place.name:
                 self.place_slug = slugify(self.place.name)
+        else:
+            self.country_slug = ""
+            self.place_slug = ""
+
         super().save(*args, **kwargs)
         self.trigger_translations()
+
+    # Domain Logic Methods
+
+    def get_full_location(self, language_code: str = "en") -> str:
+        """Get full location string (place, country)."""
+        place_name = TranslationService.get_translation(self, "highlight_name", language_code)
+        if not place_name:
+            if language_code == settings.DEFAULT_APP_LANGUAGE and self.place:
+                place_name = self.place.name
+            else:
+                return ""
+
+        country_name = self.place.country.name if self.place else "Unknown"
+        return f"{place_name}, {country_name}"
+
+    def get_story_preview(self, language_code: str = "en", max_length: int = 150) -> str:
+        """Get truncated story for previews."""
+        story = TranslationService.get_translation(self, "story", language_code)
+        if len(story) > max_length:
+            return story[:max_length].rsplit(" ", 1)[0] + "..."
+        return story
+
+    @property
+    def date_slug(self) -> Optional[str]:
+        """
+        Returns a URL-safe adventure date string like 'jan2026'.
+        Always uses English month abbreviations for stable URLs regardless of UI language.
+        Returns None when no adventure_date is set.
+        """
+        if not self.adventure_date or not self.adventure_date.lower:
+            return None
+        return self.adventure_date.lower.strftime("%b%Y").lower()  # type: ignore[no-any-return]
+
+    @property
+    def adventure_date_raw(self) -> Optional[str]:
+        """
+        Returns the lower boundary of the adventure date in ISO format
+        for frontend slug generation.
+        """
+        if not self.adventure_date or not self.adventure_date.lower:
+            return None
+        return self.adventure_date.lower.isoformat()  # type: ignore[no-any-return]
+
+    @staticmethod
+    def _parse_date_slug(date_slug: str) -> Optional[PG_DateRange]:
+        """
+        Parses a date slug like 'jan2026' into a psycopg2 DateRange.
+        Returns None if parsing fails.
+        """
+        try:
+            # Example: 'jan2026'
+            month_str = date_slug[:3].lower()
+            year_str = date_slug[3:]
+
+            # Use month_abbr for 3-letter abbreviations ('jan', 'feb', etc.)
+            months = {m.lower(): i for i, m in enumerate(calendar.month_abbr) if m}
+            month = months.get(month_str)
+            year = int(year_str)
+
+            if not month:
+                return None
+
+            first_day = dt_date(year, month, 1)
+            if month == 12:
+                next_month_start = dt_date(year + 1, 1, 1)
+            else:
+                next_month_start = dt_date(year, month + 1, 1)
+
+            return PG_DateRange(first_day, next_month_start, bounds="[)")
+        except (ValueError, IndexError, KeyError):
+            return None
 
 
 class MeteorsMainPageConfig(SingletonModel):

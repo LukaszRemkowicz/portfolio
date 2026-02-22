@@ -45,7 +45,7 @@ export interface Place {
 }
 
 export interface AstroImage {
-  pk: number;
+  pk: string;
   slug: string;
   url?: string;
   thumbnail_url?: string;
@@ -78,12 +78,16 @@ export interface MainPageLocation {
   place: Place;
   place_slug: string | null;
   country_slug: string;
+  date_slug: string | null;
   highlight_name?: string;
   highlight_title?: string;
+  full_location: string;
+  story_preview: string;
   adventure_date?: string;
   story?: string;
   background_image?: string | null;
   background_image_thumbnail?: string | null;
+  adventure_date_raw: string;
   created_at: string;
   images: AstroImage[];
 }

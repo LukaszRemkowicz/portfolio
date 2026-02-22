@@ -27,6 +27,7 @@ interface AppState {
   profile: UserProfile | null;
   backgroundUrl: string | null;
   images: AstroImage[];
+  latestImages: AstroImage[];
   imageUrls: Record<string, string>;
   projects: Project[];
   categories: string[];
@@ -48,7 +49,8 @@ interface AppState {
   // Actions
   loadInitialData: (force?: boolean) => Promise<void>;
   loadImages: (params?: FilterParams) => Promise<void>;
-  loadImageUrls: (ids?: number[]) => Promise<void>;
+  loadLatestImages: () => Promise<void>;
+  loadImageUrls: (ids?: string[]) => Promise<void>;
   loadImageDetail: (slug: string) => Promise<void>;
   clearActiveImage: () => void;
   loadProjects: () => Promise<void>;
@@ -62,6 +64,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   profile: null,
   backgroundUrl: null,
   images: [],
+  latestImages: [],
   imageUrls: {},
   projects: [],
   categories: [],
@@ -145,7 +148,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  loadImageUrls: async (ids?: number[]) => {
+  loadLatestImages: async () => {
+    // If we already have latest images, don't show loading state
+    const hasData = get().latestImages.length > 0;
+    if (!hasData) set({ isImagesLoading: true });
+
+    try {
+      const { fetchLatestAstroImages } = await import('../api/services');
+      const data = await fetchLatestAstroImages();
+      set({
+        latestImages: data || [],
+        isImagesLoading: false,
+      });
+    } catch (e: unknown) {
+      console.error('Store latest images load failure:', e);
+      set({ isImagesLoading: false });
+    }
+  },
+
+  loadImageUrls: async (ids?: string[]) => {
     try {
       const urls = await fetchImageUrls(ids);
       // Merge new URLs with existing ones
