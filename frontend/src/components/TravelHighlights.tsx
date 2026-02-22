@@ -7,6 +7,7 @@ import { fetchTravelHighlights } from '../api/services';
 import { MainPageLocation } from '../types';
 import { useAppStore } from '../store/useStore';
 import { stripHtml } from '../utils/html';
+import { getDateSlug } from '../utils/date';
 import { APP_ROUTES, DEFAULT_TRAVEL_IMAGE } from '../api/constants';
 import { useTranslation } from 'react-i18next';
 
@@ -43,10 +44,14 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
   }, [location.story, location.images, location.place?.country]);
 
   const handleCardClick = () => {
-    const url = location.place_slug
-      ? `${APP_ROUTES.TRAVEL_HIGHLIGHTS}/${location.country_slug}/${location.place_slug}`
-      : `${APP_ROUTES.TRAVEL_HIGHLIGHTS}/${location.country_slug}`;
+    // Generate the required date slug using the actual raw date range.
+    const resolvedDateSlug =
+      location.date_slug || getDateSlug(location.adventure_date_raw);
 
+    let url = `${APP_ROUTES.TRAVEL_HIGHLIGHTS}/${location.country_slug}`;
+    if (location.place_slug && resolvedDateSlug) {
+      url += `/${location.place_slug}/${resolvedDateSlug}`;
+    }
     navigate(url);
   };
 

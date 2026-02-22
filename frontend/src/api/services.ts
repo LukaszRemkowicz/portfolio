@@ -99,6 +99,20 @@ export const fetchAstroImages = async (
   return data;
 };
 
+export const fetchLatestAstroImages = async (): Promise<AstroImage[]> => {
+  const response: AxiosResponse<AstroImage[]> = await api.get(
+    `${API_ROUTES.astroImages}latest/`
+  );
+  const data = handleResponse<AstroImage[]>(response);
+  if (Array.isArray(data)) {
+    return data.map(image => ({
+      ...image,
+      thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+    }));
+  }
+  return data;
+};
+
 export const fetchAstroImageDetail = async (
   slug: string
 ): Promise<AstroImage> => {

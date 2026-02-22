@@ -3,11 +3,11 @@ from typing import Any, Dict, Optional
 
 from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
-from rest_framework.serializers import ImageField
 
 from django.conf import settings
 from django.utils import translation
 
+from common.constants import FALLBACK_URL_SLUG
 from common.serializers import TranslatedSerializerMixin
 from translation.services import TranslationService
 
@@ -103,6 +103,7 @@ class AstroImageBaseSerializer(TranslatedSerializerMixin, TranslatableModelSeria
             "capture_date",
             "process",
             "celestial_object",
+            "created_at",
         ]
 
 
@@ -112,7 +113,15 @@ class AstroImageSerializerList(AstroImageBaseSerializer):
     Excludes heavy descriptions and technical details.
     """
 
-    thumbnail_url = ImageField(source="thumbnail", read_only=True)
+    thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
+
+    def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
+        data = super().to_representation(instance)
+        return self.translate_fields(
+            data=data,
+            instance=instance,
+            fields=["name", "description"],
+        )
 
     class Meta(AstroImageBaseSerializer.Meta):
         fields = AstroImageBaseSerializer.Meta.fields + ["thumbnail_url", "description"]
@@ -145,7 +154,7 @@ class AstroImageSerializer(AstroImageBaseSerializer):
 
 
 class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
-    url = serializers.ImageField(source="path")
+    url = serializers.ImageField(source="path", read_only=True)
 
     class Meta:
         model = MainPageBackgroundImage
@@ -155,6 +164,14 @@ class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
 class AstroImageThumbnailSerializer(AstroImageBaseSerializer):
     thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
 
+    def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
+        data = super().to_representation(instance)
+        return self.translate_fields(
+            data=data,
+            instance=instance,
+            fields=["description"],
+        )
+
     class Meta(AstroImageBaseSerializer.Meta):
         fields = ["pk", "slug", "thumbnail_url", "description"]
 
@@ -162,24 +179,37 @@ class AstroImageThumbnailSerializer(AstroImageBaseSerializer):
 class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
     place = PlaceSerializer(read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
-    background_image = serializers.SerializerMethodField()
-    background_image_thumbnail = serializers.SerializerMethodField()
+    background_image = serializers.ImageField(source="background_image.path", read_only=True)
+    background_image_thumbnail = serializers.ImageField(
+        source="background_image.thumbnail", read_only=True
+    )
     adventure_date = serializers.SerializerMethodField()
+    adventure_date_raw = serializers.ReadOnlyField()
+    full_location = serializers.SerializerMethodField()
+    story_preview = serializers.SerializerMethodField()
+    date_slug = serializers.ReadOnlyField()
 
     @staticmethod
     def format_date(dt: date) -> str:
         """Format: 20 Jan 2026"""
         return dt.strftime("%-d %b %Y")
 
-    def get_background_image(self, obj: MainPageLocation) -> Optional[str]:
-        if background := obj.background_image:
-            return str(background.path.url)
-        return None
+    def get_full_location(self, obj: MainPageLocation) -> str:
+        request = self.context.get("request")
+        lang = request.query_params.get("lang") if request else "en"
+        val = obj.get_full_location(language_code=str(lang))
+        # SerializerMethodFields bypass translate_fields(), so strip explicitly
+        if val.startswith(TranslationService.TRANSLATION_FAILED_PREFIX):
+            return ""
+        return val
 
-    def get_background_image_thumbnail(self, obj: MainPageLocation) -> Optional[str]:
-        if (background := obj.background_image) and background.thumbnail:
-            return str(background.thumbnail.url)
-        return self.get_background_image(obj)
+    def get_story_preview(self, obj: MainPageLocation) -> str:
+        request = self.context.get("request")
+        lang = request.query_params.get("lang") if request else "en"
+        val = obj.get_story_preview(language_code=str(lang))
+        if val.startswith(TranslationService.TRANSLATION_FAILED_PREFIX):
+            return ""
+        return val
 
     def get_adventure_date(self, obj: MainPageLocation) -> Optional[str]:
         if not (date_range := obj.adventure_date):
@@ -193,6 +223,7 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
 
         # upper represents the first day AFTER the range in PostgreSQL DateRange
         # So we subtract one day for display if it exists
+
         display_upper = upper - timedelta(days=1) if upper else None
 
         if not display_upper or lower == display_upper:
@@ -211,12 +242,21 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
         return f"{self.format_date(lower)} - {self.format_date(display_upper)}"
 
     def to_representation(self, instance: MainPageLocation) -> Dict[str, Any]:
+
         data = super().to_representation(instance)
-        return self.translate_fields(
+        data = self.translate_fields(
             data=data,
             instance=instance,
             fields=["highlight_name", "highlight_title", "story"],
         )
+        # Enforce strict 3-segment URL generation fallback
+        if not instance.place:
+            data["place_slug"] = FALLBACK_URL_SLUG
+            data["country_slug"] = FALLBACK_URL_SLUG
+        elif not data.get("country_slug"):
+            data["country_slug"] = FALLBACK_URL_SLUG
+
+        return data
 
     class Meta:
         model = MainPageLocation
@@ -225,13 +265,17 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
             "place",
             "place_slug",
             "country_slug",
+            "date_slug",
             "highlight_name",
             "highlight_title",
+            "full_location",
+            "story_preview",
             "adventure_date",
             "story",
             "background_image",
             "background_image_thumbnail",
             "images",
+            "adventure_date_raw",
             "created_at",
         ]
 

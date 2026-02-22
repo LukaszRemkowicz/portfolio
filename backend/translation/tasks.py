@@ -4,6 +4,7 @@ Celery tasks for asynchronous translation processing.
 """
 
 import logging
+import uuid
 from typing import Any
 
 from celery import shared_task
@@ -45,6 +46,9 @@ def translate_instance_task(
         instance = Model.objects.get(pk=instance_pk)
         content_type = ContentType.objects.get_for_model(Model)
 
+        # Establish a unique ID for this execution (CELERY task ID or fresh UUID for manual runs)
+        task_id = self.request.id or str(uuid.uuid4())
+
         # Mark as RUNNING
         _update_task_record(
             content_type,
@@ -52,16 +56,32 @@ def translate_instance_task(
             language_code,
             method_name,
             TranslationTask.Status.RUNNING,
-            self.request.id or str(instance_pk),
+            task_id,
         )
 
-        # Execute translation
-        method = getattr(TranslationService, method_name)
-        result = method(instance, language_code, **kwargs)
+        # Execute translation - create service instance
+        service = TranslationService.create_default()
+        method = getattr(service, method_name)
+        result, failures = method(instance, language_code, **kwargs)
+
+        if failures:
+            # failures is now a dict: {field: reason}
+            failure_details = ", ".join(f"{f} ({r})" for f, r in failures.items())
+            error_msg = f"Translation partially failed: {failure_details}"
+            logger.warning(error_msg)
+            _handle_task_failure(model_name, instance_pk, language_code, error_msg, task_id=task_id)
+            return _task_result(
+                model_name, instance_pk, language_code, method_name, result=result, error=error_msg
+            )
 
         # Mark as COMPLETED
         _update_task_record(
-            content_type, instance_pk, language_code, method_name, TranslationTask.Status.COMPLETED
+            content_type,
+            instance_pk,
+            language_code,
+            method_name,
+            TranslationTask.Status.COMPLETED,
+            task_id=task_id,
         )
 
         logger.info("Task success: %s(pk=%s, lang=%s)", method_name, instance_pk, language_code)
@@ -93,28 +113,70 @@ def _update_task_record(
     task_id: str | None = None,
 ) -> None:
     """Updates or creates a TranslationTask record."""
-    defaults: dict[str, Any] = {"method": method, "status": status}
-    if task_id:
-        defaults["task_id"] = task_id
+    defaults: dict[str, Any] = {
+        "method": method,
+        "status": status,
+        "content_type": content_type,
+        "object_id": str(object_id),
+        "language": language,
+    }
     if status != TranslationTask.Status.FAILED:
         defaults["error_message"] = ""
 
-    TranslationTask.objects.update_or_create(
-        content_type=content_type,
-        object_id=str(object_id),
-        language=language,
-        defaults=defaults,
-    )
+    # If we have a specific task_id, that's our primary anchor.
+    if task_id:
+        TranslationTask.objects.update_or_create(task_id=task_id, defaults=defaults)
+    else:
+        # Fallback to broad match but avoid MultipleObjectsReturned
+        task = (
+            TranslationTask.objects.filter(
+                content_type=content_type,
+                object_id=str(object_id),
+                language=language,
+                method=method,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        if task:
+            for key, value in defaults.items():
+                setattr(task, key, value)
+            task.save()
+        else:
+            # Create new if nothing found
+            TranslationTask.objects.create(
+                **defaults,
+                task_id=f"internal-{status}-{object_id}-{language}",  # dummy for manual runs
+            )
 
 
-def _handle_task_failure(model_name: str, instance_pk: Any, language: str, error: str) -> None:
+def _handle_task_failure(
+    model_name: str, instance_pk: Any, language: str, error: str, task_id: str | None = None
+) -> None:
     """Safely updates task status to FAILED."""
     try:
         Model = apps.get_model(model_name)
         content_type = ContentType.objects.get_for_model(Model)
-        TranslationTask.objects.filter(
-            content_type=content_type, object_id=str(instance_pk), language=language
-        ).update(status=TranslationTask.Status.FAILED, error_message=error[:500])
+
+        # If we have a task_id, update that specific record first
+        if task_id:
+            TranslationTask.objects.filter(task_id=task_id).update(
+                status=TranslationTask.Status.FAILED, error_message=error[:500]
+            )
+            return
+
+        # Target the latest record for this instance/language as fallback
+        task = (
+            TranslationTask.objects.filter(
+                content_type=content_type, object_id=str(instance_pk), language=language
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        if task:
+            task.status = TranslationTask.Status.FAILED
+            task.error_message = error[:500]
+            task.save()
     except Exception:
         logger.exception("Failed to update task status to FAILED")
 

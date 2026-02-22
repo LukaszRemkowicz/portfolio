@@ -7,7 +7,7 @@ import { X, Calendar, MapPin } from 'lucide-react';
 import styles from '../../styles/components/ImageModal.module.css';
 import { AstroImage, EquipmentItem } from '../../types';
 import { useAppStore } from '../../store/useStore';
-import { sanitizeHtml, slugify } from '../../utils/html';
+import { sanitizeHtml, isHtmlEmpty, slugify } from '../../utils/html';
 import { APP_ROUTES } from '../../api/constants';
 
 interface ImageModalProps {
@@ -47,11 +47,13 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   useEffect(() => {
     if (image?.slug) {
       loadImageDetail(image.slug);
+      // Ensure we have the signed URL for this image
+      useAppStore.getState().loadImageUrls([image.pk]);
     }
     return () => {
       clearActiveImage();
     };
-  }, [image?.slug, loadImageDetail, clearActiveImage]);
+  }, [image?.slug, image?.pk, loadImageDetail, clearActiveImage]);
 
   const closeFullRes = () => {
     setIsFullRes(false);
@@ -329,20 +331,20 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
       },
       {
         label: 'Exposure',
-        value: source.exposure_details ? (
+        value: !isHtmlEmpty(source.exposure_details) ? (
           <div
             dangerouslySetInnerHTML={{
-              __html: sanitizeHtml(source.exposure_details),
+              __html: sanitizeHtml(source.exposure_details!),
             }}
           />
         ) : null,
       },
       {
         label: 'Processing',
-        value: source.processing_details ? (
+        value: !isHtmlEmpty(source.processing_details) ? (
           <div
             dangerouslySetInnerHTML={{
-              __html: sanitizeHtml(source.processing_details),
+              __html: sanitizeHtml(source.processing_details!),
             }}
           />
         ) : null,
@@ -383,9 +385,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
 
         <div className={styles.imageWrapper}>
           <img
-            src={
-              imageUrls[image.slug] || image.url || image.thumbnail_url || ''
-            }
+            src={imageUrls[image.pk] || image.url || image.thumbnail_url || ''}
             alt={image.name}
             className={styles.modalImage}
             onClick={() => {
@@ -447,10 +447,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
               </button>
               <img
                 src={
-                  imageUrls[image.slug] ||
-                  image.url ||
-                  image.thumbnail_url ||
-                  ''
+                  imageUrls[image.pk] || image.url || image.thumbnail_url || ''
                 }
                 alt={image.name}
                 className={`${styles.fullResImage} ${

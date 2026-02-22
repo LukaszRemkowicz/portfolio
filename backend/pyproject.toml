@@ -40,6 +40,7 @@ celery = {extras = ["redis"], version = "^5.4.0"}
 flower = "^2.0.0"
 sentry-sdk = "^2.52.0"
 requests = "^2.32.0"
+django-model-utils = "^5.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.2"
@@ -94,7 +95,7 @@ sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLD
 
 [tool.mypy]
 python_version = "3.13"
-exclude = ["migrations/", "tests/"]
+exclude = ["migrations/", "tests/", "test_slug.py"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
@@ -126,6 +127,7 @@ module = [
     "django_ckeditor_5.*",
     "django_select2.*",
     "environ.*",
+    "psycopg2.*",
 ]
 ignore_missing_imports = true
 
@@ -173,6 +175,16 @@ disable_error_code = [
 DJANGO_SETTINGS_MODULE = "settings.tests"
 pythonpath = ["."]
 addopts = "--tb=short --strict-markers --reuse-db"
+testpaths = [
+    "astrophotography/tests",
+    "users/tests",
+    "translation/tests",
+    "monitoring/tests",
+    "programming/tests",
+    "inbox/tests",
+    "core/tests",
+    "common/tests",
+]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",

@@ -21,12 +21,54 @@ class PlaceAdminForm(TranslatableModelForm):
 
     # Explicitly define country field to override django-countries default widget
     country = forms.ChoiceField(
-        choices=list(countries), widget=CountrySelect2Widget(), required=False, label=_("Country")
+        choices=[("", "---------")] + list(countries),
+        widget=CountrySelect2Widget(),
+        required=False,
+        label=_("Country"),
+        help_text=_("Required for regular places. Leave blank for multi-country regions."),
+    )
+    sub_places = forms.ModelMultipleChoiceField(
+        queryset=Place.objects.all(),
+        widget=ThemedSelect2MultipleWidget(
+            attrs={
+                "data-placeholder": _("Select sub-places for this region..."),
+            }
+        ),
+        required=False,
+        label=_("Sub-Places"),
+        help_text=_(
+            "For regions: the specific sub-places covered by this region "
+            "(e.g. Hawaii → Oahu, Big Island)."
+        ),
     )
 
     class Meta:
         model = Place
         fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Exclude this place from its own sub_places to prevent circular references
+        if self.instance.pk:
+            self.fields["sub_places"].queryset = Place.objects.exclude(pk=self.instance.pk)
+        else:
+            self.fields["sub_places"].queryset = Place.objects.all()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        is_region = cleaned_data.get("is_region", False)
+        country = cleaned_data.get("country")
+        if not is_region and not country:
+            self.add_error("country", _("Country is required for non-region places."))
+        return cleaned_data
+
+
+class TagAdminForm(TranslatableModelForm):
+    """Custom form for Tag admin to handle readonly slug validation gracefully."""
+
+    class Meta:
+        model = Tag
+        exclude = ("slug",)
 
 
 class AstroImageForm(TranslatableModelForm):

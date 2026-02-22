@@ -10,10 +10,10 @@ import GalleryCard from './common/GalleryCard';
 const Gallery: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [filter, setFilter] = useState('all');
-  const images = useAppStore(state => state.images);
+  const images = useAppStore(state => state.latestImages);
   const loading = useAppStore(state => state.isImagesLoading);
   const error = useAppStore(state => state.error);
-  const loadImages = useAppStore(state => state.loadImages);
+  const loadLatestImages = useAppStore(state => state.loadLatestImages);
   const features = useAppStore(state => state.features);
   const [searchParams, setSearchParams] = useSearchParams();
   const imgId = searchParams.get('img');
@@ -27,9 +27,9 @@ const Gallery: React.FC = () => {
 
   useEffect(() => {
     if (features?.lastimages !== false) {
-      loadImages({ limit: 50 });
+      loadLatestImages();
     }
-  }, [loadImages, features, i18n.language]);
+  }, [loadLatestImages, features, i18n.language]);
 
   const filteredImages = useMemo(() => {
     if (filter === 'all') return images.slice(0, 9);

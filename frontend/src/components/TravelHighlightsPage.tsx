@@ -17,9 +17,10 @@ interface ExtendedAstroImage extends AstroImage {
 
 const TravelHighlightsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { countrySlug, placeSlug } = useParams<{
+  const { countrySlug, placeSlug, dateSlug } = useParams<{
     countrySlug: string;
     placeSlug?: string;
+    dateSlug?: string;
   }>();
 
   const [images, setImages] = useState<ExtendedAstroImage[]>([]);
@@ -27,11 +28,9 @@ const TravelHighlightsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const imgParam = searchParams.get('img');
-  const [country, setCountry] = useState<string>('');
-  const [place, setPlace] = useState<string | null>(null);
+  const [fullLocation, setFullLocation] = useState<string>('Travel Highlights');
   const [story, setStory] = useState<string | null>(null);
   const [adventureDate, setAdventureDate] = useState<string | null>(null);
-  const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [highlightName, setHighlightName] = useState<string | null>(null);
   const [highlightTitle, setHighlightTitle] = useState<string | null>(null);
   const [locationBackgroundImage, setLocationBackgroundImage] = useState<
@@ -47,8 +46,10 @@ const TravelHighlightsPage: React.FC = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      if (!countrySlug) {
-        setError('No location specified');
+      if (!countrySlug || !placeSlug || !dateSlug) {
+        setError(
+          'Incomplete location specified. URL must contain country, place, and date.'
+        );
         setLoading(false);
         return;
       }
@@ -56,14 +57,9 @@ const TravelHighlightsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // Build slug-based URL
-        const slugPath = placeSlug
-          ? `${countrySlug}/${placeSlug}`
-          : `${countrySlug}`;
-
-        // Fetch from new slug-based endpoint
+        // Fetch from new strict 3-segment endpoint
         const response = await api.get(
-          `${API_ROUTES.travelBySlug}${slugPath}/`
+          `${API_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`
         );
 
         const data = response.data;
@@ -73,20 +69,16 @@ const TravelHighlightsPage: React.FC = () => {
           throw new Error('Invalid API response structure');
         }
 
-        // Set metadata with fallbacks
-        const placeName = data.place?.name || null;
-        const countryName = data.place?.country || '';
-
-        setCountry(countryName);
-        setPlace(placeName);
+        // Set metadata using new pre-formatted fields
+        setFullLocation(data.full_location || 'Travel Highlights');
         setStory(data.story || null);
         setAdventureDate(data.adventure_date || null);
-        setCreatedAt(data.created_at || null);
         setHighlightName(data.highlight_name || null);
         setHighlightTitle(data.highlight_title || null);
         setLocationBackgroundImage(data.background_image || null);
 
         // Process images with defensive checks
+        // ... (rest of logic unchanged)
         const imagesArray = Array.isArray(data.images) ? data.images : [];
         const processedImages: ExtendedAstroImage[] = imagesArray.map(
           (image: AstroImage) => ({
@@ -102,10 +94,9 @@ const TravelHighlightsPage: React.FC = () => {
         if (imagesArray.length > 0) {
           const imageIds = imagesArray.map((img: AstroImage) => img.pk);
           // Trigger store action to fetch URLs
-          loadImageUrls(imageIds);
+          await loadImageUrls(imageIds);
         }
-      } catch (err) {
-        console.error('Failed to load travel highlights:', err);
+      } catch {
         setError(
           'Failed to load travel highlights. Please check the URL and try again.'
         );
@@ -114,7 +105,7 @@ const TravelHighlightsPage: React.FC = () => {
       }
     };
     loadData();
-  }, [countrySlug, placeSlug, i18n.language, loadImageUrls]);
+  }, [countrySlug, placeSlug, dateSlug, i18n.language, loadImageUrls]);
 
   // Derive modal image from URL parameter
   const modalImage = useMemo(() => {
@@ -146,10 +137,6 @@ const TravelHighlightsPage: React.FC = () => {
 
   if (loading) return <LoadingScreen />;
   if (error) return <div className={styles.error}>{error}</div>;
-
-  // Display title: "Place, Country" or just "Country"
-  const displayTitle =
-    place && country ? `${place}, ${country}` : country || 'Travel Highlights';
 
   const localizeAdventureDate = (dateStr: string | null, lang: string) => {
     if (!dateStr) return null;
@@ -196,9 +183,9 @@ const TravelHighlightsPage: React.FC = () => {
               }
         }
       >
-        <h1 className={styles.heroTitle}>{displayTitle}</h1>
+        <h1 className={styles.heroTitle}>{fullLocation}</h1>
         <p className={styles.heroSubtitle}>
-          {highlightTitle || `${t('travel.exploringCosmic')} ${displayTitle}`}
+          {highlightTitle || `${t('travel.exploringCosmic')} ${fullLocation}`}
         </p>
       </div>
 
@@ -214,14 +201,7 @@ const TravelHighlightsPage: React.FC = () => {
                       adventureDate,
                       i18n.language
                     )?.toUpperCase()
-                  : createdAt
-                    ? new Date(createdAt)
-                        .toLocaleDateString(i18n.language, {
-                          month: 'long',
-                          year: 'numeric',
-                        })
-                        .toUpperCase()
-                    : 'RECENT EXPEDITION'}
+                  : 'RECENT EXPEDITION'}
               </span>
             </header>
 

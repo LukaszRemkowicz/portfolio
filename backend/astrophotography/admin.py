@@ -10,8 +10,10 @@ from django.contrib import admin, messages
 from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
+from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 
+from astrophotography.services import GalleryQueryService
 from core.widgets import (
     ReadOnlyMessageWidget,
     ThemedRangeWidget,
@@ -24,7 +26,7 @@ from translation.mixins import (
     TranslationStatusMixin,
 )
 
-from .forms import AstroImageForm, MeteorsMainPageConfigForm, PlaceAdminForm
+from .forms import AstroImageForm, MeteorsMainPageConfigForm, PlaceAdminForm, TagAdminForm
 from .models import (
     AstroImage,
     Camera,
@@ -40,6 +42,38 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class RegionFilter(admin.SimpleListFilter):
+    """
+    Sidebar filter for PlaceAdmin that lists each region by name.
+    Selecting a region shows all its sub-places.
+    Selecting 'Regions only' shows all region-type places.
+    """
+
+    title = _("Region")
+    parameter_name = "region"
+
+    def lookups(self, request, model_admin):
+
+        regions = Place.objects.filter(is_region=True).order_by("pk")
+
+        choices: list[tuple[str, Any]] = [("__regions__", _("Regions only"))]
+        for region in regions:
+            choices.append((str(region.pk), str(region)))
+        return choices
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value == "__regions__":
+            return queryset.filter(is_region=True)
+        if value:
+            try:
+                region = Place.objects.get(pk=value, is_region=True)
+                return queryset.filter(parent_regions=region)
+            except (Place.DoesNotExist, ValueError):
+                pass
+        return queryset
 
 
 class BaseTranslatableAdmin(
@@ -63,12 +97,16 @@ class BaseTranslatableAdmin(
 class PlaceAdmin(BaseTranslatableAdmin):
     """Admin configuration for geographical places."""
 
-    fields = ("name", "country")
+    fields = ("is_region", "name", "country", "sub_places")
     form = PlaceAdminForm
 
-    list_display = ("id", "get_name", "country")
+    list_display = ("id", "get_name", "country", "is_region", "get_regions")
     list_display_links = ("get_name",)
     search_fields = ("translations__name", "country")
+    list_filter = (RegionFilter,)
+
+    class Media:
+        js = ("core/js/place_admin.js",)
 
     def get_queryset(self, request: HttpRequest) -> QuerySet:
         qs = super().get_queryset(request)
@@ -78,6 +116,14 @@ class PlaceAdmin(BaseTranslatableAdmin):
     def get_name(self, obj: Place) -> str:
         """Returns the string representation of the place."""
         return str(obj)
+
+    @admin.display(description=_("Belongs to Regions"))
+    def get_regions(self, obj: Place) -> str:
+        """Returns comma-separated list of regions this place belongs to."""
+        regions = obj.parent_regions.all()
+        if not regions:
+            return "-"
+        return ", ".join(str(region) for region in regions)
 
     def changeform_view(
         self,
@@ -90,8 +136,6 @@ class PlaceAdmin(BaseTranslatableAdmin):
         Switch active language to the one currently being edited (via Parler tab)
         so that shared fields like CountryField display localized choices.
         """
-        from django.utils import translation
-
         lang_code = request.GET.get("language")
         if lang_code:
             translation.activate(lang_code)
@@ -107,6 +151,7 @@ class PlaceAdmin(BaseTranslatableAdmin):
 class TagAdmin(BaseTranslatableAdmin):
     """Admin configuration for image tags."""
 
+    form = TagAdminForm
     list_display = ("get_name", "slug", "id")
     list_display_links = ("get_name",)
     search_fields = ("translations__name", "slug")
@@ -179,7 +224,13 @@ class AstroImageAdmin(BaseTranslatableAdmin):
 
     @admin.display(description=_("Name"))
     def get_name(self, obj: AstroImage) -> str:
-        return str(obj)
+        name = obj.safe_translation_getter("name", any_language=True)
+        if not name:
+            for lang in obj.get_available_languages():
+                name = obj.safe_translation_getter("name", language_code=lang)
+                if name:
+                    break
+        return str(name) if name else str(obj.id)
 
     search_fields = (
         "translations__name",
@@ -364,11 +415,48 @@ class MainPageLocationForm(TranslatableModelForm):
     def _apply_dynamic_filtering(self):  # noqa: C901
         """
         Dynamically filter the available images based on the selected place.
+
+        - No place (explore_tour): all images from that country (via country_slug)
+        - Exact place (not a region): only images from that specific place
+        - Region with sub_places defined: only images from the listed sub-places
+        - Region with no sub_places: fall back to all images in the same country
         """
-        # Dynamic filtering for images field
         if self.instance.pk:
-            # Edit mode
-            qs = AstroImage.objects.filter(place=self.instance.place)
+            place = self.instance.place
+
+            if place is None:
+                # Fallback for country-wide tours: find the ISO code and show all images
+                # from that country.
+
+                maps = GalleryQueryService._get_country_maps()
+                iso_code = maps["code_map"].get(self.instance.country_slug) or maps[
+                    "country_map"
+                ].get(self.instance.country_slug)
+                if iso_code:
+                    qs = AstroImage.objects.filter(place__country=iso_code)
+                else:
+                    qs = AstroImage.objects.filter(
+                        place__country__icontains=self.instance.country_slug
+                    )
+            elif place.is_region:
+                sub_places = place.sub_places.all()
+                if sub_places.exists():
+                    countries = {str(sp.country) for sp in sub_places if sp.country}
+                    if len(countries) > 1:
+                        # Multi-country region (e.g. Scandinavia → Norway, Sweden, Finland):
+                        # filter by country so images from any city in those countries appear.
+                        qs = AstroImage.objects.filter(place__country__in=countries)
+                    else:
+                        # Single-country region (e.g. Hawaii → Oahu, Big Island):
+                        # filter by the exact sub-places to avoid including unrelated places
+                        # in the same country (e.g. Arkansas).
+                        qs = AstroImage.objects.filter(place__in=sub_places)
+                else:
+                    # No sub_places configured: fall back to country-wide (backward compat)
+                    qs = AstroImage.objects.filter(place__country=place.country)
+            else:
+                qs = AstroImage.objects.filter(place=place)
+
             images_field = self.fields.get("images")
             if isinstance(images_field, forms.ModelChoiceField):
                 images_field.queryset = qs
@@ -379,11 +467,13 @@ class MainPageLocationForm(TranslatableModelForm):
 
             if not qs.exists():
                 self.fields["images"].widget = ReadOnlyMessageWidget(
-                    message=_("No matching items found for this place.")
+                    message=_(
+                        "No matching items found for this place. "
+                        "Check the place assignment on your images."
+                    )
                 )
         else:
-            # Creation mode
-            # Logic simplified for now
+            # Creation mode — no place selected yet, show all images
             pass
 
     class Meta:
@@ -405,7 +495,9 @@ class MainPageLocationForm(TranslatableModelForm):
                 },
             ),
             "adventure_date": ThemedRangeWidget(
-                base_widget=forms.DateInput(attrs={"type": "date", "onclick": "this.showPicker()"}),
+                base_widget=forms.DateInput(
+                    format="%Y-%m-%d", attrs={"type": "date", "onclick": "this.showPicker()"}
+                ),
                 placeholder_min=_("Start Date"),
                 placeholder_max=_("End Date"),
             ),

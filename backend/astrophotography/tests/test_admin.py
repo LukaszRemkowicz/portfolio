@@ -1,14 +1,17 @@
 import uuid
+from datetime import date
 from io import BytesIO
 from unittest.mock import MagicMock
 
 import pytest
 from PIL import Image
+from psycopg2.extras import DateRange
 from pytest_mock import MockerFixture
 
+from django.contrib.admin.sites import site
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import HttpResponse
-from django.test import Client, override_settings
+from django.test import Client, RequestFactory, override_settings
 from django.urls import reverse
 
 from astrophotography.admin import MainPageLocationAdmin
@@ -18,7 +21,12 @@ from astrophotography.models import (
     Lens,
     MainPageBackgroundImage,
     MainPageLocation,
+    MeteorsMainPageConfig,
     Place,
+    Tag,
+    Telescope,
+    Tracker,
+    Tripod,
 )
 from astrophotography.tests.factories import (
     AstroImageFactory,
@@ -28,6 +36,7 @@ from astrophotography.tests.factories import (
     MainPageLocationFactory,
     PlaceFactory,
 )
+from core.widgets import ThemedRangeWidget
 
 
 @pytest.mark.django_db
@@ -87,49 +96,94 @@ class TestAstroImageAdmin:
         assert "Place/City" not in content
         assert "Astrobin URL" not in content
 
+    def test_admin_add_creates_object(self, admin_client: Client) -> None:
+        """
+        Verify that submitting the AstroImage add form successfully creates a new object
+        with all attributes and the uploaded file.
+        """
+        url: str = reverse("admin:astrophotography_astroimage_add")
+        place: Place = PlaceFactory()
+
+        # Create a mock image file
+        image_file = BytesIO()
+        image = Image.new("RGB", (100, 100), color="black")
+        image.save(image_file, "jpeg")
+        image_file.name = "test_nebula.jpg"
+        image_file.seek(0)
+
+        data = {
+            "name": "Test Orion Nebula",
+            "description": "A very bright test nebula",
+            "path": image_file,
+            "place": place.pk,
+            "capture_date": "2026-01-01",
+            "zoom": "True",
+            "celestial_object": "Landscape",
+            # Additional relationships can be posted as lists if many-to-many
+        }
+
+        response: HttpResponse = admin_client.post(url, data, format="multipart")
+
+        # The admin should save and redirect to the changelist
+        if response.status_code == 200:
+            form = response.context_data.get("adminform")
+            errors = form.form.errors if form else "No form errors found"
+            pytest.fail(f"Form submission failed with errors: {errors}")
+        assert response.status_code == 302
+        assert AstroImage.objects.filter(translations__name="Test Orion Nebula").exists()
+        created_image = AstroImage.objects.get(translations__name="Test Orion Nebula")
+        assert created_image.place == place
+        assert created_image.celestial_object == "Landscape"
+
 
 @pytest.mark.django_db
-class TestCameraLensAdmin:
-    CAMERA_CHANGELIST_URL: str = reverse("admin:astrophotography_camera_changelist")
-    LENS_CHANGELIST_URL: str = reverse("admin:astrophotography_lens_changelist")
+class TestEquipmentAdmin:
+    @pytest.mark.parametrize(
+        "url_name, model_class, model_value",
+        [
+            ("admin:astrophotography_camera_add", Camera, "Sony A7S III"),
+            ("admin:astrophotography_lens_add", Lens, "Sony FE 35mm f/1.4"),
+            ("admin:astrophotography_telescope_add", Telescope, "RedCat 51"),
+            ("admin:astrophotography_tracker_add", Tracker, "Star Adventurer GTi"),
+            ("admin:astrophotography_tripod_add", Tripod, "Benro Mach3"),
+        ],
+    )
+    def test_equipment_admin_add(
+        self, admin_client: Client, url_name: str, model_class, model_value: str
+    ) -> None:
+        url: str = reverse(url_name)
+        data = {"model": model_value}
+        response: HttpResponse = admin_client.post(url, data)
+        assert response.status_code == 302, f"Failed to add {model_class.__name__}"
+        assert model_class.objects.filter(model=model_value).exists()
 
     def test_camera_list_display(self, admin_client: Client) -> None:
-        """
-        Verify that the camera model name appears in the admin list view.
-        """
         camera: Camera = CameraFactory(model="Nikon Z6 Mod")
-        response: HttpResponse = admin_client.get(self.CAMERA_CHANGELIST_URL)
-        content: str = response.content.decode("utf-8")
-
-        assert response.status_code == 200
-        assert camera.model in content
-
-    def test_camera_change_view(self, admin_client: Client) -> None:
-        """Verify that the camera change page loads correctly."""
-        camera: Camera = CameraFactory()
-        url: str = reverse("admin:astrophotography_camera_change", args=[camera.pk])
-        response: HttpResponse = admin_client.get(url)
+        response: HttpResponse = admin_client.get(
+            reverse("admin:astrophotography_camera_changelist")
+        )
         assert response.status_code == 200
         assert camera.model in response.content.decode("utf-8")
 
-    def test_lens_list_display(self, admin_client: Client) -> None:
-        """
-        Verify that the lens model name appears in the admin list view.
-        """
-        lens: Lens = LensFactory(model="Nikkor Z 20mm f/1.8")
-        response: HttpResponse = admin_client.get(self.LENS_CHANGELIST_URL)
-        content: str = response.content.decode("utf-8")
-
+    def test_camera_change_view(self, admin_client: Client) -> None:
+        camera: Camera = CameraFactory()
+        response: HttpResponse = admin_client.get(
+            reverse("admin:astrophotography_camera_change", args=[camera.pk])
+        )
         assert response.status_code == 200
-        assert lens.model in content
 
-    def test_lens_change_view(self, admin_client: Client) -> None:
-        """Verify that the lens change page loads correctly."""
-        lens: Lens = LensFactory()
-        url: str = reverse("admin:astrophotography_lens_change", args=[lens.pk])
-        response: HttpResponse = admin_client.get(url)
+    def test_lens_list_display(self, admin_client: Client) -> None:
+        lens: Lens = LensFactory(model="Nikkor Z 20mm f/1.8")
+        response: HttpResponse = admin_client.get(reverse("admin:astrophotography_lens_changelist"))
         assert response.status_code == 200
         assert lens.model in response.content.decode("utf-8")
+
+    def test_lens_change_view(self, admin_client: Client) -> None:
+        lens: Lens = LensFactory()
+        response: HttpResponse = admin_client.get(
+            reverse("admin:astrophotography_lens_change", args=[lens.pk])
+        )
+        assert response.status_code == 200
 
 
 @pytest.mark.django_db
@@ -163,6 +217,24 @@ class TestMainPageBackgroundImageAdmin:
         assert response.status_code == 200
         assert "Admin Existing BG" in response.content.decode("utf-8")
 
+    def test_admin_add_creates_object(self, admin_client: Client) -> None:
+        url: str = reverse("admin:astrophotography_mainpagebackgroundimage_add")
+        image_file = BytesIO()
+        image = Image.new("RGB", (100, 100), color="black")
+        image.save(image_file, "jpeg")
+        image_file.name = "test_bg.jpg"
+        image_file.seek(0)
+        data = {"name": "Test Background Entry", "path": image_file}
+        response = admin_client.post(url, data, format="multipart")
+        if response.status_code == 200:
+            form = response.context_data.get("adminform")
+            errors = form.form.errors if form else "No form errors found"
+            pytest.fail(f"Form submission failed with errors: {errors}")
+        assert response.status_code == 302
+        assert MainPageBackgroundImage.objects.filter(
+            translations__name="Test Background Entry"
+        ).exists()
+
 
 @pytest.mark.django_db
 class TestPlaceAdmin:
@@ -186,12 +258,12 @@ class TestPlaceAdmin:
             )
 
             response: HttpResponse = admin_client.post(
-                self.ADD_URL, {"name": "Hawaii", "country": "US", "_save": "Save"}
+                self.ADD_URL, {"name": "New Test Place", "country": "US", "_save": "Save"}
             )
         assert response.status_code == 302  # Redirect on success
 
         # Verify Place exists
-        place: Place = Place.objects.get(translations__name="Hawaii")
+        place: Place = Place.objects.get(translations__name="New Test Place")
         assert place.country == "US"
 
         # Verify task was dispatched
@@ -292,6 +364,115 @@ class TestPlaceAdmin:
         # Verify page language is Polish (title should be in Polish)
         assert 'lang="pl"' in content
 
+    def test_admin_add_creates_object(self, admin_client: Client) -> None:
+        url: str = self.ADD_URL
+        data = {"name": "Test Location", "country": "PL", "is_region": "True"}
+        response = admin_client.post(url, data)
+        if response.status_code == 200:
+            form = response.context_data.get("adminform")
+            errors = form.form.errors if form else "No form errors found"
+            pytest.fail(f"Form submission failed with errors: {errors}")
+        assert response.status_code == 302
+        assert Place.objects.filter(translations__name="Test Location").exists()
+
+
+class TestMainPageBackgroundImageAdminActions:
+    ADD_URL: str = reverse("admin:astrophotography_mainpagebackgroundimage_add")
+    CHANGE_URL_NAME: str = "admin:astrophotography_mainpagebackgroundimage_change"
+
+    def test_save_model_triggers_translation_on_create(
+        self,
+        admin_client: Client,
+        mocker: MockerFixture,
+        mock_translate_task: MagicMock,
+        mock_get_available_languages: MagicMock,
+    ) -> None:
+        with override_settings(DEFAULT_APP_LANGUAGE="en"):
+            mock_translate_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
+                id=str(uuid.uuid4())
+            )
+
+            img: Image.Image = Image.new("RGB", (1, 1), color="red")
+            img_io: BytesIO = BytesIO()
+            img.save(img_io, format="PNG")
+            img_io.seek(0)
+            image_file: SimpleUploadedFile = SimpleUploadedFile(
+                "test_bg.png", img_io.read(), content_type="image/png"
+            )
+
+            response: HttpResponse = admin_client.post(
+                self.ADD_URL, {"name": "Test Background", "path": image_file, "_save": "Save"}
+            )
+        assert response.status_code == 302  # Redirect on success
+
+        bg: MainPageBackgroundImage = MainPageBackgroundImage.objects.get(
+            translations__name="Test Background"
+        )
+
+        mock_translate_task.delay.assert_called_once()
+        args, kwargs = mock_translate_task.delay.call_args
+        assert kwargs["model_name"] == "astrophotography.MainPageBackgroundImage"
+        assert kwargs["instance_pk"] == bg.pk
+        assert kwargs["language_code"] == "pl"
+        assert kwargs["method_name"] == "translate_main_page_background_image"
+
+    def test_save_model_triggers_translation_on_name_change(
+        self,
+        admin_client: Client,
+        mocker: MockerFixture,
+        mock_translate_task: MagicMock,
+        mock_get_available_languages: MagicMock,
+    ) -> None:
+        """Test that updating MainPageBackgroundImage name via Admin triggers translation task."""
+
+        with override_settings(DEFAULT_APP_LANGUAGE="en"):
+            mock_translate_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
+                id=str(uuid.uuid4())
+            )
+
+            bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Old Name")
+
+            url: str = reverse(self.CHANGE_URL_NAME, args=[bg.pk])
+            data: dict[str, str] = {"name": "New Name", "_save": "Save"}
+
+            response: HttpResponse = admin_client.post(url, data)
+        assert response.status_code == 302
+
+        mock_translate_task.delay.assert_called_once()
+        args, kwargs = mock_translate_task.delay.call_args
+        assert kwargs["model_name"] == "astrophotography.MainPageBackgroundImage"
+        assert kwargs["instance_pk"] == bg.pk
+        assert kwargs["language_code"] == "pl"
+        assert kwargs["method_name"] == "translate_main_page_background_image"
+
+    def test_save_model_does_not_trigger_translation_if_no_name_change(
+        self, admin_client: Client, mocker: MockerFixture, mock_translate_task: MagicMock
+    ) -> None:
+        """Test that translation is NOT triggered when the name doesn't change."""
+
+        mock_translate_task.delay.return_value.id = str(uuid.uuid4())
+
+        bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Test BG")
+
+        bg.set_current_language("pl")
+        bg.name = "Testowe Tlo"
+        bg.save()
+
+        bg.set_current_language("en")
+        mock_translate_task.reset_mock()
+
+        url: str = reverse(self.CHANGE_URL_NAME, args=[bg.pk])
+
+        with override_settings(DEFAULT_APP_LANGUAGE="en"):
+            data: dict[str, str] = {
+                "name": "Test BG",  # Same name
+                "_save": "Save",
+            }
+            response: HttpResponse = admin_client.post(url, data)
+
+        assert response.status_code == 302
+        assert mock_translate_task.delay.call_count == 0
+
 
 @pytest.mark.django_db
 class TestAdminDebug:
@@ -374,11 +555,6 @@ class TestMainPageLocationAdmin:
         Verify that the adventure_date field in the MainPageLocationAdmin form
         uses the ThemedRangeWidget correctly.
         """
-        from django.contrib.admin.sites import site
-        from django.test import RequestFactory
-
-        from core.widgets import ThemedRangeWidget
-
         factory = RequestFactory()
         request = factory.get("/")
         request.user = admin_user
@@ -416,6 +592,8 @@ class TestMainPageLocationAdmin:
             "place": place.pk,
             "highlight_name": "Original Name",
             "highlight_title": "Original Title",
+            "adventure_date_0": "2025-01-01",
+            "adventure_date_1": "2025-01-31",
             "is_active": "on",
             "_save": "Save",
         }
@@ -432,3 +610,142 @@ class TestMainPageLocationAdmin:
         )
         assert pl_call.kwargs["method_name"] == "translate_main_page_location"
         assert pl_call.kwargs["model_name"] == "astrophotography.MainPageLocation"
+
+    def test_admin_add_page_loads(self, admin_client: Client) -> None:
+        """GET /admin/astrophotography/mainpagelocation/add/ must return 200."""
+        url: str = reverse("admin:astrophotography_mainpagelocation_add")
+        response: HttpResponse = admin_client.get(url)
+        assert response.status_code == 200
+        content: str = response.content.decode("utf-8")
+        assert 'id="id_highlight_name"' in content
+
+    def test_admin_add_creates_object(
+        self,
+        admin_client: Client,
+        mock_translate_task: MagicMock,
+        mock_get_available_languages: MagicMock,
+    ) -> None:
+        """
+        Regression test: POST to add view must persist a new MainPageLocation row.
+
+        This specifically guards against the Postgres sequence desync bug that
+        produces IntegrityError 'duplicate key value violates unique constraint
+        astrophotography_mainpagelocation_pkey' when a row was inserted with an
+        explicit id that the sequence hasn't advanced past yet.
+        """
+        place: Place = PlaceFactory()
+        mock_translate_task.delay.reset_mock()
+
+        url: str = reverse("admin:astrophotography_mainpagelocation_add")
+        data: dict = {
+            "place": place.pk,
+            "highlight_name": "New Location",
+            "adventure_date_0": "2025-01-01",
+            "adventure_date_1": "2025-01-31",
+            "is_active": "on",
+            "_save": "Save",
+        }
+
+        response: HttpResponse = admin_client.post(url, data)
+
+        # Must redirect (302) on successful creation, not show an error page.
+        assert response.status_code == 302, (
+            f"Expected 302 redirect after add, got {response.status_code}. "
+            "Possible sequence desync or validation error."
+        )
+
+        assert MainPageLocation.objects.filter(
+            translations__highlight_name="New Location"
+        ).exists(), "MainPageLocation was not saved to the database."
+
+    def test_admin_add_second_object_after_first(
+        self,
+        admin_client: Client,
+        mock_translate_task: MagicMock,
+        mock_get_available_languages: MagicMock,
+    ) -> None:
+        """
+        Regression test: creating a second MainPageLocation must not raise a
+        duplicate-key IntegrityError.  Reproduces the exact failure path: an
+        existing row with id=N exists, then we try to add another row which
+        Django should assign id=N+1 via the sequence.
+        """
+        place: Place = PlaceFactory()
+
+        # First object — inserted via factory so it has a concrete id in the DB.
+        existing: MainPageLocation = MainPageLocationFactory(place=place)
+        mock_translate_task.delay.reset_mock()
+
+        url: str = reverse("admin:astrophotography_mainpagelocation_add")
+        data: dict = {
+            "place": place.pk,
+            "highlight_name": "Second Location",
+            "adventure_date_0": "2026-01-01",
+            "adventure_date_1": "2026-01-31",
+            "is_active": "on",
+            "_save": "Save",
+        }
+
+        response: HttpResponse = admin_client.post(url, data)
+
+        assert response.status_code == 302, (
+            f"Adding a second MainPageLocation failed with status {response.status_code}. "
+            f"Possible sequence desync (existing id={existing.pk})."
+        )
+        assert MainPageLocation.objects.count() == 2
+
+    def test_admin_overlapping_date_range_validation(self, admin_client: Client) -> None:
+        """
+        Verify that the Admin form correctly handles overlapping date ranges.
+        """
+        place: Place = PlaceFactory()
+        # Existing: 2026-05-01 to 2026-05-15
+        MainPageLocationFactory(
+            place=place, adventure_date=DateRange(date(2026, 5, 1), date(2026, 5, 15))
+        )
+
+        url: str = reverse("admin:astrophotography_mainpagelocation_add")
+        # Overlapping: 2026-05-10 to 2026-05-20
+        data: dict = {
+            "place": place.pk,
+            "highlight_name": "Overlapping location",
+            "adventure_date_0": "2026-05-10",
+            "adventure_date_1": "2026-05-20",
+            "is_active": "on",
+            "_save": "Save",
+        }
+
+        response: HttpResponse = admin_client.post(url, data)
+        # Should stay on the same page (200 OK) with validation error
+        assert response.status_code == 200
+        assert "overlapping Date range already exists" in response.content.decode()
+
+
+@pytest.mark.django_db
+class TestTagAdmin:
+    def test_admin_add_creates_object(self, admin_client: Client) -> None:
+        url: str = reverse("admin:astrophotography_tag_add")
+        data = {
+            "name": "Milky Way",
+        }
+        response = admin_client.post(url, data)
+        if response.status_code == 200:
+            form = response.context_data.get("adminform")
+            errors = form.form.errors if form else "No form errors found"
+            pytest.fail(f"Form submission failed with errors: {errors}")
+        assert response.status_code == 302
+        assert Tag.objects.filter(translations__name="Milky Way").exists()
+
+
+@pytest.mark.django_db
+class TestMeteorsMainPageConfigAdmin:
+    def test_admin_add_creates_object(self, admin_client: Client) -> None:
+        url: str = reverse("admin:astrophotography_meteorsmainpageconfig_add")
+        data = {"bolid_chance": "10.5", "bolid_interval": "5"}
+        response = admin_client.post(url, data)
+        if response.status_code == 200:
+            form = response.context_data.get("adminform")
+            errors = form.form.errors if form else "No form errors found"
+            pytest.fail(f"Form submission failed with errors: {errors}")
+        assert response.status_code == 302
+        assert MeteorsMainPageConfig.objects.filter(bolid_chance=10.5).exists()

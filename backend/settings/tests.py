@@ -61,3 +61,7 @@ CELERY_RESULT_BACKEND = "cache+memory://"
 # Disable logging during tests
 LOGGING_CONFIG = None
 ENABLE_SENTRY = False
+
+# Use mock LLM provider for all services in tests
+TRANSLATION_LLM_PROVIDER = "mock"
+MONITORING_LLM_PROVIDER = "mock"

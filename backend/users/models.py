@@ -99,6 +99,43 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
         except IntegrityError as exc:
             raise ValueError("Failed to save user. Only one user is allowed.") from exc
 
+    # Domain Logic Methods
+
+    def get_full_name(self) -> str:
+        """Get full name or email."""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        elif self.first_name:
+            return self.first_name
+        return self.email
+
+    def get_avatar_url(self) -> str:
+        """Get avatar URL or default placeholder."""
+        if self.avatar:
+            return self.avatar.url  # type: ignore[no-any-return]
+        return "/static/images/default-avatar.png"
+
+    def has_complete_profile(self) -> bool:
+        """Check if user has completed their profile."""
+        # Check if user has bio in default language
+        bio = self.safe_translation_getter("bio", any_language=False)
+        short_desc = self.safe_translation_getter("short_description", any_language=False)
+
+        return all(
+            [
+                self.first_name,
+                self.last_name,
+                bio,
+                short_desc,
+                self.avatar,
+            ]
+        )
+
+    @property
+    def display_name(self) -> str:
+        """Alias for get_full_name() for template convenience."""
+        return self.get_full_name()
+
 
 class Profile(AutomatedTranslationModelMixin, TranslatableModel):
     """Admin interface for managing different user profiles"""
@@ -138,7 +175,7 @@ class Profile(AutomatedTranslationModelMixin, TranslatableModel):
         verbose_name_plural = _("Profiles")
         unique_together = ("user", "type")
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         super().save(*args, **kwargs)
         self.trigger_translations()
 

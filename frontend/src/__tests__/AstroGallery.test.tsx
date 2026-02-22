@@ -19,6 +19,12 @@ jest.mock('../api/services', () => ({
   fetchProfile: jest.fn(),
   fetchTags: jest.fn(),
   fetchCategories: jest.fn(),
+  fetchAstroImageDetail: jest.fn(),
+}));
+
+jest.mock('../api/imageUrlService', () => ({
+  fetchImageUrls: jest.fn(),
+  fetchSingleImageUrl: jest.fn(),
 }));
 
 import {
@@ -27,7 +33,9 @@ import {
   fetchProfile,
   fetchTags,
   fetchCategories,
+  fetchBackground,
 } from '../api/services';
+import { fetchImageUrls } from '../api/imageUrlService';
 import { useAppStore } from '../store/useStore';
 import { Tag } from '../types';
 
@@ -93,6 +101,8 @@ describe('AstroGallery Component', () => {
       'Milky Way',
       'Northern Lights',
     ]);
+    (fetchBackground as jest.Mock).mockResolvedValue('/test-bg.jpg');
+    (fetchImageUrls as jest.Mock).mockResolvedValue({});
     resetStore();
   });
 
@@ -110,16 +120,13 @@ describe('AstroGallery Component', () => {
         )
     );
 
-    await act(async () => {
-      render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path='/' element={<AstroGallery />} />
-          </Routes>
-        </MemoryRouter>
-      );
-    });
-
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path='/' element={<AstroGallery />} />
+        </Routes>
+      </MemoryRouter>
+    );
     expect(screen.getByTestId('loading-screen')).toBeInTheDocument();
     expect(screen.getByText(/Synchronizing/i)).toBeInTheDocument();
   });
@@ -149,7 +156,7 @@ describe('AstroGallery Component', () => {
   it('renders images from the API after loading', async () => {
     const mockImages: AstroImage[] = [
       {
-        pk: 1,
+        pk: '1',
         slug: 'test-image-1',
         thumbnail_url: '/test1-thumb.jpg',
         name: 'Test Image 1',
@@ -234,7 +241,7 @@ describe('AstroGallery Component', () => {
   it('filters images when filter is clicked', async () => {
     const mockImages: AstroImage[] = [
       {
-        pk: 1,
+        pk: '1',
         slug: 'test-image-1',
         thumbnail_url: '/test1-thumb.jpg',
         name: 'Test Image 1',
@@ -277,7 +284,7 @@ describe('AstroGallery Component', () => {
   it('opens modal when image is clicked', async () => {
     const mockImages: AstroImage[] = [
       {
-        pk: 1,
+        pk: '1',
         slug: 'test-image-1',
         thumbnail_url: '/test1-thumb.jpg',
         name: 'Test Image 1',

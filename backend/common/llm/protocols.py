@@ -19,13 +19,15 @@ class TranslationAgentProtocol(Protocol):
         """
         pass
 
-    def translate(self, text: str, target_lang_code: str) -> Optional[str]:
+    def translate(self, text: str, target_lang_code: str, field_hint: str = "") -> Optional[str]:
         """
         Translates plain text.
         """
         pass
 
-    def translate_html(self, text: str, target_lang_code: str) -> Optional[str]:
+    def translate_html(
+        self, text: str, target_lang_code: str, field_hint: str = ""
+    ) -> Optional[str]:
         """
         Translates HTML content, preserving tags.
         """
@@ -52,5 +54,19 @@ class LLMProvider(Protocol):
 
         Returns:
             LLM's response text, or None on failure
+        """
+        pass
+
+    def ask_question_with_usage(
+        self,
+        system_prompt: str,
+        user_message: str,
+        temperature: float = 0.0,
+    ) -> tuple[Optional[str], dict]:
+        """
+        Ask the LLM a question and return response + usage stats.
+
+        Returns:
+            Tuple of (response_text, usage_dict)
         """
         pass

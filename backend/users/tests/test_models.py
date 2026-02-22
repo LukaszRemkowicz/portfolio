@@ -40,12 +40,10 @@ def test_profile_type_uniqueness(user: User):
 def test_user_singleton_pattern_only_one_user_allowed() -> None:
     """Test that only one user can exist (singleton pattern)"""
     # Create first user - should succeed
-    UserFactory()
+    UserFactory.create_superuser()
     assert User.objects.count() == 1
 
     # Try to create second user - should raise ValueError
-    # We use build() then save() to trigger the model's clean/save logic manually
-    # or just another Factory call which calls save()
     second_user = UserFactory.build()
     with pytest.raises(ValueError, match="Only one user is allowed"):
         second_user.save()
@@ -62,7 +60,7 @@ def test_user_get_user_method() -> None:
     assert User.get_user() is None
 
     # Create user
-    user = UserFactory()
+    user = UserFactory.create_superuser()
 
     # get_user() should return the user
     retrieved_user = User.get_user()
@@ -117,3 +115,45 @@ def test_user_save_generic_exception(mocker: MockerFixture) -> None:
     mock_save.side_effect = Exception("Some other error")
     with pytest.raises(Exception, match="Some other error"):
         user.save()
+
+
+@pytest.mark.django_db
+class TestUserDomainMethods:
+    """Tests for User domain logic methods."""
+
+    def test_get_full_name_with_both_names(self):
+        """Test get_full_name returns first + last name."""
+        user = UserFactory.create_superuser(
+            email="test@example.com", first_name="John", last_name="Doe"
+        )
+        assert user.get_full_name() == "John Doe"
+
+    def test_get_full_name_with_only_first_name(self):
+        """Test get_full_name returns first name only."""
+        user = UserFactory.create_superuser(
+            email="test@example.com", first_name="John", last_name=""
+        )
+        assert user.get_full_name() == "John"
+
+    def test_get_full_name_fallback_to_email(self):
+        """Test get_full_name falls back to email."""
+        user = UserFactory.create_superuser(email="test@example.com", first_name="", last_name="")
+        assert user.get_full_name() == "test@example.com"
+
+    def test_display_name_property(self):
+        """Test display_name property works."""
+        user = UserFactory.create_superuser(
+            email="test@example.com", first_name="John", last_name=""
+        )
+        assert user.display_name == "John"
+
+    def test_get_avatar_url_with_no_avatar(self):
+        """Test get_avatar_url returns placeholder when no avatar."""
+        user = UserFactory.create_superuser(email="test@example.com")
+        url = user.get_avatar_url()
+        assert url == "/static/images/default-avatar.png"
+
+    def test_has_complete_profile_false_missing_fields(self):
+        """Test has_complete_profile returns False when incomplete."""
+        user = UserFactory.create_superuser(email="test@example.com", bio="")
+        assert user.has_complete_profile() is False

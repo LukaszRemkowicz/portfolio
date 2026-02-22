@@ -4,7 +4,7 @@ import pytest
 from psycopg2.extras import DateRange
 from pytest_mock import MockerFixture
 
-from astrophotography.models import MainPageLocation, Tag
+from astrophotography.models import Tag
 from astrophotography.serializers import (
     AstroImageSerializer,
     AstroImageSerializerList,
@@ -54,9 +54,8 @@ class TestEquipmentSerializers:
         """Test custom logic in MainPageLocationSerializer (adventure_date)"""
 
         # Case 1: Single date (formatted as lower)
-        place = PlaceFactory(country="PL", name="Tatras")
         obj = MainPageLocationFactory(
-            place=place, adventure_date=DateRange(date(2026, 1, 20), date(2026, 1, 21))
+            adventure_date=DateRange(date(2026, 1, 20), date(2026, 1, 21))
         )
         serializer = MainPageLocationSerializer(obj)
         # Expected: 20 Jan 2026
@@ -64,7 +63,7 @@ class TestEquipmentSerializers:
 
         # Case 2: Range in same month
         obj2 = MainPageLocationFactory(
-            place=place, adventure_date=DateRange(date(2026, 1, 20), date(2026, 1, 26))
+            adventure_date=DateRange(date(2026, 1, 20), date(2026, 1, 26))
         )
         serializer2 = MainPageLocationSerializer(obj2)
         assert serializer2.data["adventure_date"] == "20 - 25 Jan 2026"
@@ -167,7 +166,8 @@ class TestTranslationSerializers:
         request = mocker.MagicMock()
         request.query_params.get.return_value = "pl"
 
-        instance = MainPageLocation.objects.create(highlight_name="Highlights")
+        place = PlaceFactory()
+        instance = MainPageLocationFactory(place=place, highlight_name="Highlights")
         serializer = MainPageLocationSerializer(instance, context={"request": request})
         data = serializer.data
 

@@ -1,9 +1,10 @@
 import logging
+import re
 from typing import List, Optional
 
 from bs4 import BeautifulSoup
 
-from .protocols import LLMProvider, TranslationAgentProtocol
+from common.llm.protocols import LLMProvider, TranslationAgentProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -101,15 +102,26 @@ class TranslationAgent(TranslationAgentProtocol):
             logger.exception(f"LLM tag translation failed for '{text}'")
         return result
 
-    def translate(self, text: str, target_lang_code: str) -> Optional[str]:
+    def translate(self, text: str, target_lang_code: str, field_hint: str = "") -> Optional[str]:
         """
         Translates plain text using a two-step process:
         1. Literal translation with strict rule adherence.
         2. Editorial refinement to ensure natural tone and neutral language.
+
+        Args:
+            field_hint: Optional hint about which field is being translated
+                        (e.g. 'name', 'description'). Helps the LLM understand
+                        the context and avoid treating short strings as mistakes.
         """
         if not text:
             return ""
         logger.info(f"Translating text to {target_lang_code}")
+        field_context = (
+            f"Context: you are translating the '{field_hint}' field of an astrophotography "
+            f"entry. Even very short or technical strings should be translated as-is.\n"
+            if field_hint
+            else ""
+        )
         # ===== PROMPT 1: TRANSLATE =====
         translation_instructions = """
         Translate the text to {language}.
@@ -121,7 +133,7 @@ class TranslationAgent(TranslationAgentProtocol):
         - CRITICAL: Keep ALL placeholders like [[T0]], [[T1]], [[L0]] etc. EXACTLY as they appear.
         - Do NOT remove, modify, or translate placeholder tokens in double square brackets.
         - Do NOT use metaphors, poetic language, or embellishments.
-        - Do NOT use camera or meta narration (no “frame”, “photo”, “widać”, “na zdjęciu”).
+        - Do NOT use camera or meta narration (no "frame", "photo", "widać", "na zdjęciu").
         - Use plain, neutral language.
         Return ONLY the translated text with placeholders preserved.
         If there is anchor <a href></a> text, keep it in the same place.
@@ -138,9 +150,9 @@ class TranslationAgent(TranslationAgentProtocol):
         - CRITICAL: Keep ALL placeholders like [[T0]], [[T1]], [[L0]] etc. EXACTLY as they appear.
         - Do NOT remove, modify, or translate placeholder tokens in double square brackets.
         Editing goals:
-        - Remove camera/meta narration (e.g. “widać”, “na zdjęciu”).
+        - Remove camera/meta narration (e.g. "widać", "na zdjęciu").
         - Replace metaphors with plain wording, but keep the original meaning.
-        - If an evaluation exists (e.g. “looked exceptional”), keep it in simple, natural form.
+        - If an evaluation exists (e.g. "looked exceptional"), keep it in simple, natural form.
         - Keep sentences concise and natural.
         Return ONLY the edited text with all placeholders preserved.
         """.strip()
@@ -148,7 +160,7 @@ class TranslationAgent(TranslationAgentProtocol):
 
         # ---- CALL 1: TRANSLATE ----
         translated_raw = self.provider.ask_question(
-            system_prompt=translation_instructions.format(language=lang_name),
+            system_prompt=field_context + translation_instructions.format(language=lang_name),
             user_message=text,
             temperature=0.0,
         )
@@ -161,7 +173,7 @@ class TranslationAgent(TranslationAgentProtocol):
 
         # ---- CALL 2: EDIT ----
         final_result = self.provider.ask_question(
-            system_prompt=editing_instructions.format(language=lang_name),
+            system_prompt=field_context + editing_instructions.format(language=lang_name),
             user_message=translated_raw,
             temperature=0.2,
         )
@@ -180,11 +192,9 @@ class TranslationAgent(TranslationAgentProtocol):
 
         Example:
             Input:  "<p><strong>Hello</strong> world</p>"
-            Output: ("[[T0]][[T1]]Hello[[T2]] world[[T3]]",
-                     {0: "<p>", 1: "<strong>", 2: "</strong>", 3: "</p>"})
+        Output: ("[[T0]][[T1]]Hello[[T2]] world[[T3]]",
+                 {0: "<p>", 1: "<strong>", 2: "</strong>", 3: "</p>"})
         """
-        import re
-
         tag_map = {}
         counter = 0
 
@@ -234,7 +244,9 @@ class TranslationAgent(TranslationAgentProtocol):
             final_text = final_text.replace(placeholder, original_html)
         return final_text
 
-    def translate_html(self, text: str, target_lang_code: str) -> Optional[str]:
+    def translate_html(
+        self, text: str, target_lang_code: str, field_hint: str = ""
+    ) -> Optional[str]:
         """
         Orchestrates translation of HTML content.
         Preserves ALL HTML tags and attributes using placeholders to avoid GPT corruption.
@@ -247,7 +259,7 @@ class TranslationAgent(TranslationAgentProtocol):
         clean_text, tag_map = self._extract_all_html_tags(text)
 
         # Translate the text with placeholders
-        translated = self.translate(clean_text, target_lang_code)
+        translated = self.translate(clean_text, target_lang_code, field_hint=field_hint)
         if translated is None:
             return None
 

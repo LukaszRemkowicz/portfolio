@@ -16,7 +16,7 @@ export const APP_ROUTES = {
   ASTROPHOTOGRAPHY: '/astrophotography',
   PROGRAMMING: '/programming',
   CONTACT: '/contact',
-  TRAVEL_HIGHLIGHTS: '/travel-highlights',
+  TRAVEL_HIGHLIGHTS: '/travel',
   PRIVACY: '/privacy',
 };
 
