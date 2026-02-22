@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.utils import translation
 
 from astrophotography.models import Place
 
@@ -116,6 +117,8 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         retranslate = options["retranslate"]
         lang = settings.DEFAULT_APP_LANGUAGE
+        translation.activate(lang)
+
         if dry_run:
             self.stdout.write(self.style.WARNING("DRY RUN — no changes will be written.\n"))
 

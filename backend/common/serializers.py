@@ -1,8 +1,30 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from rest_framework import serializers
 
+from django.conf import settings
+from django.urls import reverse
+
+from common.utils.signing import generate_signed_url_params
 from translation.services import TranslationService
+
+
+class SecureMediaURLMixin(serializers.Serializer):
+    """
+    Mixin to standardize generating signed URLs for secure media fields.
+    """
+
+    def get_secure_url(self, resource_id: str, url_name: str) -> Optional[str]:
+        if not resource_id:
+            return None
+        request = self.context.get("request")
+        if not request:
+            return None
+        url_path = reverse(url_name, kwargs={"slug": resource_id})
+        params = generate_signed_url_params(
+            resource_id, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
+        )
+        return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
 
 
 class TranslatedSerializerMixin(serializers.Serializer):

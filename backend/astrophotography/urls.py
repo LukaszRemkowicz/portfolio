@@ -3,12 +3,12 @@ from rest_framework.routers import DefaultRouter
 from django.urls import include, path
 
 from .views import (
+    AstroImageSecureView,
     AstroImageViewSet,
     CelestialObjectCategoriesView,
     ImageURLViewSet,
     MainPageBackgroundImageView,
     MainPageLocationViewSet,
-    SecureMediaView,
     TagsView,
     TravelHighlightsBySlugView,
 )
@@ -24,10 +24,10 @@ router.register("images", ImageURLViewSet, basename="image-urls")
 
 
 urlpatterns = [
-    # Secure Media Endpoint
+    # Secure Media Endpoints
     path(
         "images/<slug:slug>/serve/",
-        SecureMediaView.as_view(),
+        AstroImageSecureView.as_view(),
         name="secure-image-serve",
     ),
     # Slug-based travel highlights endpoints (more specific routes first)

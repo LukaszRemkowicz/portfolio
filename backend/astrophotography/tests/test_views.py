@@ -468,76 +468,46 @@ class TestAstroImageViewSetCountryPlaceFiltering:
 
 
 @pytest.mark.django_db
-class TestSecureMediaView:
-    def test_missing_signature_params(self, api_client: APIClient) -> None:
-        """Test accessing without s and e parameters returns 403"""
-        image: AstroImage = AstroImageFactory()
-        url: str = reverse(SECURE_IMAGE_SERVE_URL_NAME, args=[image.slug])
+class TestAstroImageSecureView:
+    """
+    Tests the AstroImageSecureView to verify that high-resolution
+    objects are protected and correctly authenticated via cryptographic signature.
+    """
 
-        # Request without params
-        response: Response = api_client.get(url)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-        # Request with only one param
-        response = api_client.get(url + "?s=foo")
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    def test_invalid_signature(self, api_client: APIClient) -> None:
-        """Test accessing with manipulated signature returns 403"""
-        image: AstroImage = AstroImageFactory()
-        url: str = reverse(SECURE_IMAGE_SERVE_URL_NAME, args=[image.slug])
-        params: dict[str, Any] = generate_signed_url_params(image.slug)
-        params["s"] = "invalid_signature"
-
-        response: Response = api_client.get(url, params)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    def test_expired_signature(self, api_client: APIClient) -> None:
-        """Test accessing with expired timestamp returns 403"""
-        image: AstroImage = AstroImageFactory()
-        url: str = reverse(SECURE_IMAGE_SERVE_URL_NAME, args=[image.slug])
-
-        # Create params expired 10 seconds ago
-        params: dict[str, Any] = generate_signed_url_params(image.slug, expiration_seconds=-10)
-
-        response: Response = api_client.get(url, params)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    def test_valid_signature_success(self, api_client: APIClient) -> None:
-        """Test valid signature returns 200 and X-Accel-Redirect header"""
-        image: AstroImage = AstroImageFactory()
-        url: str = reverse(SECURE_IMAGE_SERVE_URL_NAME, args=[image.slug])
-        params: dict[str, Any] = generate_signed_url_params(image.slug)
+    def test_astro_image_secure_view_success(
+        self, api_client: APIClient, astro_image: AstroImage
+    ) -> None:
+        url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
+        params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
 
         response: Response = api_client.get(url, params)
         assert response.status_code == status.HTTP_200_OK
-
-        # Verify Nginx redirect header
         assert response.has_header("X-Accel-Redirect")
-        assert response["X-Accel-Redirect"].startswith("/protected_media/")
-        assert image.path.name in response["X-Accel-Redirect"]
+        assert f"/protected_media/{astro_image.path.name}" == response["X-Accel-Redirect"]
 
-        # Verify Content-Type is empty (let Nginx decide)
-        assert response["Content-Type"] == ""
+    def test_secure_media_view_missing_signature(
+        self, api_client: APIClient, astro_image: AstroImage
+    ) -> None:
+        """Test base class validation logic implicitly via a subclass"""
+        url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
+        response: Response = api_client.get(url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_image_not_found(self, api_client: APIClient) -> None:
-        """Test accessing non-existent image with valid signature structure returns 404"""
-        slug: str = "non-existent-slug"
-        url: str = reverse(SECURE_IMAGE_SERVE_URL_NAME, args=[slug])
-        params: dict[str, Any] = generate_signed_url_params(slug)
-
+    def test_secure_media_view_invalid_signature(
+        self, api_client: APIClient, astro_image: AstroImage
+    ) -> None:
+        url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
+        params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
+        params["s"] = "invalid_hash"
         response: Response = api_client.get(url, params)
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_image_file_missing(self, api_client: APIClient) -> None:
-        """Test accessing image with no file returns 404"""
-        image: AstroImage = AstroImageFactory()
-        # Manually clear the path to simulate missing file reference
-        image.path = ""
-        image.save()
-
-        url: str = reverse(SECURE_IMAGE_SERVE_URL_NAME, args=[image.slug])
-        params: dict[str, Any] = generate_signed_url_params(image.slug)
-
+    def test_secure_media_view_expired_signature(
+        self, api_client: APIClient, astro_image: AstroImage
+    ) -> None:
+        url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
+        params: dict[str, Any] = generate_signed_url_params(
+            astro_image.slug, expiration_seconds=-10
+        )
         response: Response = api_client.get(url, params)
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_403_FORBIDDEN

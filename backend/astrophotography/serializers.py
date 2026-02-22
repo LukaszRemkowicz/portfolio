@@ -154,7 +154,7 @@ class AstroImageSerializer(AstroImageBaseSerializer):
 
 
 class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
-    url = serializers.ImageField(source="path")
+    url = serializers.ImageField(source="path", read_only=True)
 
     class Meta:
         model = MainPageBackgroundImage
@@ -179,8 +179,10 @@ class AstroImageThumbnailSerializer(AstroImageBaseSerializer):
 class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
     place = PlaceSerializer(read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
-    background_image = serializers.SerializerMethodField()
-    background_image_thumbnail = serializers.SerializerMethodField()
+    background_image = serializers.ImageField(source="background_image.path", read_only=True)
+    background_image_thumbnail = serializers.ImageField(
+        source="background_image.thumbnail", read_only=True
+    )
     adventure_date = serializers.SerializerMethodField()
     adventure_date_raw = serializers.ReadOnlyField()
     full_location = serializers.SerializerMethodField()
@@ -208,16 +210,6 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
         if val.startswith(TranslationService.TRANSLATION_FAILED_PREFIX):
             return ""
         return val
-
-    def get_background_image(self, obj: MainPageLocation) -> Optional[str]:
-        if background := obj.background_image:
-            return str(background.path.url)
-        return None
-
-    def get_background_image_thumbnail(self, obj: MainPageLocation) -> Optional[str]:
-        if (background := obj.background_image) and background.thumbnail:
-            return str(background.thumbnail.url)
-        return self.get_background_image(obj)
 
     def get_adventure_date(self, obj: MainPageLocation) -> Optional[str]:
         if not (date_range := obj.adventure_date):

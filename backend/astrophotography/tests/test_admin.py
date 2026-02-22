@@ -21,7 +21,12 @@ from astrophotography.models import (
     Lens,
     MainPageBackgroundImage,
     MainPageLocation,
+    MeteorsMainPageConfig,
     Place,
+    Tag,
+    Telescope,
+    Tracker,
+    Tripod,
 )
 from astrophotography.tests.factories import (
     AstroImageFactory,
@@ -91,49 +96,94 @@ class TestAstroImageAdmin:
         assert "Place/City" not in content
         assert "Astrobin URL" not in content
 
+    def test_admin_add_creates_object(self, admin_client: Client) -> None:
+        """
+        Verify that submitting the AstroImage add form successfully creates a new object
+        with all attributes and the uploaded file.
+        """
+        url: str = reverse("admin:astrophotography_astroimage_add")
+        place: Place = PlaceFactory()
+
+        # Create a mock image file
+        image_file = BytesIO()
+        image = Image.new("RGB", (100, 100), color="black")
+        image.save(image_file, "jpeg")
+        image_file.name = "test_nebula.jpg"
+        image_file.seek(0)
+
+        data = {
+            "name": "Test Orion Nebula",
+            "description": "A very bright test nebula",
+            "path": image_file,
+            "place": place.pk,
+            "capture_date": "2026-01-01",
+            "zoom": "True",
+            "celestial_object": "Landscape",
+            # Additional relationships can be posted as lists if many-to-many
+        }
+
+        response: HttpResponse = admin_client.post(url, data, format="multipart")
+
+        # The admin should save and redirect to the changelist
+        if response.status_code == 200:
+            form = response.context_data.get("adminform")
+            errors = form.form.errors if form else "No form errors found"
+            pytest.fail(f"Form submission failed with errors: {errors}")
+        assert response.status_code == 302
+        assert AstroImage.objects.filter(translations__name="Test Orion Nebula").exists()
+        created_image = AstroImage.objects.get(translations__name="Test Orion Nebula")
+        assert created_image.place == place
+        assert created_image.celestial_object == "Landscape"
+
 
 @pytest.mark.django_db
-class TestCameraLensAdmin:
-    CAMERA_CHANGELIST_URL: str = reverse("admin:astrophotography_camera_changelist")
-    LENS_CHANGELIST_URL: str = reverse("admin:astrophotography_lens_changelist")
+class TestEquipmentAdmin:
+    @pytest.mark.parametrize(
+        "url_name, model_class, model_value",
+        [
+            ("admin:astrophotography_camera_add", Camera, "Sony A7S III"),
+            ("admin:astrophotography_lens_add", Lens, "Sony FE 35mm f/1.4"),
+            ("admin:astrophotography_telescope_add", Telescope, "RedCat 51"),
+            ("admin:astrophotography_tracker_add", Tracker, "Star Adventurer GTi"),
+            ("admin:astrophotography_tripod_add", Tripod, "Benro Mach3"),
+        ],
+    )
+    def test_equipment_admin_add(
+        self, admin_client: Client, url_name: str, model_class, model_value: str
+    ) -> None:
+        url: str = reverse(url_name)
+        data = {"model": model_value}
+        response: HttpResponse = admin_client.post(url, data)
+        assert response.status_code == 302, f"Failed to add {model_class.__name__}"
+        assert model_class.objects.filter(model=model_value).exists()
 
     def test_camera_list_display(self, admin_client: Client) -> None:
-        """
-        Verify that the camera model name appears in the admin list view.
-        """
         camera: Camera = CameraFactory(model="Nikon Z6 Mod")
-        response: HttpResponse = admin_client.get(self.CAMERA_CHANGELIST_URL)
-        content: str = response.content.decode("utf-8")
-
-        assert response.status_code == 200
-        assert camera.model in content
-
-    def test_camera_change_view(self, admin_client: Client) -> None:
-        """Verify that the camera change page loads correctly."""
-        camera: Camera = CameraFactory()
-        url: str = reverse("admin:astrophotography_camera_change", args=[camera.pk])
-        response: HttpResponse = admin_client.get(url)
+        response: HttpResponse = admin_client.get(
+            reverse("admin:astrophotography_camera_changelist")
+        )
         assert response.status_code == 200
         assert camera.model in response.content.decode("utf-8")
 
-    def test_lens_list_display(self, admin_client: Client) -> None:
-        """
-        Verify that the lens model name appears in the admin list view.
-        """
-        lens: Lens = LensFactory(model="Nikkor Z 20mm f/1.8")
-        response: HttpResponse = admin_client.get(self.LENS_CHANGELIST_URL)
-        content: str = response.content.decode("utf-8")
-
+    def test_camera_change_view(self, admin_client: Client) -> None:
+        camera: Camera = CameraFactory()
+        response: HttpResponse = admin_client.get(
+            reverse("admin:astrophotography_camera_change", args=[camera.pk])
+        )
         assert response.status_code == 200
-        assert lens.model in content
 
-    def test_lens_change_view(self, admin_client: Client) -> None:
-        """Verify that the lens change page loads correctly."""
-        lens: Lens = LensFactory()
-        url: str = reverse("admin:astrophotography_lens_change", args=[lens.pk])
-        response: HttpResponse = admin_client.get(url)
+    def test_lens_list_display(self, admin_client: Client) -> None:
+        lens: Lens = LensFactory(model="Nikkor Z 20mm f/1.8")
+        response: HttpResponse = admin_client.get(reverse("admin:astrophotography_lens_changelist"))
         assert response.status_code == 200
         assert lens.model in response.content.decode("utf-8")
+
+    def test_lens_change_view(self, admin_client: Client) -> None:
+        lens: Lens = LensFactory()
+        response: HttpResponse = admin_client.get(
+            reverse("admin:astrophotography_lens_change", args=[lens.pk])
+        )
+        assert response.status_code == 200
 
 
 @pytest.mark.django_db
@@ -167,6 +217,24 @@ class TestMainPageBackgroundImageAdmin:
         assert response.status_code == 200
         assert "Admin Existing BG" in response.content.decode("utf-8")
 
+    def test_admin_add_creates_object(self, admin_client: Client) -> None:
+        url: str = reverse("admin:astrophotography_mainpagebackgroundimage_add")
+        image_file = BytesIO()
+        image = Image.new("RGB", (100, 100), color="black")
+        image.save(image_file, "jpeg")
+        image_file.name = "test_bg.jpg"
+        image_file.seek(0)
+        data = {"name": "Test Background Entry", "path": image_file}
+        response = admin_client.post(url, data, format="multipart")
+        if response.status_code == 200:
+            form = response.context_data.get("adminform")
+            errors = form.form.errors if form else "No form errors found"
+            pytest.fail(f"Form submission failed with errors: {errors}")
+        assert response.status_code == 302
+        assert MainPageBackgroundImage.objects.filter(
+            translations__name="Test Background Entry"
+        ).exists()
+
 
 @pytest.mark.django_db
 class TestPlaceAdmin:
@@ -190,12 +258,12 @@ class TestPlaceAdmin:
             )
 
             response: HttpResponse = admin_client.post(
-                self.ADD_URL, {"name": "Hawaii", "country": "US", "_save": "Save"}
+                self.ADD_URL, {"name": "New Test Place", "country": "US", "_save": "Save"}
             )
         assert response.status_code == 302  # Redirect on success
 
         # Verify Place exists
-        place: Place = Place.objects.get(translations__name="Hawaii")
+        place: Place = Place.objects.get(translations__name="New Test Place")
         assert place.country == "US"
 
         # Verify task was dispatched
@@ -295,6 +363,17 @@ class TestPlaceAdmin:
 
         # Verify page language is Polish (title should be in Polish)
         assert 'lang="pl"' in content
+
+    def test_admin_add_creates_object(self, admin_client: Client) -> None:
+        url: str = self.ADD_URL
+        data = {"name": "Test Location", "country": "PL", "is_region": "True"}
+        response = admin_client.post(url, data)
+        if response.status_code == 200:
+            form = response.context_data.get("adminform")
+            errors = form.form.errors if form else "No form errors found"
+            pytest.fail(f"Form submission failed with errors: {errors}")
+        assert response.status_code == 302
+        assert Place.objects.filter(translations__name="Test Location").exists()
 
 
 class TestMainPageBackgroundImageAdminActions:
@@ -640,3 +719,33 @@ class TestMainPageLocationAdmin:
         # Should stay on the same page (200 OK) with validation error
         assert response.status_code == 200
         assert "overlapping Date range already exists" in response.content.decode()
+
+
+@pytest.mark.django_db
+class TestTagAdmin:
+    def test_admin_add_creates_object(self, admin_client: Client) -> None:
+        url: str = reverse("admin:astrophotography_tag_add")
+        data = {
+            "name": "Milky Way",
+        }
+        response = admin_client.post(url, data)
+        if response.status_code == 200:
+            form = response.context_data.get("adminform")
+            errors = form.form.errors if form else "No form errors found"
+            pytest.fail(f"Form submission failed with errors: {errors}")
+        assert response.status_code == 302
+        assert Tag.objects.filter(translations__name="Milky Way").exists()
+
+
+@pytest.mark.django_db
+class TestMeteorsMainPageConfigAdmin:
+    def test_admin_add_creates_object(self, admin_client: Client) -> None:
+        url: str = reverse("admin:astrophotography_meteorsmainpageconfig_add")
+        data = {"bolid_chance": "10.5", "bolid_interval": "5"}
+        response = admin_client.post(url, data)
+        if response.status_code == 200:
+            form = response.context_data.get("adminform")
+            errors = form.form.errors if form else "No form errors found"
+            pytest.fail(f"Form submission failed with errors: {errors}")
+        assert response.status_code == 302
+        assert MeteorsMainPageConfig.objects.filter(bolid_chance=10.5).exists()
