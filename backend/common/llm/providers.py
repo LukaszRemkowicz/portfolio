@@ -70,13 +70,11 @@ class GPTProvider(LLMProvider):
             # Handle usage object safely
             usage = {}
             if response.usage:
-                # model_dump is standard pydantic v2, fallback to dict if needed
-                if hasattr(response.usage, "model_dump"):
-                    usage = response.usage.model_dump()
-                elif hasattr(response.usage, "to_dict"):
-                    usage = response.usage.to_dict()
-                else:
-                    usage = dict(response.usage)
+                usage = {
+                    "completion_tokens": response.usage.completion_tokens,
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "total_tokens": response.usage.total_tokens,
+                }
 
             logger.debug(f"GPT response received (length: {len(result)})")
             return result, usage
