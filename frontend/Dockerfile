@@ -25,8 +25,10 @@ ENV VITE_API_URL=$API_URL
 ENV VITE_GA_TRACKING_ID=$GA_TRACKING_ID
 ENV VITE_SENTRY_DSN_FE=$SENTRY_DSN_FE
 ENV VITE_ENVIRONMENT=$ENVIRONMENT
+
 COPY frontend/ .
 COPY scripts/frontend/inject-metadata.sh ./scripts/
+
 RUN npm run build && ./scripts/inject-metadata.sh && rm -rf ./scripts
 
 # --- Production runtime ---

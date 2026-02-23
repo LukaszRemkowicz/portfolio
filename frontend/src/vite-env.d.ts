@@ -1,13 +1,7 @@
-// frontend/src/vite-env.d.ts
 /// <reference types="vite/client" />
+import { ViteMappedEnv } from './utils/env';
 
-interface ImportMetaEnv {
-  readonly VITE_API_URL: string;
-  readonly VITE_GA_TRACKING_ID: string;
-  readonly VITE_ENABLE_GA: string;
-  readonly VITE_SENTRY_DSN_FE: string;
-  readonly VITE_ENVIRONMENT: string;
-  readonly MODE: string;
+interface ImportMetaEnv extends ViteMappedEnv {
   readonly DEV: boolean;
   readonly PROD: boolean;
 }

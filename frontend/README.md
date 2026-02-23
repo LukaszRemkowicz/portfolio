@@ -170,7 +170,6 @@ docker run -p 3000:3000 portfolio-frontend
 - **CSS Variables**: Consistent colors, spacing, typography, and other design tokens
 - **Utility Classes**: Reusable mixins for common patterns (flexbox, spacing, etc.)
 - **Responsive Design**: Mobile-first approach with consistent breakpoints
-- **Dark Mode Support**: Automatic dark mode detection with CSS variables
 - **Skeleton Screens**: Shimmer animations for smooth loading transitions
 
 ### Component Styles
@@ -257,14 +256,11 @@ To deploy to production, you only need to ensure the following environment varia
 
 ### ⚡ Priority 1 - Important
 
-- [ ] **Google Analytics Environment Storage** - Move GA measurement ID to environment variables for better security and portability.
 - [ ] **Add Equipment Section** - Document astronomical gear and setups
 
 ### 🎯 Priority 2 - Nice to Have
 
-- [x] **Complete Programming Page** - Portfolio projects showcase fully implemented.
-- [x] **Contact Form** - Implementation with honeypot and multi-channel notification.
-- [x] **Filtering by Tags** - Add tag-based filtering to astrophotography gallery
+- [ ] **Complete Programming Page** - Portfolio projects showcase.
 - [ ] **React Admin Panel** - Create custom admin dashboard using React Admin or Refine framework
   - Alternative to Django Admin with premium design matching portfolio aesthetic
   - Connect to existing DRF API endpoints
