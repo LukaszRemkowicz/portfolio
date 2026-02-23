@@ -80,7 +80,7 @@ export const test = base.extend<PortfolioFixtures>({
         // So if we define this here, test-specific 'page.route' calls inside the test will take precedence.
 
         // Let's provide a safe default for images to avoid network errors
-        if (url.includes('/image/')) {
+        if (url.includes('/astroimages/')) {
           // If the test didn't override this path, return empty list to prevent 404s
           // But wait, allow the `continue()` call? No, we are mocking everything.
           // We will fulfill with empty list as a safe default.

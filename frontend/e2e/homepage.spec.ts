@@ -5,36 +5,55 @@ test.describe('Landing Page', () => {
     // Override specific routes needed for Homepage tests
 
     // 1. Mock specific image data for the homepage "Latest Images" section
-    await page.route('**/v1/image/**', async route => {
+    await page.route('**/v1/astroimages/**', async route => {
       // Logic from original test: return 2 specific images
-      // We only care about the list view here
+      // We only care about the list view here unless it's a detail request
+      const urlObj = new URL(route.request().url());
+      const isDetailView = urlObj.pathname.match(/\/astroimages\/([^/]+)\/?$/);
+
+      const images = [
+        {
+          pk: 1,
+          name: 'Test Galaxy',
+          slug: 'test-galaxy',
+          url: 'https://via.placeholder.com/800x600',
+          thumbnail_url: 'https://via.placeholder.com/200x150',
+          description: 'A test galaxy far away',
+          capture_date: '2023-01-01',
+          location: 'Backyard',
+          tags: ['Galaxy', 'Deep Sky'],
+        },
+        {
+          pk: 2,
+          name: 'Test Nebula',
+          slug: 'test-nebula',
+          url: 'https://via.placeholder.com/800x600',
+          thumbnail_url: 'https://via.placeholder.com/200x150',
+          description: 'A test nebula',
+          capture_date: '2023-01-02',
+          location: 'Mountain',
+          tags: ['Nebula'],
+        },
+      ];
+
+      if (isDetailView && isDetailView[1]) {
+        const idOrSlug = isDetailView[1];
+        const img = images.find(
+          i => i.pk.toString() === idOrSlug || i.slug === idOrSlug
+        );
+        if (img) {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(img),
+          });
+        }
+      }
+
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([
-          {
-            pk: 1,
-            name: 'Test Galaxy',
-            slug: 'test-galaxy',
-            url: 'https://via.placeholder.com/800x600',
-            thumbnail_url: 'https://via.placeholder.com/200x150',
-            description: 'A test galaxy far away',
-            capture_date: '2023-01-01',
-            location: 'Backyard',
-            tags: ['Galaxy', 'Deep Sky'],
-          },
-          {
-            pk: 2,
-            name: 'Test Nebula',
-            slug: 'test-nebula',
-            url: 'https://via.placeholder.com/800x600',
-            thumbnail_url: 'https://via.placeholder.com/200x150',
-            description: 'A test nebula',
-            capture_date: '2023-01-02',
-            location: 'Mountain',
-            tags: ['Nebula'],
-          },
-        ]),
+        body: JSON.stringify(images),
       });
     });
 
@@ -90,12 +109,12 @@ test.describe('Landing Page', () => {
 
     await expect(heading).toBeVisible({ timeout: 20000 });
 
-    const firstImage = page
-      .getByRole('button', { name: /View details for/ })
-      .first();
+    // Target explicit data-testid for the first card
+    const firstImage = page.getByTestId('gallery-card-test-galaxy').first();
 
     await expect(firstImage).toBeVisible({ timeout: 10000 });
-    await firstImage.click();
+    // Force click since the image might be behind an overlay or animating
+    await firstImage.click({ force: true });
 
     const modal = page.getByTestId('image-modal');
     await expect(modal).toBeVisible({ timeout: 10000 });

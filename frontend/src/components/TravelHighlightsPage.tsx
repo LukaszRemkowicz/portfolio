@@ -202,6 +202,7 @@ const TravelHighlightsPage: React.FC = () => {
                     <img
                       src={image.thumbnail_url}
                       alt={image.name}
+                      data-testid={`gallery-card-${image.slug}`}
                       className={styles.viewerImage}
                       onClick={() => handleImageClick(image)}
                       draggable='false'

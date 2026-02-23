@@ -5,6 +5,7 @@ import styles from '../styles/components/Gallery.module.css';
 import { AstroImage } from '../types';
 import ImageModal from './common/ImageModal';
 import GalleryCard from './common/GalleryCard';
+import GallerySkeleton from './skeletons/GallerySkeleton';
 import { useSettings } from '../hooks/useSettings';
 import { useLatestAstroImages } from '../hooks/useLatestAstroImages';
 
@@ -117,7 +118,7 @@ const Gallery: React.FC = () => {
 
       <div className={styles.grid}>
         {loading ? (
-          <div className={styles.loading}>{t('gallery.loading')}</div>
+          <GallerySkeleton count={6} />
         ) : error ? (
           <div className={styles.error}>{error}</div>
         ) : filteredImages.length > 0 ? (

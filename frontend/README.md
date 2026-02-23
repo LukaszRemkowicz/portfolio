@@ -209,9 +209,13 @@ All component styles are organized in `styles/components/` directory:
 
 ### Environment Variables
 
-### Environment Variables
+The frontend application requires specific `VITE_` prefixed variables natively. When using Docker Compose or the deployment scripts, these are automatically injected securely from your host's Doppler or `.env` configuration without you needing to change the source names:
 
-- `API_URL` - Backend API endpoint (default: `https://api.portfolio.local`)
+- `VITE_API_URL` - Backend API endpoint (mapped from host `API_URL`)
+- `VITE_GA_TRACKING_ID` - Google Analytics ID (mapped from host `GA_TRACKING_ID`)
+- `VITE_ENABLE_GA` - Analytics active flag (mapped from host `ENABLE_GA`)
+- `VITE_SENTRY_DSN_FE` - Sentry DSN endpoint (mapped from host `SENTRY_DSN_FE`)
+- `VITE_ENVIRONMENT` - Telemetry gating mode (mapped from host `ENVIRONMENT`)
 
 ### Build Configuration
 

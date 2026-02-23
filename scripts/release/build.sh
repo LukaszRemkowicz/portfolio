@@ -147,9 +147,9 @@ docker build \
   -f frontend/Dockerfile \
   --target prod \
   --build-arg "SITE_DOMAIN=${SITE_DOMAIN}" \
-  --build-arg "API_URL=https://${API_DOMAIN}" \
-  --build-arg "GA_TRACKING_ID=${GA_TRACKING_ID}" \
-  --build-arg "SENTRY_DSN_FE=${SENTRY_DSN_FE}" \
+  --build-arg "VITE_API_URL=https://${API_DOMAIN}" \
+  --build-arg "VITE_GA_TRACKING_ID=${GA_TRACKING_ID}" \
+  --build-arg "VITE_SENTRY_DSN_FE=${SENTRY_DSN_FE}" \
   -t "portfolio-frontend:$TAG" \
   .
 echo "✅ Frontend image built"

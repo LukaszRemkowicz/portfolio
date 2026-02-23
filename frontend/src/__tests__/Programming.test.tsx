@@ -29,7 +29,7 @@ describe('Programming Component', () => {
     });
 
     render(<Programming />);
-    expect(screen.getByText(/Compiling projects/i)).toBeInTheDocument();
+    expect(screen.getAllByTestId('project-skeleton')).toHaveLength(3);
   });
 
   it('renders projects list', () => {

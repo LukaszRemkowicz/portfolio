@@ -50,6 +50,7 @@ const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
       onFocus={handleMouseEnter}
       aria-label={`View details for ${item.name}`}
       type='button'
+      data-testid={`gallery-card-${item.slug}`}
     >
       {isNew(item.created_at) && <div className={styles.newBadge}>NEW!</div>}
       <div className={styles.imageWrapper} aria-hidden='true'>
