@@ -167,10 +167,46 @@ docker run -p 3000:3000 portfolio-frontend
 
 ### Design System
 
-- **CSS Variables**: Consistent colors, spacing, and typography tokens
-- **Modular CSS**: Each component has its dedicated `.module.css` file
-- **Dark Mode Support**: Automatic detection and theme switching
+- **CSS Variables**: Consistent colors, spacing, typography, and other design tokens
+- **Utility Classes**: Reusable mixins for common patterns (flexbox, spacing, etc.)
+- **Responsive Design**: Mobile-first approach with consistent breakpoints
+- **Dark Mode Support**: Automatic dark mode detection with CSS variables
 - **Skeleton Screens**: Shimmer animations for smooth loading transitions
+
+### Component Styles
+
+All component styles are organized in `styles/components/` directory:
+
+- **Modular Structure**: Each component has its dedicated CSS file
+- **Consistent Naming**: All files follow `ComponentName.module.css` convention
+- **Easy Maintenance**: Clear separation makes styles easy to find and modify
+
+## 📱 Pages & Components
+
+### HomePage (`/`)
+
+- Hero section with dynamic background
+- User profile display
+- Quick gallery preview
+- About section with bio
+
+### Astrophotography (`/astrophotography`)
+
+- Full-screen image gallery
+- Filter by celestial object type
+- Modal lightbox for image details
+- Equipment and processing info
+
+### Programming (`/programming`)
+
+- Currently shows "under construction"
+- Planned: Project showcase with screenshots
+- Technology stacks and links
+
+### Contact (`/contact`)
+
+- Full implementation with validation and spam protection
+- Integrated with backend API
 
 ## 🔧 Configuration
 
@@ -202,6 +238,38 @@ The frontend application requires specific `VITE_` prefixed variables at build/r
 - [x] Configured **Vite PWA** with service workers
 - [x] Added **Skeleton components** for core loading states
 - [x] Implemented **Playwright** for E2E testing
+
+## 🌐 Deployment Checklist (Production)
+
+> [!NOTE]
+> All SEO and discovery files (`index.html`, `sitemap.xml`, `robots.txt`) are now **automatically configured** during the build process using the `inject-metadata.sh` script.
+
+To deploy to production, you only need to ensure the following environment variables are correctly set in your CI/CD or production `docker-compose.yml`:
+
+- **`SITE_DOMAIN`**: Your production domain (e.g., `yourdomain.com`). Used to inject OG tags, Twitter metadata, and generate the sitemap.
+- **`API_URL`**: Your production backend URL (e.g., `https://api.yourdomain.com`).
+- **`SENTRY_DSN_FE`**: Your frontend Sentry DSN for error tracking.
+- **`ENVIRONMENT`**: Set to `production` to enable production-only optimizations and telemetry.
+
+---
+
+## 📋 TODO / Future Improvements
+
+### ⚡ Priority 1 - Important
+
+- [ ] **Google Analytics Environment Storage** - Move GA measurement ID to environment variables for better security and portability.
+- [ ] **Add Equipment Section** - Document astronomical gear and setups
+
+### 🎯 Priority 2 - Nice to Have
+
+- [x] **Complete Programming Page** - Portfolio projects showcase fully implemented.
+- [x] **Contact Form** - Implementation with honeypot and multi-channel notification.
+- [x] **Filtering by Tags** - Add tag-based filtering to astrophotography gallery
+- [ ] **React Admin Panel** - Create custom admin dashboard using React Admin or Refine framework
+  - Alternative to Django Admin with premium design matching portfolio aesthetic
+  - Connect to existing DRF API endpoints
+  - Features: Image management, drag-drop ordering, inline editing, better UX
+  - Frameworks to consider: [React Admin](https://marmelab.com/react-admin/), [Refine](https://refine.dev/)
 
 ---
 
