@@ -6,7 +6,7 @@ Modern React + TypeScript frontend for a personal portfolio showcasing astrophot
 
 ### Core Functionality
 
-- **Dynamic Profile Loading** - Fetches user profile, bio, avatar, and social links from Django API
+- **Dynamic Profile Loading** - Fetches user profile, bio, avatar, and social links from API
 - **Multi-page Navigation** - Home, Astrophotography, Programming, and Contact pages
 - **Responsive Design** - Mobile-first approach with CSS Modules
 - **Image Gallery** - Interactive astrophotography gallery with filtering
@@ -14,21 +14,21 @@ Modern React + TypeScript frontend for a personal portfolio showcasing astrophot
 
 ### Technical Features
 
+- **Vite** - Next-generation frontend tooling for ultra-fast development (HMR)
 - **100% TypeScript** - Full type safety across entire codebase
+- **TanStack Query (v5)** - Powerful server-state management with advanced caching
 - **React Router v6** - Client-side routing with nested layouts
-- **Axios HTTP Client** - API communication with error handling
+- **React Helmet Async** - Dynamic SEO management and metadata injection
+- **Axios HTTP Client** - Robust API communication with interceptors
 - **CSS Modules** - Scoped styling with design tokens
-- **Webpack 5** - Modern build system with hot reloading
-- **Jest Testing** - Unit testing setup with React Testing Library + TypeScript
-- **Error Tracking** - **Sentry (React)** integration for production crash reporting
+- **Sentry** - Production error tracking and telemetry
+- **Vite PWA** - Progressive Web App support with offline capabilities
 
 ## 🔌 API Integration
 
 ### Endpoints Used
 
-- **Profile API**: `GET /api/v1/profile/` - User profile data
-- **Background API**: `GET /api/v1/background/` - Main page background
-- **Astro Images API**: `GET /api/v1/image/` - Astrophotography gallery
+All API routes and endpoint configurations are centrally managed in `src/api/routes.ts` and `src/api/constants.ts`. Refer to these files for the complete and up-to-date list of available backend REST connections.
 
 ### Fallback Behavior
 
@@ -42,7 +42,7 @@ When the API is unavailable or `API_URL` is not set, the app gracefully falls ba
 
 ### Error Handling
 
-- Loading states for all API calls
+- Loading states using Skeleton components
 - Error messages for failed requests
 - Graceful degradation when backend is offline
 
@@ -50,17 +50,18 @@ When the API is unavailable or `API_URL` is not set, the app gracefully falls ba
 
 ### Prerequisites
 
-- Node.js 16+
-- npm or yarn
+- Node.js 18+
+- npm (recommended) or yarn
 - Docker (for containerized development)
 - Backend API running (see backend README)
 
-> **Docker Compose Version**: Check your Docker version with `docker --version`. Use `docker compose` (V2) or `docker-compose` (V1) accordingly.
+> **Docker Compose Version**: Use `docker compose` (V2) for all commands.
 
 ### Installation
 
 ```bash
 # Clone the repository
+# Navigate to frontend
 cd frontend
 npm install
 ```
@@ -75,24 +76,23 @@ docker compose up
 ```
 
 - Frontend: `https://portfolio.local/`
-- Backend: `https://admin.portfolio.local/`
+- API: `https://api.portfolio.local/`
+- Admin: `https://admin.portfolio.local/`
 
 #### 💻 Native (Without Docker)
 
-You can run the frontend directly on your host machine for faster iteration:
+You can run the frontend directly on your host machine:
 
-1.  **Environment Variables**: Point the frontend to your local backend (e.g., Running on port 8000):
+1.  **Environment Variables**: Set your API URL (defaults to production if unset):
     ```bash
     export API_URL="http://localhost:8000"
     ```
 2.  **Start the App**:
     ```bash
-    npm start
+    npm run dev
     ```
 
 - URL: `http://localhost:3000`
-- **Note**: If you want to use the `portfolio.local` domain without Nginx, add `127.0.0.1 portfolio.local` to your `/etc/hosts` and access via `http://portfolio.local:3000`.
-- **Note**: Domain usage without port 80/443 requires an active Nginx proxy and SSL certificates.
 
 ### Production Build
 
@@ -100,33 +100,40 @@ You can run the frontend directly on your host machine for faster iteration:
 npm run build
 ```
 
-- Creates optimized build in `dist/` directory
+- Compiles TypeScript and builds optimized assets via Vite (Rollup)
 - Minified CSS and JavaScript
-- Asset optimization
+- Route-based lazy-loading and dynamic asset optimization
+- Configures PWA service workers
 
-> **Deployment**: For full production deployment with Docker (including backend and Nginx), refer to the **Root README** "Production Deployment" section.
+> **Deployment**: For full production deployment with Docker, refer to the **Root README**.
 
 ### Testing
 
-#### Local Testing
+#### E2E Testing (Playwright)
+
+```bash
+npm run test:e2e
+```
+
+- Full end-to-end verification of gallery filtering, travel highlights, image modals, and routing.
+- Emulates Chromium browsers internally to test real user interactions.
+
+#### Unit Testing (Jest)
 
 ```bash
 npm test
 ```
 
-- Jest test runner
-- React Testing Library for component tests
-- React 18 `act` support (imported from `react`)
-- CSS Modules mock setup included
+- Jest test runner with React Testing Library
+- Comprehensive coverage for hooks (TanStack Query) and components
+- React 18 `act` support
+- Mock service workers and DOM abstraction
 
 #### Docker Testing
 
 ```bash
-# Run tests in Docker container (Docker Compose V2)
+# Run tests in Docker container
 docker compose exec portfolio-fe npm test
-
-# Run tests in Docker container (Docker Compose V1)
-docker-compose exec portfolio-fe npm test
 
 # Or run tests in dedicated test container
 cd frontend
@@ -134,24 +141,19 @@ docker build --target test -t portfolio-frontend-test .
 docker run --rm portfolio-frontend-test
 ```
 
-> **Note**: The Docker build automatically handles SSL certificate issues. The webpack configuration gracefully falls back to HTTP when SSL certificates are not available in the container, but HTTPS is supported in both development and production modes when certificates are present.
+> **Note**: The Vite dev server automatically handles hot reloading. HTTP is utilized gracefully as a proxy fallback when SSL configurations are missing.
 
 ## 🐳 Docker Integration
 
 ### With Docker Compose (Recommended)
 
 ```bash
-# Docker Compose V2 (newer versions)
 docker compose up --build
-
-# Docker Compose V1 (older versions)
-docker-compose up --build
 ```
 
-- Frontend: `https://portfolio.local/`
-- Backend: `https://api.portfolio.local/`
 - Shared network configuration
-- Volume mounting for development
+- Volume mounting for instant HMR in dev
+- Internal Nginx proxy for production parity
 
 ### Frontend-Only Docker
 
@@ -165,150 +167,41 @@ docker run -p 3000:3000 portfolio-frontend
 
 ### Design System
 
-- **CSS Variables**: Consistent colors, spacing, typography, and other design tokens
-- **Utility Classes**: Reusable mixins for common patterns (flexbox, spacing, etc.)
-- **Responsive Design**: Mobile-first approach with consistent breakpoints
-- **Dark Mode Support**: Automatic dark mode detection with CSS variables
-
-### Component Styles
-
-All component styles are organized in `styles/components/` directory:
-
-- **Modular Structure**: Each component has its dedicated CSS file
-- **Consistent Naming**: All files follow `ComponentName.module.css` convention
-- **Easy Maintenance**: Clear separation makes styles easy to find and modify
-
-## 📱 Pages & Components
-
-### HomePage (`/`)
-
-- Hero section with dynamic background
-- User profile display
-- Quick gallery preview
-- About section with bio
-
-### Astrophotography (`/astrophotography`)
-
-- Full-screen image gallery
-- Filter by celestial object type
-- Modal lightbox for image details
-- Equipment and processing info
-
-### Programming (`/programming`)
-
-- Currently shows "under construction"
-- Planned: Project showcase with screenshots
-- Technology stacks and links
-
-### Contact (`/contact`)
-
-- Full implementation with validation and spam protection
-- Integrated with Django backend API
+- **CSS Variables**: Consistent colors, spacing, and typography tokens
+- **Modular CSS**: Each component has its dedicated `.module.css` file
+- **Dark Mode Support**: Automatic detection and theme switching
+- **Skeleton Screens**: Shimmer animations for smooth loading transitions
 
 ## 🔧 Configuration
 
 ### Environment Variables
 
-The frontend application requires specific `VITE_` prefixed variables natively. When using Docker Compose or the deployment scripts, these are automatically injected securely from your host's Doppler or `.env` configuration without you needing to change the source names:
+The frontend application requires specific `VITE_` prefixed variables at build/runtime. When using Docker Compose, these are automatically aliased from your host's environment:
 
-- `VITE_API_URL` - Backend API endpoint (mapped from host `API_URL`)
-- `VITE_GA_TRACKING_ID` - Google Analytics ID (mapped from host `GA_TRACKING_ID`)
-- `VITE_ENABLE_GA` - Analytics active flag (mapped from host `ENABLE_GA`)
-- `VITE_SENTRY_DSN_FE` - Sentry DSN endpoint (mapped from host `SENTRY_DSN_FE`)
-- `VITE_ENVIRONMENT` - Telemetry gating mode (mapped from host `ENVIRONMENT`)
-
-### Build Configuration
-
-- Webpack 5 with modern JavaScript features
-- CSS Modules support
-- Asset optimization
-- Development server with HTTPS
-
-## 🧪 Testing Strategy
-
-### Current Tests
-
-- **Component Tests** - All major components have test coverage
-- **API Mocking** - Services are properly mocked for testing
-- **Router Testing** - Navigation components tested with React Router
-- **Error Handling** - API error scenarios tested
-- **User Interactions** - Click events and state changes tested
-- **CSS Modules Support** - Identity proxy configured for CSS Modules
-
-### Test Configuration
-
-- **Jest Config** (`jest.config.js`) - Main Jest configuration with proper setup
-- **Test Match** - Automatically finds tests in `__tests__/` directory
-- **CSS Modules** - Identity proxy configured for CSS imports
-- **Jest DOM** - Custom matchers imported in each test file for reliability
-- **Comprehensive Documentation** - Each test file includes detailed JSDoc comments
-- **Test Module README** - Complete guide for running and understanding tests
-
-### Test Documentation
-
-- **Comprehensive JSDoc Comments** - Every test file and individual test is documented
-- **Mock Strategy** - Clear documentation of how API services are mocked
-- **Best Practices** - Guidelines for writing maintainable tests
-- **Troubleshooting Guide** - Common issues and solutions
-- **Self-contained Tests** - Each test file imports its own dependencies (no separate setup files)
+- `VITE_API_URL` - Backend API endpoint (mapped from `API_URL`)
+- `VITE_GA_TRACKING_ID` - Google Analytics ID (mapped from `GA_TRACKING_ID`)
+- `VITE_ENABLE_GA` - Analytics toggle (mapped from `ENABLE_GA`)
+- `VITE_SENTRY_DSN_FE` - Sentry DSN (mapped from `SENTRY_DSN_FE`)
+- `VITE_ENVIRONMENT` - Deployment mode (mapped from `ENVIRONMENT`)
 
 ## 🚀 Performance Features
 
-- **Code Splitting** - Route-based lazy loading
-- **Image Optimization** - Lazy loading for gallery images
-- **API Caching** - Efficient data fetching
-- **Bundle Optimization** - Webpack production optimizations
+- **TanStack Query** - Efficient data fetching, caching, and state synchronization
+- **Code Splitting** - Automatic route-level chunking via Vite/Rollup
+- **Lazy Loading** - Native lazy loading for off-screen images
+- **Hover Prefetching** - Passive prefetching of query data on interaction
+- **Skeleton States** - Improved Perceived Performance during data fetching
 
 ## ✅ Recently Completed
 
-### 🎯 TypeScript Migration (COMPLETED)
+### 🎯 Vite & State Migration
 
-- ✅ **Full TypeScript Migration** - 100% TypeScript coverage across entire frontend
-- ✅ **23 Files Migrated** - All components, API services, data files, and tests
-- ✅ **Type Safety** - Strict TypeScript configuration with comprehensive interfaces
-- ✅ **Enhanced Developer Experience** - IntelliSense, autocomplete, error detection
-- ✅ **Professional Grade** - Enterprise-level TypeScript codebase
-- ✅ **All Tests Passing** - 21/21 tests with full TypeScript support
-
-### 📈 Analytics (PRO-LEVEL COMPLETED)
-
-- ✅ **Modern Architecture** - Centralized consent management in root `App.tsx`
-- ✅ **SPA Transition Tracking** - Accurate `page_view` events for subpage navigation
-- ✅ **Race Condition Guards** - Bulletproof initialization with `__ga_inited` and script load listeners
-- ✅ **Environment Awareness** - Automatic `debug_mode` gating based on environment
-- ✅ **Telemetry** - Production Sentry integration with build-time DSN injection
-
-## 🌐 Deployment Checklist (Production)
-
-> [!NOTE]
-> All SEO and discovery files (`index.html`, `sitemap.xml`, `robots.txt`) are now **automatically configured** during the build process using the `inject-metadata.sh` script.
-
-To deploy to production, you only need to ensure the following environment variables are correctly set in your CI/CD or production `docker-compose.yml`:
-
-- **`SITE_DOMAIN`**: Your production domain (e.g., `yourdomain.com`). Used to inject OG tags, Twitter metadata, and generate the sitemap.
-- **`API_URL`**: Your production backend URL (e.g., `https://api.yourdomain.com`).
-- **`SENTRY_DSN_FE`**: Your frontend Sentry DSN for error tracking.
-- **`ENVIRONMENT`**: Set to `production` to enable production-only optimizations and telemetry.
-
----
-
-## 📋 TODO / Future Improvements
-
-### ⚡ Priority 1 - Important
-
-- [ ] **Google Analytics Environment Storage** - Move GA measurement ID to environment variables for better security and portability.
-- [ ] **Add Equipment Section** - Document astronomical gear and setups
-
-### 🎯 Priority 2 - Nice to Have
-
-- [x] **Complete Programming Page** - Portfolio projects showcase fully implemented.
-- [x] **Contact Form** - Implementation with honeypot and multi-channel notification.
-- [x] **Filtering by Tags** - Add tag-based filtering to astrophotography gallery
-- [ ] **React Admin Panel** - Create custom admin dashboard using React Admin or Refine framework
-  - Alternative to Django Admin with premium design matching portfolio aesthetic
-  - Connect to existing DRF API endpoints
-  - Features: Image management, drag-drop ordering, inline editing, better UX
-  - Frameworks to consider: [React Admin](https://marmelab.com/react-admin/), [Refine](https://refine.dev/)
+- [x] Migrated from Webpack 5 to **Vite 6**
+- [x] Implemented **TanStack Query** for all server-state
+- [x] Added **React Helmet Async** for dynamic SEO
+- [x] Configured **Vite PWA** with service workers
+- [x] Added **Skeleton components** for core loading states
+- [x] Implemented **Playwright** for E2E testing
 
 ---
 
