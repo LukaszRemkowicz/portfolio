@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchContact } from '../api/services';
-import { useAppStore } from '../store/useStore';
+import { useSettings } from '../hooks/useSettings';
 import styles from '../styles/components/Contact.module.css';
 import { ContactFormData, ValidationErrors, SubmitStatus } from '../types';
 import { AppError, ValidationError } from '../api/errors';
@@ -20,9 +20,9 @@ const Contact: React.FC = () => {
     {}
   );
   const [serverError, setServerError] = useState<string | null>(null);
-  const { features, isInitialLoading: isLoading } = useAppStore();
+  const { data: settings, isLoading } = useSettings();
   const { t } = useTranslation();
-  const isEnabled = features?.contactForm === true;
+  const isEnabled = settings?.contactForm === true;
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {

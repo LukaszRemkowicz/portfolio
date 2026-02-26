@@ -3,9 +3,9 @@ import { type FC, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../styles/components/TravelHighlights.module.css';
 import { MapPin } from 'lucide-react';
-import { fetchTravelHighlights } from '../api/services';
 import { MainPageLocation } from '../types';
-import { useAppStore } from '../store/useStore';
+import { useSettings } from '../hooks/useSettings';
+import { useTravelHighlights } from '../hooks/useTravelHighlights';
 import { stripHtml } from '../utils/html';
 import { getDateSlug } from '../utils/date';
 import { APP_ROUTES, DEFAULT_TRAVEL_IMAGE } from '../api/constants';
@@ -43,6 +43,19 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
       : `Explore the cosmic wonders of ${location.place?.country}.`;
   }, [location.story, location.images, location.place?.country]);
 
+  // Check if the location is "new" (created within last 14 days)
+  const isNew = useMemo(() => {
+    if (!location.created_at) return false;
+    try {
+      const createdAtDate = new Date(location.created_at);
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+      return createdAtDate > fourteenDaysAgo;
+    } catch {
+      return false;
+    }
+  }, [location.created_at]);
+
   const handleCardClick = () => {
     // Generate the required date slug using the actual raw date range.
     const resolvedDateSlug =
@@ -61,6 +74,7 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
       onClick={handleCardClick}
       style={{ cursor: 'pointer' }}
     >
+      {isNew && <div className={styles.newBadge}>New!</div>}
       <div className={styles.imageWrapper}>
         {displayImages.map((img, index) => (
           <img
@@ -93,34 +107,18 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
 };
 
 const TravelHighlights: FC = () => {
-  const [locations, setLocations] = useState<MainPageLocation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { features } = useAppStore();
+  const { data: settings } = useSettings();
+  const isEnabled = settings?.travelHighlights !== false;
+
+  const { data: locations = [], isLoading: loading } =
+    useTravelHighlights(isEnabled);
   const { t } = useTranslation();
 
-  useEffect(() => {
-    const loadSliders = async () => {
-      if (features?.travelHighlights === false) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const data = await fetchTravelHighlights();
-        if (data) setLocations(data);
-      } catch (error) {
-        console.error('Failed to fetch travel highlights:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadSliders();
-  }, [features?.travelHighlights]);
-
-  if (loading) {
+  if (loading && isEnabled) {
     return null; // Or a loading spinner
   }
 
-  if (features?.travelHighlights === false) {
+  if (!isEnabled) {
     return null;
   }
 
@@ -136,7 +134,7 @@ const TravelHighlights: FC = () => {
       </header>
 
       <div className={styles.grid}>
-        {locations.map(location => (
+        {locations.map((location: MainPageLocation) => (
           <TravelCard key={location.pk} location={location} />
         ))}
       </div>

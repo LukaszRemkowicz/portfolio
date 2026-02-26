@@ -120,7 +120,7 @@ need_deps=false
 
 if [[ "$need_deps" == true ]]; then
   echo "🧩 Starting dependencies (db, redis)..."
-  "${COMPOSE[@]}" up -d db redis
+  "${COMPOSE[@]}" up -d --remove-orphans db redis
 else
   echo "✅ Dependencies already running"
 fi
@@ -193,7 +193,7 @@ echo "📦 Backend image found: portfolio-backend:${TAG}"
 # Ensure dependencies are up (release should be repeatable after reboot)
 if ! "${COMPOSE[@]}" ps --services --status running 2>/dev/null | grep -q '^db$'; then
   echo "🧩 Starting dependencies (db, redis)..."
-  "${COMPOSE[@]}" up -d db redis
+  "${COMPOSE[@]}" up -d --remove-orphans db redis
 fi
 
 # ------------------------------------------------------------------

@@ -9,7 +9,7 @@ import {
   type CSSProperties,
 } from 'react';
 import styles from '../styles/components/ShootingStars.module.css';
-import { useAppStore } from '../store/useStore';
+import { useSettings } from '../hooks/useSettings';
 import { MeteorConfig } from '../types';
 
 const DEFAULT_METEOR_CONFIG: MeteorConfig = {
@@ -132,7 +132,9 @@ const ShootingStars: FC<ShootingStarsProps> = ({
   className = '',
   random: randomProp,
 }) => {
-  const { features, meteorConfig: dynamicConfig } = useAppStore();
+  const { data: settings } = useSettings();
+  const features = settings;
+  const dynamicConfig = settings?.meteors || null;
   const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
   const lastBolidTimeRef = useRef<number>(0);
 

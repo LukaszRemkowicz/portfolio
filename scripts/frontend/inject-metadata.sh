@@ -14,6 +14,6 @@ for file in dist/index.html dist/sitemap.xml dist/robots.txt; do
     if [ -f "$file" ]; then
         echo "Updating placeholders in $file..."
         sed "s/__SITE_DOMAIN__/${SITE_DOMAIN}/g" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-        sed "s/__GA_TRACKING_ID__/${GA_TRACKING_ID}/g" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+        sed "s/__GA_TRACKING_ID__/${VITE_GA_TRACKING_ID}/g" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
     fi
 done

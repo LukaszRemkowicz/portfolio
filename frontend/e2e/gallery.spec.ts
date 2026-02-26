@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Gallery Page', () => {
   test.beforeEach(async ({ page }) => {
     // Override default empty image list with mock data for Gallery tests
-    await page.route('**/v1/image/**', async route => {
+    await page.route('**/v1/astroimages/**', async route => {
       const url = route.request().url();
       const images = [
         {
@@ -30,23 +30,28 @@ test.describe('Gallery Page', () => {
         },
       ];
 
-      // Check for detail view (e.g., /api/v1/image/1/)
-      const match = url.match(/\/image\/(\d+)\//);
-      if (match) {
-        const id = parseInt(match[1]);
-        const img = images.find(i => i.pk === id);
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(img || {}),
-        });
+      // Check for detail view (e.g., /api/v1/astroimages/slug/ or /api/v1/astroimages/1/)
+      // Check if URL ends with ID/slug before query params
+      const urlObj = new URL(url);
+      const isDetailView = urlObj.pathname.match(/\/astroimages\/([^/]+)\/?$/);
+      if (isDetailView && isDetailView[1]) {
+        const idOrSlug = isDetailView[1];
+        const img = images.find(
+          i => i.pk.toString() === idOrSlug || i.slug === idOrSlug
+        );
+        if (img) {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(img),
+          });
+        }
       }
 
       // Image list view with simple mock filtering
       let filteredImages = [...images];
-      const searchParams = new URL(url).searchParams;
-      const tagFilter = searchParams.get('tag');
-      const catFilter = searchParams.get('filter');
+      const tagFilter = urlObj.searchParams.get('tag');
+      const catFilter = urlObj.searchParams.get('filter');
 
       if (tagFilter) {
         filteredImages = filteredImages.filter(img =>
@@ -73,14 +78,10 @@ test.describe('Gallery Page', () => {
 
   test('should display all images by default', async ({ page }) => {
     await expect(
-      page
-        .getByRole('button', { name: /View details for Milky Way Arch/ })
-        .first()
+      page.getByTestId('gallery-card-milky-way-arch').first()
     ).toBeVisible();
     await expect(
-      page
-        .getByRole('button', { name: /View details for Orion Nebula/ })
-        .first()
+      page.getByTestId('gallery-card-orion-nebula').first()
     ).toBeVisible();
   });
 
@@ -99,10 +100,9 @@ test.describe('Gallery Page', () => {
   });
 
   test('should open modal and display tags', async ({ page }) => {
-    const card = page
-      .getByRole('button', { name: /View details for Milky Way Arch/ })
-      .first();
-    await card.click({ force: true });
+    const card = page.getByTestId('gallery-card-milky-way-arch').first();
+    // Force click to deal with potential overlay components like hover elements
+    await card.click();
 
     await page.waitForURL(/\?img=/, { timeout: 10000 });
 
@@ -124,7 +124,7 @@ test.describe('Gallery Page', () => {
     await expect(modal).toBeVisible({ timeout: 10000 });
 
     const tag = modal.getByRole('button', { name: '#Deep Sky' }).first();
-    await tag.click({ force: true });
+    await tag.click();
 
     await page.waitForURL(/\?tag=deep-sky/, { timeout: 10000 });
 

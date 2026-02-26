@@ -1,9 +1,14 @@
+// frontend/src/index.tsx
 import { createRoot } from 'react-dom/client';
 import * as Sentry from '@sentry/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import App from './App';
 import './styles/global/index.css';
-import './i18n'; // Initialize i18n
+import './i18n';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+import { getEnv } from './utils/env';
+import i18n from './i18n';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -11,8 +16,7 @@ if (!rootElement) {
 }
 
 // Initialize Sentry
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const sentryDsn = (process.env as any).SENTRY_DSN_FE;
+const sentryDsn = getEnv('SENTRY_DSN_FE');
 if (sentryDsn) {
   Sentry.init({
     dsn: sentryDsn,
@@ -20,25 +24,38 @@ if (sentryDsn) {
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration(),
     ],
-    // Tracing
-    tracesSampleRate: 1.0, // Capture 100% of the transactions
-    // Session Replay
-    replaysSessionSampleRate: 0.1, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
-    replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
-    environment:
-      (process.env as { [key: string]: string | undefined }).ENVIRONMENT ||
-      'development',
+    tracesSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+    environment: getEnv('ENVIRONMENT', 'development'),
   });
 }
 
-const root = createRoot(rootElement);
-root.render(<App />);
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-// Register service worker for offline support and PWA features
-const isProd = process.env.NODE_ENV === 'production';
-if (isProd) {
+// Invalidate all queries when language changes so all data is refetched in new language
+i18n.on('languageChanged', () => {
+  queryClient.invalidateQueries();
+});
+
+const root = createRoot(rootElement);
+root.render(
+  <QueryClientProvider client={queryClient}>
+    <App />
+    {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+  </QueryClientProvider>
+);
+
+// Register service worker in production only
+if (import.meta.env.PROD) {
   serviceWorkerRegistration.register();
 } else {
-  // Unregister service worker in development to avoid refresh loops
   serviceWorkerRegistration.unregister();
 }

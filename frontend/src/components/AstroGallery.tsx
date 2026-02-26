@@ -4,27 +4,21 @@ import { useTranslation } from 'react-i18next';
 import styles from '../styles/components/AstroGallery.module.css';
 import { ASSETS } from '../api/routes';
 import { AstroImage, FilterType } from '../types';
-import { useAppStore } from '../store/useStore';
 import ImageModal from './common/ImageModal';
 import LoadingScreen from './common/LoadingScreen';
 import GalleryCard from './common/GalleryCard';
+import GallerySkeleton from './skeletons/GallerySkeleton';
 import TagSidebar from './TagSidebar';
 import CategorySidebar from './CategorySidebar';
 import { Sliders, LayoutGrid } from 'lucide-react';
+import SEO from './common/SEO';
+import { useAstroImages } from '../hooks/useAstroImages';
+import { useCategories } from '../hooks/useCategories';
+import { useTags } from '../hooks/useTags';
+import { useBackground } from '../hooks/useBackground';
+import { useImageUrls } from '../hooks/useImageUrls';
 
 const AstroGallery: React.FC = () => {
-  const images = useAppStore(state => state.images);
-  const categories = useAppStore(state => state.categories);
-  const isInitialLoading = useAppStore(state => state.isInitialLoading);
-  const isImagesLoading = useAppStore(state => state.isImagesLoading);
-  const tags = useAppStore(state => state.tags);
-  const background = useAppStore(state => state.backgroundUrl);
-  const error = useAppStore(state => state.error);
-  const loadInitialData = useAppStore(state => state.loadInitialData);
-  const loadImages = useAppStore(state => state.loadImages);
-  const loadImageUrls = useAppStore(state => state.loadImageUrls);
-  const loadCategories = useAppStore(state => state.loadCategories);
-  const loadTags = useAppStore(state => state.loadTags);
   const [searchParams, setSearchParams] = useSearchParams();
   const [isTagsDrawerOpen, setIsTagsDrawerOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -34,6 +28,32 @@ const AstroGallery: React.FC = () => {
   const selectedTag = searchParams.get('tag');
   const imgParam = searchParams.get('img');
 
+  const { t } = useTranslation();
+
+  const { data: background } = useBackground();
+  const { data: categories = [] } = useCategories();
+  const { data: tags = [] } = useTags(selectedFilter || undefined);
+
+  const params = useMemo(
+    () => ({
+      ...(selectedFilter ? { filter: selectedFilter } : {}),
+      ...(selectedTag ? { tag: selectedTag } : {}),
+    }),
+    [selectedFilter, selectedTag]
+  );
+
+  const {
+    data: images = [],
+    isLoading: isImagesLoading,
+    error: queryError,
+  } = useAstroImages(params);
+
+  // Pre-fetch all signed urls
+  useImageUrls();
+
+  const error = queryError ? 'Failed to fetch gallery images.' : null;
+  const isInitialLoading = isImagesLoading && images.length === 0 && !error;
+
   const modalImage = useMemo(() => {
     if (!imgParam) return null;
     return (
@@ -41,26 +61,6 @@ const AstroGallery: React.FC = () => {
       null
     );
   }, [imgParam, images]);
-
-  useEffect(() => {
-    loadInitialData();
-    loadCategories();
-  }, [loadInitialData, loadCategories]);
-
-  const { t, i18n } = useTranslation();
-
-  useEffect(() => {
-    loadImages({
-      ...(selectedFilter ? { filter: selectedFilter } : {}),
-      ...(selectedTag ? { tag: selectedTag } : {}),
-    });
-    loadImageUrls(); // Fetch fresh signed URLs
-  }, [selectedFilter, selectedTag, loadImages, loadImageUrls, i18n.language]);
-
-  // Refresh tags when category changes
-  useEffect(() => {
-    loadTags(selectedFilter || undefined);
-  }, [selectedFilter, loadTags, i18n.language]);
 
   // Smooth scroll to results on filter/tag change (Mobile only)
   useEffect(() => {
@@ -123,6 +123,7 @@ const AstroGallery: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      <SEO title={t('common.gallery')} />
       <div
         className={styles.hero}
         style={{
@@ -201,9 +202,7 @@ const AstroGallery: React.FC = () => {
           <div ref={resultsRef} className={styles.scrollAnchor} />
           <div className={styles.grid}>
             {isImagesLoading ? (
-              <div className={styles.noResults}>
-                <p>{t('common.scanning')}</p>
-              </div>
+              <GallerySkeleton count={9} />
             ) : images.length > 0 ? (
               images.map((image: AstroImage) => (
                 <GalleryCard

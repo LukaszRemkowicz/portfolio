@@ -2,6 +2,7 @@ import React from 'react';
 import styles from '../styles/components/About.module.css';
 import { Camera } from 'lucide-react';
 import { AboutProps } from '../types';
+import { sanitizeHtml } from '../utils/html';
 
 import { useTranslation } from 'react-i18next';
 
@@ -24,7 +25,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
           <div
             className={styles.description}
             dangerouslySetInnerHTML={{
-              __html: profile?.bio || t('about.defaultBio'),
+              __html: sanitizeHtml(profile?.bio || t('about.defaultBio')),
             }}
           />
           <div className={styles.stats}>

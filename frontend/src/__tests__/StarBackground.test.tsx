@@ -1,8 +1,19 @@
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import StarBackground from '../components/StarBackground';
+import { useSettings } from '../hooks/useSettings';
+
+jest.mock('../hooks/useSettings');
 
 describe('StarBackground Component', () => {
+  beforeEach(() => {
+    (useSettings as jest.Mock).mockReturnValue({
+      data: { meteors: null },
+      isLoading: false,
+      error: null,
+    });
+  });
+
   it('renders without crashing', () => {
     const { container } = render(<StarBackground />);
     expect(container.firstChild).toBeInTheDocument();

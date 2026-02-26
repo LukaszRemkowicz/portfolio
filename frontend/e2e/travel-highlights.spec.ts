@@ -3,12 +3,13 @@ import { test, expect } from './fixtures';
 test.describe('Travel Highlights Page', () => {
   test.beforeEach(async ({ page }) => {
     // Override specific endpoint for travel detail
-    await page.route('**/v1/travel/iceland/', async route => {
+    await page.route('**/v1/travel/**', async route => {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           country: 'Iceland',
+          full_location: 'Iceland',
           place: null,
           story: '<p>A land of fire and ice...</p>',
           adventure_date: 'Jan 2026',
@@ -22,7 +23,9 @@ test.describe('Travel Highlights Page', () => {
               url: 'https://via.placeholder.com/800x600',
               thumbnail_url: 'https://via.placeholder.com/200x150',
               description: 'Dancing lights.',
+              slug: 'northern-lights',
               location: 'Reykjavik',
+              place: { name: 'Reykjavik' },
               camera: [{ model: 'Canon R6' }],
               lens: [{ model: '14mm F1.8' }],
               telescope: [],
@@ -32,8 +35,22 @@ test.describe('Travel Highlights Page', () => {
       });
     });
 
-    // Navigate to the travel page
-    await page.goto('/travel-highlights/iceland');
+    // Mock specific image detail payload needed for ImageModal hook
+    await page.route('**/v1/astroimages/**', async route => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          pk: 101,
+          name: 'Northern Lights',
+          slug: 'northern-lights',
+          description: 'Dancing lights.',
+        }),
+      });
+    });
+
+    // Navigate to the travel page (needs country, place, and date slugs)
+    await page.goto('/travel/iceland/reykjavik/jan-2026');
   });
 
   test('should display the travel highlights content', async ({ page }) => {
@@ -69,12 +86,14 @@ test.describe('Travel Highlights Page', () => {
   });
 
   test('should open modal when clicking an image', async ({ page }) => {
-    const image = page.getByRole('img', { name: 'Northern Lights' }).first();
+    const image = page.getByTestId('gallery-card-northern-lights').first();
     await image.click();
+
+    await page.waitForURL(/\?img=/, { timeout: 10000 });
 
     // Check modal
     const modal = page.getByTestId('image-modal');
-    await expect(modal).toBeVisible();
+    await expect(modal).toBeVisible({ timeout: 10000 });
     await expect(
       modal.getByRole('heading', { name: 'Northern Lights' })
     ).toBeVisible();

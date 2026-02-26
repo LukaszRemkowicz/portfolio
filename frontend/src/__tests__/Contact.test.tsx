@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Contact from '../components/Contact';
-import { useAppStore } from '../store/useStore';
+import { useSettings } from '../hooks/useSettings';
 import { fetchContact } from '../api/services';
 import { AppError } from '../api/errors';
 
@@ -10,20 +10,21 @@ jest.mock('../api/services', () => ({
   fetchEnabledFeatures: jest.fn(),
   fetchContact: jest.fn(),
 }));
+jest.mock('../hooks/useSettings');
 
 describe('Contact Component', () => {
   const mockFetchContact = fetchContact as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    useAppStore.setState({
-      features: null,
-      isInitialLoading: false,
+    (useSettings as jest.Mock).mockReturnValue({
+      data: null,
+      isLoading: false,
     });
   });
 
   it('renders the form when contactForm is enabled', async () => {
-    useAppStore.setState({ features: { contactForm: true } });
+    (useSettings as jest.Mock).mockReturnValue({ data: { contactForm: true } });
     render(<Contact />);
 
     expect(
@@ -36,7 +37,9 @@ describe('Contact Component', () => {
   });
 
   it('renders nothing when contactForm is disabled', async () => {
-    useAppStore.setState({ features: { contactForm: false } });
+    (useSettings as jest.Mock).mockReturnValue({
+      data: { contactForm: false },
+    });
     const { container } = render(<Contact />);
 
     await waitFor(() => {
@@ -45,7 +48,7 @@ describe('Contact Component', () => {
   });
 
   it('shows validation errors when fields are empty', async () => {
-    useAppStore.setState({ features: { contactForm: true } });
+    (useSettings as jest.Mock).mockReturnValue({ data: { contactForm: true } });
     render(<Contact />);
 
     const form = screen.getByRole('form');
@@ -58,7 +61,7 @@ describe('Contact Component', () => {
   });
 
   it('shows success message on successful submission', async () => {
-    useAppStore.setState({ features: { contactForm: true } });
+    (useSettings as jest.Mock).mockReturnValue({ data: { contactForm: true } });
     mockFetchContact.mockResolvedValue({ message: 'Success' });
 
     render(<Contact />);
@@ -93,7 +96,7 @@ describe('Contact Component', () => {
   });
 
   it('displays server error message (e.g., 429 Throttling)', async () => {
-    useAppStore.setState({ features: { contactForm: true } });
+    (useSettings as jest.Mock).mockReturnValue({ data: { contactForm: true } });
 
     // Simulate a 429 Throttled error with a specific message
     const throttledError = new AppError('Too many requests. Wait 1 hour.', 429);
@@ -128,7 +131,7 @@ describe('Contact Component', () => {
   });
 
   it('handles 400 validation errors from server', async () => {
-    useAppStore.setState({ features: { contactForm: true } });
+    (useSettings as jest.Mock).mockReturnValue({ data: { contactForm: true } });
 
     // We need to import the class or simulate the behavior
     // Since we mock services, we can just throw what the interceptor would throw

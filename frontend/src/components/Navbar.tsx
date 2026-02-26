@@ -5,7 +5,7 @@ import Logo from './common/Logo';
 import styles from '../styles/components/Navbar.module.css';
 import { Menu, X } from 'lucide-react';
 import { NavbarProps } from '../types';
-import { useAppStore } from '../store/useStore';
+import { useSettings } from '../hooks/useSettings';
 import { APP_ROUTES } from '../api/constants';
 
 import LanguageSwitcher from './common/LanguageSwitcher';
@@ -16,7 +16,8 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
   const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { features } = useAppStore();
+  const { data: settings } = useSettings();
+  const features = settings;
   const isProgrammingEnabled = features?.programming === true;
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);

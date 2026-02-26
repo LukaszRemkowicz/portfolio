@@ -4,6 +4,8 @@ import styles from '../../styles/components/GalleryCard.module.css';
 import { MapPin } from 'lucide-react';
 import { AstroImage } from '../../types';
 import { stripHtml } from '../../utils/html';
+import { useQueryClient } from '@tanstack/react-query';
+import { fetchAstroImageDetail } from '../../api/services';
 
 interface GalleryCardProps {
   item: AstroImage;
@@ -13,6 +15,7 @@ interface GalleryCardProps {
 const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
   const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false);
+  const queryClient = useQueryClient();
 
   const isNew = (dateString?: string) => {
     if (!dateString) return false;
@@ -31,14 +34,25 @@ const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
       : plainDescription;
   }, [item.description]);
 
+  const handleMouseEnter = () => {
+    queryClient.prefetchQuery({
+      queryKey: ['astro-image', item.slug],
+      queryFn: () => fetchAstroImageDetail(item.slug),
+      staleTime: 5 * 60 * 1000,
+    });
+  };
+
   return (
     <button
       className={styles.card}
       onClick={() => onClick(item)}
+      onMouseEnter={handleMouseEnter}
+      onFocus={handleMouseEnter}
       aria-label={`View details for ${item.name}`}
       type='button'
+      data-testid={`gallery-card-${item.slug}`}
     >
-      {isNew(item.created_at) && <div className={styles.newBadge}>NEW</div>}
+      {isNew(item.created_at) && <div className={styles.newBadge}>NEW!</div>}
       <div className={styles.imageWrapper} aria-hidden='true'>
         <div
           className={`${styles.placeholder} ${isLoaded ? styles.hide : ''}`}

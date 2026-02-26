@@ -116,9 +116,9 @@ services:
     networks:
       - portfolio_network
     environment:
-      GA_TRACKING_ID: ${GA_TRACKING_ID}
-      SENTRY_DSN_FE: ${SENTRY_DSN_FE}
-      ENVIRONMENT: ${ENVIRONMENT:-production}
+      VITE_GA_TRACKING_ID: ${GA_TRACKING_ID}
+      VITE_SENTRY_DSN_FE: ${SENTRY_DSN_FE}
+      VITE_ENVIRONMENT: ${ENVIRONMENT:-production}
 
   # ---------- Backend ----------
   portfolio-be:

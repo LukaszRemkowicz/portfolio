@@ -37,9 +37,9 @@ services:
   portfolio-fe:
     <<: *frontend-common
     environment:
-      API_URL: https://${API_DOMAIN:-api.portfolio.local}
-      GA_TRACKING_ID: ${GA_TRACKING_ID:-G-2WGK87YBL6}
-      ENABLE_GA: ${ENABLE_GA:-false}
+      VITE_API_URL: https://${API_DOMAIN:-api.portfolio.local}
+      VITE_GA_TRACKING_ID: ${GA_TRACKING_ID:-G-2WGK87YBL6}
+      VITE_ENABLE_GA: ${ENABLE_GA:-false}
     ports:
       - "3000:3000"
     restart: unless-stopped
