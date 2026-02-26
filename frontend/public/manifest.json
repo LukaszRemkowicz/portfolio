@@ -1,25 +1,24 @@
 {
-  "short_name": "Portfolio",
-  "name": "Łukasz Remkowicz - Software Developer & Astrophotographer",
+  "short_name": "Łukasz Remkowicz",
+  "name": "Łukasz Remkowicz - Portfolio & Astrophotography",
   "icons": [
     {
-      "src": "telescope.png",
+      "src": "favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/png"
+      "type": "image/x-icon"
     },
     {
-      "src": "telescope.png",
+      "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any maskable"
+      "sizes": "192x192"
     },
     {
-      "src": "telescope.png",
+      "src": "logo512.png",
       "type": "image/png",
       "sizes": "512x512"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
   "theme_color": "#02040a",
   "background_color": "#02040a"

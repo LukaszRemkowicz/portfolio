@@ -4,57 +4,78 @@ import { MemoryRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import HomePage from '../HomePage';
 import { UserProfile } from '../types';
-import * as services from '../api/services';
-import { useAppStore } from '../store/useStore';
 
-// Mock the API services
-jest.mock('../api/services');
+import { useProfile } from '../hooks/useProfile';
+import { useBackground } from '../hooks/useBackground';
+import { useSettings } from '../hooks/useSettings';
+import { useLatestAstroImages } from '../hooks/useLatestAstroImages';
+import { useTravelHighlights } from '../hooks/useTravelHighlights';
+import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
+
+jest.mock('../hooks/useProfile');
+jest.mock('../hooks/useBackground');
+jest.mock('../hooks/useSettings');
+jest.mock('../hooks/useLatestAstroImages');
+jest.mock('../hooks/useTravelHighlights');
+jest.mock('../hooks/useAstroImageDetail');
 
 describe('HomePage Component', () => {
-  const mockFetchProfile = services.fetchProfile as jest.Mock;
-  const mockFetchBackground = services.fetchBackground as jest.Mock;
-  const mockFetchSettings = services.fetchSettings as jest.Mock;
-  const mockFetchTravelHighlights = services.fetchTravelHighlights as jest.Mock;
-  const mockFetchAstroImages = services.fetchAstroImages as jest.Mock;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFetchBackground.mockResolvedValue('/test-bg.jpg');
-    mockFetchTravelHighlights.mockResolvedValue([]); // Prevent undefined crash
-    mockFetchAstroImages.mockResolvedValue([]); // Prevent undefined crash
-    mockFetchSettings.mockResolvedValue({
-      programming: true,
-      meteors: {
-        randomShootingStars: true,
-        bolidChance: 0.1,
-        bolidMinInterval: 60,
-        starPathRange: [50, 500],
-        bolidPathRange: [50, 500],
-        starStreakRange: [100, 200],
-        bolidStreakRange: [20, 100],
-        starDurationRange: [0.4, 1.2],
-        bolidDurationRange: [0.4, 0.9],
-        starOpacityRange: [0.4, 0.8],
-        bolidOpacityRange: [0.7, 1.0],
-        smokeOpacityRange: [0.5, 0.8],
-      },
+    (useBackground as jest.Mock).mockReturnValue({ data: '/test-bg.jpg' });
+    (useProfile as jest.Mock).mockReturnValue({
+      data: null,
+      isLoading: true,
+      error: null,
     });
 
-    // Reset Zustand store to initial state
-    useAppStore.setState({
-      profile: null,
-      backgroundUrl: null,
-      images: [],
-      features: null,
-      meteorConfig: null,
-      isInitialLoading: false,
-      isImagesLoading: false,
+    (useLatestAstroImages as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+    });
+
+    (useTravelHighlights as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+    });
+
+    (useAstroImageDetail as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
+
+    (useSettings as jest.Mock).mockReturnValue({
+      data: {
+        programming: true,
+        meteors: {
+          randomShootingStars: true,
+          bolidChance: 0.1,
+          bolidMinInterval: 60,
+          starPathRange: [50, 500],
+          bolidPathRange: [50, 500],
+          starStreakRange: [100, 200],
+          bolidStreakRange: [20, 100],
+          starDurationRange: [0.4, 1.2],
+          bolidDurationRange: [0.4, 0.9],
+          starOpacityRange: [0.4, 0.8],
+          bolidOpacityRange: [0.7, 1.0],
+          smokeOpacityRange: [0.5, 0.8],
+        },
+      },
+      isLoading: false,
       error: null,
     });
   });
 
   it('shows loading state initially', async () => {
-    mockFetchProfile.mockReturnValue(new Promise(() => {})); // Never resolves
+    (useProfile as jest.Mock).mockReturnValue({
+      data: null,
+      isLoading: true,
+      error: null,
+    });
 
     await act(async () => {
       render(
@@ -80,7 +101,11 @@ describe('HomePage Component', () => {
       about_me_image2: null,
     };
 
-    mockFetchProfile.mockResolvedValue(mockProfile);
+    (useProfile as jest.Mock).mockReturnValue({
+      data: mockProfile,
+      isLoading: false,
+      error: null,
+    });
 
     await act(async () => {
       render(

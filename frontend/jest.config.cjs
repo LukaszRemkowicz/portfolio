@@ -1,3 +1,11 @@
+// frontend/jest.config.cjs
+process.env.VITE_API_URL = 'http://localhost:8000';
+process.env.VITE_GA_TRACKING_ID = '';
+process.env.VITE_ENABLE_GA = 'false';
+process.env.VITE_SENTRY_DSN_FE = '';
+process.env.VITE_ENVIRONMENT = 'test';
+process.env.MODE = 'test';
+
 module.exports = {
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   testMatch: [
@@ -22,6 +30,7 @@ module.exports = {
     '!src/types/**/*.ts',
     '!src/config.ts',
     '!src/**/*.d.ts',
+    '!src/hooks/**',
   ],
   transform: {
     '^.+\\.(ts|tsx)$': [

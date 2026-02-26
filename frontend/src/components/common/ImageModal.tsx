@@ -6,7 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import { X, Calendar, MapPin } from 'lucide-react';
 import styles from '../../styles/components/ImageModal.module.css';
 import { AstroImage, EquipmentItem } from '../../types';
-import { useAppStore } from '../../store/useStore';
+import { useAstroImageDetail } from '../../hooks/useAstroImageDetail';
+import { useImageUrls } from '../../hooks/useImageUrls';
 import { sanitizeHtml, isHtmlEmpty, slugify } from '../../utils/html';
 import { APP_ROUTES } from '../../api/constants';
 
@@ -19,11 +20,12 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
 
-  const activeImageDetail = useAppStore(state => state.activeImageDetail);
-  const loadImageDetail = useAppStore(state => state.loadImageDetail);
-  const imageUrls = useAppStore(state => state.imageUrls);
-  const clearActiveImage = useAppStore(state => state.clearActiveImage);
-  const isActiveImageLoading = useAppStore(state => state.isActiveImageLoading);
+  const { data: activeImageDetail, isLoading: isActiveImageLoading } =
+    useAstroImageDetail(image?.slug || null);
+  const { data: imageUrls = {} } = useImageUrls(
+    image ? [image.pk.toString()] : undefined,
+    !!image
+  );
 
   const [isFullRes, setIsFullRes] = useState(false);
   const [scale, setScale] = useState(1);
@@ -42,18 +44,6 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
   // Use refs to avoid re-renders during drag
   const dragStartRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
-
-  // Fetch full details when the image changes
-  useEffect(() => {
-    if (image?.slug) {
-      loadImageDetail(image.slug);
-      // Ensure we have the signed URL for this image
-      useAppStore.getState().loadImageUrls([image.pk]);
-    }
-    return () => {
-      clearActiveImage();
-    };
-  }, [image?.slug, image?.pk, loadImageDetail, clearActiveImage]);
 
   const closeFullRes = () => {
     setIsFullRes(false);

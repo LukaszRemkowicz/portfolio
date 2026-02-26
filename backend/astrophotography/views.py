@@ -121,9 +121,9 @@ class TravelHighlightsBySlugView(APIView):
     def get(
         self,
         request: Request,
-        country_slug: Optional[str] = None,
-        place_slug: Optional[str] = None,
-        date_slug: Optional[str] = None,
+        country_slug: str,
+        place_slug: str,
+        date_slug: str,
     ) -> Response:
         """
         Retrieves highlight details by delegating to the model layer.

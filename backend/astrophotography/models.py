@@ -1,8 +1,10 @@
 import calendar
+import logging
 import uuid
 from datetime import date as dt_date
 from typing import Any, Optional
 
+import sentry_sdk
 from django_ckeditor_5.fields import CKEditor5Field
 from django_countries.fields import CountryField
 from model_utils import FieldTracker
@@ -25,6 +27,8 @@ from translation.mixins import AutomatedTranslationModelMixin
 from translation.services import TranslationService
 
 from .constants import CELESTIAL_OBJECT_CHOICES, MeteorDefaults
+
+logger = logging.getLogger(__name__)
 
 
 class Place(AutomatedTranslationModelMixin, TranslatableModel):
@@ -619,24 +623,37 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
         return story
 
     @property
-    def date_slug(self) -> Optional[str]:
+    def date_slug(self) -> str:
         """
         Returns a URL-safe adventure date string like 'jan2026'.
         Always uses English month abbreviations for stable URLs regardless of UI language.
-        Returns None when no adventure_date is set.
+        Raises AttributeError when no adventure_date is set.
         """
         if not self.adventure_date or not self.adventure_date.lower:
-            return None
+            msg = (
+                f"MainPageLocation (ID: {self.pk}) has no adventure_date set. "
+                "Date range is required for URL generation."
+            )
+            logger.error(msg)
+            sentry_sdk.capture_message(msg, level="error")
+            raise AttributeError(msg)
         return self.adventure_date.lower.strftime("%b%Y").lower()  # type: ignore[no-any-return]
 
     @property
-    def adventure_date_raw(self) -> Optional[str]:
+    def adventure_date_raw(self) -> str:
         """
         Returns the lower boundary of the adventure date in ISO format
         for frontend slug generation.
+        Raises AttributeError when no adventure_date is set.
         """
         if not self.adventure_date or not self.adventure_date.lower:
-            return None
+            msg = (
+                f"MainPageLocation (ID: {self.pk}) has no adventure_date set. "
+                "Date range is required for URL generation."
+            )
+            logger.error(msg)
+            sentry_sdk.capture_message(msg, level="error")
+            raise AttributeError(msg)
         return self.adventure_date.lower.isoformat()  # type: ignore[no-any-return]
 
     @staticmethod

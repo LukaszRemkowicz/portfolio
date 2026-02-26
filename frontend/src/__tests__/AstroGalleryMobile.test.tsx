@@ -3,60 +3,58 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import AstroGallery from '../components/AstroGallery';
-import { useAppStore } from '../store/useStore';
-import {
-  fetchAstroImages,
-  fetchSettings,
-  fetchTags,
-  fetchCategories,
-} from '../api/services';
+import { useAstroImages } from '../hooks/useAstroImages';
+import { useCategories } from '../hooks/useCategories';
+import { useTags } from '../hooks/useTags';
+import { useBackground } from '../hooks/useBackground';
+import { useSettings } from '../hooks/useSettings';
+import { useImageUrls } from '../hooks/useImageUrls';
+import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
 
-// Mock the API services
-jest.mock('../api/services', () => ({
-  fetchAstroImages: jest.fn(),
-  fetchBackground: jest.fn(),
-  fetchSettings: jest.fn(),
-  fetchTags: jest.fn(),
-  fetchCategories: jest.fn(),
-}));
+// Mock the hooks
+jest.mock('../hooks/useAstroImages');
+jest.mock('../hooks/useCategories');
+jest.mock('../hooks/useTags');
+jest.mock('../hooks/useBackground');
+jest.mock('../hooks/useSettings');
+jest.mock('../hooks/useImageUrls');
+jest.mock('../hooks/useAstroImageDetail');
 
 describe('AstroGallery Mobile Navigation', () => {
-  const resetStore = () => {
-    useAppStore.setState({
-      profile: null,
-      backgroundUrl: null,
-      images: [],
-      projects: [],
-      categories: [],
-      tags: [],
-      features: null,
-      isInitialLoading: true,
-      isImagesLoading: true,
-      isProjectsLoading: false,
-      error: null,
-      initialSessionId: '',
-      imagesSessionId: '',
-      projectsSessionId: '',
-      tagsSessionId: '',
-      meteorConfig: null,
-    });
-  };
-
   beforeEach(() => {
     jest.resetAllMocks();
-    (fetchSettings as jest.Mock).mockResolvedValue({
-      programming: true,
-      contactForm: true,
-      lastimages: true,
-      meteors: null,
+    (useBackground as jest.Mock).mockReturnValue({ data: null });
+    (useSettings as jest.Mock).mockReturnValue({
+      data: {
+        programming: true,
+        contactForm: true,
+        lastimages: true,
+        meteors: null,
+      },
     });
-    (fetchTags as jest.Mock).mockResolvedValue([
-      { name: 'Nebula', slug: 'nebula', count: 5 },
-      { name: 'Galaxy', slug: 'galaxy', count: 10 },
-    ]);
-    (fetchAstroImages as jest.Mock).mockResolvedValue([]);
-    (fetchCategories as jest.Mock).mockResolvedValue(['Landscape', 'Deep Sky']);
-    resetStore();
+    (useTags as jest.Mock).mockReturnValue({
+      data: [
+        { name: 'Nebula', slug: 'nebula', count: 5 },
+        { name: 'Galaxy', slug: 'galaxy', count: 10 },
+      ],
+      isLoading: false,
+    });
+    (useCategories as jest.Mock).mockReturnValue({
+      data: ['Landscape', 'Deep Sky'],
+      isLoading: false,
+    });
+    (useAstroImages as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+    (useImageUrls as jest.Mock).mockReturnValue({
+      data: {},
+    });
+    (useAstroImageDetail as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
   });
 
   const renderGallery = async () => {

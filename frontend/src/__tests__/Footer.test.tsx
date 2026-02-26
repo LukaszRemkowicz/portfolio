@@ -2,21 +2,19 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import Footer from '../components/Footer';
-import { useAppStore } from '../store/useStore';
+import { useProfile } from '../hooks/useProfile';
 
-// Mock the store
-jest.mock('../store/useStore');
-
-const mockUseAppStore = useAppStore as unknown as jest.Mock;
+// Mock the hook
+jest.mock('../hooks/useProfile');
 
 describe('Footer Component', () => {
   beforeEach(() => {
-    mockUseAppStore.mockClear();
+    (useProfile as jest.Mock).mockClear();
   });
 
   it('renders copyright text', () => {
-    mockUseAppStore.mockReturnValue({
-      profile: { contact_email: 'test@example.com' },
+    (useProfile as jest.Mock).mockReturnValue({
+      data: { contact_email: 'test@example.com' },
     });
     render(
       <MemoryRouter>
@@ -37,7 +35,7 @@ describe('Footer Component', () => {
         },
       ],
     };
-    mockUseAppStore.mockReturnValue({ profile: mockProfile });
+    (useProfile as jest.Mock).mockReturnValue({ data: mockProfile });
 
     render(
       <MemoryRouter>
@@ -62,7 +60,7 @@ describe('Footer Component', () => {
   });
 
   it('does not render social links when profile data is missing', () => {
-    mockUseAppStore.mockReturnValue({ profile: { profiles: [] } });
+    (useProfile as jest.Mock).mockReturnValue({ data: { profiles: [] } });
     render(
       <MemoryRouter>
         <Footer />

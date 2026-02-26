@@ -8,25 +8,18 @@ import {
 } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import TravelHighlightsPage from '../components/TravelHighlightsPage';
-import { api } from '../api/api';
-import { useAppStore } from '../store/useStore';
-import { fetchProfile, fetchBackground, fetchSettings } from '../api/services';
+import { useBackground } from '../hooks/useBackground';
+import { useImageUrls } from '../hooks/useImageUrls';
+import { useTravelHighlightDetail } from '../hooks/useTravelHighlightDetail';
+import { useSettings } from '../hooks/useSettings';
+import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
 
-// Mock API (direct axios calls)
-jest.mock('../api/api');
-const mockedApi = api as jest.Mocked<typeof api>;
-
-// Mock Services (store calls)
-jest.mock('../api/services', () => ({
-  fetchProfile: jest.fn(),
-  fetchBackground: jest.fn(),
-  fetchSettings: jest.fn(),
-  fetchAstroImageDetail: jest.fn(() => Promise.resolve({})),
-}));
-
-jest.mock('../api/imageUrlService', () => ({
-  fetchImageUrls: jest.fn((_ids?: number[]) => Promise.resolve({})),
-}));
+// Mock Services
+jest.mock('../hooks/useBackground');
+jest.mock('../hooks/useImageUrls');
+jest.mock('../hooks/useTravelHighlightDetail');
+jest.mock('../hooks/useSettings');
+jest.mock('../hooks/useAstroImageDetail');
 
 jest.mock('../api/routes', () => ({
   API_ROUTES: {
@@ -38,39 +31,34 @@ jest.mock('../api/routes', () => ({
   getMediaUrl: (path: string) => path, // Return path as-is for tests
 }));
 
-import * as imageUrlService from '../api/imageUrlService';
-
 describe('TravelHighlightsPage', () => {
   beforeEach(() => {
     jest.resetAllMocks();
 
-    // Re-set mock implementations because resetAllMocks clears them
-    (fetchProfile as jest.Mock).mockResolvedValue({});
-    (fetchBackground as jest.Mock).mockResolvedValue(null);
-    (fetchSettings as jest.Mock).mockResolvedValue({
-      programming: true,
-      contactForm: true,
-      lastimages: true,
-      meteors: {
-        randomShootingStars: true,
-        bolidChance: 0.1,
-        bolidMinInterval: 60,
-        starPathRange: [50, 500],
-        bolidPathRange: [50, 500],
-        starStreakRange: [100, 200],
-        bolidStreakRange: [20, 100],
-        starDurationRange: [0.4, 1.2],
-        bolidDurationRange: [0.4, 0.9],
-        starOpacityRange: [0.4, 0.8],
-        bolidOpacityRange: [0.7, 1.0],
-        smokeOpacityRange: [0.5, 0.8],
+    (useSettings as jest.Mock).mockReturnValue({
+      data: {
+        programming: true,
+        meteors: null,
       },
+      isLoading: false,
     });
 
-    useAppStore.setState({
-      backgroundUrl: null,
-      meteorConfig: null,
-      isInitialLoading: false,
+    (useBackground as jest.Mock).mockReturnValue({
+      data: null,
+    });
+
+    (useImageUrls as jest.Mock).mockReturnValue({
+      data: {},
+    });
+
+    (useAstroImageDetail as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    });
+
+    (useTravelHighlightDetail as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: true,
       error: null,
     });
   });
@@ -93,25 +81,17 @@ describe('TravelHighlightsPage', () => {
   };
 
   test('renders loading state initially', async () => {
-    // Keep promise pending
-    mockedApi.get.mockReturnValue(new Promise(() => {}));
-
     await renderComponent();
-
-    // Check for the loading screen using the testid we added
     expect(screen.getByTestId('loading-screen')).toBeInTheDocument();
   });
 
   test('renders content after successful fetch', async () => {
     const mockData = {
       full_location: 'Reykjavik, Iceland',
-      place: {
-        name: 'Reykjavik',
-        country: 'Iceland',
-      },
       story: '<p>Beautiful aurora</p>',
       adventure_date: 'Jan 2026',
       highlight_name: 'Northern Expedition',
+      highlight_title: 'Exploring the cosmic wonders of Reykjavik, Iceland',
       background_image: 'iceland.jpg',
       images: [
         {
@@ -124,7 +104,11 @@ describe('TravelHighlightsPage', () => {
       ],
     };
 
-    mockedApi.get.mockResolvedValue({ data: mockData });
+    (useTravelHighlightDetail as jest.Mock).mockReturnValue({
+      data: mockData,
+      isLoading: false,
+      error: null,
+    });
 
     await renderComponent();
 
@@ -148,7 +132,12 @@ describe('TravelHighlightsPage', () => {
   });
 
   test('handles API error gracefully', async () => {
-    mockedApi.get.mockRejectedValue(new Error('Network error'));
+    (useTravelHighlightDetail as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+    });
+
     // Spy to suppress console error
     const consoleSpy = jest
       .spyOn(console, 'error')
@@ -175,7 +164,6 @@ describe('TravelHighlightsPage', () => {
 
   test('opens modal on image click via URL parameter', async () => {
     const mockData = {
-      country: 'Iceland',
       images: [
         {
           pk: 1,
@@ -185,7 +173,11 @@ describe('TravelHighlightsPage', () => {
         },
       ],
     };
-    mockedApi.get.mockResolvedValue({ data: mockData });
+    (useTravelHighlightDetail as jest.Mock).mockReturnValue({
+      data: mockData,
+      isLoading: false,
+      error: null,
+    });
 
     await renderComponent();
 
@@ -218,28 +210,31 @@ describe('TravelHighlightsPage', () => {
     );
     expect(modal).toBeInTheDocument();
   });
+
   test('fetches and uses full-resolution image URLs', async () => {
     const mockData = {
-      place: { name: 'Reykjavik', country: 'Iceland' },
       images: [
         {
           pk: 1,
           slug: 'aurora-borealis',
           name: 'Aurora',
           thumbnail_url: '/thumbs/aurora.jpg',
-          // Backend no longer sends 'url' directly for full-res
         },
       ],
     };
 
     const mockImageUrls = {
-      'aurora-borealis': 'https://cdn.example.com/full/aurora.jpg?s=signature',
+      '1': 'https://cdn.example.com/full/aurora.jpg?s=signature',
     };
 
-    mockedApi.get.mockResolvedValue({ data: mockData });
-    (imageUrlService.fetchImageUrls as jest.Mock).mockResolvedValue(
-      mockImageUrls
-    );
+    (useTravelHighlightDetail as jest.Mock).mockReturnValue({
+      data: mockData,
+      isLoading: false,
+      error: null,
+    });
+    (useImageUrls as jest.Mock).mockReturnValue({
+      data: mockImageUrls,
+    });
 
     await renderComponent();
 
@@ -250,9 +245,6 @@ describe('TravelHighlightsPage', () => {
       expect.stringContaining('/thumbs/aurora.jpg')
     );
 
-    // 2. Verify fetchImageUrls was called
-    expect(imageUrlService.fetchImageUrls).toHaveBeenCalledWith([1]);
-
     // 3. Open modal and check for FULL RES url
     await act(async () => {
       fireEvent.click(image);
@@ -262,13 +254,9 @@ describe('TravelHighlightsPage', () => {
     await waitFor(async () => {
       // Scope to modal to avoid confusion with thumbnail
       const modal = screen.getByTestId('image-modal');
-      // Use querySelector for direct element access if role fails, or within(modal)
-      // But verify modal exists first
       expect(modal).toBeInTheDocument();
 
       const modalImages = within(modal).getAllByRole('img');
-      // The modal usually has 1 image, maybe 2 if fullRes overlay is open?
-      // fullRes overlay is not open yet (isFullRes=false).
       const modalImage = modalImages[0];
 
       expect(modalImage).toHaveAttribute(

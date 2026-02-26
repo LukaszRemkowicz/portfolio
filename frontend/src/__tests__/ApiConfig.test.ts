@@ -33,37 +33,25 @@ describe('API Configuration', () => {
     });
   });
 
-  it('should not crash if process is undefined', () => {
+  it('should not throw when VITE_API_URL is missing — warns instead', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.isolateModules(() => {
-      // Mock global.process as undefined
-      const actualProcess = global.process;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (global as any).process;
-
-      try {
-        expect(() => require('../api/routes')).toThrow(
-          'API_URL is not defined'
-        );
-      } finally {
-        global.process = actualProcess;
-      }
+      delete process.env.VITE_API_URL;
+      const { API_BASE_URL: resolvedUrl } = require('../api/constants');
+      expect(resolvedUrl).toBe('');
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('VITE_API_URL is not set')
+      );
     });
+    warnSpy.mockRestore();
   });
 
-  it('should not crash if process is undefined', () => {
+  it('returns empty string (not crash) when env is completely missing', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.isolateModules(() => {
-      // Mock global.process as undefined
-      const actualProcess = global.process;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (global as any).process;
-
-      try {
-        expect(() => require('../api/routes')).toThrow(
-          'API_URL is not defined'
-        );
-      } finally {
-        global.process = actualProcess;
-      }
+      delete process.env.VITE_API_URL;
+      expect(() => require('../api/constants')).not.toThrow();
     });
+    warnSpy.mockRestore();
   });
 });

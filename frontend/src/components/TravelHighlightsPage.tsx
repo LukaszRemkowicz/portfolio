@@ -1,19 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import styles from '../styles/components/TravelHighlightsPage.module.css';
-import { API_ROUTES, getMediaUrl, ASSETS } from '../api/routes';
-import { AstroImage } from '../types';
-import { api } from '../api/api';
+import { getMediaUrl, ASSETS } from '../api/routes';
 import ImageModal from './common/ImageModal';
 import LoadingScreen from './common/LoadingScreen';
 import StarBackground from './StarBackground';
-import { useAppStore } from '../store/useStore';
 import { sanitizeHtml } from '../utils/html';
-
-interface ExtendedAstroImage extends AstroImage {
-  url?: string;
-}
+import { useBackground } from '../hooks/useBackground';
+import { useImageUrls } from '../hooks/useImageUrls';
+import SEO from './common/SEO';
+import {
+  useTravelHighlightDetail,
+  ExtendedAstroImage,
+} from '../hooks/useTravelHighlightDetail';
 
 const TravelHighlightsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -23,89 +23,45 @@ const TravelHighlightsPage: React.FC = () => {
     dateSlug?: string;
   }>();
 
-  const [images, setImages] = useState<ExtendedAstroImage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const imgParam = searchParams.get('img');
-  const [fullLocation, setFullLocation] = useState<string>('Travel Highlights');
-  const [story, setStory] = useState<string | null>(null);
-  const [adventureDate, setAdventureDate] = useState<string | null>(null);
-  const [highlightName, setHighlightName] = useState<string | null>(null);
-  const [highlightTitle, setHighlightTitle] = useState<string | null>(null);
-  const [locationBackgroundImage, setLocationBackgroundImage] = useState<
-    string | null
-  >(null);
 
-  const { backgroundUrl, loadInitialData, loadImageUrls, imageUrls } =
-    useAppStore();
+  const { data: backgroundUrl } = useBackground();
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  // Redirect or show error if URL params are incomplete
+  const hasIncompleteParams = !countrySlug || !placeSlug || !dateSlug;
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (!countrySlug || !placeSlug || !dateSlug) {
-        setError(
-          'Incomplete location specified. URL must contain country, place, and date.'
-        );
-        setLoading(false);
-        return;
-      }
+  const {
+    data: detailData,
+    isLoading: queryLoading,
+    error: queryError,
+  } = useTravelHighlightDetail(countrySlug, placeSlug, dateSlug);
 
-      setLoading(true);
-      setError(null);
-      try {
-        // Fetch from new strict 3-segment endpoint
-        const response = await api.get(
-          `${API_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`
-        );
+  const error = hasIncompleteParams
+    ? 'Incomplete location specified. URL must contain country, place, and date.'
+    : queryError
+      ? 'Failed to load travel highlights. Please check the URL and try again.'
+      : null;
 
-        const data = response.data;
+  const loading = queryLoading && !hasIncompleteParams;
 
-        // Validate response structure
-        if (!data || typeof data !== 'object') {
-          throw new Error('Invalid API response structure');
-        }
+  const fullLocation = detailData?.full_location || 'Travel Highlights';
+  const story = detailData?.story || null;
+  const adventureDate = detailData?.adventure_date || null;
+  const highlightName = detailData?.highlight_name || null;
+  const highlightTitle = detailData?.highlight_title || null;
+  const locationBackgroundImage = detailData?.background_image || null;
+  const images = useMemo(() => detailData?.images || [], [detailData?.images]);
 
-        // Set metadata using new pre-formatted fields
-        setFullLocation(data.full_location || 'Travel Highlights');
-        setStory(data.story || null);
-        setAdventureDate(data.adventure_date || null);
-        setHighlightName(data.highlight_name || null);
-        setHighlightTitle(data.highlight_title || null);
-        setLocationBackgroundImage(data.background_image || null);
-
-        // Process images with defensive checks
-        // ... (rest of logic unchanged)
-        const imagesArray = Array.isArray(data.images) ? data.images : [];
-        const processedImages: ExtendedAstroImage[] = imagesArray.map(
-          (image: AstroImage) => ({
-            ...image,
-            thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-            url: undefined, // Initialize url clearly
-          })
-        );
-
-        setImages(processedImages);
-
-        // Fetch full resolution URLs for all images
-        if (imagesArray.length > 0) {
-          const imageIds = imagesArray.map((img: AstroImage) => img.pk);
-          // Trigger store action to fetch URLs
-          await loadImageUrls(imageIds);
-        }
-      } catch {
-        setError(
-          'Failed to load travel highlights. Please check the URL and try again.'
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, [countrySlug, placeSlug, dateSlug, i18n.language, loadImageUrls]);
+  // Fetch full resolution URLs for all images
+  const imageIdsToFetch = useMemo(
+    () => images.map(img => img.pk.toString()),
+    [images]
+  );
+  const { data: imageUrls = {} } = useImageUrls(
+    imageIdsToFetch,
+    imageIdsToFetch.length > 0
+  );
 
   // Derive modal image from URL parameter
   const modalImage = useMemo(() => {
@@ -116,7 +72,7 @@ const TravelHighlightsPage: React.FC = () => {
     if (!found) return null;
 
     // Enhance with full-res URL if available
-    const fullResUrl = imageUrls[found.slug];
+    const fullResUrl = imageUrls[found.pk.toString()] || imageUrls[found.slug];
     return {
       ...found,
       url: fullResUrl || found.url || found.thumbnail_url,
@@ -164,8 +120,24 @@ const TravelHighlightsPage: React.FC = () => {
     );
   };
 
+  // Derive SEO description safely
+  const seoDescription = String(
+    highlightTitle ||
+      (story ? story.substring(0, 160) : undefined) ||
+      `Travel highlights from ${fullLocation}`
+  );
+
   return (
     <div className={styles.container}>
+      <SEO
+        title={fullLocation}
+        description={seoDescription}
+        ogImage={
+          locationBackgroundImage
+            ? getMediaUrl(locationBackgroundImage)
+            : undefined
+        }
+      />
       <StarBackground />
       <div
         className={styles.hero}
@@ -230,6 +202,7 @@ const TravelHighlightsPage: React.FC = () => {
                     <img
                       src={image.thumbnail_url}
                       alt={image.name}
+                      data-testid={`gallery-card-${image.slug}`}
                       className={styles.viewerImage}
                       onClick={() => handleImageClick(image)}
                       draggable='false'

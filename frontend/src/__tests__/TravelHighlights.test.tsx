@@ -2,24 +2,22 @@ import { act } from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TravelHighlights from '../components/TravelHighlights';
-import { fetchTravelHighlights } from '../api/services';
-import { useAppStore } from '../store/useStore';
+import { useSettings } from '../hooks/useSettings';
+import { useTravelHighlights } from '../hooks/useTravelHighlights';
 
-// Mock Services
-jest.mock('../api/services', () => ({
-  fetchTravelHighlights: jest.fn().mockResolvedValue([]),
-  fetchProfile: jest.fn().mockResolvedValue({}),
-  fetchBackground: jest.fn().mockResolvedValue(null),
-  fetchEnabledFeatures: jest.fn().mockResolvedValue({}),
-}));
+// Mock Hooks
+jest.mock('../hooks/useSettings');
+jest.mock('../hooks/useTravelHighlights');
 
 describe('TravelHighlights Component', () => {
-  const mockedFetchTravelHighlights = fetchTravelHighlights as jest.Mock;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    useAppStore.setState({
-      features: { travelHighlights: true },
+    (useSettings as jest.Mock).mockReturnValue({
+      data: { travelHighlights: true },
+    });
+    (useTravelHighlights as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
     });
   });
 
@@ -43,7 +41,10 @@ describe('TravelHighlights Component', () => {
         ],
       },
     ];
-    mockedFetchTravelHighlights.mockResolvedValue(mockLocations);
+    (useTravelHighlights as jest.Mock).mockReturnValue({
+      data: mockLocations,
+      isLoading: false,
+    });
 
     await act(async () => {
       render(
@@ -58,8 +59,8 @@ describe('TravelHighlights Component', () => {
   });
 
   it('renders nothing if feature is disabled', async () => {
-    useAppStore.setState({
-      features: { travelHighlights: false },
+    (useSettings as jest.Mock).mockReturnValue({
+      data: { travelHighlights: false },
     });
 
     await act(async () => {
@@ -83,7 +84,11 @@ describe('TravelHighlights Component', () => {
         ],
       },
     ];
-    mockedFetchTravelHighlights.mockResolvedValue(mockLocations);
+
+    (useTravelHighlights as jest.Mock).mockReturnValue({
+      data: mockLocations,
+      isLoading: false,
+    });
 
     jest.useFakeTimers();
     await act(async () => {
@@ -99,9 +104,6 @@ describe('TravelHighlights Component', () => {
       jest.advanceTimersByTime(0);
     });
 
-    // Now we can find the text
-    // Use getBy instead of findBy since we advanced timers
-    // Use getAllByText because it appears in title and location
     expect(screen.getAllByText('Multi Image').length).toBeGreaterThan(0);
 
     const images = screen.getAllByRole('img');

@@ -1,40 +1,43 @@
-declare global {
-  interface Window {
-    _ENV_?: {
-      GA_TRACKING_ID?: string;
-    };
-  }
+// frontend/src/utils/env.ts
+
+/**
+ * Adding a variable here automatically types it globally.
+ */
+export interface EnvSchema {
+  API_URL: string;
+  GA_TRACKING_ID: string;
+  ENABLE_GA: string;
+  SENTRY_DSN_FE: string;
+  ENVIRONMENT: string;
+  NODE_ENV: string;
 }
 
 /**
- * Safely access environment variables defined by Webpack's DefinePlugin
- * or injected at runtime via window._ENV_.
+ * Derived type that maps EnvSchema keys to their Vite-prefixed equivalents.
+ * This drives the global ImportMetaEnv type.
  */
-export const getEnv = (key: string, fallback: string = ''): string => {
-  // 1. Check runtime configuration (Site Domain, Tracking ID, etc.)
-  if (typeof window !== 'undefined' && window._ENV_) {
-    const runtimeVal = (window._ENV_ as Record<string, string | undefined>)[
-      key
-    ];
-    if (runtimeVal && runtimeVal !== `__${key}__`) {
-      return runtimeVal;
-    }
-  }
+export type ViteMappedEnv = {
+  [K in keyof EnvSchema as K extends 'NODE_ENV' ? 'MODE' : `VITE_${K}`]: string;
+};
 
+/**
+ * Static assignment required by Vite to enable build-time replacement.
+ */
+const SETTINGS: EnvSchema = {
+  API_URL: import.meta.env.VITE_API_URL,
+  GA_TRACKING_ID: import.meta.env.VITE_GA_TRACKING_ID,
+  ENABLE_GA: import.meta.env.VITE_ENABLE_GA,
+  SENTRY_DSN_FE: import.meta.env.VITE_SENTRY_DSN_FE,
+  ENVIRONMENT: import.meta.env.VITE_ENVIRONMENT || import.meta.env.MODE,
+  NODE_ENV: import.meta.env.MODE,
+};
+
+/**
+ * Safely access environment variables with type support.
+ */
+export const getEnv = (key: keyof EnvSchema, fallback: string = ''): string => {
   try {
-    // 2. Check build-time DefinePlugin configuration
-    switch (key) {
-      case 'API_URL':
-        return process.env.API_URL || fallback;
-      case 'GA_TRACKING_ID':
-        return process.env.GA_TRACKING_ID || fallback;
-      case 'ENABLE_GA':
-        return process.env.ENABLE_GA || fallback;
-      case 'NODE_ENV':
-        return process.env.NODE_ENV || fallback;
-      default:
-        return fallback;
-    }
+    return SETTINGS[key] || fallback;
   } catch {
     return fallback;
   }

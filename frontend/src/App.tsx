@@ -1,6 +1,7 @@
 // frontend/src/App.tsx
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import HomePage from './HomePage';
 import { hasAnalyticsConsent } from './utils/analytics';
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
@@ -56,51 +57,53 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AnalyticsTracker hasConsented={hasConsented} />
-      <ScrollToHash />
-      <Suspense fallback={<LoadingScreen />}>
-        <ErrorBoundary>
-          <Routes>
-            <Route path={APP_ROUTES.HOME} element={<HomePage />} />
-            <Route
-              path={APP_ROUTES.ASTROPHOTOGRAPHY}
-              element={
-                <MainLayout>
-                  <AstroGallery />
-                </MainLayout>
-              }
-            />
-            <Route
-              path={APP_ROUTES.PROGRAMMING}
-              element={
-                <MainLayout>
-                  <Programming />
-                </MainLayout>
-              }
-            />
-            <Route
-              path={`${APP_ROUTES.TRAVEL_HIGHLIGHTS}/:countrySlug/:placeSlug/:dateSlug`}
-              element={
-                <MainLayout>
-                  <TravelHighlightsPage />
-                </MainLayout>
-              }
-            />
+    <HelmetProvider>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AnalyticsTracker hasConsented={hasConsented} />
+        <ScrollToHash />
+        <Suspense fallback={<LoadingScreen />}>
+          <ErrorBoundary>
+            <Routes>
+              <Route path={APP_ROUTES.HOME} element={<HomePage />} />
+              <Route
+                path={APP_ROUTES.ASTROPHOTOGRAPHY}
+                element={
+                  <MainLayout>
+                    <AstroGallery />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path={APP_ROUTES.PROGRAMMING}
+                element={
+                  <MainLayout>
+                    <Programming />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path={`${APP_ROUTES.TRAVEL_HIGHLIGHTS}/:countrySlug/:placeSlug/:dateSlug`}
+                element={
+                  <MainLayout>
+                    <TravelHighlightsPage />
+                  </MainLayout>
+                }
+              />
 
-            <Route
-              path={APP_ROUTES.PRIVACY}
-              element={
-                <MainLayout>
-                  <PrivacyPolicy />
-                </MainLayout>
-              }
-            />
-          </Routes>
-        </ErrorBoundary>
-      </Suspense>
-      <CookieConsent onAccept={() => setHasConsented(true)} />
-    </Router>
+              <Route
+                path={APP_ROUTES.PRIVACY}
+                element={
+                  <MainLayout>
+                    <PrivacyPolicy />
+                  </MainLayout>
+                }
+              />
+            </Routes>
+          </ErrorBoundary>
+        </Suspense>
+        <CookieConsent onAccept={() => setHasConsented(true)} />
+      </Router>
+    </HelmetProvider>
   );
 };
 
