@@ -3,6 +3,8 @@
   max-width: 80rem;
   /* max-w-7xl */
   margin: 0 auto;
+  position: relative;
+  z-index: 10;
 }
 
 .header {
@@ -150,4 +152,5 @@
   text-align: center;
   padding: 4rem 1.5rem;
   color: #94a3b8;
+  grid-column: 1 / -1;
 }

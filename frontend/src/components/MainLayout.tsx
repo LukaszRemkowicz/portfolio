@@ -14,8 +14,8 @@ const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <div
-      className={`${styles['app-container']} ${
-        isProgramming ? styles['programming-bg'] : styles['astro-bg']
+      className={`${styles.appContainer} ${
+        isProgramming ? styles.programmingBg : styles.astroBg
       }`}
       style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}
     >
