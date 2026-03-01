@@ -80,7 +80,8 @@
     "whatwg-encoding": "npm:@exodus/bytes@^3.1.1",
     "abab": "^2.0.6",
     "domexception": "^4.0.0",
-    "source-map": "^0.7.4"
+    "source-map": "^0.7.4",
+    "serialize-javascript": "^7.0.3"
   },
   "browserslist": [
     ">0.5%",
