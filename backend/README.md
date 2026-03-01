@@ -179,3 +179,6 @@ We provide specialized "God-Tier" scripts for automated database backups and res
 - [x] **Harden Container** - Non-root user with runtime volume permission mapping
 - [x] **Dependency Scanning** - GitHub Actions with Safety & Dependabot
 - [x] **ViewSet Hardening** - Minimalist ViewSets with strict method enforcement
+
+### 🎨 Admin UI
+- [ ] **django-jazzmin** - Replace the default Django Admin skin with [django-jazzmin](https://github.com/farridav/django-jazzmin) for a responsive, dark-mode Bootstrap 5 admin panel
