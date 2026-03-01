@@ -141,8 +141,9 @@ services:
     environment:
       # Injected by Doppler at runtime — envsubst replaces ${SITE_DOMAIN} in TEMPLATE.conf.template
       SITE_DOMAIN: ${SITE_DOMAIN}
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
     volumes:
-      - ./nginx/prod/TEMPLATE.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/prod/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
       - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
       - ${NGINX_LOG_DIR:-./nginx/logs}:/var/log/nginx
       - prod_media_data:/app/media:ro
