@@ -67,7 +67,7 @@
     "prettier": "^3.0.0",
     "test-exclude": "^7.0.1",
     "typescript": "^5.0.0",
-    "typescript-eslint": "^8.54.0",
+    "typescript-eslint": "^8.56.1",
     "vite": "^6.4.1",
     "vite-plugin-pwa": "^0.21.2"
   },
