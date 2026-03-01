@@ -1,10 +1,8 @@
 # backend/monitoring/services.py
 import logging
 import os
-import shutil
-import subprocess
 import time
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from django.conf import settings
@@ -20,112 +18,64 @@ logger = logging.getLogger(__name__)
 
 
 class DockerLogCollector:
-    """Collects logs from Docker containers."""
+    """Reads pre-collected logs from a volume-mounted directory.
 
-    _docker_path: Optional[str] = None  # Cache docker executable path
+    Logs are collected daily by `scripts/monitoring/collect-logs.sh` (host cron job)
+    and written to DOCKER_LOGS_DIR, which is mounted read-only into this container.
+    """
+
+    MAX_STALENESS_HOURS = 25
 
     @classmethod
-    def _get_docker_path(cls) -> str:
-        """
-        Find docker executable path with caching.
-
-        Returns:
-            str: Absolute path to docker executable
-
-        Raises:
-            FileNotFoundError: If docker is not found
-        """
-        if cls._docker_path:
-            return cls._docker_path
-
-        docker_path = shutil.which("docker")
-
-        if not docker_path:
-            # Fallback to common locations
-            for candidate in ["/usr/local/bin/docker", "/usr/bin/docker"]:
-                if os.path.exists(candidate):
-                    docker_path = candidate
-                    break
-            else:
-                raise FileNotFoundError(
-                    "Could not find 'docker' executable. "
-                    "Please ensure Docker is installed and in PATH."
-                )
-
-        cls._docker_path = docker_path
-        logger.info("Docker executable found at: %s", docker_path)
-        return docker_path
+    def _check_staleness(cls, logs_dir: str) -> None:
+        """Warn if collected_at.txt indicates logs older than MAX_STALENESS_HOURS."""
+        collected_at_path = os.path.join(logs_dir, "collected_at.txt")
+        if not os.path.exists(collected_at_path):
+            logger.warning(
+                "collected_at.txt not found in %s — cron job may not have run yet",
+                logs_dir,
+            )
+            return
+        with open(collected_at_path) as f:
+            collected_at_raw = f.read().strip()
+        collected_at = datetime.fromisoformat(collected_at_raw).replace(tzinfo=timezone.utc)
+        age_hours = (datetime.now(timezone.utc) - collected_at).total_seconds() / 3600
+        if age_hours > cls.MAX_STALENESS_HOURS:
+            logger.warning(
+                "Docker logs are %.1f hours old (expected <%d h) — cron job may have missed a run",
+                age_hours,
+                cls.MAX_STALENESS_HOURS,
+            )
 
     @classmethod
     def collect_logs(cls) -> tuple[str, str]:
-        """
-        Collect logs from Docker containers and write to temp files.
+        """Return paths to pre-collected log files from the mounted volume.
 
         Returns:
             Tuple of (backend_log_path, frontend_log_path)
 
         Raises:
-            FileNotFoundError: If docker executable not found
-            subprocess.TimeoutExpired: If collection times out
-            subprocess.CalledProcessError: If docker command fails
+            FileNotFoundError: If expected log files are missing (cron hasn't run)
         """
-        logger.info("Collecting Docker logs to temporary files")
+        logs_dir: str = settings.DOCKER_LOGS_DIR
 
-        try:
-            # Get project directory from settings
-            project_dir = settings.PROJECT_ROOT
+        backend_log_path = os.path.join(logs_dir, "backend.log")
+        frontend_log_path = os.path.join(logs_dir, "frontend.log")
 
-            # Find docker executable
-            docker_path = cls._get_docker_path()
-
-            timestamp = int(time.time())
-            backend_log_path = f"/tmp/backend_{timestamp}.log"
-            frontend_log_path = f"/tmp/frontend_{timestamp}.log"
-
-            # Backend logs - stream to file
-            with open(backend_log_path, "w") as f:
-                subprocess.run(
-                    [docker_path, "compose", "logs", "--tail=2000", "portfolio-be"],
-                    stdout=f,
-                    stderr=subprocess.STDOUT,
-                    timeout=45,
-                    check=True,
-                    cwd=project_dir,
-                    env={
-                        **os.environ,
-                        "PATH": "/usr/local/bin:/usr/bin:/bin:" + os.environ.get("PATH", ""),
-                    },
+        for path in (backend_log_path, frontend_log_path):
+            if not os.path.exists(path):
+                raise FileNotFoundError(
+                    f"Log file not found: {path}. "
+                    "Ensure the collect-logs.sh cron job has run successfully."
                 )
 
-            # Frontend logs - stream to file
-            with open(frontend_log_path, "w") as f:
-                subprocess.run(
-                    [docker_path, "compose", "logs", "--tail=2000", "portfolio-fe"],
-                    stdout=f,
-                    stderr=subprocess.STDOUT,
-                    timeout=45,
-                    check=True,
-                    cwd=project_dir,
-                    env={
-                        **os.environ,
-                        "PATH": "/usr/local/bin:/usr/bin:/bin:" + os.environ.get("PATH", ""),
-                    },
-                )
+        cls._check_staleness(logs_dir)
 
-            # Check file sizes
-            be_size = os.path.getsize(backend_log_path)
-            fe_size = os.path.getsize(frontend_log_path)
+        be_size = os.path.getsize(backend_log_path)
+        fe_size = os.path.getsize(frontend_log_path)
+        logger.info("Read logs: backend=%d bytes, frontend=%d bytes", be_size, fe_size)
 
-            logger.info("Collected logs: backend=%d bytes, frontend=%d bytes", be_size, fe_size)
-
-            return backend_log_path, frontend_log_path
-
-        except subprocess.TimeoutExpired:
-            logger.error("Docker logs collection timed out")
-            raise
-        except subprocess.CalledProcessError as e:
-            logger.error("Docker command failed: %s", e)
-            raise
+        return backend_log_path, frontend_log_path
 
 
 class LogAnalyzer:

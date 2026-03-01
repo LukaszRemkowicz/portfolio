@@ -60,8 +60,12 @@ SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
 SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True)
 SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=True)
-SECURE_CONTENT_TYPE_NOSNIFF = env.bool("SECURE_CONTENT_TYPE_NOSNIFF", default=True)
-SECURE_BROWSER_XSS_FILTER = env.bool("SECURE_BROWSER_XSS_FILTER", default=True)
+# These headers are set by Nginx — disable Django's duplicates where possible
+SECURE_CONTENT_TYPE_NOSNIFF = False
+SECURE_BROWSER_XSS_FILTER = False
+# X_FRAME_OPTIONS must stay — XFrameOptionsMiddleware crashes if set to None
+X_FRAME_OPTIONS = "DENY"
+
 
 # Domain settings
 SITE_DOMAIN = env.str("SITE_DOMAIN", default="portfolio.local")
@@ -204,6 +208,7 @@ OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 # Each service can use a different provider
 TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
 MONITORING_LLM_PROVIDER = env.str("MONITORING_LLM_PROVIDER", default="gpt")
+DOCKER_LOGS_DIR = env.str("DOCKER_LOGS_DIR", default="/app/docker-logs")
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

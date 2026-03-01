@@ -19,25 +19,47 @@ from monitoring.tests.factories import LogAnalysisFactory
 
 @pytest.mark.django_db
 class TestDockerLogCollector:
-    def test_collect_logs_success(self, mocker):
-        """Test successful docker log retrieval."""
-        mock_run = mocker.patch("subprocess.run")
-        mock_run.return_value.stdout = "Log content"
-        mock_run.return_value.returncode = 0
+    def test_collect_logs_success(self, tmp_path, settings):
+        """Test successful log retrieval from volume-mounted files."""
+        settings.DOCKER_LOGS_DIR = str(tmp_path)
+        (tmp_path / "backend.log").write_text("backend log content")
+        (tmp_path / "frontend.log").write_text("frontend log content")
+        (tmp_path / "collected_at.txt").write_text("2026-03-01T00:00:00Z")
 
-        # Mocks
-        mocker.patch("shutil.which", return_value="/usr/bin/docker")
-        mocker.patch("builtins.open", mock_open())
-        mocker.patch("os.path.getsize", return_value=100)
+        backend_path, frontend_path = DockerLogCollector.collect_logs()
 
-        # Execute
-        logs = DockerLogCollector.collect_logs()
+        assert backend_path == str(tmp_path / "backend.log")
+        assert frontend_path == str(tmp_path / "frontend.log")
 
-        assert len(logs) == 2
-        assert "backend" in logs[0]
-        assert "frontend" in logs[1]
-        assert "logs" in mock_run.call_args[0][0]
-        assert "--tail=2000" in mock_run.call_args[0][0]
+    def test_collect_logs_missing_backend_raises(self, tmp_path, settings):
+        """FileNotFoundError when backend.log is missing."""
+        settings.DOCKER_LOGS_DIR = str(tmp_path)
+        (tmp_path / "frontend.log").write_text("frontend log content")
+
+        with pytest.raises(FileNotFoundError, match="backend.log"):
+            DockerLogCollector.collect_logs()
+
+    def test_collect_logs_missing_frontend_raises(self, tmp_path, settings):
+        """FileNotFoundError when frontend.log is missing."""
+        settings.DOCKER_LOGS_DIR = str(tmp_path)
+        (tmp_path / "backend.log").write_text("backend log content")
+
+        with pytest.raises(FileNotFoundError, match="frontend.log"):
+            DockerLogCollector.collect_logs()
+
+    def test_check_staleness_warns_when_old(self, tmp_path, settings, caplog):
+        """Warning logged when logs are older than MAX_STALENESS_HOURS."""
+        import logging
+
+        settings.DOCKER_LOGS_DIR = str(tmp_path)
+        (tmp_path / "backend.log").write_text("log")
+        (tmp_path / "frontend.log").write_text("log")
+        (tmp_path / "collected_at.txt").write_text("2000-01-01T00:00:00Z")
+
+        with caplog.at_level(logging.WARNING, logger="monitoring.services"):
+            DockerLogCollector.collect_logs()
+
+        assert any("hours old" in record.message for record in caplog.records)
 
 
 @pytest.mark.django_db

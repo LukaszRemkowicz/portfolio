@@ -21,5 +21,4 @@ export const APP_ROUTES = {
   PRIVACY: '/privacy',
 };
 
-export const DEFAULT_TRAVEL_IMAGE =
-  'https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?q=80&w=1000&auto=format&fit=crop';
+export const DEFAULT_TRAVEL_IMAGE = '/default-travel.jpg';

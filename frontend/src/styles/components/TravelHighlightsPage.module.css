@@ -244,6 +244,9 @@
   z-index: 2;
   position: relative;
   margin-bottom: 0.5rem;
+  max-width: 1000px;
+  padding: 0 1.5rem;
+  text-align: center;
 }
 
 .heroSubtitle {
@@ -435,5 +438,15 @@
 
   .storyContent {
     font-size: 1rem;
+  }
+
+  .heroTitle {
+    font-size: 2rem;
+    padding: 0 1rem;
+  }
+
+  .heroSubtitle {
+    font-size: 1rem;
+    padding: 0 1rem;
   }
 }

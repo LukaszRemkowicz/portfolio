@@ -53,9 +53,5 @@ root.render(
   </QueryClientProvider>
 );
 
-// Register service worker in production only
-if (import.meta.env.PROD) {
-  serviceWorkerRegistration.register();
-} else {
-  serviceWorkerRegistration.unregister();
-}
+// Unregister service worker everywhere to rely on Nginx caching
+serviceWorkerRegistration.unregister();
