@@ -885,6 +885,21 @@ files = [
 Django = ">=3.2"
 
 [[package]]
+name = "django-jazzmin"
+version = "3.0.3"
+description = "Drop-in theme for django admin, that utilises AdminLTE 3 & Bootstrap 5 to make yo' admin look jazzy"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "django_jazzmin-3.0.3-py3-none-any.whl", hash = "sha256:a0e6afecf8a792eeaba06c7713ecddcfc6cbf349e47466cea2d484283eb87f31"},
+    {file = "django_jazzmin-3.0.3.tar.gz", hash = "sha256:ed830ae4a0509aeec8e2caa626965c5dd72f11da83776807ba2a807fc99584d5"},
+]
+
+[package.dependencies]
+django = ">=4.2"
+
+[[package]]
 name = "django-model-utils"
 version = "5.0.0"
 description = "Django model mixins and utilities"
@@ -3250,4 +3265,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<4.0"
-content-hash = "6070e948ce073003be78e732906575175c386fafa627be19a93139bccaa56d89"
+content-hash = "d58d786cbafec61f5c980c425d86b5fa3589bec647a574454528f85376354c4d"

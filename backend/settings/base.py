@@ -132,6 +132,7 @@ CSRF_COOKIE_SECURE = True
 
 # Application definition
 INSTALLED_APPS = [
+    "jazzmin",
     "parler",
     "users.apps.UsersConfig",  # Must be first
     "django.contrib.contenttypes",  # Required by auth
@@ -627,3 +628,101 @@ CELERY_RESULT_EXPIRES = 3600  # 1 hour
 # Worker settings
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
+
+
+# ===========================
+# Jazzmin Admin UI Configuration
+# ===========================
+
+JAZZMIN_SETTINGS = {
+    "site_title": "Portfolio Admin",
+    "site_header": "Portfolio",
+    "site_brand": "Portfolio Admin",
+    "site_icon": "fas fa-shield-alt",
+    "welcome_sign": "Welcome to the Portfolio Admin Interface",
+    "copyright": "Lukasz Remkowicz",
+    # User Menu
+    "user_avatar": "profiles.avatar",
+    # Top Menu
+    "topmenu_links": [
+        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"model": "users.User"},
+    ],
+    # Links on the side menu
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "hide_apps": [],
+    "hide_models": [],
+    # Custom Icons
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.Group": "fas fa-users",
+        "users.User": "fas fa-user",
+        "users.Profile": "fas fa-id-badge",
+        "astrophotography.AstroImage": "fas fa-image",
+        "astrophotography.MainPageLocation": "fas fa-map-marker-alt",
+        "astrophotography.MainPageBackgroundImage": "fas fa-camera",
+        "astrophotography.MeteorsMainPageConfig": "fas fa-meteor",
+        "astrophotography.Place": "fas fa-globe",
+        "astrophotography.Tag": "fas fa-tags",
+        "astrophotography.Camera": "fas fa-camera-retro",
+        "astrophotography.Lens": "fas fa-search",
+        "astrophotography.Telescope": "fas fa-binoculars",
+        "astrophotography.Tracker": "fas fa-crosshairs",
+        "astrophotography.Tripod": "fas fa-arrows-alt",
+        "inbox.ContactMessage": "fas fa-envelope",
+        "programming.Project": "fas fa-code",
+        "programming.ProjectImage": "fas fa-images",
+        "axes.AccessAttempt": "fas fa-user-lock",
+        "axes.AccessLog": "fas fa-list-alt",
+        "core.LandingPageSettings": "fas fa-sliders-h",
+        "translation.TranslationTask": "fas fa-language",
+        "monitoring.LogAnalysis": "fas fa-chart-line",
+    },
+    # Changing the order
+    "order_with_respect_to": [
+        "astrophotography",
+        "inbox",
+        "users",
+        "auth",
+        "axes",
+        "programming",
+        "core",
+        "translation",
+        "monitoring",
+    ],
+    "custom_css": "core/css/admin_sidebar.css",
+    "show_theme_chooser": True,
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": False,
+    "accent": "accent-primary",
+    "navbar": "",
+    "no_navbar_border": False,
+    "navbar_fixed": False,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "default_theme_mode": "auto",
+    "button_classes": {
+        "primary": "btn-outline-primary",
+        "secondary": "btn-outline-secondary",
+        "info": "btn-outline-info",
+        "warning": "btn-outline-warning",
+        "danger": "btn-outline-danger",
+        "success": "btn-outline-success",
+    },
+}

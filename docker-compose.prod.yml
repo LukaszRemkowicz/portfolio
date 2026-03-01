@@ -9,7 +9,7 @@ x-backend-defaults: &backend-defaults
     - prod_static_data:/app/staticfiles
   networks:
     - portfolio_network
-  environment:
+  environment: &backend-defaults-env
     DEBUG: "False"
     DOCKER_ENV: "true"
     PYTHONPATH: "."
@@ -85,14 +85,15 @@ services:
     <<: *backend-defaults
     image: portfolio-backend:${TAG}
     restart: always
-    command: celery -A settings worker -l info --concurrency=4
+    command: celery -A settings worker -l info -Q celery,monitoring --concurrency=4
     environment:
+      <<: *backend-defaults-env
       MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
       DOCKER_LOGS_DIR: /app/docker-logs
     volumes:
       - prod_media_data:/app/media
       - prod_static_data:/app/staticfiles
-      - ${DOCKER_LOGS_DIR}:/app/docker-logs:ro
+      - ${DOCKER_LOGS_DIR}:/app/docker-logs
     healthcheck:
       test: ["CMD-SHELL", "celery -A settings inspect ping -d celery@$$HOSTNAME"]
       interval: 30s

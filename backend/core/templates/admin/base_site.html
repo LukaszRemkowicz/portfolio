@@ -6,20 +6,33 @@
 <h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
 {% endblock %}
 
-{% block usertools %}
-<div style="display: flex; align-items: center; justify-content: flex-end;">
-    <span style="color: #ffc107; font-family: monospace; font-size: 14px; font-weight: bold; margin-right: 15px;"
-        id="admin-timer"></span>
-    <script>
-        function updateAdminTimer() {
-            const now = new Date();
-            document.getElementById('admin-timer').textContent = now.toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'medium' });
-        }
-        updateAdminTimer();
-        setInterval(updateAdminTimer, 1000);
-    </script>
-    {{ block.super }}
-</div>
-{% endblock %}
+{% block extrajs %}
+{{ block.super }}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const navbar = document.querySelector('.navbar-nav.ms-auto');
+        if (navbar) {
+            const timerLi = document.createElement('li');
+            timerLi.className = 'nav-item d-none d-sm-inline-block';
 
-{% block nav-global %}{% endblock %}
+            const timerSpan = document.createElement('span');
+            timerSpan.id = 'admin-timer';
+            timerSpan.className = 'nav-link';
+            timerSpan.style.cursor = 'default';
+            timerSpan.style.color = 'inherit';
+            // Use standard font weight to match UI, not monospace
+            timerSpan.style.fontWeight = '500';
+
+            timerLi.appendChild(timerSpan);
+            navbar.insertBefore(timerLi, navbar.firstChild);
+
+            function updateAdminTimer() {
+                const now = new Date();
+                timerSpan.textContent = now.toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'medium' });
+            }
+            updateAdminTimer();
+            setInterval(updateAdminTimer, 1000);
+        }
+    });
+</script>
+{% endblock %}

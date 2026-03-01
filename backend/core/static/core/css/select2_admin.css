@@ -147,6 +147,10 @@
 }
 
 /* Dropdown Menu */
+.select2-container--open {
+    z-index: 9999 !important;
+}
+
 .select2-dropdown {
     background-color: var(--body-bg) !important;
     border: 1px solid var(--border-color) !important;
@@ -185,6 +189,13 @@
     gap: 12px !important;
     max-width: fit-content !important;
     flex-wrap: nowrap !important;
+    position: relative !important;
+    z-index: 1050 !important;
+}
+
+.related-widget-wrapper:focus-within {
+    z-index: 99999 !important;
+    /* Jump to top when active */
 }
 
 .related-widget-wrapper .delete-related {
