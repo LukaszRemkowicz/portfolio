@@ -36,7 +36,8 @@ class DockerLogCollector:
                 logs_dir,
             )
             return
-        collected_at_raw = open(collected_at_path).read().strip()
+        with open(collected_at_path) as f:
+            collected_at_raw = f.read().strip()
         collected_at = datetime.fromisoformat(collected_at_raw).replace(tzinfo=timezone.utc)
         age_hours = (datetime.now(timezone.utc) - collected_at).total_seconds() / 3600
         if age_hours > cls.MAX_STALENESS_HOURS:
