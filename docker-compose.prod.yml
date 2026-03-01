@@ -61,6 +61,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -70,6 +72,8 @@ services:
     restart: always
     networks:
       - portfolio_network
+    ports:
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -81,33 +85,20 @@ services:
     <<: *backend-defaults
     image: portfolio-backend:${TAG}
     restart: always
-    command: celery -A core worker -l info --concurrency=4
+    command: celery -A settings worker -l info --concurrency=4
+    environment:
+      MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
+      DOCKER_LOGS_DIR: /app/docker-logs
+    volumes:
+      - prod_media_data:/app/media
+      - prod_static_data:/app/staticfiles
+      - ${DOCKER_LOGS_DIR}:/app/docker-logs:ro
     healthcheck:
-      test: ["CMD-SHELL", "celery -A core inspect ping -d celery@$$HOSTNAME"]
+      test: ["CMD-SHELL", "celery -A settings inspect ping -d celery@$$HOSTNAME"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-
-  # ---------- Flower (Celery Monitoring) ----------
-  flower:
-    <<: *backend-defaults
-    image: portfolio-backend:${TAG}
-    restart: always
-    command: celery -A core flower
-    ports:
-      - "5555:5555"
-    environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      FLOWER_BASIC_AUTH: ${FLOWER_BASIC_AUTH:-admin:admin}
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      celery-worker:
-        condition: service_healthy
 
   # ---------- Frontend ----------
   portfolio-fe:
@@ -147,15 +138,19 @@ services:
     depends_on:
       - portfolio-be
       - portfolio-fe
+    environment:
+      # Injected by Doppler at runtime — envsubst replaces ${SITE_DOMAIN} in TEMPLATE.conf.template
+      SITE_DOMAIN: ${SITE_DOMAIN}
     volumes:
-      - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
-      - ${NGINX_SSL_DIR}:/etc/nginx/ssl:ro
-      - ${NGINX_LOG_DIR}:/var/log/nginx
+      - ./nginx/prod/TEMPLATE.conf:/etc/nginx/templates/default.conf.template:ro
+      - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
+      - ${NGINX_LOG_DIR:-./nginx/logs}:/var/log/nginx
       - prod_media_data:/app/media:ro
       - prod_static_data:/app/staticfiles:ro
     ports:
       - "80:80"
       - "443:443"
+
 
 volumes:
   postgres_data:
