@@ -11,8 +11,8 @@
 .select2-container--default .select2-selection--multiple,
 .themed-select2+.select2-container .select2-selection--single,
 .themed-select2+.select2-container .select2-selection--multiple {
-    background-color: var(--input-bg) !important;
-    border: 1px solid var(--border-color) !important;
+    background-color: var(--input-bg, #ffffff) !important;
+    border: 1px solid var(--border-color, #ced4da) !important;
     border-radius: var(--select2-border-radius) !important;
     min-height: var(--select2-min-height) !important;
     height: auto !important;
@@ -111,6 +111,7 @@
 
 .select2-container--default .select2-selection--single .select2-selection__placeholder {
     color: var(--body-quiet-color) !important;
+    padding-left: 15px !important;
 }
 
 /* Professional Arrow & Clear indicator */
@@ -148,16 +149,15 @@
 
 /* Dropdown Menu */
 .select2-container--open {
-    z-index: 9999 !important;
+    z-index: 999999 !important;
 }
 
 .select2-dropdown {
-    background-color: var(--body-bg) !important;
     border: 1px solid var(--border-color) !important;
     border-radius: 0 0 10px 10px !important;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4) !important;
     margin-top: -2px !important;
-    z-index: 9999 !important;
+    z-index: 999999 !important;
 }
 
 .select2-results__option {
@@ -166,8 +166,8 @@
 }
 
 .select2-container--default .select2-results__option--highlighted[aria-selected] {
-    background-color: var(--selected-row) !important;
-    color: var(--body-fg) !important;
+    background-color: var(--selected-row, #007bff) !important;
+    color: #fff !important;
 }
 
 .select2-container--default .select2-results__option[aria-selected=true] {
@@ -189,13 +189,6 @@
     gap: 12px !important;
     max-width: fit-content !important;
     flex-wrap: nowrap !important;
-    position: relative !important;
-    z-index: 1050 !important;
-}
-
-.related-widget-wrapper:focus-within {
-    z-index: 99999 !important;
-    /* Jump to top when active */
 }
 
 .related-widget-wrapper .delete-related {

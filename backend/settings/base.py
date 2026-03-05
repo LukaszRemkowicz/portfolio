@@ -21,6 +21,8 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 # Project root (repository root where docker-compose.yml lives) for Docker Compose access
 PROJECT_ROOT = env.str("PROJECT_ROOT", default=str(BASE_DIR.parent))
 
+# Project Owner
+PROJECT_OWNER = env.str("PROJECT_OWNER")
 
 # Sentry Configuration
 SENTRY_DSN = env("SENTRY_DSN", default="")
@@ -439,6 +441,7 @@ CONTACT_EMAIL = env.str("CONTACT_EMAIL", default="admin@example.com")
 # CKEditor 5 Configuration
 CKEDITOR_5_CONFIGS = {
     "default": {
+        "language": "en",
         "toolbar": [
             "heading",
             "|",
@@ -452,6 +455,7 @@ CKEDITOR_5_CONFIGS = {
         ],
     },
     "extends": {
+        "language": "en",
         "blockToolbar": [
             "paragraph",
             "heading1",
@@ -498,11 +502,10 @@ CKEDITOR_5_CONFIGS = {
             "toolbar": [
                 "imageTextAlternative",
                 "|",
-                "imageStyle:alignLeft",
-                "imageStyle:alignCenter",
-                "imageStyle:alignRight",
+                "imageStyle:inline",
+                "imageStyle:block",
+                "imageStyle:side",
             ],
-            "styles": ["alignLeft", "alignCenter", "alignRight"],
         },
     },
 }
@@ -638,9 +641,8 @@ JAZZMIN_SETTINGS = {
     "site_title": "Portfolio Admin",
     "site_header": "Portfolio",
     "site_brand": "Portfolio Admin",
-    "site_icon": "fas fa-shield-alt",
     "welcome_sign": "Welcome to the Portfolio Admin Interface",
-    "copyright": "Lukasz Remkowicz",
+    "copyright": PROJECT_OWNER,
     # User Menu
     "user_avatar": "profiles.avatar",
     # Top Menu

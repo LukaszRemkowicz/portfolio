@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from common.llm.protocols import LLMProvider
+from common.llm.providers import MockLLMProvider
 from monitoring.agents import LogAnalysisAgent
 
 
@@ -24,7 +25,7 @@ class TestLogAnalysisAgent:
             '{"summary": "Test summary", "severity": "INFO", '
             '"key_findings": [], "recommendations": ""}'
         )
-        mock_usage = {"total_tokens": 100}
+        mock_usage = {"total_tokens": 100, "cost_usd": 0.005}
         mock_llm_provider.ask_question_with_usage.return_value = (mock_response, mock_usage)
 
         result = agent.analyze_logs("backend logs", "frontend logs")
@@ -33,6 +34,7 @@ class TestLogAnalysisAgent:
         assert result["summary"] == "Test summary"
         assert result["severity"] == "INFO"
         assert result["gpt_tokens_used"] == 100
+        assert result["gpt_cost_usd"] == 0.005
 
         # Verify provider call
         mock_llm_provider.ask_question_with_usage.assert_called_once()
@@ -53,7 +55,7 @@ class TestLogAnalysisAgent:
             'Here is the analysis:\n```json\n{"summary": "Markdown summary", '
             '"severity": "WARNING", "key_findings": [], "recommendations": ""}\n```'
         )
-        mock_usage = {"total_tokens": 50}
+        mock_usage = {"total_tokens": 50, "cost_usd": 0.002}
         mock_llm_provider.ask_question_with_usage.return_value = (mock_response, mock_usage)
 
         result = agent.analyze_logs("logs", "logs")
@@ -64,7 +66,7 @@ class TestLogAnalysisAgent:
     def test_analyze_logs_malformed_json(self, agent, mock_llm_provider):
         """Test graceful handling of malformed JSON."""
         mock_response = "Not a JSON response"
-        mock_usage = {"total_tokens": 10}
+        mock_usage = {"total_tokens": 10, "cost_usd": 0.001}
         mock_llm_provider.ask_question_with_usage.return_value = (mock_response, mock_usage)
 
         # Should return fallback structure
@@ -73,3 +75,18 @@ class TestLogAnalysisAgent:
         assert result is not None
         assert result["severity"] == "WARNING"
         assert "Not a JSON response" in result["summary"]
+
+    def test_analyze_logs_with_custom_mock_json_path(self):
+        """Test the agent using the real MockLLMProvider configured with a specific JSON file."""
+        # Create a real MockLLMProvider, not a MagicMock
+        provider = MockLLMProvider()
+        # Point it to our new attack response fixture
+        provider.configure(mock_json_path="monitoring/tests/llm_responses/attack.json")
+
+        agent = LogAnalysisAgent(provider=provider)
+        result = agent.analyze_logs("dummy logs", "dummy logs")
+
+        assert result is not None
+        assert result["severity"] == "CRITICAL"
+        assert "A05 Security Misconfiguration" in result["key_findings"][0]
+        assert result["gpt_tokens_used"] == 600  # Default fallback logic from MockLLMProvider

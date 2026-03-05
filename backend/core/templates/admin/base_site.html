@@ -6,6 +6,32 @@
 <h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
 {% endblock %}
 
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /*
+     * HARDCODED SERVER-SIDE CSS:
+     * This physically cannot be ignored by Javascript or caching.
+     * It brutally forces the submit buttons away from the translated input tabs.
+     */
+    form .submit-row,
+    #content-main form .submit-row,
+    .content-wrapper .submit-row {
+        margin-top: 35px !important;
+        padding-top: 15px !important;
+    }
+
+    /* Fallback directly on the buttons if submit-row is stripped */
+    input[type="submit"],
+    button[type="submit"] {
+        margin-top: 10px !important;
+    }
+</style>
+{% endblock %}
+
+{# Shim for django-ckeditor-5 AMD translation bug (en.js calls CKEDITOR.define before editor init) #}
+<script>window.CKEDITOR = window.CKEDITOR || {}; window.CKEDITOR.define = window.CKEDITOR.define || function () { };</script>
+
 {% block extrajs %}
 {{ block.super }}
 <script>
@@ -32,7 +58,141 @@
             }
             updateAdminTimer();
             setInterval(updateAdminTimer, 1000);
+        } // close if(navbar)
+
+        // --- Dynamic Select2 Theme Adapter ---
+        // Mathematically evaluates the actual painted background color of the page wrapper
+        // to universally determine if we are in Dark Mode or Light Mode, bypassing all
+        // Jazzmin CSS class inconsistencies and transparent input edge cases.
+        function applyDynamicSelect2Theme() {
+            let isDark = false;
+
+            // Grab the main content container which always dictates the user's perceived theme
+            let wrapper = document.querySelector('.content-wrapper') || document.body;
+            let bgColor = window.getComputedStyle(wrapper).backgroundColor;
+
+            // If the wrapper is transparent, fall back to body
+            if (bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
+                bgColor = window.getComputedStyle(document.body).backgroundColor;
+            }
+
+            // Extract RGB values to calculate mathematical brightness
+            let rgb = bgColor.match(/\d+/g);
+            if (rgb && rgb.length >= 3) {
+                let r = parseInt(rgb[0]);
+                let g = parseInt(rgb[1]);
+                let b = parseInt(rgb[2]);
+                // Standard HSP color equation from http://alienryderflex.com/hsp.html
+                let hsp = Math.sqrt(
+                    0.299 * (r * r) +
+                    0.587 * (g * g) +
+                    0.114 * (b * b)
+                );
+                // If the perceived brightness is under 127.5, it's a dark background
+                isDark = hsp < 127.5;
+            } else {
+                // Ultimate fallback if getComputedStyle inexplicably fails
+                isDark = document.body.classList.contains('dark-mode') || document.documentElement.getAttribute('data-theme') === 'dark';
+            }
+
+            // Explicitly force high-contrast text and border colors based on the math
+            let targetBg = isDark ? '#343a40' : '#ffffff';
+            let targetBorder = isDark ? '#4b545c' : '#ced4da';
+            let targetColor = isDark ? '#ffffff' : '#495057';
+
+            let styleEl = document.getElementById('dynamic-select2-theme');
+            let cssString = `
+                /* Ruthless universal match for ALL text-like inputs, regardless of Parler or Jazzmin classes */
+                html body input[type="text"],
+                html body input[type="url"],
+                html body input[type="email"],
+                html body input[type="number"],
+                html body input[type="password"],
+                html body textarea,
+                html body .vTextField,
+                html body .vLargeTextField,
+                html body input[type="date"],
+                html body .select2-container--default .select2-selection--single,
+                html body .select2-container--default .select2-selection--multiple,
+                html body .themed-select2+.select2-container .select2-selection--single,
+                html body .themed-select2+.select2-container .select2-selection--multiple,
+                html body .select2-dropdown,
+                html body .select2-container--default .select2-search__field {
+                    background-color: ${targetBg} !important;
+                    border-color: ${targetBorder} !important;
+                    color: ${targetColor} !important;
+                    border-radius: 8px !important;
+                    border-style: solid !important;
+                    border-width: 1px !important;
+                    box-shadow: none !important;
+                    -webkit-appearance: none !important;
+                    outline: none !important;
+                }
+
+                /* Specific dimensions for simple single-line text inputs to match the 44px DateRange */
+                html body input[type="text"]:not(.select2-search__field),
+                html body input[type="url"]:not(.select2-search__field),
+                html body input[type="email"]:not(.select2-search__field),
+                html body input[type="number"]:not(.select2-search__field),
+                html body input[type="password"]:not(.select2-search__field),
+                html body .vTextField:not(.select2-search__field),
+                html body .select2-container--default .select2-selection--single {
+                    height: 44px !important;
+                    min-height: 44px !important;
+                    padding: 0 15px !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                }
+
+                /* Keep textareas height auto but matched in styling */
+                html body textarea {
+                    padding: 10px 15px !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                }
+
+                /* Ensure Select2 inner text vertically aligns with the new 44px height */
+                .select2-container--default.select2-container--default.select2-container--default .select2-selection--single .select2-selection__rendered {
+                    line-height: 42px !important;
+                    padding-left: 0 !important;
+                }
+                .select2-container--default.select2-container--default.select2-container--default .select2-selection--single .select2-selection__arrow {
+                    height: 42px !important;
+                }
+
+                .select2-results__option.select2-results__option.select2-results__option {
+                    background-color: ${targetBg} !important;
+                    color: ${targetColor} !important;
+                }
+                #content-main .select2-container--default .select2-selection--single .select2-selection__rendered,
+                #content-main .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+                    color: ${targetColor} !important;
+                }
+
+                /* Align helper text with the new 15px input text padding */
+                html body .help,
+                html body .help-block,
+                html body .form-text {
+                    padding-left: 15px !important;
+                }
+            `;
+
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'dynamic-select2-theme';
+                document.head.appendChild(styleEl);
+                styleEl.innerHTML = cssString;
+            } else if (styleEl.dataset.currentCss !== cssString) {
+                styleEl.innerHTML = cssString;
+                styleEl.dataset.currentCss = cssString;
+            }
+
         }
+
+        // Run immediately, then continuously poll to catch asynchronous UI Tweaker custom theme swaps
+        applyDynamicSelect2Theme();
+        setInterval(applyDynamicSelect2Theme, 250);
+
     });
 </script>
 {% endblock %}

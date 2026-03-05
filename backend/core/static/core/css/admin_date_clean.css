@@ -17,39 +17,14 @@ input[type="date"] {
     font-family: inherit;
     border-radius: 8px;
     border: 1px solid var(--border-color, #ddd) !important;
-    background-color: var(--input-bg, #fff) !important;
-    color: var(--body-fg, #333) !important;
+    background-color: transparent;
+    /* Let the JS color engine handle this */
     transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     color-scheme: light dark;
 }
 
-/* Dark Mode Support - Django Admin & System Preference */
-@media (prefers-color-scheme: dark) {
-    input[type="date"] {
-        background-color: var(--input-bg, #121212) !important;
-        color: var(--body-fg, #ffffff) !important;
-        border-color: var(--border-color, #444) !important;
-        color-scheme: dark;
-    }
-}
-
-[data-theme="dark"] input[type="date"] {
-    background-color: var(--input-bg) !important;
-    border-color: var(--border-color) !important;
-    color: var(--body-fg) !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    color-scheme: dark;
-}
-
-/* Hover & Focus States */
-input[type="date"]:hover {
-    border-color: #bbb;
-}
-
-[data-theme="dark"] input[type="date"]:hover {
-    border-color: #444;
-}
+/* Dark Mode Support - Handled dynamically by JS in base_site.html */
 
 input[type="date"]:focus {
     outline: none;
