@@ -374,7 +374,7 @@ class TranslationService:
             lower = translated.strip().lower()
             for prefix in cls.REFUSAL_PREFIXES:
                 if lower.startswith(prefix):
-                    reason = "LLM Refusal"
+                    reason = f"LLM Refusal: {str(translated).strip()[:200]}"
                     break
 
         if reason:
