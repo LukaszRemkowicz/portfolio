@@ -13,9 +13,29 @@ from common.llm.registry import LLMProviderRegistry
 
 logger = logging.getLogger(__name__)
 
+# gpt-4o pricing (USD per 1M tokens) — update when OpenAI changes rates
+_GPT4O_INPUT_COST_PER_M = 2.50
+_GPT4O_OUTPUT_COST_PER_M = 10.00
+
 
 class MockLLMProvider(LLMProvider):
     """Mock provider for testing purposes."""
+
+    def __init__(self) -> None:
+        self._mock_response: Optional[str] = None
+        self._mock_usage: Optional[dict] = None
+        self._mock_json_path: Optional[str] = None
+
+    def configure(
+        self,
+        mock_response: Optional[str] = None,
+        mock_usage: Optional[dict] = None,
+        mock_json_path: Optional[str] = None,
+    ) -> None:
+        """Configure dynamic mock responses for tests."""
+        self._mock_response = mock_response
+        self._mock_usage = mock_usage
+        self._mock_json_path = mock_json_path
 
     def ask_question_with_usage(
         self,
@@ -25,9 +45,25 @@ class MockLLMProvider(LLMProvider):
     ) -> tuple[Optional[str], dict]:
         """Mock LLM response for testing purposes."""
         logger.info("Using mock LLM response for testing purposes.")
-        mock_path = Path(settings.BASE_DIR) / "monitoring/tests/llm_mock_response.json"
+
+        if self._mock_response is not None:
+            return self._mock_response, self._mock_usage or {}
+
+        # Fallback for backward compatibility or custom JSON path
+        mock_usage = self._mock_usage or {
+            "completion_tokens": 100,
+            "prompt_tokens": 500,
+            "total_tokens": 600,
+            "cost_usd": 0.005,
+        }
+
+        if self._mock_json_path:
+            mock_path = Path(settings.BASE_DIR) / self._mock_json_path
+        else:
+            mock_path = Path(settings.BASE_DIR) / "monitoring/tests/llm_responses/default.json"
+
         with open(mock_path, "r", encoding="utf-8") as f:
-            return f.read(), {}
+            return f.read(), mock_usage
 
     def ask_question(
         self,
@@ -70,10 +106,18 @@ class GPTProvider(LLMProvider):
             # Handle usage object safely
             usage = {}
             if response.usage:
+                prompt_tokens = response.usage.prompt_tokens
+                completion_tokens = response.usage.completion_tokens
+                total_tokens = response.usage.total_tokens
+                cost_usd = (
+                    prompt_tokens / 1_000_000 * _GPT4O_INPUT_COST_PER_M
+                    + completion_tokens / 1_000_000 * _GPT4O_OUTPUT_COST_PER_M
+                )
                 usage = {
-                    "completion_tokens": response.usage.completion_tokens,
-                    "prompt_tokens": response.usage.prompt_tokens,
-                    "total_tokens": response.usage.total_tokens,
+                    "completion_tokens": completion_tokens,
+                    "prompt_tokens": prompt_tokens,
+                    "total_tokens": total_tokens,
+                    "cost_usd": round(cost_usd, 6),
                 }
 
             logger.debug(f"GPT response received (length: {len(result)})")

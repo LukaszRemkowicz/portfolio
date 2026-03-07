@@ -1,5 +1,9 @@
 import pytest
 
+from django.core import mail
+
+from common.llm.providers import MockLLMProvider
+from monitoring.models import LogAnalysis
 from monitoring.tasks import cleanup_old_logs_task, daily_log_analysis_task
 
 
@@ -44,6 +48,78 @@ class TestMonitoringTasks:
         # Verify return value
         assert result["status"] == "success"
         assert result["log_analysis_id"] == log_analysis.id
+
+    def test_daily_log_analysis_integration(self, mocker, settings):
+        """
+        True End-to-End Integration test.
+        Mocks ONLY:
+        - DockerLogCollector (we don't have containers in test)
+        - OpenAI API call (uses our new dynamic MockLLMProvider)
+        - File System (os.open/getsize for reading/saving logs)
+
+        Verifies: Data is processed -> DB is populated correctly -> Email renders and sends.
+        """
+        # 1. Configure the LLM mock to return the attack sequence
+        # We read the file FIRST before we mock `builtins.open` below to prevent I/O conflicts.
+        attack_json_path = settings.BASE_DIR / "monitoring/tests/llm_responses/attack.json"
+        with open(attack_json_path, "r", encoding="utf-8") as f:
+            attack_json = f.read()
+
+        provider = MockLLMProvider()
+        provider.configure(
+            mock_response=attack_json,
+            mock_usage={
+                "completion_tokens": 50,
+                "prompt_tokens": 100,
+                "total_tokens": 150,
+                "cost_usd": 0.0075,
+            },
+        )
+        mocker.patch("monitoring.services.LLMProviderRegistry.get", return_value=provider)
+
+        # 2. Mock the log collection I/O
+        mock_collector = mocker.patch("monitoring.services.DockerLogCollector")
+        collector_instance = mock_collector.return_value
+        collector_instance.collect_logs.return_value = ("/tmp/be.log", "/tmp/fe.log", "/tmp/nx.log")
+        collector_instance.get_collected_at.return_value = "2026-03-05T12:00:00Z"
+
+        # Mock reading of log files specifically in the agent, not globally
+        mocker.patch("monitoring.agent.agent.open", mocker.mock_open(read_data="Mock log line"))
+        mocker.patch("os.path.getsize", return_value=100)
+
+        # Mock the Django File saving so we don't dump files into the local /media during tests
+        mocker.patch("monitoring.services.LogStorageService.attach_log_files")
+
+        # 3. RUN PIPELINE
+        result = daily_log_analysis_task()
+
+        # 4. Assert Pipeline Status
+        assert result["status"] == "success"
+
+        # 5. Assert Database Persistence
+        assert LogAnalysis.objects.count() == 1
+        analysis = LogAnalysis.objects.first()
+
+        # Verify the new fields and agent results were saved!
+        assert analysis.severity == "CRITICAL"
+        assert analysis.gpt_tokens_used == 150
+        assert analysis.gpt_cost_usd == 0.0075
+        assert analysis.email_sent is True
+        assert "Automated reconnaissance" in analysis.summary
+
+        # 6. Assert Email rendering and dispatch
+        assert len(mail.outbox) == 1
+        email = mail.outbox[0]
+
+        # Check subject template
+        assert "CRITICAL" in email.subject
+        assert str(analysis.analysis_date) in email.subject
+
+        # Check body rendering (specifically the findings array)
+        # The attack.json contains these specific findings
+        assert "A05 Security Misconfiguration" in email.body
+        assert "A01 Broken Access Control" in email.body
+        assert "$0.0075" in email.body  # The template should render the new cost tracking!
 
     def test_cleanup_old_logs_task(self, mocker):
         """Test that the cleanup task calls the service."""

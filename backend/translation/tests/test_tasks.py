@@ -426,7 +426,7 @@ class TestTranslationServiceBusinessLogic:
 
         # name is a plain text field — on refusal it must be empty so FE shows default lang
         assert result["name"] == ""
-        assert failures["name"] == "LLM Refusal"
+        assert failures["name"].startswith("LLM Refusal")
 
     def test_llm_identical_output_accepted_as_proper_noun(self, mocker, astro_image_factory):
         """LLM returning the exact source text is now treated

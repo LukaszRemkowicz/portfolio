@@ -35,8 +35,8 @@ rm -f "${DOCKER_LOGS_DIR}"/*.log "${DOCKER_LOGS_DIR}/collected_at.txt" 2>/dev/nu
 # ---------------------------------------------------------------------------
 # 3. Collect backend logs
 # ---------------------------------------------------------------------------
-log "Collecting backend logs (${BACKEND_SERVICE}, --tail=${LOG_TAIL})..."
-docker compose -f "${COMPOSE_FILE}" logs --no-color --tail="${LOG_TAIL}" "${BACKEND_SERVICE}" \
+log "Collecting backend logs (${BACKEND_SERVICE}, --tail=${LOG_TAIL}, --since=25h)..."
+docker compose -f "${COMPOSE_FILE}" logs --no-color --tail="${LOG_TAIL}" --since="25h" "${BACKEND_SERVICE}" \
     > "${DOCKER_LOGS_DIR}/backend.log"
 BACKEND_SIZE=$(wc -c < "${DOCKER_LOGS_DIR}/backend.log")
 log "Backend log: ${BACKEND_SIZE} bytes"
@@ -44,8 +44,8 @@ log "Backend log: ${BACKEND_SIZE} bytes"
 # ---------------------------------------------------------------------------
 # 4. Collect frontend logs
 # ---------------------------------------------------------------------------
-log "Collecting frontend logs (${FRONTEND_SERVICE}, --tail=${LOG_TAIL})..."
-docker compose -f "${COMPOSE_FILE}" logs --no-color --tail="${LOG_TAIL}" "${FRONTEND_SERVICE}" \
+log "Collecting frontend logs (${FRONTEND_SERVICE}, --tail=${LOG_TAIL}, --since=25h)..."
+docker compose -f "${COMPOSE_FILE}" logs --no-color --tail="${LOG_TAIL}" --since="25h" "${FRONTEND_SERVICE}" \
     > "${DOCKER_LOGS_DIR}/frontend.log"
 FRONTEND_SIZE=$(wc -c < "${DOCKER_LOGS_DIR}/frontend.log")
 log "Frontend log: ${FRONTEND_SIZE} bytes"

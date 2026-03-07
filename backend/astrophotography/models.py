@@ -211,7 +211,7 @@ class AstroImageQuerySet(TranslatableQuerySet):
 
     def latest(self):
         """Returns the 9 most recent images."""
-        return self.order_by("-capture_date", "-created_at")[:9]
+        return self.order_by("-created_at", "-capture_date")[:9]
 
 
 class AstroImage(AutomatedTranslationModelMixin, BaseImage):

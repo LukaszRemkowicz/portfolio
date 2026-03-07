@@ -38,6 +38,7 @@ x-backend-defaults: &backend-defaults
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
     SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
+    PROJECT_OWNER: ${PROJECT_OWNER}
   depends_on:
     db:
       condition: service_healthy
@@ -123,6 +124,7 @@ services:
       VITE_GA_TRACKING_ID: ${GA_TRACKING_ID}
       VITE_SENTRY_DSN_FE: ${SENTRY_DSN_FE}
       VITE_ENVIRONMENT: ${ENVIRONMENT:-production}
+      VITE_PROJECT_OWNER: ${PROJECT_OWNER}
 
   # ---------- Backend ----------
   be:
