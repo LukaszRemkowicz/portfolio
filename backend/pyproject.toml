@@ -41,6 +41,7 @@ flower = "^2.0.0"
 sentry-sdk = "^2.52.0"
 requests = "^2.32.0"
 django-model-utils = "^5.0.0"
+django-jazzmin = "^3.0.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.2"

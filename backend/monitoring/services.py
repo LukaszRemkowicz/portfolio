@@ -48,19 +48,30 @@ class DockerLogCollector:
             )
 
     @classmethod
-    def collect_logs(cls) -> tuple[str, str]:
+    def get_collected_at(cls) -> str:
+        """Return the raw ISO timestamp from collected_at.txt, or empty string if missing."""
+        path = os.path.join(settings.DOCKER_LOGS_DIR, "collected_at.txt")
+        if os.path.exists(path):
+            with open(path) as f:
+                return f.read().strip()
+        return ""
+
+    @classmethod
+    def collect_logs(cls) -> tuple[str, str, Optional[str]]:
         """Return paths to pre-collected log files from the mounted volume.
 
         Returns:
-            Tuple of (backend_log_path, frontend_log_path)
+            Tuple of (backend_log_path, frontend_log_path, nginx_log_path|None)
+            nginx_log_path is None if nginx.log was not collected (warns, doesn't fail).
 
         Raises:
-            FileNotFoundError: If expected log files are missing (cron hasn't run)
+            FileNotFoundError: If backend or frontend log files are missing (cron hasn't run)
         """
         logs_dir: str = settings.DOCKER_LOGS_DIR
 
         backend_log_path = os.path.join(logs_dir, "backend.log")
         frontend_log_path = os.path.join(logs_dir, "frontend.log")
+        nginx_log_path = os.path.join(logs_dir, "nginx.log")
 
         for path in (backend_log_path, frontend_log_path):
             if not os.path.exists(path):
@@ -71,11 +82,28 @@ class DockerLogCollector:
 
         cls._check_staleness(logs_dir)
 
+        nginx_path: Optional[str] = None
+        if os.path.exists(nginx_log_path):
+            nginx_path = nginx_log_path
+            nginx_size = os.path.getsize(nginx_log_path)
+        else:
+            logger.warning(
+                "nginx.log not found in %s — nginx logs will be skipped. "
+                "Ensure NGINX_LOG_DIR is set in collect-logs.sh.",
+                logs_dir,
+            )
+            nginx_size = 0
+
         be_size = os.path.getsize(backend_log_path)
         fe_size = os.path.getsize(frontend_log_path)
-        logger.info("Read logs: backend=%d bytes, frontend=%d bytes", be_size, fe_size)
+        logger.info(
+            "Read logs: backend=%d bytes, frontend=%d bytes, nginx=%d bytes",
+            be_size,
+            fe_size,
+            nginx_size,
+        )
 
-        return backend_log_path, frontend_log_path
+        return backend_log_path, frontend_log_path, nginx_path
 
 
 class LogAnalyzer:
@@ -84,13 +112,21 @@ class LogAnalyzer:
     def __init__(self, agent: LogAnalysisAgent):
         self.agent = agent
 
-    def analyze_logs_from_files(self, backend_log_path: str, frontend_log_path: str) -> dict:
+    def analyze_logs_from_files(
+        self,
+        backend_log_path: str,
+        frontend_log_path: str,
+        nginx_log_path: Optional[str] = None,
+        collected_at: str = "",
+    ) -> dict:
         """
         Analyze logs using LLM.
 
         Args:
             backend_log_path: Path to backend log file
             frontend_log_path: Path to frontend log file
+            nginx_log_path: Optional path to nginx log file
+            collected_at: ISO timestamp string from collected_at.txt
 
         Returns:
             Analysis result dict with keys: summary, severity, key_findings,
@@ -99,7 +135,9 @@ class LogAnalyzer:
         Raises:
             ValueError: If analysis returns empty result
         """
-        result = self.agent.analyze_logs_from_files(backend_log_path, frontend_log_path)
+        result = self.agent.analyze_logs_from_files(
+            backend_log_path, frontend_log_path, nginx_log_path, collected_at
+        )
 
         if not result:
             raise ValueError("LLM analysis returned empty result")
@@ -144,6 +182,7 @@ class LogStorageService:
         backend_path: str,
         frontend_path: str,
         analysis_date: date,
+        nginx_path: Optional[str] = None,
     ) -> None:
         """
         Attach log files to the analysis record.
@@ -153,12 +192,17 @@ class LogStorageService:
             backend_path: Path to backend log file
             frontend_path: Path to frontend log file
             analysis_date: Date for filename generation
+            nginx_path: Optional path to nginx combined log file
         """
         with open(backend_path, "rb") as f:
             log_analysis.backend_logs.save(f"backend_{analysis_date}.log", File(f))
 
         with open(frontend_path, "rb") as f:
             log_analysis.frontend_logs.save(f"frontend_{analysis_date}.log", File(f))
+
+        if nginx_path and os.path.exists(nginx_path):
+            with open(nginx_path, "rb") as f:
+                log_analysis.nginx_logs.save(f"nginx_{analysis_date}.log", File(f))
 
 
 class LogCleanupService:
@@ -219,15 +263,20 @@ class LogAnalysisOrchestrator:
 
         try:
             # 1. Collect logs
-            backend_log_path, frontend_log_path = self.collector.collect_logs()
-            log_size = os.path.getsize(backend_log_path) + os.path.getsize(frontend_log_path)
+            backend_log_path, frontend_log_path, nginx_log_path = self.collector.collect_logs()
+            log_size = (
+                os.path.getsize(backend_log_path)
+                + os.path.getsize(frontend_log_path)
+                + (os.path.getsize(nginx_log_path) if nginx_log_path else 0)
+            )
 
             if log_size == 0:
                 logger.warning("No logs collected from Docker containers")
 
-            # 2. Analyze with LLM
+            # 2. Collect collected_at metadata and analyze with LLM
+            collected_at = self.collector.get_collected_at()
             analysis_result = self.analyzer.analyze_logs_from_files(
-                backend_log_path, frontend_log_path
+                backend_log_path, frontend_log_path, nginx_log_path, collected_at
             )
 
             # 3. Store in database
@@ -240,11 +289,12 @@ class LogAnalysisOrchestrator:
                 recommendations=analysis_result.get("recommendations", ""),
                 execution_time_seconds=time.time() - start_time,
                 gpt_tokens_used=analysis_result.get("gpt_tokens_used", 0),
+                gpt_cost_usd=analysis_result.get("gpt_cost_usd", 0.0),
             )
 
             # 4. Attach log files
             self.storage.attach_log_files(
-                log_analysis, backend_log_path, frontend_log_path, analysis_date
+                log_analysis, backend_log_path, frontend_log_path, analysis_date, nginx_log_path
             )
 
             logger.info(

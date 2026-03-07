@@ -74,6 +74,9 @@ class LogAnalysis(models.Model):
     frontend_logs = models.FileField(
         upload_to="logs/%Y/%m/%d/", help_text="Raw frontend logs", null=True, blank=True
     )
+    nginx_logs = models.FileField(
+        upload_to="logs/%Y/%m/%d/", help_text="Raw nginx logs", null=True, blank=True
+    )
     log_size_bytes = models.IntegerField(default=0)
 
     # GPT Analysis
@@ -85,6 +88,7 @@ class LogAnalysis(models.Model):
     # Execution tracking
     execution_time_seconds = models.FloatField(default=0.0)
     gpt_tokens_used = models.IntegerField(default=0)
+    gpt_cost_usd = models.FloatField(default=0.0, help_text="Estimated OpenAI API cost in USD")
     email_sent = models.BooleanField(default=False)
     error_message = models.TextField(blank=True)
 

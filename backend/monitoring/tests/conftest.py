@@ -14,6 +14,7 @@ def log_analysis():
         log_size_bytes=1024,
         execution_time_seconds=5.5,
         gpt_tokens_used=150,
+        gpt_cost_usd=0.0075,
         key_findings=["Database latency normal", "Cache hit rate high"],
         recommendations="No action needed.\nMonitor disk usage.",
         email_sent=False,
@@ -24,6 +25,9 @@ def log_analysis():
 def mock_llm_response():
     """Load mock response from JSON file."""
 
-    json_path = Path(__file__).parent / "llm_mock_response.json"
+    json_path = Path(__file__).parent / "llm_responses" / "default.json"
     with open(json_path, "r") as f:
-        return json.load(f)
+        data = json.load(f)
+        data["gpt_tokens_used"] = 150
+        data["gpt_cost_usd"] = 0.0075
+        return data
