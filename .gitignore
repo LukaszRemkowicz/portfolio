@@ -144,3 +144,6 @@ database_data/
 
 # Celery
 celerybeat-schedule*
+
+# Security
+*.key
