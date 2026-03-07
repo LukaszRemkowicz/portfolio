@@ -9,6 +9,7 @@ on:
 env:
   PYTHON_VERSION: "3.13"
   NODE_VERSION: "20"
+  PROJECT_OWNER: "GitHub Actions"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
