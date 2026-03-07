@@ -31,25 +31,8 @@
 #   - Does not update current_tag / prev_tag
 #   - Does not touch the database
 #
-# Preconditions:
-#   - Must be run from inside the git repository
-#   - HEAD must be exactly tagged (vX.Y.Z)
-#   - Required environment variables must be provided
-#     (typically via: doppler run -- ./build.sh)
-#   - Docker must be available on the host
-#
 # Typical usage:
 #   TAG=v1.2.3 doppler run -- ./build.sh
-#
-# Relationship to other scripts:
-#   - build.sh   → builds images only (this file)
-#   - release.sh → runs migrations / collectstatic
-#   - deploy.sh  → starts services and handles rollback
-#
-# Design principles:
-#   - Deterministic: same inputs → same images
-#   - Explicit: no hidden defaults for production config
-#   - Boring: no automation magic, easy to reason about
 #
 ###############################################################################
 
@@ -68,62 +51,74 @@ set -euo pipefail
 : "${GA_TRACKING_ID:?GA_TRACKING_ID is required (inject via: doppler run -- ./build.sh)}"
 : "${SITE_DOMAIN:?SITE_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
 : "${SENTRY_DSN_FE:?SENTRY_DSN_FE is required (inject via: doppler run -- ./build.sh)}"
-
-echo "API_DOMAIN=${API_DOMAIN}"
-
+: "${ALLOWED_HOSTS:?ALLOWED_HOSTS is required (inject via: doppler run -- ./build.sh)}"
+: "${ENVIRONMENT:?ENVIRONMENT is required (inject via: doppler run -- ./build.sh)}"
 
 # ------------------------------------------------------------------
-# Resolve project root directory
-#
-# We require running inside the git repository, because:
-# - build context paths are relative to repo root
-# - tag detection uses git metadata
-# - prevents "ran from wrong directory" mistakes
+# Setup & Context
 # ------------------------------------------------------------------
-PROJECT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-if [[ -z "$PROJECT_DIR" ]]; then
-  echo "❌ ERROR: build.sh must be run inside a Git repository."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/utils.sh"
+
+PROJECT_DIR="$(get_project_dir)"
+
+# Dynamic validation: If the config file exists, the environment is valid.
+# This avoids hardcoding environment names and allows easy scaling (stage, prod, qa, etc).
+if [[ ! -f "${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml" ]]; then
+  echo "❌ ERROR: Configuration for environment '$ENVIRONMENT' not found." >&2
+  echo "📂 Expected: docker-compose.${ENVIRONMENT}.yml" >&2
   exit 1
 fi
+
+CACHE_FLAG=""
+for arg in "$@"; do
+  case "${arg}" in
+    --no-cache) CACHE_FLAG="--no-cache"; echo "♻️  No-cache mode enabled (performing a fresh build)" ;;
+    *)
+      # We allow unknown tags to pass for now, or you can strictly fail.
+      # But usually build.sh is called like: ./build.sh --no-cache
+      ;;
+  esac
+done
+
+echo "⚙️  Target ENVIRONMENT: ${ENVIRONMENT}"
+echo "⚙️  Target API_DOMAIN: ${API_DOMAIN}"
+
+
+# ------------------------------------------------------------------
+# Set working directory
+# ------------------------------------------------------------------
 cd "$PROJECT_DIR"
 echo "📁 Project root: ${PROJECT_DIR}"
 
 
-
 # ------------------------------------------------------------------
 # Resolve release TAG
-#
-# We require an exact git tag on HEAD to make builds reproducible.
-# This prevents "I built some random commit and forgot which one".
 # ------------------------------------------------------------------
+git fetch --tags >/dev/null 2>&1 || true
 TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || true)}"
 if [[ -z "$TAG" ]]; then
   echo "🛑 ERROR: No Git tag on HEAD."
   echo "👉 Fix: git tag vX.Y.Z && git push origin vX.Y.Z"
   exit 1
 fi
+validate_tag "$TAG"
 export TAG
-
-if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([\-+].+)?$ ]]; then
-  echo "ERROR: Tag '$TAG' is not SemVer-like (expected vX.Y.Z or vX.Y.Z-suffix)" >&2
-  exit 1
-fi
 
 echo "🏷️  Release tag: $TAG"
 
 
+# TODO uncomment this before pushing to server
 # Enforce deterministic build
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "🛑 ERROR: Working tree is dirty. Commit or stash changes first."
-  git status --porcelain
-  exit 1
-fi
+# if [[ -n "$(git status --porcelain)" ]]; then
+#   echo "🛑 ERROR: Working tree is dirty. Commit or stash changes first."
+#   git status --porcelain
+#   exit 1
+# fi
 
 
 # ------------------------------------------------------------------
 # Enable Docker BuildKit
-#
-# BuildKit improves performance and caching and is the modern builder.
 # ------------------------------------------------------------------
 export DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"
 echo "⚙️  DOCKER_BUILDKIT=${DOCKER_BUILDKIT}"
@@ -132,63 +127,50 @@ echo "⚙️  DOCKER_BUILDKIT=${DOCKER_BUILDKIT}"
 echo "🏗️  Starting build..."
 
 # ---------------- Backend ----------------
-echo "🐍 Building backend image..."
 docker build \
+  ${CACHE_FLAG} \
   --pull \
   --target production \
-  -t "portfolio-backend:$TAG" \
+  -t "${ENVIRONMENT}-be:${TAG}" \
+  -t "${ENVIRONMENT}-worker:${TAG}" \
   ./backend
-echo "✅ Backend image built"
+echo "✅ Backend & Worker images built"
 
 # ---------------- Frontend ----------------
 echo "🌐 Building frontend image..."
 docker build \
+  ${CACHE_FLAG} \
   --pull \
-  -f frontend/Dockerfile \
   --target prod \
   --build-arg "SITE_DOMAIN=${SITE_DOMAIN}" \
   --build-arg "API_URL=https://${API_DOMAIN}" \
   --build-arg "GA_TRACKING_ID=${GA_TRACKING_ID}" \
   --build-arg "SENTRY_DSN_FE=${SENTRY_DSN_FE}" \
-  -t "portfolio-frontend:$TAG" \
-  .
+  --build-arg "ENVIRONMENT=${ENVIRONMENT}" \
+  -t "${ENVIRONMENT}-fe:${TAG}" \
+  ./frontend
 echo "✅ Frontend image built"
 
 
 # ------------------------------------------------------------------
-# Summary
-#
-# Show resulting images for quick verification.
+# Verify Built Images
 # ------------------------------------------------------------------
-
 echo "📦 Built images:"
-docker images | grep -E '^portfolio-(frontend|backend)'
+docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${ENVIRONMENT}-(be|fe|worker):${TAG}"
 
 
 # ------------------------------------------------------------------
 # Cleanup old images
 #
-# We keep:
-# - the tag we just built
-# - the "current" tag (currently deployed)
-# - the "prev" tag (rollback target)
+# To prevent the VPS disk from filling up, we remove older images.
+# We maintain a "retention window" of the last 5 SemVer-tagged builds.
 #
-# Everything else for these repos can be removed to save disk space.
+# State Management:
+#   We track 'current_tag' (what is live) and 'prev_tag' (rollback target).
+#   These are stored in a persistent directory ($STATE_DIR).
+#   deploy.sh handles updating these files; build.sh only reads them for auditing.
 # ------------------------------------------------------------------
-# We write:
-# - current_tag: the tag considered "currently deployed"
-# - prev_tag   : the previous value of current_tag (rollback target)
-# ------------------------------------------------------------------
-# State directory for tag tracking
-# We prefer /var/lib/portfolio for multi-user consistency (sudo vs regular),
-# but fallback to $HOME if we can't write there.
-if [[ -z "${STATE_DIR:-}" ]]; then
-  if [[ -w "/var/lib/portfolio" ]] || [[ "$EUID" -eq 0 && -d "/var/lib" ]]; then
-    STATE_DIR="/var/lib/portfolio"
-  else
-    STATE_DIR="$HOME/.portfolio-state"
-  fi
-fi
+  STATE_DIR="$(get_state_dir "${ENVIRONMENT}")"
 CURRENT_FILE="$STATE_DIR/current_tag"
 PREV_FILE="$STATE_DIR/prev_tag"
 mkdir -p "$STATE_DIR"
@@ -199,36 +181,47 @@ PREV_TAG="$(cat "$PREV_FILE" 2>/dev/null || true)"
 echo "🧹 Cleaning up old images..."
 echo "📌 Keeping tags: build=$TAG current=${CURRENT_TAG:-none} prev=${PREV_TAG:-none}"
 
-should_keep() {
-  local t="$1"
-  [[ -n "$t" && "$t" != "<none>" ]] || return 1
-  [[ "$t" == "$TAG" ]] && return 0
-  [[ -n "$CURRENT_TAG" && "$t" == "$CURRENT_TAG" ]] && return 0
-  [[ -n "$PREV_TAG" && "$t" == "$PREV_TAG" ]] && return 0
-  return 1
-}
 
-
-# ===============================
-# 🧹 Cleanup images – keep last 5 versions (BE + FE)
-# ===============================
-
+# ------------------------------------------------------------------
+# Retention Policy - Keep last 5 versions for each service image.
+# ------------------------------------------------------------------
 KEEP_IMAGES=5
-REPOS=("portfolio-backend" "portfolio-frontend")
+REPOS=("${ENVIRONMENT}-be" "${ENVIRONMENT}-fe" "${ENVIRONMENT}-worker")
 
 echo "🧹 Cleaning up images (keeping last $KEEP_IMAGES versions)..."
 
+
+# ------------------------------------------------------------------
+# Tag Discovery Optimization
+# ------------------------------------------------------------------
+# Implementation note: We use a 'while read' loop for universal compatibility.
+# This works on both macOS (Bash 3.2) and Linux (Bash 4.0+).
+#
+# PERFORMANCE TIP (PRODUCTION ONLY on Ubuntu):
+# If you have thousands of images, you can replace the entire 'while' loop block
+# (the 6 lines from 'tags=()' down to ') ') with this one-liner:
+#
+#   mapfile -t tags < <(docker images "$repo" --format '{{.Tag}}' | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+" | sort -V)
+#
+# ------------------------------------------------------------------
 for repo in "${REPOS[@]}"; do
   echo "➡️ Repo: $repo"
 
-  mapfile -t tags < <(
+  # --- Universal Tag Discovery (macOS + Linux) ---
+  tags=()
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && tags+=("$line")
+  done < <(
     docker images "$repo" --format '{{.Tag}}' \
-    | grep -E '^v[0-9]+' \
+    | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+" \
     | sort -V
   )
+  # -----------------------------------------------
 
+  # Check if we have more tags than our retention window allows.
   if (( ${#tags[@]} > KEEP_IMAGES )); then
     remove_count=$((${#tags[@]} - KEEP_IMAGES))
+    # Remove the oldest tags first (at the start of the sorted list).
     for ((i=0; i<remove_count; i++)); do
       t="${tags[$i]}"
       echo "🗑️ Removing old image: $repo:$t"

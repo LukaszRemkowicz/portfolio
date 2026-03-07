@@ -5,7 +5,7 @@ Shared views and utility endpoints for the core application.
 from typing import Any, cast
 
 from rest_framework import generics, permissions, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -39,6 +39,7 @@ class SettingsView(generics.RetrieveAPIView):
 
 @api_view(["GET"])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([])
 def health_check_view(request: Request) -> Response:
     """
     Simple health check endpoint returning 200 OK.

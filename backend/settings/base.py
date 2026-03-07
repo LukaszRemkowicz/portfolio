@@ -79,13 +79,9 @@ SECURE_MEDIA_URL_EXPIRATION = env.int("SECURE_MEDIA_URL_EXPIRATION", default=360
 # Filter out empty values and consolidate hosts
 _base_hosts = [SITE_DOMAIN, ADMIN_DOMAIN, API_DOMAIN]
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + [h for h in _base_hosts if h]
+# Unconditionally allow local access for container health checks
+ALLOWED_HOSTS += ["localhost", "127.0.0.1", "0.0.0.0"]
 
-if DEBUG:
-    ALLOWED_HOSTS += [
-        "localhost",
-        "127.0.0.1",
-        "0.0.0.0",
-    ]
 
 USE_X_FORWARDED_HOST = True
 

@@ -1,262 +1,234 @@
 #!/usr/bin/env bash
-set -euo pipefail
-
 ###############################################################################
 # release.sh
 #
 # Purpose:
-#   Run a safe, repeatable "release job" for production.
+#   Run a safe, repeatable "release job" (migrations, seeds, etc) for production.
 #
-# What this script DOES:
-#   - Ensures it is run from a clean, tagged git state
-#   - Prevents concurrent releases (lock file)
-#   - Ensures required dependencies (db, redis) are running
-#   - Waits for the database to become healthy
-#   - Runs the Docker Compose "release" service exactly once
-#
-# What this script DOES NOT DO:
-#   - Build images (handled by build.sh)
-#   - Start application services (handled by deploy.sh)
-#   - Update current_tag / prev_tag (deploy responsibility)
-#
-# When to use:
-#   After images for a given TAG already exist.
+# High-level behavior:
+#   - Prevents concurrent releases via flock
+#   - Dynamically resolves release image from docker-compose config
+#   - Ensures required dependencies (db, redis) are running and healthy
+#   - Captures release logs for long-term auditing
 #
 # Typical usage:
-#   TAG=v1.2.3 doppler run -- ./release.sh
-#
+#   TAG=v1.2.3 ENVIRONMENT=stage doppler run -- ./release.sh
 ###############################################################################
 
-COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-portfolio}"
+set -euo pipefail
+
+: "${ENVIRONMENT:?ENVIRONMENT is required (inject via: doppler run -- ./release.sh)}"
+
+# ------------------------------------------------------------------
+# Setup & Context
+# ------------------------------------------------------------------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/utils.sh"
+
+PROJECT_DIR="$(get_project_dir)"
+
+# Dynamic validation: If the config file exists, the environment is valid.
+if [[ ! -f "${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml" ]]; then
+  echo "❌ ERROR: Configuration for environment '$ENVIRONMENT' not found." >&2
+  exit 1
+fi
+
+cd "${PROJECT_DIR}"
+COMPOSE_PROJECT_NAME="landingpage-${ENVIRONMENT}"
 export COMPOSE_PROJECT_NAME
 
-echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
-
-
 # ------------------------------------------------------------------
-# Resolve project root directory
-#
-# We require running this script from inside a git repository.
-# git rev-parse --show-toplevel returns the absolute path to the repo root.
-#
-# This ensures:
-# - paths are stable
-# - docker-compose file is found correctly
-# - scripts behave the same no matter where invoked from
-# ------------------------------------------------------------------
-PROJECT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-if [[ -z "${PROJECT_DIR}" ]]; then
-  echo "❌ ERROR: release.sh must be run inside a Git repository."
-  exit 1
-fi
-cd "${PROJECT_DIR}"
-
-echo "📁 Project root: ${PROJECT_DIR}"
-
-
-# ------------------------------------------------------------------
-# Ensure 'flock' is available
-#
-# flock provides a filesystem-based lock to prevent
-# two release scripts from running at the same time.
-#
-# Without this, concurrent releases could:
-# - run migrations twice
-# - corrupt shared volumes
-# - race on database state
-# ------------------------------------------------------------------
-command -v flock >/dev/null 2>&1 || {
-  echo "❌ ERROR: 'flock' is required but not installed (usually in util-linux)." >&2
-  exit 1
-}
-
-
-# ------------------------------------------------------------------
-# Acquire exclusive release lock
-#
-# We open a file descriptor (9) on a lock file and try to lock it.
-# If another release is running, this will fail immediately.
-#
-# This is critical safety for production.
-# ------------------------------------------------------------------
-LOCK_FILE="/var/lock/portfolio-release.lock"
-exec 9>"$LOCK_FILE"
-if ! flock -n 9; then
-  echo "❌ ERROR: Another release appears to be running (lock: $LOCK_FILE)" >&2
-  exit 1
-fi
-
-
-# ------------------------------------------------------------------
-# Resolve docker-compose production file
-#
-# Allows overriding via COMPOSE_PROD env,
-# but defaults to docker-compose.prod.yml in repo root.
-#
-# We explicitly fail if the file does not exist
-# to avoid running against the wrong stack.
-# ------------------------------------------------------------------
-COMPOSE_PROD="${COMPOSE_PROD:-${PROJECT_DIR}/docker-compose.prod.yml}"
-[[ -f "$COMPOSE_PROD" ]] || { echo "❌ ERROR: Missing compose file: $COMPOSE_PROD" >&2; exit 1; }
-
-
-# Build reusable docker compose command array
-COMPOSE=(docker compose -f "${COMPOSE_PROD}")
-echo "🧾 Using compose file: ${COMPOSE_PROD}"
-
-
-# ------------------------------------------------------------------
-# Check whether required dependencies are already running
-#
-# We inspect currently running compose services.
-# If either db or redis is missing, we mark that dependencies
-# need to be started.
-#
-# This makes release repeatable after server reboot.
-# ------------------------------------------------------------------
-need_deps=false
-"${COMPOSE[@]}" ps --services --status running 2>/dev/null | grep -q '^db$' || need_deps=true
-"${COMPOSE[@]}" ps --services --status running 2>/dev/null | grep -q '^redis$' || need_deps=true
-
-if [[ "$need_deps" == true ]]; then
-  echo "🧩 Starting dependencies (db, redis)..."
-  "${COMPOSE[@]}" up -d --remove-orphans db redis
-else
-  echo "✅ Dependencies already running"
-fi
-
-
-# ------------------------------------------------------------------
-# Parse command-line arguments
-#
-# Supported flags:
-#   --dry-run  : show what would be executed without doing it
-#
-# Any unknown argument is treated as an error to avoid ambiguity.
+# Parse arguments
 # ------------------------------------------------------------------
 DRY_RUN=false
 for arg in "$@"; do
   case "${arg}" in
-    --dry-run) DRY_RUN=true; echo "🧪 Dry-run mode enabled";;
+    --dry-run) DRY_RUN=true; echo "🧪 Dry-run mode enabled" ;;
     *)
       echo "❌ ERROR: Unknown argument: ${arg}"
-      echo "✅ Usage: TAG=vX.Y.Z doppler run -- ./release.sh [--dry-run]"
       exit 1
       ;;
   esac
 done
 
-
 # ------------------------------------------------------------------
-# Resolve release TAG
-#
-# Priority:
-#   1. Explicit TAG environment variable
-#   2. Exact git tag on HEAD
-#
-# We require an exact tag to guarantee reproducible releases.
+# Concurrency Lock
 # ------------------------------------------------------------------
-TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || true)}"
-if [[ -z "${TAG}" ]]; then
-  echo "🛑❌ ERROR: TAG is required (or HEAD must be exactly tagged)."
-  echo "👉 Example: TAG=vX.Y.Z doppler run -- ./release.sh"
-  exit 1
-fi
-export TAG
-
-if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([\-+].+)?$ ]]; then
-  echo "❌ ERROR: Tag '$TAG' is not SemVer-like (expected vX.Y.Z or vX.Y.Z-suffix)" >&2
-  exit 1
-fi
-
-
-echo "🏷️  Release tag: ${TAG}"
-echo "🔎 Preflight checks..."
-
-# Determinism: ensure compose sees TAG (helpful debug)
-if [[ -z "${TAG}" ]]; then
-  echo "❌ ERROR: TAG resolved to empty (unexpected)."
-  exit 1
-fi
-
-# Ensure the exact backend image exists locally (release never builds).
-if ! docker image inspect "portfolio-backend:${TAG}" >/dev/null 2>&1; then
-  echo "❌ ERROR: Missing image portfolio-backend:${TAG}"
-  echo "👉 Build it first: TAG=${TAG} doppler run -- ./build.sh"
-  exit 1
-fi
-
-echo "📦 Backend image found: portfolio-backend:${TAG}"
-
-# Optional: ensure DB is up (so release doesn't fail mid-way with confusing errors)
-# This doesn't start anything; it just checks the current state.
-# Ensure dependencies are up (release should be repeatable after reboot)
-if ! "${COMPOSE[@]}" ps --services --status running 2>/dev/null | grep -q '^db$'; then
-  echo "🧩 Starting dependencies (db, redis)..."
-  "${COMPOSE[@]}" up -d --remove-orphans db redis
-fi
-
-# ------------------------------------------------------------------
-# Wait for database to become healthy
-#
-# We rely on Docker healthchecks defined in docker-compose.
-# This prevents running migrations against a database
-# that is still starting.
-# ------------------------------------------------------------------
-echo "⏳ Waiting for db to become healthy..."
-DB_CID="$("${COMPOSE[@]}" ps -q db)"
-if [[ -z "$DB_CID" ]]; then
-  echo "❌ ERROR: Could not get db container id" >&2
-  exit 1
-fi
-
-has_health="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$DB_CID" 2>/dev/null || true)"
-if [[ -z "$has_health" ]]; then
-  echo "❌ ERROR: db container has no healthcheck configured; cannot wait for health." >&2
-  exit 1
-fi
-
-
-for i in {1..60}; do
-  status="$(docker inspect -f '{{.State.Health.Status}}' "$DB_CID" 2>/dev/null || true)"
-  if [[ "$status" == "healthy" ]]; then
-    echo "✅ db is healthy"
-    break
-  fi
-  echo "⏳ Waiting for db… (${i}/60)"
-  sleep 1
-  if [[ "$i" -eq 60 ]]; then
-    echo "❌ ERROR: db did not become healthy in time (last status: ${status:-unknown})" >&2
+if command -v flock >/dev/null 2>&1; then
+  LOCK_FILE="/tmp/portfolio-release-${ENVIRONMENT}.lock"
+  exec 9>"$LOCK_FILE"
+  if ! flock -n -w 300 9; then
+    echo "❌ ERROR: Another release is running (lock: $LOCK_FILE). Timed out." >&2
     exit 1
   fi
-done
-
-
-
-echo "✅ Preflight OK"
-echo "🧪 Running release job (migrations/static/messages/seeds)..."
-
+  # Automatically remove the lock file when the script exits.
+  cleanup() {
+    local exit_code=$?
+    rm -f "${LOCK_FILE:-}"
+    exit $exit_code
+  }
+  trap cleanup EXIT SIGINT SIGTERM
+  echo "🔒 Release lock acquired"
+else
+  echo "⚠️  'flock' not found; skipping concurrency lock"
+fi
 
 # ------------------------------------------------------------------
-# Execute release job
-#
-# This runs the one-shot "release" service defined in docker-compose:
-# - database migrations
-# - seed data
-# - compile messages
-# - collect static files
-#
-# IMPORTANT:
-# - No images are built here
-# - Image must already exist locally
+# Resolve TAG & Compose
 # ------------------------------------------------------------------
-if [[ "${DRY_RUN}" == true ]]; then
-  echo "🧾 DRY RUN: would execute:"
-  echo "   TAG=${TAG} ${COMPOSE[*]} run --rm release"
+git fetch --tags >/dev/null 2>&1 || true
+TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || true)}"
+validate_tag "$TAG"
+export TAG
+
+COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.prod.yml}"
+[[ -f "$COMPOSE_FILE" ]] || { echo "❌ ERROR: Missing $COMPOSE_FILE"; exit 1; }
+export COMPOSE_FILE
+COMPOSE=(docker compose -f "${COMPOSE_FILE}")
+
+DB_SVC="db"
+REDIS_SVC="redis"
+RELEASE_SVC="release"
+
+# ------------------------------------------------------------------
+# Dependency & Health Checks
+# ------------------------------------------------------------------
+check_health() {
+  echo "🔍 [RELEASE] [1/3] Checking dependencies..."
+
+  # Ensure containers are at least running
+  # STRICT DRY_RUN: In dry-run mode, we do NOT attempt to start services.
+  # We only warn if they are missing.
+  if ! "${COMPOSE[@]}" ps --services --status running 2>/dev/null | grep -q "^${DB_SVC}$"; then
+    if [[ "${DRY_RUN}" == "true" ]]; then
+       echo "⚠️  DRY RUN: Database is NOT running (would be started in a real run)."
+    else
+       echo "🧩 Starting database..."
+       "${COMPOSE[@]}" up -d "${DB_SVC}"
+    fi
+  fi
+
+  if ! "${COMPOSE[@]}" ps --services --status running 2>/dev/null | grep -q "^${REDIS_SVC}$"; then
+    if [[ "${DRY_RUN}" == "true" ]]; then
+       echo "⚠️  DRY RUN: Redis is NOT running (would be started in a real run)."
+    else
+       echo "🧩 Starting redis..."
+       "${COMPOSE[@]}" up -d "${REDIS_SVC}"
+    fi
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then return 0; fi
+
+  # 1. Database Health (Configurable Timeout & Progressive Backoff)
+  local db_timeout="${DB_HEALTH_TIMEOUT:-120}"
+
+  # Dynamically resolve ALL active database container names.
+  # This handles clusters or scaled instances (e.g. db-1, db-2).
+  local db_containers
+  db_containers=$(docker ps --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" --filter "label=com.docker.compose.service=${DB_SVC}" --format '{{.Names}}')
+
+  if [[ -z "${db_containers}" ]]; then
+     echo "⚠️  WARNING: No active DB containers found via labels; falling back to default naming."
+     db_containers="${COMPOSE_PROJECT_NAME}-${DB_SVC}-1"
+  fi
+
+  for container in ${db_containers}; do
+    echo "🩺 Checking database: ${container}"
+    for ((i=1; i<=db_timeout; i++)); do
+      if docker inspect --format='{{.State.Health.Status}}' "${container}" 2>/dev/null | grep -q "healthy"; then
+        echo "✅ Database ${container} is healthy"
+        break
+      fi
+      # Progressive backoff sleep: sleep 1s for first 10 tries, then i/10s.
+      # This reduces log spam during long boots or massive migrations.
+      local sleep_time=$(( i < 10 ? 1 : i / 10 ))
+      echo "⏳ Waiting for ${container}... ($i/$db_timeout, sleep ${sleep_time}s)"
+      sleep "${sleep_time}"
+      [[ "$i" -eq "$db_timeout" ]] && { echo "❌ ERROR: Database ${container} timeout"; exit 1; }
+    done
+  done
+
+  # 2. Redis Health (Multi-instance & Retry Loop)
+  local redis_timeout=30
+  local redis_containers
+  redis_containers=$(docker ps --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" --filter "label=com.docker.compose.service=${REDIS_SVC}" --format '{{.Names}}')
+
+  if [[ -z "${redis_containers}" ]]; then
+     echo "⚠️  WARNING: No active Redis containers found via labels; falling back to default naming."
+     redis_containers="${COMPOSE_PROJECT_NAME}-${REDIS_SVC}-1"
+  fi
+
+  for container in ${redis_containers}; do
+    echo "🩺 Checking Redis: ${container}"
+    local redis_ok=false
+    for ((i=1; i<=redis_timeout; i++)); do
+      # Preferred: Live PING
+      if docker exec "${container}" redis-cli PING 2>/dev/null | grep -iq "PONG"; then
+        echo "✅ Redis ${container} is reachable (PONG)"
+        redis_ok=true
+        break
+      fi
+      # Fallback: Docker Health Status
+      if docker inspect --format='{{.State.Health.Status}}' "${container}" 2>/dev/null | grep -q "healthy"; then
+        echo "✅ Redis ${container} is healthy (Docker)"
+        redis_ok=true
+        break
+      fi
+      local sleep_time=$(( i < 10 ? 1 : i / 10 ))
+      echo "⏳ Waiting for ${container}... ($i/$redis_timeout, sleep ${sleep_time}s)"
+      sleep "${sleep_time}"
+    done
+
+    if [[ "${redis_ok}" != "true" ]]; then
+      echo "❌ ERROR: Redis ${container} not ready after ${redis_timeout}s." >&2
+      exit 1
+    fi
+  done
+}
+
+check_health
+
+# ------------------------------------------------------------------
+# Image Preflight
+# ------------------------------------------------------------------
+echo "🔎 [RELEASE] [2/3] Checking release image..."
+
+RELEASE_IMAGE=$(get_compose_image "${RELEASE_SVC}" "${COMPOSE[@]}")
+
+if [[ "${RELEASE_IMAGE}" =~ ^[[:space:]]*$ ]]; then
+  echo "ℹ️  NOTE: Using naming fallback for release image (config resolution skipped)."
+  echo "👉 Fallback image: ${ENVIRONMENT}-be:${TAG}"
+  RELEASE_IMAGE="${ENVIRONMENT}-be:${TAG}"
+fi
+
+if ! docker image inspect "${RELEASE_IMAGE}" >/dev/null 2>&1; then
+  echo "❌ Error: Missing image ${RELEASE_IMAGE}"
+  exit 1
+fi
+echo "✅ Image found: ${RELEASE_IMAGE}"
+
+# ------------------------------------------------------------------
+# Execution
+# ------------------------------------------------------------------
+if [[ "${DRY_RUN}" == "true" ]]; then
+  echo "🧪 DRY RUN: Would execute release job for ${TAG}"
   exit 0
 fi
 
-echo "🚀 Executing release container"
-"${COMPOSE[@]}" run --rm release
+LOG_DIR="$HOME/.portfolio-logs/${ENVIRONMENT}"
+LOG_FILE="${LOG_DIR}/release-${TAG}-$(date +%Y%m%d-%H%M%S).log"
+mkdir -p "$LOG_DIR" || { echo "❌ ERROR: Cannot create log dir $LOG_DIR"; exit 1; }
 
-echo "🎉 Release completed successfully for tag: ${TAG}"
+echo "🚀 [RELEASE] [3/3] Running release job..."
+echo "📝 Logs: $LOG_FILE"
+
+if "${COMPOSE[@]}" run --rm "${RELEASE_SVC}" 2>&1 | tee "$LOG_FILE"; then
+  echo "🎉 Release successful!"
+else
+  echo "❌ ERROR: Release job failed." >&2
+  echo "📁 Log summary (cat $LOG_FILE):" >&2
+  echo "------------------------------------------------------------------" >&2
+  cat "$LOG_FILE" >&2
+  echo "------------------------------------------------------------------" >&2
+  exit 1
+fi

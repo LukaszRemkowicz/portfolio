@@ -1,20 +1,20 @@
 networks:
-  portfolio_network:
+  stage_network:
 
 
 # ---------- Backend Defaults ----------
 x-backend-defaults: &backend-defaults
   volumes:
-    - prod_media_data:/app/media
-    - prod_static_data:/app/staticfiles
+    - stage_media_data:/app/media
+    - stage_static_data:/app/staticfiles
   networks:
-    - portfolio_network
+    - stage_network
   environment: &backend-defaults-env
     DEBUG: "False"
     DOCKER_ENV: "true"
     PYTHONPATH: "."
     SECRET_KEY: ${SECRET_KEY}
-    DB_NAME: ${DB_NAME}
+    DB_NAME: ${DB_NAME:-portfolio_stage}
     DB_USER: ${DB_USER}
     DB_PASSWORD: ${DB_PASSWORD}
     DB_HOST: db
@@ -33,10 +33,14 @@ x-backend-defaults: &backend-defaults
     DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
     CONTACT_EMAIL: ${CONTACT_EMAIL}
     SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN}
-    SENTRY_DSN: ${SENTRY_DSN}
-    ENVIRONMENT: ${ENVIRONMENT:-production}
-    SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
+    SENTRY_DSN: ${SENTRY_DSN:-}
+    ENABLE_SENTRY: ${ENABLE_SENTRY:-false}
+    ENVIRONMENT: ${ENVIRONMENT:-stage}
+    SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.0}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
+    REDIS_URL: redis://redis:6379/1
+    CELERY_BROKER_URL: redis://redis:6379/0
+    CELERY_RESULT_BACKEND: redis://redis:6379/0
     SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
   depends_on:
     db:
@@ -51,29 +55,29 @@ services:
     image: postgres:17
     restart: always
     networks:
-      - portfolio_network
+      - stage_network
     environment:
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_DB: ${DB_NAME:-portfolio_stage}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME:-portfolio_stage}"]
       interval: 5s
       timeout: 5s
       retries: 5
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - stage_postgres_data:/var/lib/postgresql/data
 
   # ---------- Redis ----------
   redis:
     image: redis:7-alpine
     restart: always
     networks:
-      - portfolio_network
+      - stage_network
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -83,16 +87,16 @@ services:
   # ---------- Celery Worker ----------
   celery-worker:
     <<: *backend-defaults
-    image: production-worker:${TAG}
+    image: stage-worker:${TAG}
     restart: always
-    command: celery -A settings worker -l info -Q celery,monitoring --concurrency=4
+    command: celery -A settings worker -l info -Q celery,monitoring --concurrency=2
     environment:
       <<: *backend-defaults-env
       MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
     volumes:
-      - prod_media_data:/app/media
-      - prod_static_data:/app/staticfiles
-      - ${DOCKER_LOGS_DIR:-./logs}:/app/docker-logs
+      - stage_media_data:/app/media
+      - stage_static_data:/app/staticfiles
+      - ${DOCKER_LOGS_DIR:-/tmp/stage-docker-logs}:/app/docker-logs
     healthcheck:
       test: ["CMD-SHELL", "celery -A settings inspect ping -d celery@$$HOSTNAME"]
       interval: 30s
@@ -103,37 +107,38 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: production-be:${TAG}
+    image: stage-be:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
       <<: *backend-defaults-env
     volumes:
-      - prod_media_data:/app/media
-      - prod_static_data:/app/staticfiles
-      - celerybeat_data:/app/celerybeat
+      - stage_media_data:/app/media
+      - stage_static_data:/app/staticfiles
+      - stage_celerybeat_data:/app/celerybeat
 
   # ---------- Frontend ----------
   fe:
-    image: production-fe:${TAG}
-    restart: "always"
+    image: stage-fe:${TAG}
+    restart: always
     networks:
-      - portfolio_network
+      - stage_network
     environment:
-      VITE_GA_TRACKING_ID: ${GA_TRACKING_ID}
-      VITE_SENTRY_DSN_FE: ${SENTRY_DSN_FE}
-      VITE_ENVIRONMENT: ${ENVIRONMENT:-production}
+      VITE_GA_TRACKING_ID: ${GA_TRACKING_ID:-}
+      VITE_SENTRY_DSN_FE: ${SENTRY_DSN_FE:-}
+      VITE_ENVIRONMENT: ${ENVIRONMENT:-stage}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
 
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
-    image: production-be:${TAG}
+    image: stage-be:${TAG}
     restart: always
 
   # ---------- Release Job ----------
   release:
     <<: *backend-defaults
-    image: production-be:${TAG}
+    image: stage-be:${TAG}
     restart: "no"
     command: >
       sh -c "
@@ -148,27 +153,27 @@ services:
     image: nginx:1.25
     restart: always
     networks:
-      - portfolio_network
+      - stage_network
     depends_on:
       - be
       - fe
     environment:
-      # Injected by Doppler at runtime — envsubst replaces ${SITE_DOMAIN} in TEMPLATE.conf.template
       SITE_DOMAIN: ${SITE_DOMAIN}
+      ALLOWED_IP: ${ALLOWED_IP:-127.0.0.1}
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
     volumes:
-      - ./nginx/prod/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
-      - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
-      - ${NGINX_LOG_DIR:-./nginx/logs}:/var/log/nginx
-      - prod_media_data:/app/media:ro
-      - prod_static_data:/app/staticfiles:ro
+      - ./nginx/stage/local.conf:/etc/nginx/templates/nginx.conf.template:ro
+      - ./nginx/stage/ssl:/etc/nginx/ssl:ro
+      - ${NGINX_STAGE_LOG_DIR:-./nginx/logs/stage}:/var/log/nginx
+      - stage_media_data:/app/media:ro
+      - stage_static_data:/app/staticfiles:ro
     ports:
       - "80:80"
       - "443:443"
 
 
 volumes:
-  postgres_data:
-  prod_media_data:
-  prod_static_data:
-  celerybeat_data:
+  stage_postgres_data:
+  stage_media_data:
+  stage_static_data:
+  stage_celerybeat_data:

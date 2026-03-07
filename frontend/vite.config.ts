@@ -49,12 +49,17 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
-    allowedHosts: ['portfolio.local', 'localhost'],
-    // HMR must go through Nginx reverse-proxy (wss://portfolio.local)
+    allowedHosts: process.env.ALLOWED_HOSTS
+      ? process.env.ALLOWED_HOSTS.split(',').map(h => h.trim())
+      : ['portfolio.local', 'localhost'],
+    // HMR config
     hmr: {
-      clientPort: 443,
+      clientPort: process.env.VITE_ENVIRONMENT === 'stage' ? 8443 : 443,
       protocol: 'wss',
-      host: 'portfolio.local',
+      host:
+        process.env.VITE_ENVIRONMENT === 'stage'
+          ? process.env.SITE_DOMAIN || 'stage.portfolio.local'
+          : 'portfolio.local',
     },
     warmup: {
       clientFiles: ['./src/index.tsx'],
