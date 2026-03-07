@@ -9,7 +9,7 @@ x-backend-defaults: &backend-defaults
     - prod_static_data:/app/staticfiles
   networks:
     - portfolio_network
-  environment:
+  environment: &backend-defaults-env
     DEBUG: "False"
     DOCKER_ENV: "true"
     PYTHONPATH: "."
@@ -85,14 +85,15 @@ services:
     <<: *backend-defaults
     image: portfolio-backend:${TAG}
     restart: always
-    command: celery -A settings worker -l info --concurrency=4
+    command: celery -A settings worker -l info -Q celery,monitoring --concurrency=4
     environment:
+      <<: *backend-defaults-env
       MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
       DOCKER_LOGS_DIR: /app/docker-logs
     volumes:
       - prod_media_data:/app/media
       - prod_static_data:/app/staticfiles
-      - ${DOCKER_LOGS_DIR}:/app/docker-logs:ro
+      - ${DOCKER_LOGS_DIR}:/app/docker-logs
     healthcheck:
       test: ["CMD-SHELL", "celery -A settings inspect ping -d celery@$$HOSTNAME"]
       interval: 30s
@@ -141,8 +142,9 @@ services:
     environment:
       # Injected by Doppler at runtime — envsubst replaces ${SITE_DOMAIN} in TEMPLATE.conf.template
       SITE_DOMAIN: ${SITE_DOMAIN}
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
     volumes:
-      - ./nginx/prod/TEMPLATE.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/prod/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
       - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
       - ${NGINX_LOG_DIR:-./nginx/logs}:/var/log/nginx
       - prod_media_data:/app/media:ro

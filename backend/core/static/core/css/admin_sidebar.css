@@ -1,0 +1,51 @@
+/* Custom CSS to restrict massive user avatars in the Jazzmin sidebar and align them as a column */
+
+.user-panel.d-flex {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+}
+
+.user-panel .image {
+    width: 80px !important;
+    height: 80px !important;
+    margin-bottom: 12px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    overflow: hidden !important;
+}
+
+.user-panel .image img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+}
+
+.user-panel .info {
+    padding-left: 0 !important;
+    width: 100% !important;
+    text-align: center !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-direction: column !important;
+}
+
+.user-panel .info a {
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+    text-align: center !important;
+    display: block !important;
+}
+
+/* Fix overlapping footer issues (Select2 dropdowns falling behind) */
+.main-footer {
+    z-index: 10 !important;
+}
+
+.content-wrapper {
+    z-index: 100 !important;
+}

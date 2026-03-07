@@ -1,0 +1,10 @@
+{
+    "summary": "CRITICAL: Automated reconnaissance attack detected probing multiple sensitive file paths.",
+    "severity": "CRITICAL",
+    "key_findings": [
+        "A05 Security Misconfiguration probe: 33 requests targeting /.env, /.git/config, /v1/image/",
+        "A01 Broken Access Control probe: CSRF attempts on /admin/ without Referer header",
+        "Last probe timestamp: 21:31:06 UTC"
+    ],
+    "recommendations": "Add Nginx rate limiting to block rapid 404s. Implement fail2ban to permanently ban the offending IP addressing scanning for sensitive files."
+}
