@@ -38,6 +38,7 @@ x-backend-defaults: &backend-defaults
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
     SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
+    PROJECT_OWNER: ${PROJECT_OWNER}
   depends_on:
     db:
       condition: service_healthy
@@ -101,6 +102,19 @@ services:
       retries: 3
       start_period: 30s
 
+  # ---------- Celery Beat ----------
+  celery-beat:
+    <<: *backend-defaults
+    image: production-be:${TAG}
+    restart: always
+    command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
+    environment:
+      <<: *backend-defaults-env
+    volumes:
+      - prod_media_data:/app/media
+      - prod_static_data:/app/staticfiles
+      - celerybeat_data:/app/celerybeat
+
   # ---------- Frontend ----------
   portfolio-fe:
     image: portfolio-frontend:${TAG}
@@ -111,6 +125,7 @@ services:
       VITE_GA_TRACKING_ID: ${GA_TRACKING_ID}
       VITE_SENTRY_DSN_FE: ${SENTRY_DSN_FE}
       VITE_ENVIRONMENT: ${ENVIRONMENT:-production}
+      VITE_PROJECT_OWNER: ${PROJECT_OWNER}
 
   # ---------- Backend ----------
   portfolio-be:
@@ -158,3 +173,4 @@ volumes:
   postgres_data:
   prod_media_data:
   prod_static_data:
+  celerybeat_data:
