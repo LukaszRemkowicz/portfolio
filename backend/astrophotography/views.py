@@ -12,7 +12,6 @@ from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
 from django.conf import settings
 from django.db.models import Model, QuerySet
-from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.decorators import method_decorator
@@ -20,8 +19,8 @@ from django.utils.translation import gettext_lazy as _
 
 from common.decorators.cache import cache_response
 from common.throttling import GalleryRateThrottle
-from common.utils.logging import sanitize_for_logging
-from common.utils.signing import generate_signed_url_params, validate_signed_url
+from common.utils.signing import generate_signed_url_params
+from core.views import GenericAdminSecureMediaView, SecureMediaView
 
 from .constants import CELESTIAL_OBJECT_CHOICES
 from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Tag
@@ -184,59 +183,6 @@ class CelestialObjectCategoriesView(APIView):
         return Response(categories)
 
 
-class SecureMediaView(APIView):
-    """
-    Base view to carefully serve secure, internal media via Nginx X-Accel-Redirect.
-    Extending classes MUST implement get_object() and get_file_path().
-    """
-
-    permission_classes = [AllowAny]
-    authentication_classes = []
-
-    def get_object(self) -> Model:
-        raise NotImplementedError("Subclasses must implement get_object")
-
-    def get_file_path(self, obj: Model) -> str:
-        raise NotImplementedError("Subclasses must implement get_file_path")
-
-    def get(self, request: Request, slug: str) -> HttpResponse:
-        safe_slug: str = sanitize_for_logging(slug)
-        signature: Optional[str] = request.query_params.get("s")
-        expiration: Optional[str] = request.query_params.get("e")
-        safe_signature: str = sanitize_for_logging(signature)
-        safe_expiration: str = sanitize_for_logging(expiration)
-
-        if not signature or not expiration:
-            logger.warning(
-                f"Missing signature params for secure media. Slug: {safe_slug}, "
-                f"S: {bool(signature)}, E: {bool(expiration)}"
-            )
-            return HttpResponse("Missing signature", status=status.HTTP_403_FORBIDDEN)
-
-        if not validate_signed_url(slug, signature, expiration):
-            logger.warning(
-                f"Invalid or expired signature for secure media. Slug: {safe_slug}, "
-                f"S: {safe_signature[:8]}..., E: {safe_expiration}"
-            )
-            return HttpResponse("Invalid or expired signature", status=status.HTTP_403_FORBIDDEN)
-
-        # Get the object exactly how the subclass wants
-        obj: Model = self.get_object()
-        file_path: str = self.get_file_path(obj)
-
-        if not file_path:
-            logger.error(f"Object record found but file path missing/empty for slug: {safe_slug}")
-            raise Http404("Image file not found or is empty")
-
-        response = HttpResponse()
-        # This path must match the 'location /protected_media/' block in nginx.conf
-        redirect_uri: str = f"/protected_media/{file_path}"
-        response["X-Accel-Redirect"] = redirect_uri
-        response["Content-Type"] = ""  # Let Nginx determine the content type
-        logger.info(f"Serving secure media via Nginx redirect: {redirect_uri}")
-        return response
-
-
 class AstroImageSecureView(SecureMediaView):
     def get_object(self) -> AstroImage:
         slug: str = str(self.kwargs.get("slug"))
@@ -245,6 +191,23 @@ class AstroImageSecureView(SecureMediaView):
     def get_file_path(self, obj: Model) -> str:
         assert isinstance(obj, AstroImage)
         return str(obj.path.name)
+
+    def get_signature_id(self) -> str:
+        return str(self.kwargs.get("slug", ""))
+
+
+class AstroImageAdminSecureMediaView(GenericAdminSecureMediaView):
+    """
+    Dedicated admin media view for AstroImage to ease debugging.
+    """
+
+    def get_object(self) -> Model:
+        return get_object_or_404(AstroImage, pk=self.kwargs.get("pk"))
+
+    def get_signature_id(self) -> str:
+        pk = self.kwargs.get("pk")
+        field = self.kwargs.get("field_name")
+        return f"admin_media_astrophotography_astroimage_{pk}_{field}"
 
 
 class ImageURLViewSet(ViewSet):
@@ -281,6 +244,7 @@ class ImageURLViewSet(ViewSet):
                 image.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
             )
             # Use PK as key to avoid language/translation mismatches
+            # Use absolute URL from request context
             url_mapping[str(image.pk)] = (
                 f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
             )

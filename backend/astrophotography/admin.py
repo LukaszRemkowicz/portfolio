@@ -26,7 +26,14 @@ from translation.mixins import (
     TranslationStatusMixin,
 )
 
-from .forms import AstroImageForm, MeteorsMainPageConfigForm, PlaceAdminForm, TagAdminForm
+from .admin_mixins import SecureAdminSidebarPreviewMixin
+from .forms import (
+    AstroImageForm,
+    MainPageBackgroundImageForm,
+    MeteorsMainPageConfigForm,
+    PlaceAdminForm,
+    TagAdminForm,
+)
 from .models import (
     AstroImage,
     Camera,
@@ -205,14 +212,16 @@ class TripodAdmin(admin.ModelAdmin):
 
 
 @admin.register(AstroImage)
-class AstroImageAdmin(BaseTranslatableAdmin):
+class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
     """
     Main admin for astrophotography captures and related data.
     Unique complex logic:
     - Dynamic fieldsets mapping (hiding technical fields in non-default languages)
     - Dynamic filtering of equipment and locations
+    - Custom sidebar image preview
     """
 
+    change_form_template = "admin/astrophotography/secure_media_change_form.html"
     form = AstroImageForm
     list_display = ("get_name", "capture_date", "place", "has_thumbnail", "tag_list")
     list_display_links = ("get_name",)
@@ -242,6 +251,10 @@ class AstroImageAdmin(BaseTranslatableAdmin):
         "tracker__model",
         "tripod__model",
     )
+
+    readonly_fields = ("created_at", "updated_at", "thumbnail")
+
+    ordering = ("-capture_date", "-created_at")
 
     fieldsets = (
         (
@@ -344,45 +357,27 @@ class AstroImageAdmin(BaseTranslatableAdmin):
     def has_thumbnail(self, obj: AstroImage) -> bool:
         return bool(obj.thumbnail)
 
-    readonly_fields = ("created_at", "updated_at", "thumbnail")
-
-    def changeform_view(
-        self,
-        request: HttpRequest,
-        object_id: Optional[str] = None,
-        form_url: str = "",
-        extra_context: Optional[Dict[str, Any]] = None,
-    ) -> HttpResponse:
-        """
-        Customizes the change form view to hide certain buttons.
-
-        Specifically, hides the 'Save and add another' button when editing
-        an existing object to streamline the UI.
-        """
-        extra_context = extra_context or {}
-        if object_id:
-            extra_context["show_save_and_add_another"] = False
-
-        return super().changeform_view(  # type: ignore[no-any-return]
-            request, object_id, form_url, extra_context
-        )
+    secure_preview_url_name = "admin-astroimage-secure-media"
 
 
 @admin.register(MainPageBackgroundImage)
-class MainPageBackgroundImageAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
+class MainPageBackgroundImageAdmin(BaseTranslatableAdmin):
     """
     Admin for main page background images.
     Features:
     - Dynamic Parler-style UI synchronization for translations
     """
 
+    form = MainPageBackgroundImageForm
+
     list_display = ("get_name", "path", "created_at")
     list_display_links = ("get_name",)
     readonly_fields = ("created_at", "updated_at")
+
     fieldsets = (
         (None, {"fields": ("name", "description", "path")}),
         (
-            "Metadata",
+            _("Metadata"),
             {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
         ),
     )

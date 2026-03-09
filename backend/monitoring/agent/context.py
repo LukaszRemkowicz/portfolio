@@ -49,7 +49,7 @@ Sentry JS SDK + Google Analytics/GTM. Cookie consent.
 NORMAL_PATTERNS_CONTEXT = """
 ## KNOWN NORMAL LOG PATTERNS — do NOT flag as issues
 
-- `GET /healthcheck/` or `/ping/` — Nginx health probes
+- `GET /v1/health` or `/ping/` — Nginx health probes
 - `[axes]` lockout entries after 5 failed admin logins — expected security behavior
 - celery-beat or celery-worker scheduling messages — normal operation
 - 'Replacing N existing analysis record(s)' — idempotent log analysis, not an error

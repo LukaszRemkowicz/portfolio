@@ -105,7 +105,7 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: production-be:${TAG}
+    image: portfolio-backend:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
@@ -155,11 +155,13 @@ services:
       - portfolio-be
       - portfolio-fe
     environment:
-      # Injected by Doppler at runtime — envsubst replaces ${SITE_DOMAIN} in TEMPLATE.conf.template
+      # Injected by Doppler at runtime — envsubst replaces variable placeholders
       SITE_DOMAIN: ${SITE_DOMAIN}
+      SSL_CERT_NAME: ${SSL_CERT_NAME}
+      SSL_KEY_NAME: ${SSL_KEY_NAME}
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
     volumes:
-      - ./nginx/prod/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
+      - ./nginx/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
       - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
       - ${NGINX_LOG_DIR:-./nginx/logs}:/var/log/nginx
       - prod_media_data:/app/media:ro
