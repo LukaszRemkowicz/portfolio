@@ -35,12 +35,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies into virtualenv
-COPY pyproject.toml poetry.lock ./
+COPY backend/pyproject.toml backend/poetry.lock ./
 RUN python -m venv $VIRTUAL_ENV && \
     poetry install --no-root --only main
 
 # Pre-compile translations at build time for production
-COPY . .
+COPY backend/ .
 
 # --- Development Stage ---
 FROM base AS development
@@ -56,13 +56,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder $VIRTUAL_ENV $VIRTUAL_ENV
 
 # Install ALL dependencies (including dev)
-COPY pyproject.toml poetry.lock ./
+COPY backend/pyproject.toml backend/poetry.lock ./
 RUN poetry install --no-root
 
-COPY . .
+COPY backend/ .
 RUN mkdir -p /app/media /app/staticfiles
 
-COPY entrypoint.sh /entrypoint.sh
+COPY backend/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -4,8 +4,8 @@ networks:
 
 x-backend-common: &backend-common
   build:
-    context: ./backend
-    dockerfile: ../docker/backend/Dockerfile
+    context: .
+    dockerfile: docker/backend/Dockerfile
     target: development
   networks:
     - portfolio_network
