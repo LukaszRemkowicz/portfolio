@@ -3,6 +3,7 @@ import styles from '../styles/components/About.module.css';
 import { Camera } from 'lucide-react';
 import { AboutProps } from '../types';
 import { sanitizeHtml } from '../utils/html';
+import ImageWithFallback from './common/ImageWithFallback';
 
 import { useTranslation } from 'react-i18next';
 
@@ -43,7 +44,7 @@ const About: React.FC<AboutProps> = ({ profile }) => {
           <div className={styles.glassCard}>
             <div className={styles.cardGradient}></div>
             {profile?.about_me_image ? (
-              <img
+              <ImageWithFallback
                 src={profile.about_me_image}
                 alt='About me'
                 className={styles.aboutImage}

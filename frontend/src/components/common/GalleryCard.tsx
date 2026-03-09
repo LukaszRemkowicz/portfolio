@@ -6,6 +6,7 @@ import { AstroImage } from '../../types';
 import { stripHtml } from '../../utils/html';
 import { useQueryClient } from '@tanstack/react-query';
 import { fetchAstroImageDetail } from '../../api/services';
+import ImageWithFallback from './ImageWithFallback';
 
 interface GalleryCardProps {
   item: AstroImage;
@@ -15,6 +16,7 @@ interface GalleryCardProps {
 const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
   const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(!item.thumbnail_url);
   const queryClient = useQueryClient();
 
   const isNew = (dateString?: string) => {
@@ -57,15 +59,21 @@ const GalleryCard = memo(({ item, onClick }: GalleryCardProps) => {
         <div
           className={`${styles.placeholder} ${isLoaded ? styles.hide : ''}`}
         />
-        <img
+        <ImageWithFallback
           src={item.thumbnail_url || ''}
           alt=''
           loading='lazy'
           onLoad={() => setIsLoaded(true)}
-          className={`${styles.cardImage} ${isLoaded ? styles.show : ''}`}
+          onError={() => setHasError(true)}
+          className={`${styles.cardImage} ${isLoaded || hasError ? styles.show : ''}`}
           draggable='false'
           onContextMenu={e => e.preventDefault()}
         />
+        {hasError && (
+          <div className={styles.placeholderOverlay}>
+            <span className={styles.placeholderText}>[Placeholder]</span>
+          </div>
+        )}
       </div>
       <div className={styles.cardContent}>
         <span className={styles.category}>

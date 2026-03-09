@@ -72,6 +72,13 @@
   overflow: hidden;
 }
 
+.carouselSlide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .cardImage {
   position: absolute;
   inset: 0;
@@ -194,4 +201,39 @@
   box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.2);
   pointer-events: none;
+}
+
+.placeholderOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
+}
+
+.placeholderOverlay.active {
+  opacity: 1;
+}
+
+.placeholderText {
+  transform: rotate(-30deg);
+  background: var(--celestial-blue);
+  color: #02040a;
+  padding: 0.3rem 2rem;
+  font-family: var(--font-family-heading, sans-serif);
+  font-weight: 800;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+  border-radius: 2px;
 }

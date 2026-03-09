@@ -68,6 +68,7 @@ set -euo pipefail
 : "${GA_TRACKING_ID:?GA_TRACKING_ID is required (inject via: doppler run -- ./build.sh)}"
 : "${SITE_DOMAIN:?SITE_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
 : "${SENTRY_DSN_FE:?SENTRY_DSN_FE is required (inject via: doppler run -- ./build.sh)}"
+: "${FRONTEND_PORT:=8080}"
 
 echo "API_DOMAIN=${API_DOMAIN}"
 
@@ -135,6 +136,7 @@ echo "🏗️  Starting build..."
 echo "🐍 Building backend image..."
 docker build \
   --pull \
+  -f docker/backend/Dockerfile \
   --target production \
   -t "portfolio-backend:$TAG" \
   ./backend
@@ -144,12 +146,14 @@ echo "✅ Backend image built"
 echo "🌐 Building frontend image..."
 docker build \
   --pull \
-  -f frontend/Dockerfile \
+  -f docker/frontend/Dockerfile \
   --target prod \
   --build-arg "SITE_DOMAIN=${SITE_DOMAIN}" \
   --build-arg "API_URL=https://${API_DOMAIN}" \
   --build-arg "GA_TRACKING_ID=${GA_TRACKING_ID}" \
   --build-arg "SENTRY_DSN_FE=${SENTRY_DSN_FE}" \
+  --build-arg "FRONTEND_PORT=${FRONTEND_PORT}" \
+  --build-arg "PROJECT_OWNER=${PROJECT_OWNER}" \
   -t "portfolio-frontend:$TAG" \
   .
 echo "✅ Frontend image built"

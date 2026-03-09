@@ -141,6 +141,7 @@ frontend/playwright-report/
 frontend/test-results/
 database_data/
 *.sql
+*.dump
 
 # Celery
 celerybeat-schedule*

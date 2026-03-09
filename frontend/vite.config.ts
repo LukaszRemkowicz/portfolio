@@ -15,8 +15,8 @@ export default defineConfig({
         'logo512.png',
       ],
       manifest: {
-        short_name: 'Łukasz Remkowicz',
-        name: 'Łukasz Remkowicz - Portfolio & Astrophotography',
+        short_name: process.env.PROJECT_OWNER,
+        name: `${process.env.PROJECT_OWNER} - Portfolio & Astrophotography`,
         icons: [
           {
             src: 'favicon.ico',
@@ -48,7 +48,7 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 3000,
+    port: Number(process.env.FRONTEND_PORT) || 8080,
     allowedHosts: ['portfolio.local', 'localhost'],
     // HMR must go through Nginx reverse-proxy (wss://portfolio.local)
     hmr: {
@@ -62,7 +62,7 @@ export default defineConfig({
   },
   preview: {
     host: '0.0.0.0',
-    port: 3000,
+    port: Number(process.env.FRONTEND_PORT) || 8080,
   },
   build: {
     outDir: 'dist',
