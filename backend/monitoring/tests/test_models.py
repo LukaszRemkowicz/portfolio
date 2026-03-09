@@ -195,3 +195,52 @@ class TestLogAnalysisMethods:
         # email_sent should be updated, but summary should remain original
         assert log.email_sent is True
         assert log.summary == "Original"
+
+
+@pytest.mark.django_db
+class TestLogAnalysisManager:
+    """Test last_5_days queryset/manager method and historical context."""
+
+    def test_last_5_days_returns_records_within_window(self):
+        """Records within last 5 days are returned; older ones are not."""
+        inside = LogAnalysisFactory(analysis_date=date.today() - timedelta(days=3))
+        LogAnalysisFactory(analysis_date=date.today() - timedelta(days=6))
+
+        results = LogAnalysis.objects.last_5_days()
+        assert inside in results
+        assert results.count() == 1
+
+    def test_last_5_days_boundary_is_inclusive(self):
+        """A record exactly 5 days old is included (analysis_date__gte)."""
+        boundary = LogAnalysisFactory(analysis_date=date.today() - timedelta(days=5))
+
+        results = LogAnalysis.objects.last_5_days()
+        assert boundary in results
+
+    def test_last_5_days_ordered_newest_first(self):
+        """Records are ordered by analysis_date descending."""
+        older = LogAnalysisFactory(analysis_date=date.today() - timedelta(days=4))
+        newer = LogAnalysisFactory(analysis_date=date.today() - timedelta(days=1))
+
+        results = list(LogAnalysis.objects.last_5_days())
+        assert results[0] == newer
+        assert results[1] == older
+
+    def test_last_5_days_excludes_given_date(self):
+        """exclude_date param omits the matching record."""
+        today_record = LogAnalysisFactory(analysis_date=date.today())
+        yesterday = LogAnalysisFactory(analysis_date=date.today() - timedelta(days=1))
+
+        results = LogAnalysis.objects.last_5_days(exclude_date=date.today())
+        assert today_record not in results
+        assert yesterday in results
+
+    def test_last_5_days_empty_db_returns_empty_qs(self):
+        """No records in DB returns empty queryset."""
+        assert LogAnalysis.objects.last_5_days().count() == 0
+
+    def test_trend_summary_field_exists_and_blank_by_default(self):
+        """trend_summary field exists and defaults to blank string."""
+        log = LogAnalysisFactory()
+        assert hasattr(log, "trend_summary")
+        assert log.trend_summary == ""

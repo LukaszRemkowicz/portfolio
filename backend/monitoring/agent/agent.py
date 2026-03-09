@@ -25,6 +25,7 @@ class LogAnalysisAgent:
         frontend_log_path: str,
         nginx_log_path: Optional[str] = None,
         collected_at: str = "",
+        historical_context: str = "",
     ) -> Optional[dict]:
         """
         Analyzes logs from file paths to minimize memory usage.
@@ -50,7 +51,9 @@ class LogAnalysisAgent:
             self._read_file_tail(nginx_log_path, MAX_CHARS_PER_LOG) if nginx_log_path else ""
         )
 
-        return self.analyze_logs(backend_content, frontend_content, nginx_content, collected_at)
+        return self.analyze_logs(
+            backend_content, frontend_content, nginx_content, collected_at, historical_context
+        )
 
     def _read_file_tail(self, file_path: str, max_chars: int) -> str:
         """Reads the last max_chars from a file efficiently."""
@@ -70,6 +73,7 @@ class LogAnalysisAgent:
         frontend_logs: str,
         nginx_logs: str = "",
         collected_at: str = "",
+        historical_context: str = "",
     ) -> Optional[dict]:
         """
         Analyzes logs and returns structured insights.
@@ -79,12 +83,13 @@ class LogAnalysisAgent:
                 "summary": str,
                 "severity": "INFO" | "WARNING" | "CRITICAL",
                 "key_findings": [str, ...],
-                "recommendations": str
+                "recommendations": str,
+                "trend_summary": str,
             }
         """
         logger.info("Preparing prompt for LLM")
 
-        prompt = build_prompt()
+        prompt = build_prompt(historical_context=historical_context)
         combined_logs = self._prepare_logs(backend_logs, frontend_logs, nginx_logs, collected_at)
 
         logger.info("Sending request to LLM provider (prompt size: %d chars)", len(combined_logs))

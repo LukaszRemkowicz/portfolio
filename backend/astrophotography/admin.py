@@ -351,8 +351,6 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
     def tag_list(self, obj: AstroImage) -> str:
         return ", ".join(tag.name for tag in obj.tags.all())
 
-    ordering = ("-capture_date", "-created_at")
-
     @admin.display(boolean=True, description="Has Thumbnail")
     def has_thumbnail(self, obj: AstroImage) -> bool:
         return bool(obj.thumbnail)

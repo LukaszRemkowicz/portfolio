@@ -90,3 +90,17 @@ class TestLogAnalysisAgent:
         assert result["severity"] == "CRITICAL"
         assert "A05 Security Misconfiguration" in result["key_findings"][0]
         assert result["gpt_tokens_used"] == 600  # Default fallback logic from MockLLMProvider
+
+    def test_analyze_logs_historical_context_in_system_prompt(self, agent, mock_llm_provider):
+        """historical_context is injected into the system prompt sent to the LLM."""
+        mock_response = (
+            '{"summary": "Calm", "severity": "INFO", '
+            '"key_findings": [], "recommendations": "", "trend_summary": "Attack calmed down"}'
+        )
+        mock_llm_provider.ask_question_with_usage.return_value = (mock_response, {})
+
+        historical = "## 2026-03-08 — Severity: CRITICAL\nSummary: Bot attack"
+        agent.analyze_logs("backend", "frontend", historical_context=historical)
+
+        call_kwargs = mock_llm_provider.ask_question_with_usage.call_args.kwargs
+        assert historical in call_kwargs["system_prompt"]
