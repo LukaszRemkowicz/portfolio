@@ -511,3 +511,42 @@ class TestAstroImageSecureView:
         )
         response: Response = api_client.get(url, params)
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+class TestAstroImageAdminSecureMediaView:
+    def test_admin_secure_media_view_success_staff(
+        self, admin_client: APIClient, astro_image: AstroImage
+    ) -> None:
+        url: str = reverse(
+            "admin-astroimage-secure-media",
+            kwargs={"pk": str(astro_image.pk), "field_name": "path"},
+        )
+        sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_path"
+        params: dict[str, Any] = generate_signed_url_params(sig_id)
+        response = admin_client.get(url, params)
+        assert response.status_code == status.HTTP_200_OK
+        assert "X-Accel-Redirect" in response
+        assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.path.name}"
+
+    def test_admin_secure_media_view_forbidden_anonymous(
+        self, api_client: APIClient, astro_image: AstroImage
+    ) -> None:
+        url: str = reverse(
+            "admin-astroimage-secure-media",
+            kwargs={"pk": str(astro_image.pk), "field_name": "path"},
+        )
+        sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_path"
+        params: dict[str, Any] = generate_signed_url_params(sig_id)
+        response = api_client.get(url, params)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_admin_secure_media_view_missing_signature_staff(
+        self, admin_client: APIClient, astro_image: AstroImage
+    ) -> None:
+        url: str = reverse(
+            "admin-astroimage-secure-media",
+            kwargs={"pk": str(astro_image.pk), "field_name": "path"},
+        )
+        response = admin_client.get(url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN

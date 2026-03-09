@@ -24,13 +24,13 @@ router.register("images", ImageURLViewSet, basename="image-urls")
 
 
 urlpatterns = [
-    # Secure Media Endpoints
+    # Public API Serve Endpoints (Public + Signed)
     path(
         "images/<slug:slug>/serve/",
         AstroImageSecureView.as_view(),
         name="secure-image-serve",
     ),
-    # Slug-based travel highlights endpoints (more specific routes first)
+    # Slug-based travel highlights endpoints
     path(
         "travel/<slug:country_slug>/<slug:place_slug>/<slug:date_slug>/",
         TravelHighlightsBySlugView.as_view(),

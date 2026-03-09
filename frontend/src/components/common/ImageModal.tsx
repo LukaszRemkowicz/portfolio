@@ -10,6 +10,7 @@ import { useAstroImageDetail } from '../../hooks/useAstroImageDetail';
 import { useImageUrls } from '../../hooks/useImageUrls';
 import { sanitizeHtml, isHtmlEmpty, slugify } from '../../utils/html';
 import { APP_ROUTES } from '../../api/constants';
+import ImageWithFallback from './ImageWithFallback';
 
 interface ImageModalProps {
   image: AstroImage | null;
@@ -374,7 +375,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
         </button>
 
         <div className={styles.imageWrapper}>
-          <img
+          <ImageWithFallback
             src={imageUrls[image.pk] || image.url || image.thumbnail_url || ''}
             alt={image.name}
             className={styles.modalImage}
@@ -435,7 +436,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
               >
                 <X size={32} />
               </button>
-              <img
+              <ImageWithFallback
                 src={
                   imageUrls[image.pk] || image.url || image.thumbnail_url || ''
                 }

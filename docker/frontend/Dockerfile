@@ -9,7 +9,8 @@ FROM base AS dev
 COPY frontend/ .
 RUN chown -R node:node /app
 USER node
-EXPOSE 3000
+
+EXPOSE $FRONTEND_PORT
 CMD ["npm", "run", "dev"]
 
 # --- Production build ---
@@ -35,11 +36,18 @@ RUN npm run build && ./scripts/inject-metadata.sh && rm -rf ./scripts
 FROM nginx:alpine AS prod
 WORKDIR /usr/share/nginx/html
 
+# Create non-root user for nginx
+RUN touch /var/run/nginx.pid && \
+    chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
+
 # Copy built assets
 COPY --from=build /app/dist .
 
 # Copy internal nginx config
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+# Use non-root user
+USER nginx
+
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

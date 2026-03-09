@@ -1,9 +1,9 @@
-### Contact Form API Tests
-### This file can be used in PyCharm/IntelliJ HTTP Client to test the API endpoints
-
 ### Variables
 @baseUrl = http://localhost:8000/v1
 @contentType = application/json
+@feUrl = https://portfolio.local
+@apiUrl = https://api.portfolio.local
+@adminUrl = https://admin.portfolio.local
 
 ### ============================================================
 ### CONTACT FORM API TESTS
@@ -218,3 +218,44 @@ Content-Type: {{contentType}}
 ### Checking different language code
 GET {{baseUrl}}/auth/user/?lang=de
 Content-Type: {{contentType}}
+
+### ============================================================
+### NGINX SECURITY HARDENING TESTS
+### ============================================================
+### These tests verify that Nginx intercepts malicious probes across all domains
+### Expected result for all: 404 Not Found (blocked by Nginx)
+
+### --- Frontend Domain ---
+### Test 29: FE - Block hidden files (.env)
+GET {{feUrl}}/.env
+
+### Test 30: FE - Block prohibited extensions (.php)
+GET {{feUrl}}/index.php
+
+### Test 31: FE - Block malicious CMS paths (wp-admin)
+GET {{feUrl}}/wp-admin/
+
+
+### --- API Domain ---
+### Test 32: API - Block hidden files (.env)
+GET {{apiUrl}}/.env
+
+### Test 33: API - Block prohibited extensions (.php)
+GET {{apiUrl}}/v1/test.php
+
+### Test 34: API - Block malicious CMS paths (wp-login.php)
+GET {{apiUrl}}/wp-login.php
+
+
+### --- Admin Domain ---
+### Test 35: Admin - Block hidden files (.git)
+GET {{adminUrl}}/.git/config
+
+### Test 36: Admin - Block prohibited extensions (.sql)
+GET {{adminUrl}}/backup.sql
+
+### Test 37: Admin - Block malicious CMS paths (xmlrpc.php)
+GET {{adminUrl}}/xmlrpc.php
+
+### .git/refs/tags/
+GET {{adminUrl}}/.git/refs/tags/

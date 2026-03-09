@@ -26,7 +26,8 @@ def reset_mainpagelocation_sequence(apps, schema_editor):
 
 
 def seed_regions(apps, schema_editor):
-    call_command("seed_regions")
+    pass
+    # call_command("seed_regions")
 
 
 def reverse_seed_regions(apps, schema_editor):
@@ -117,5 +118,5 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             reset_mainpagelocation_sequence, reverse_code=migrations.RunPython.noop
         ),
-        migrations.RunPython(seed_regions, reverse_code=reverse_seed_regions),
+        # migrations.RunPython(seed_regions, reverse_code=reverse_seed_regions),
     ]

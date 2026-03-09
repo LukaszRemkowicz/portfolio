@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import styles from '../styles/components/TravelHighlightsPage.module.css';
 import { getMediaUrl, ASSETS } from '../api/routes';
 import ImageModal from './common/ImageModal';
+import ImageWithFallback from './common/ImageWithFallback';
 import LoadingScreen from './common/LoadingScreen';
 import StarBackground from './StarBackground';
 import { sanitizeHtml } from '../utils/html';
@@ -199,14 +200,9 @@ const TravelHighlightsPage: React.FC = () => {
               <div key={image.pk} className={styles.viewerContainer}>
                 <div className={styles.viewerFrame}>
                   <div className={styles.imageWrapper}>
-                    <img
-                      src={image.thumbnail_url}
-                      alt={image.name}
-                      data-testid={`gallery-card-${image.slug}`}
-                      className={styles.viewerImage}
-                      onClick={() => handleImageClick(image)}
-                      draggable='false'
-                      onContextMenu={e => e.preventDefault()}
+                    <ViewerImage
+                      image={image}
+                      handleImageClick={handleImageClick}
                     />
                   </div>
 
@@ -235,6 +231,33 @@ const TravelHighlightsPage: React.FC = () => {
       </div>
       <ImageModal image={modalImage} onClose={closeModal} />
     </div>
+  );
+};
+
+const ViewerImage: React.FC<{
+  image: ExtendedAstroImage;
+  handleImageClick: (image: ExtendedAstroImage) => void;
+}> = ({ image, handleImageClick }) => {
+  const [hasError, setHasError] = React.useState(!image.thumbnail_url);
+
+  return (
+    <>
+      <ImageWithFallback
+        src={image.thumbnail_url}
+        alt={image.name}
+        data-testid={`gallery-card-${image.slug}`}
+        className={styles.viewerImage}
+        onClick={() => handleImageClick(image)}
+        draggable='false'
+        onContextMenu={e => e.preventDefault()}
+        onError={() => setHasError(true)}
+      />
+      {hasError && (
+        <div className={styles.placeholderOverlay}>
+          <span className={styles.placeholderText}>[Placeholder]</span>
+        </div>
+      )}
+    </>
   );
 };
 

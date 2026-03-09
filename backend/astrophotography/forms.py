@@ -1,19 +1,24 @@
+from urllib.parse import urlencode
+
 from django_countries import countries
 from parler.forms import TranslatableModelForm
 
 from django import forms
 from django.conf import settings
 from django.contrib.admin.widgets import FilteredSelectMultiple
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
+from common.utils.signing import generate_signed_url_params
 from core.forms import RangeField
 from core.widgets import (
     CountrySelect2Widget,
+    SecureAdminFileWidget,
     ThemedSelect2MultipleWidget,
     ThemedSelect2Widget,
 )
 
-from .models import AstroImage, MeteorsMainPageConfig, Place, Tag
+from .models import AstroImage, MainPageBackgroundImage, MeteorsMainPageConfig, Place, Tag
 
 
 class PlaceAdminForm(TranslatableModelForm):
@@ -145,12 +150,19 @@ class AstroImageForm(TranslatableModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._init_place_queryset()
+        self._init_location_choices()
+        self._init_tags_initial_data()
+        self._init_name_field_validation()
+        self._init_secure_path_widget()
 
-        # Fix duplicate places in dropdown by clearing ordering (which uses properties/joins)
+    def _init_place_queryset(self) -> None:
+        """Fix duplicate places in dropdown by clearing ordering."""
         if "place" in self.fields:
             self.fields["place"].queryset = Place.objects.order_by("pk").distinct()
 
-        # Enhance location (country) labels with codes for better searchability
+    def _init_location_choices(self) -> None:
+        """Enhance location (country) labels with codes for better searchability."""
         location_field = self.fields.get("location")
         if isinstance(location_field, forms.ChoiceField):
             enhanced_choices = [("", "---------")]
@@ -164,15 +176,42 @@ class AstroImageForm(TranslatableModelForm):
                     enhanced_choices.append((code, label))
             location_field.choices = enhanced_choices
 
+    def _init_tags_initial_data(self) -> None:
+        """Set initial tags for existing instances."""
         if self.instance.pk:
             self.fields["tags"].initial = self.instance.tags.all()
 
-        # Enforce 'name' as required for the default language (English)
-        # since we added blank=True to the model to allow clearing translations.
+    def _init_name_field_validation(self) -> None:
+        """Enforce 'name' as required for the default language (English)."""
         current_lang = self.instance.get_current_language()
         default_lang = settings.DEFAULT_APP_LANGUAGE
         if current_lang == default_lang and "name" in self.fields:
             self.fields["name"].required = True
+
+    def _init_secure_path_widget(self) -> None:
+        """Configure the SecureAdminFileWidget with signed URLs."""
+        if self.instance.pk and self.instance.path and "path" in self.fields:
+            url = reverse(
+                "admin-astroimage-secure-media",
+                kwargs={"pk": str(self.instance.pk), "field_name": "path"},
+            )
+            app_label = self.instance._meta.app_label
+            model_name = self.instance._meta.model_name
+            pk = self.instance.pk
+            sig_id = f"admin_media_{app_label}_{model_name}_{pk}_path"
+            params = generate_signed_url_params(sig_id, 3600)
+            full_url = f"{url}?{urlencode(params)}"
+            filename = self.instance.path.name.split("/")[-1]
+
+            self.fields["path"].widget = SecureAdminFileWidget(signed_url=full_url, label=filename)
+
+
+class MainPageBackgroundImageForm(TranslatableModelForm):
+    """Custom form for main page background images."""
+
+    class Meta:
+        model = MainPageBackgroundImage
+        fields = "__all__"
 
 
 class MeteorsMainPageConfigForm(forms.ModelForm):
