@@ -145,7 +145,8 @@ class SecureMediaView(APIView):
         return None
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> HttpResponse:
-        logger.info(f"SecureMediaView.get() hit: {request.get_full_path()}")
+        safe_path = sanitize_for_logging(request.get_full_path())
+        logger.info(f"SecureMediaView.get() hit: {safe_path}")
         identifier = self.get_signature_id()
 
         validation_error_response = self._validate_signature(request, identifier)
