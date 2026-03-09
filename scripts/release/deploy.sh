@@ -224,7 +224,7 @@ fi
 echo "🩺 Health check (Backend)..."
 MAX_RETRIES=30
 for ((i=1; i<=MAX_RETRIES; i++)); do
-  if curl -fsS -o /dev/null "https://${API_DOMAIN}/health" 2>/dev/null; then
+  if curl -fsS -o /dev/null "https://${API_DOMAIN}/v1/health" 2>/dev/null; then
     echo "✅ Backend is healthy"
     break
   fi

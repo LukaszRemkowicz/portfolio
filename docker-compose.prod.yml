@@ -35,10 +35,12 @@ x-backend-defaults: &backend-defaults
     SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN}
     SENTRY_DSN: ${SENTRY_DSN}
     ENVIRONMENT: ${ENVIRONMENT:-production}
+    MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
+    PROJECT_OWNER: ${PROJECT_OWNER}
+    REDIS_PASSWORD: ${REDIS_PASSWORD}
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
     SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
-    PROJECT_OWNER: ${PROJECT_OWNER}
   depends_on:
     db:
       condition: service_healthy
@@ -69,14 +71,15 @@ services:
 
   # ---------- Redis ----------
   redis:
-    image: redis:7-alpine
+    build:
+      context: ./docker/redis
     restart: always
     networks:
       - portfolio_network
     ports:
       - "127.0.0.1:6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping || redis-cli ping"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -105,7 +108,7 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: production-be:${TAG}
+    image: portfolio-backend:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
@@ -155,11 +158,14 @@ services:
       - portfolio-be
       - portfolio-fe
     environment:
-      # Injected by Doppler at runtime — envsubst replaces ${SITE_DOMAIN} in TEMPLATE.conf.template
+      # Injected by Doppler at runtime — envsubst replaces variable placeholders
       SITE_DOMAIN: ${SITE_DOMAIN}
+      SSL_CERT_NAME: ${SSL_CERT_NAME}
+      SSL_KEY_NAME: ${SSL_KEY_NAME}
+      FRONTEND_PORT: ${FRONTEND_PORT:-8080}
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
     volumes:
-      - ./nginx/prod/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
+      - ./nginx/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
       - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
       - ${NGINX_LOG_DIR:-./nginx/logs}:/var/log/nginx
       - prod_media_data:/app/media:ro

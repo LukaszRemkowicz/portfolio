@@ -1,0 +1,25 @@
+{% extends "admin/parler/change_form.html" %}
+{% load i18n %}
+
+{% block object-tools %}
+{{ block.super }}
+{% if sidebar_image_url %}
+<div class="sidebar-image-preview" style="margin-top: 20px;">
+    <h3
+        style="margin-bottom: 10px; font-size: 13px; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+        {% trans "Image Preview" %}
+    </h3>
+
+    <div
+        style="border: 1px solid #ddd; border-radius: 4px; overflow: hidden; background: #fff; text-align: center; padding: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <a href="{{ sidebar_image_url }}" target="_blank" title="{% trans 'View Full Size' %}">
+            <img src="{{ sidebar_thumbnail_url|default:sidebar_image_url }}" alt="{% trans 'Preview' %}"
+                style="display: block; width: 100%; height: auto; max-height: 200px; object-fit: contain;" />
+        </a>
+    </div>
+    <p style="margin-top: 8px; font-size: 11px; color: #888; text-align: center;">
+        <i class="fas fa-search-plus"></i> {% trans "Click to view full size" %}
+    </p>
+</div>
+{% endif %}
+{% endblock %}

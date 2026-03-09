@@ -9,7 +9,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 DOCKER_LOGS_DIR="${DOCKER_LOGS_DIR:?ERROR: DOCKER_LOGS_DIR env var must be set}"
 COMPOSE_FILE="${COMPOSE_FILE:?ERROR: COMPOSE_FILE env var must be set}"
-LOG_TAIL="${LOG_TAIL:-2000}"
+LOG_TAIL="${LOG_TAIL:-5000}"
 BACKEND_SERVICE="${BACKEND_SERVICE:-portfolio-be}"
 FRONTEND_SERVICE="${FRONTEND_SERVICE:-portfolio-fe}"
 
@@ -35,8 +35,8 @@ rm -f "${DOCKER_LOGS_DIR}"/*.log "${DOCKER_LOGS_DIR}/collected_at.txt" 2>/dev/nu
 # ---------------------------------------------------------------------------
 # 3. Collect backend logs
 # ---------------------------------------------------------------------------
-log "Collecting backend logs (${BACKEND_SERVICE}, --tail=${LOG_TAIL}, --since=25h)..."
-docker compose -f "${COMPOSE_FILE}" logs --no-color --tail="${LOG_TAIL}" --since="25h" "${BACKEND_SERVICE}" \
+log "Collecting backend logs (${BACKEND_SERVICE}, --tail=${LOG_TAIL}, --since=5d)..."
+docker compose -f "${COMPOSE_FILE}" logs --no-color --tail="${LOG_TAIL}" --since="5d" "${BACKEND_SERVICE}" \
     > "${DOCKER_LOGS_DIR}/backend.log"
 BACKEND_SIZE=$(wc -c < "${DOCKER_LOGS_DIR}/backend.log")
 log "Backend log: ${BACKEND_SIZE} bytes"
@@ -44,8 +44,8 @@ log "Backend log: ${BACKEND_SIZE} bytes"
 # ---------------------------------------------------------------------------
 # 4. Collect frontend logs
 # ---------------------------------------------------------------------------
-log "Collecting frontend logs (${FRONTEND_SERVICE}, --tail=${LOG_TAIL}, --since=25h)..."
-docker compose -f "${COMPOSE_FILE}" logs --no-color --tail="${LOG_TAIL}" --since="25h" "${FRONTEND_SERVICE}" \
+log "Collecting frontend logs (${FRONTEND_SERVICE}, --tail=${LOG_TAIL}, --since=5d)..."
+docker compose -f "${COMPOSE_FILE}" logs --no-color --tail="${LOG_TAIL}" --since="5d" "${FRONTEND_SERVICE}" \
     > "${DOCKER_LOGS_DIR}/frontend.log"
 FRONTEND_SIZE=$(wc -c < "${DOCKER_LOGS_DIR}/frontend.log")
 log "Frontend log: ${FRONTEND_SIZE} bytes"
