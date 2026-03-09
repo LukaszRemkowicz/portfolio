@@ -25,8 +25,11 @@ class LogAnalysisAdmin(admin.ModelAdmin):
         "execution_time_seconds",
         "gpt_tokens_used",
         "secure_backend_logs",
+        "server_backend_log_path",
         "secure_frontend_logs",
+        "server_frontend_log_path",
         "secure_nginx_logs",
+        "server_nginx_log_path",
     ]
 
     fieldsets = (
@@ -37,8 +40,11 @@ class LogAnalysisAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "secure_backend_logs",
+                    "server_backend_log_path",
                     "secure_frontend_logs",
+                    "server_frontend_log_path",
                     "secure_nginx_logs",
+                    "server_nginx_log_path",
                     "log_size_bytes",
                 ),
                 "classes": ("collapse",),
@@ -122,6 +128,34 @@ class LogAnalysisAdmin(admin.ModelAdmin):
             full_url = f"{url}?{urlencode(params)}"
 
             return format_html('<a href="{}" target="_blank">Download {}</a>', full_url, filename)
+        return "-"
+
+    @admin.display(description="Backend Server Path")
+    def server_backend_log_path(self, obj):
+        if obj.backend_logs:
+            try:
+                # Translate container-internal /app/... to host-relative backend/...
+                return str(obj.backend_logs.path).replace("/app/", "backend/")
+            except NotImplementedError:
+                return "Not supported by storage backend"
+        return "-"
+
+    @admin.display(description="Frontend Server Path")
+    def server_frontend_log_path(self, obj):
+        if obj.frontend_logs:
+            try:
+                return str(obj.frontend_logs.path).replace("/app/", "backend/")
+            except NotImplementedError:
+                return "Not supported by storage backend"
+        return "-"
+
+    @admin.display(description="Nginx Server Path")
+    def server_nginx_log_path(self, obj):
+        if obj.nginx_logs:
+            try:
+                return str(obj.nginx_logs.path).replace("/app/", "backend/")
+            except NotImplementedError:
+                return "Not supported by storage backend"
         return "-"
 
     @admin.display(description="Log Size")

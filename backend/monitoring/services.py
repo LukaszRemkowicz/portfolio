@@ -291,6 +291,7 @@ class LogAnalysisOrchestrator:
         start_time = time.time()
         backend_log_path = None
         frontend_log_path = None
+        nginx_log_path = None
 
         try:
             backend_log_path, frontend_log_path, nginx_log_path, log_size = self._collect_logs()
@@ -317,10 +318,15 @@ class LogAnalysisOrchestrator:
 
         except Exception as error:
             logger.exception("Log analysis failed for date %s", analysis_date)
-            self._store_error(analysis_date, error, start_time)
+            self._store_error(
+                analysis_date,
+                error,
+                start_time,
+                backend_log_path,
+                frontend_log_path,
+                nginx_log_path,
+            )
             raise
-        finally:
-            self._cleanup(backend_log_path, frontend_log_path)
 
     # ---------------------------------------------------------------------------
     # Private helpers
@@ -392,9 +398,17 @@ class LogAnalysisOrchestrator:
         )
         return log_analysis
 
-    def _store_error(self, analysis_date: date, error: Exception, start_time: float) -> None:
+    def _store_error(
+        self,
+        analysis_date: date,
+        error: Exception,
+        start_time: float,
+        backend_path: Optional[str] = None,
+        frontend_path: Optional[str] = None,
+        nginx_path: Optional[str] = None,
+    ) -> None:
         """Persist a CRITICAL error record so the failure is visible in the admin."""
-        self.storage.create_or_replace_analysis(
+        log_analysis = self.storage.create_or_replace_analysis(
             analysis_date=analysis_date,
             backend_logs=None,
             frontend_logs=None,
@@ -403,13 +417,15 @@ class LogAnalysisOrchestrator:
             severity=LogAnalysis.Severity.CRITICAL,
             summary=f"Analysis Failed: {str(error)}",
         )
-
-    def _cleanup(self, backend_path: Optional[str], frontend_path: Optional[str]) -> None:
-        """Remove temporary log files from disk."""
-        if backend_path and os.path.exists(backend_path):
-            os.remove(backend_path)
-        if frontend_path and os.path.exists(frontend_path):
-            os.remove(frontend_path)
+        if (
+            backend_path
+            and frontend_path
+            and os.path.exists(backend_path)
+            and os.path.exists(frontend_path)
+        ):
+            self.storage.attach_log_files(
+                log_analysis, backend_path, frontend_path, analysis_date, nginx_path
+            )
 
     @classmethod
     def create_default(cls) -> "LogAnalysisOrchestrator":
