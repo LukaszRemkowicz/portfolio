@@ -41,6 +41,7 @@ RUN python -m venv $VIRTUAL_ENV && \
 
 # Pre-compile translations at build time for production
 COPY backend/ .
+COPY docker/backend/entrypoint.sh ./entrypoint.sh
 
 # --- Development Stage ---
 FROM base AS development
@@ -62,7 +63,7 @@ RUN poetry install --no-root
 COPY backend/ .
 RUN mkdir -p /app/media /app/staticfiles
 
-COPY backend/entrypoint.sh /entrypoint.sh
+COPY docker/backend/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

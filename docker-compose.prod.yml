@@ -76,6 +76,8 @@ services:
     restart: always
     networks:
       - portfolio_network
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
       - "127.0.0.1:6379:6379"
     healthcheck:

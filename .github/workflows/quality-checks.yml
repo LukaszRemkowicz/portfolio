@@ -2,8 +2,9 @@ name: Quality Checks
 
 on:
   pull_request:
+    branches: [main, dev]
   push:
-    branches: [dev]
+    branches: [main, dev]
 
 env:
   PYTHON_VERSION: "3.13"
@@ -22,7 +23,7 @@ jobs:
   version-check:
     name: Version bump check (dev → main)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref == 'dev'
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
     steps:
       - name: Checkout PR HEAD
         uses: actions/checkout@v4
