@@ -56,6 +56,17 @@
 set -euo pipefail
 
 # ------------------------------------------------------------------
+# Emergency flag: --emergency or EMERGENCY=1
+# Bypasses the dirty working-tree guard for urgent hotfix deploys.
+# Usage: EMERGENCY=1 doppler run -- ./build.sh
+#   or:  doppler run -- ./build.sh --emergency
+# ------------------------------------------------------------------
+EMERGENCY="${EMERGENCY:-0}"
+for arg in "$@"; do
+  [[ "$arg" == "--emergency" ]] && EMERGENCY=1
+done
+
+# ------------------------------------------------------------------
 # Required environment variables (injected by Doppler)
 #
 # These must be provided at runtime (not hardcoded defaults),
@@ -115,9 +126,16 @@ echo "🏷️  Release tag: $TAG"
 
 # Enforce deterministic build
 if [[ -n "$(git status --porcelain)" ]]; then
-  echo "🛑 ERROR: Working tree is dirty. Commit or stash changes first."
-  git status --porcelain
-  exit 1
+  if [[ "${EMERGENCY}" == "1" ]]; then
+    echo "⚠️  WARNING: Working tree is dirty — EMERGENCY bypass active. Proceeding anyway."
+    git status --porcelain
+  else
+    echo "🛑 ERROR: Working tree is dirty. Commit or stash changes first."
+    echo "👉 To bypass in an emergency: EMERGENCY=1 doppler run -- ./build.sh"
+    echo "   or: doppler run -- ./build.sh --emergency"
+    git status --porcelain
+    exit 1
+  fi
 fi
 
 
@@ -139,7 +157,7 @@ docker build \
   -f docker/backend/Dockerfile \
   --target production \
   -t "portfolio-backend:$TAG" \
-  ./backend
+  .
 echo "✅ Backend image built"
 
 # ---------------- Frontend ----------------
