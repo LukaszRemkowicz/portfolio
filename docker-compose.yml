@@ -75,7 +75,7 @@ services:
     command: pytest
 
   db:
-    image: postgres:15
+    image: postgres:18
     restart: unless-stopped
     networks:
       - portfolio_network
@@ -94,7 +94,8 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres18_data:/var/lib/postgresql
+
 
   redis:
     build:
@@ -167,5 +168,6 @@ services:
 
 volumes:
   postgres_data:
+  postgres18_data:
   fe_node_modules:
   local_static_data:
