@@ -92,6 +92,22 @@ doppler run -- ./build.sh
 TAG=v1.2.3 doppler run -- ./build.sh
 ```
 
+### Emergency bypass (dirty working tree)
+If you **must** build from an uncommitted state (e.g., hotfix not yet committed),
+pass the `--emergency` flag or set `EMERGENCY=1`:
+
+```bash
+# via flag
+doppler run -- ./build.sh --emergency
+
+# via env var
+EMERGENCY=1 doppler run -- ./build.sh
+```
+
+> **Warning:** The working tree is still printed in the output so you know exactly
+> what was uncommitted. Use only in genuine emergencies — always follow up with a
+> proper commit + tagged build as soon as possible.
+
 ### Required environment (typical)
 Exact requirements depend on your script, but commonly include:
 
