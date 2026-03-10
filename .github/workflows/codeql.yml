@@ -9,7 +9,7 @@ on:
     - cron: "0 0 * * 0" # Weekly scan on Sundays
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
