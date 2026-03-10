@@ -17,7 +17,7 @@ x-backend-defaults: &backend-defaults
     DB_NAME: ${DB_NAME}
     DB_USER: ${DB_USER}
     DB_PASSWORD: ${DB_PASSWORD}
-    DB_HOST: db
+    DB_HOST: ${DB_HOST:-db}
     DB_PORT: 5432
     ADMIN_DOMAIN: ${ADMIN_DOMAIN}
     API_DOMAIN: ${API_DOMAIN}
@@ -51,7 +51,7 @@ x-backend-defaults: &backend-defaults
 services:
   # ---------- Database ----------
   db:
-    image: postgres:15
+    image: postgres:18
     restart: always
     networks:
       - portfolio_network
@@ -67,7 +67,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres18_data:/var/lib/postgresql
 
   # ---------- Redis ----------
   redis:
@@ -179,6 +179,7 @@ services:
 
 volumes:
   postgres_data:
+  postgres18_data:
   prod_media_data:
   prod_static_data:
   celerybeat_data:

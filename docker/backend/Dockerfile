@@ -23,6 +23,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 WORKDIR /app
+COPY docker/backend/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # --- Builder Stage ---
 FROM base AS builder
@@ -41,7 +43,6 @@ RUN python -m venv $VIRTUAL_ENV && \
 
 # Pre-compile translations at build time for production
 COPY backend/ .
-COPY docker/backend/entrypoint.sh ./entrypoint.sh
 
 # --- Development Stage ---
 FROM base AS development
@@ -63,9 +64,6 @@ RUN poetry install --no-root
 COPY backend/ .
 RUN mkdir -p /app/media /app/staticfiles
 
-COPY docker/backend/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 ENTRYPOINT ["/entrypoint.sh"]
 EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
@@ -80,9 +78,6 @@ RUN mkdir -p /app/media /app/staticfiles && \
 # Copy virtualenv and app (already compiled) with correct ownership
 COPY --from=builder --chown=appuser:appuser $VIRTUAL_ENV $VIRTUAL_ENV
 COPY --from=builder --chown=appuser:appuser /app /app
-
-COPY --from=builder /app/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
 EXPOSE 8000

@@ -95,7 +95,7 @@ validate_dump() {
     # Container-based fallback validation
     if command -v docker >/dev/null 2>&1; then
         echo "⚠️  pg_restore not found locally. Validating using a Postgres container..."
-        docker run --rm -i postgres:15 pg_restore -l >/dev/null 2>&1 < "$file"
+        docker run --rm -i postgres:18 pg_restore -l >/dev/null 2>&1 < "$file"
         return $?
     fi
     echo "⚠️  Could not validate dump header: tools missing."
