@@ -6,6 +6,7 @@ import styles from '../styles/components/App.module.css';
 import { HomeProps } from '../types';
 import ShootingStars from './ShootingStars';
 import { APP_ROUTES } from '../api/constants';
+import ImageWithFallback from './common/ImageWithFallback';
 
 const Home: FC<HomeProps> = ({
   portraitUrl,
@@ -39,7 +40,7 @@ const Home: FC<HomeProps> = ({
 
         {portraitUrl && (
           <div className={styles.portraitWrapper}>
-            <img
+            <ImageWithFallback
               src={portraitUrl}
               alt='Portrait'
               className={styles.heroPortrait}

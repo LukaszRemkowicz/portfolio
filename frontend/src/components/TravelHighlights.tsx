@@ -10,10 +10,12 @@ import { stripHtml } from '../utils/html';
 import { getDateSlug } from '../utils/date';
 import { APP_ROUTES, DEFAULT_TRAVEL_IMAGE } from '../api/constants';
 import { useTranslation } from 'react-i18next';
+import ImageWithFallback from './common/ImageWithFallback';
 
 const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [failedIndices, setFailedIndices] = useState<Set<number>>(new Set());
   const images = location.images.map(img => img.thumbnail_url || '');
 
   useEffect(() => {
@@ -25,8 +27,13 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
     return () => clearInterval(interval);
   }, [images.length]);
 
+  const handleImageError = (index: number) => {
+    setFailedIndices(prev => new Set(prev).add(index));
+  };
+
   // Fallback logic
-  const displayImages = images.length > 0 ? images : [DEFAULT_TRAVEL_IMAGE];
+  const hasNoImages = images.length === 0;
+  const displayImages = !hasNoImages ? images : [DEFAULT_TRAVEL_IMAGE];
 
   // Construct display location: "Place, Country" or just "Country"
   const displayLocation = location.place?.name
@@ -77,15 +84,24 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
       {isNew && <div className={styles.newBadge}>New!</div>}
       <div className={styles.imageWrapper}>
         {displayImages.map((img, index) => (
-          <img
-            key={index}
-            src={img}
-            alt={`Travel highlight from ${location.place?.country}`}
-            className={`${styles.cardImage} ${
-              index === currentIndex ? styles.active : ''
-            }`}
-            loading='lazy'
-          />
+          <div key={index} className={styles.carouselSlide}>
+            <ImageWithFallback
+              src={img}
+              alt={`Travel highlight from ${location.place?.country}`}
+              className={`${styles.cardImage} ${
+                index === currentIndex ? styles.active : ''
+              }`}
+              onError={() => handleImageError(index)}
+              loading='lazy'
+            />
+            {(failedIndices.has(index) || hasNoImages) && (
+              <div
+                className={`${styles.placeholderOverlay} ${index === currentIndex ? styles.active : ''}`}
+              >
+                <span className={styles.placeholderText}>[Placeholder]</span>
+              </div>
+            )}
+          </div>
         ))}
       </div>
       <div className={styles.cardContent}>

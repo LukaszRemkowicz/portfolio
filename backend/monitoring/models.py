@@ -17,6 +17,14 @@ class LogAnalysisQuerySet(models.QuerySet):
         cutoff = date.today() - timedelta(days=days)
         return self.filter(analysis_date__lt=cutoff)
 
+    def last_5_days(self, exclude_date: date | None = None) -> "LogAnalysisQuerySet":
+        """Return analyses for the last 5 days, optionally excluding a specific date."""
+        cutoff = date.today() - timedelta(days=5)
+        qs = self.filter(analysis_date__gte=cutoff).order_by("-analysis_date")
+        if exclude_date is not None:
+            qs = qs.exclude(analysis_date=exclude_date)
+        return qs
+
     def unsent_emails(self) -> "LogAnalysisQuerySet":
         """Filter logs where email hasn't been sent."""
         return self.filter(email_sent=False)
@@ -41,6 +49,10 @@ class LogAnalysisManager(models.Manager):
 
     def older_than(self, days: int) -> LogAnalysisQuerySet:
         return self.get_queryset().older_than(days)
+
+    def last_5_days(self, exclude_date: date | None = None) -> LogAnalysisQuerySet:
+        """Proxy for last_5_days queryset method."""
+        return self.get_queryset().last_5_days(exclude_date=exclude_date)
 
     def unsent_emails(self) -> LogAnalysisQuerySet:
         return self.get_queryset().unsent_emails()
@@ -84,6 +96,10 @@ class LogAnalysis(models.Model):
     severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.INFO)
     key_findings = models.JSONField(default=list, help_text="List of important findings")
     recommendations = models.TextField(blank=True, help_text="GPT recommendations")
+    trend_summary = models.TextField(
+        blank=True,
+        help_text="LLM-generated trend comparison vs. prior days",
+    )
 
     # Execution tracking
     execution_time_seconds = models.FloatField(default=0.0)

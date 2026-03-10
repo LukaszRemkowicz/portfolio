@@ -17,7 +17,7 @@ x-backend-defaults: &backend-defaults
     DB_NAME: ${DB_NAME}
     DB_USER: ${DB_USER}
     DB_PASSWORD: ${DB_PASSWORD}
-    DB_HOST: db
+    DB_HOST: ${DB_HOST:-db}
     DB_PORT: 5432
     ADMIN_DOMAIN: ${ADMIN_DOMAIN}
     API_DOMAIN: ${API_DOMAIN}
@@ -35,10 +35,12 @@ x-backend-defaults: &backend-defaults
     SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN}
     SENTRY_DSN: ${SENTRY_DSN}
     ENVIRONMENT: ${ENVIRONMENT:-production}
+    MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
+    PROJECT_OWNER: ${PROJECT_OWNER}
+    REDIS_PASSWORD: ${REDIS_PASSWORD}
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
     SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
-    PROJECT_OWNER: ${PROJECT_OWNER}
   depends_on:
     db:
       condition: service_healthy
@@ -49,7 +51,7 @@ x-backend-defaults: &backend-defaults
 services:
   # ---------- Database ----------
   db:
-    image: postgres:17
+    image: postgres:18
     restart: always
     networks:
       - portfolio_network
@@ -65,18 +67,21 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres18_data:/var/lib/postgresql
 
   # ---------- Redis ----------
   redis:
-    image: redis:7-alpine
+    build:
+      context: ./docker/redis
     restart: always
     networks:
       - portfolio_network
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
       - "127.0.0.1:6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping || redis-cli ping"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -84,7 +89,7 @@ services:
   # ---------- Celery Worker ----------
   celery-worker:
     <<: *backend-defaults
-    image: production-worker:${TAG}
+    image: ${ENVIRONMENT:-production}-worker:${TAG}
     restart: always
     command: celery -A settings worker -l info -Q celery,monitoring --concurrency=4
     environment:
@@ -104,7 +109,7 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: production-be:${TAG}
+    image: ${ENVIRONMENT:-production}-be:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
@@ -116,7 +121,7 @@ services:
 
   # ---------- Frontend ----------
   fe:
-    image: production-fe:${TAG}
+    image: ${ENVIRONMENT:-production}-fe:${TAG}
     restart: "always"
     networks:
       - portfolio_network
@@ -129,13 +134,13 @@ services:
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
-    image: production-be:${TAG}
+    image: ${ENVIRONMENT:-production}-be:${TAG}
     restart: always
 
   # ---------- Release Job ----------
   release:
     <<: *backend-defaults
-    image: production-be:${TAG}
+    image: ${ENVIRONMENT:-production}-be:${TAG}
     restart: "no"
     command: >
       sh -c "
@@ -155,11 +160,14 @@ services:
       - be
       - fe
     environment:
-      # Injected by Doppler at runtime — envsubst replaces ${SITE_DOMAIN} in TEMPLATE.conf.template
+      # Injected by Doppler at runtime — envsubst replaces variable placeholders
       SITE_DOMAIN: ${SITE_DOMAIN}
+      SSL_CERT_NAME: ${SSL_CERT_NAME}
+      SSL_KEY_NAME: ${SSL_KEY_NAME}
+      FRONTEND_PORT: ${FRONTEND_PORT:-8080}
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
     volumes:
-      - ./nginx/prod/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
+      - ./nginx/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
       - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
       - ${NGINX_LOG_DIR:-./nginx/logs}:/var/log/nginx
       - prod_media_data:/app/media:ro
@@ -171,6 +179,7 @@ services:
 
 volumes:
   postgres_data:
+  postgres18_data:
   prod_media_data:
   prod_static_data:
   celerybeat_data:

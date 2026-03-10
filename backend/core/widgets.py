@@ -1,6 +1,7 @@
 from django_select2.forms import Select2MultipleWidget, Select2Widget
 
 from django import forms
+from django.contrib.admin.widgets import AdminFileWidget
 from django.utils.translation import gettext_lazy as _
 
 
@@ -162,3 +163,32 @@ class ThemedRangeWidget(RangeWidget):
     @property
     def media(self):
         return super().media + forms.Media(css={"all": ("core/css/admin_date_clean.css",)})
+
+
+class SecureAdminFileWidget(AdminFileWidget):
+    """
+    A variation of AdminFileWidget that allows overriding the 'Currently' link
+    with a secure, signed URL and a friendly label.
+    """
+
+    template_name = "core/widgets/secure_admin_file_input.html"
+
+    def __init__(self, *args, **kwargs):
+        self.signed_url = kwargs.pop("signed_url", None)
+        self.label = kwargs.pop("label", _("View Secure Image"))
+        super().__init__(*args, **kwargs)
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        if self.signed_url:
+            # Mock object to satisfy the template's need for .url and string representation
+            class SecureLink:
+                def __init__(self, url, label):
+                    self.url = url
+                    self.label = label
+
+                def __str__(self):
+                    return str(self.label)
+
+            context["widget"]["value"] = SecureLink(self.signed_url, self.label)
+        return context

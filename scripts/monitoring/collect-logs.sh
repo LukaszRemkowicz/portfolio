@@ -9,7 +9,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 DOCKER_LOGS_DIR="${DOCKER_LOGS_DIR:?ERROR: DOCKER_LOGS_DIR env var must be set}"
 COMPOSE_FILE="${COMPOSE_FILE:?ERROR: COMPOSE_FILE env var must be set}"
-LOG_TAIL="${LOG_TAIL:-2000}"
+LOG_TAIL="${LOG_TAIL:-5000}"
 BACKEND_SERVICE="${BACKEND_SERVICE:-portfolio-be}"
 FRONTEND_SERVICE="${FRONTEND_SERVICE:-portfolio-fe}"
 
@@ -35,24 +35,34 @@ rm -f "${DOCKER_LOGS_DIR}"/*.log "${DOCKER_LOGS_DIR}/collected_at.txt" 2>/dev/nu
 # ---------------------------------------------------------------------------
 # 3. Collect backend logs
 # ---------------------------------------------------------------------------
-log "Collecting backend logs (${BACKEND_SERVICE}, --tail=${LOG_TAIL}, --since=25h)..."
-docker compose -f "${COMPOSE_FILE}" logs --no-color --tail="${LOG_TAIL}" --since="25h" "${BACKEND_SERVICE}" \
-    > "${DOCKER_LOGS_DIR}/backend.log"
-BACKEND_SIZE=$(wc -c < "${DOCKER_LOGS_DIR}/backend.log")
+log "Collecting backend logs (portfolio-portfolio-be-1, --tail=${LOG_TAIL}, --since=120h)..."
+# Use 'docker logs' directly to avoid 'docker compose' warnings about missing env vars
+docker logs --tail="${LOG_TAIL}" --since="120h" "portfolio-portfolio-be-1" \
+    > "${DOCKER_LOGS_DIR}/backend.log" 2>/dev/null || true
+BACKEND_SIZE=$(wc -c < "${DOCKER_LOGS_DIR}/backend.log" 2>/dev/null || echo 0)
 log "Backend log: ${BACKEND_SIZE} bytes"
 
 # ---------------------------------------------------------------------------
 # 4. Collect frontend logs
 # ---------------------------------------------------------------------------
-log "Collecting frontend logs (${FRONTEND_SERVICE}, --tail=${LOG_TAIL}, --since=25h)..."
-docker compose -f "${COMPOSE_FILE}" logs --no-color --tail="${LOG_TAIL}" --since="25h" "${FRONTEND_SERVICE}" \
-    > "${DOCKER_LOGS_DIR}/frontend.log"
-FRONTEND_SIZE=$(wc -c < "${DOCKER_LOGS_DIR}/frontend.log")
+log "Collecting frontend logs (portfolio-portfolio-fe-1, --tail=${LOG_TAIL}, --since=120h)..."
+docker logs --tail="${LOG_TAIL}" --since="120h" "portfolio-portfolio-fe-1" \
+    > "${DOCKER_LOGS_DIR}/frontend.log" 2>/dev/null || true
+FRONTEND_SIZE=$(wc -c < "${DOCKER_LOGS_DIR}/frontend.log" 2>/dev/null || echo 0)
 log "Frontend log: ${FRONTEND_SIZE} bytes"
 
 # ---------------------------------------------------------------------------
-# 5. Write metadata timestamp (Celery uses this to detect stale data)
+# 5. Collect nginx logs
+# ---------------------------------------------------------------------------
+log "Collecting nginx logs (portfolio-portfolio-nginx-1, --tail=${LOG_TAIL}, --since=120h)..."
+docker logs --tail="${LOG_TAIL}" --since="120h" "portfolio-portfolio-nginx-1" \
+    > "${DOCKER_LOGS_DIR}/nginx.log" 2>/dev/null || true
+NGINX_SIZE=$(wc -c < "${DOCKER_LOGS_DIR}/nginx.log" 2>/dev/null || echo 0)
+log "Nginx log: ${NGINX_SIZE} bytes"
+
+# ---------------------------------------------------------------------------
+# 6. Write metadata timestamp (Celery uses this to detect stale data)
 # ---------------------------------------------------------------------------
 date -u +"%Y-%m-%dT%H:%M:%SZ" > "${DOCKER_LOGS_DIR}/collected_at.txt"
 
-log "Done. Total collected: $((BACKEND_SIZE + FRONTEND_SIZE)) bytes"
+log "Done. Total collected: $((BACKEND_SIZE + FRONTEND_SIZE + NGINX_SIZE)) bytes"

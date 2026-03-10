@@ -38,21 +38,14 @@
 
 set -euo pipefail
 
-# ------------------------------------------------------------------
-# Required environment variables (injected by Doppler)
-#
-# These must be provided at runtime (not hardcoded defaults),
-# to avoid accidentally building a production image with "local" config.
-#
-# Usage example:
-#   doppler run -- ./build.sh
-# ------------------------------------------------------------------
-: "${API_DOMAIN:?API_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
-: "${GA_TRACKING_ID:?GA_TRACKING_ID is required (inject via: doppler run -- ./build.sh)}"
-: "${SITE_DOMAIN:?SITE_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
-: "${SENTRY_DSN_FE:?SENTRY_DSN_FE is required (inject via: doppler run -- ./build.sh)}"
-: "${ALLOWED_HOSTS:?ALLOWED_HOSTS is required (inject via: doppler run -- ./build.sh)}"
-: "${ENVIRONMENT:?ENVIRONMENT is required (inject via: doppler run -- ./build.sh)}"
+EMERGENCY="${EMERGENCY:-0}"
+CACHE_FLAG=""
+for arg in "$@"; do
+  case "${arg}" in
+    --emergency) EMERGENCY=1 ;;
+    --no-cache)  CACHE_FLAG="--no-cache"; echo "♻️  No-cache mode enabled (fresh build)" ;;
+  esac
+done
 
 # ------------------------------------------------------------------
 # Setup & Context
@@ -62,24 +55,24 @@ source "${SCRIPT_DIR}/utils.sh"
 
 PROJECT_DIR="$(get_project_dir)"
 
+# ------------------------------------------------------------------
+# Required environment variables (injected by Doppler)
+# ------------------------------------------------------------------
+: "${API_DOMAIN:?API_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
+: "${GA_TRACKING_ID:?GA_TRACKING_ID is required (inject via: doppler run -- ./build.sh)}"
+: "${SITE_DOMAIN:?SITE_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
+: "${SENTRY_DSN_FE:?SENTRY_DSN_FE is required (inject via: doppler run -- ./build.sh)}"
+: "${ALLOWED_HOSTS:?ALLOWED_HOSTS is required (inject via: doppler run -- ./build.sh)}"
+: "${ENVIRONMENT:?ENVIRONMENT is required (inject via: doppler run -- ./build.sh)}"
+: "${PROJECT_OWNER:?PROJECT_OWNER is required (inject via: doppler run -- ./build.sh)}"
+: "${FRONTEND_PORT:=8080}"
+
 # Dynamic validation: If the config file exists, the environment is valid.
-# This avoids hardcoding environment names and allows easy scaling (stage, prod, qa, etc).
 if [[ ! -f "${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml" ]]; then
   echo "❌ ERROR: Configuration for environment '$ENVIRONMENT' not found." >&2
   echo "📂 Expected: docker-compose.${ENVIRONMENT}.yml" >&2
   exit 1
 fi
-
-CACHE_FLAG=""
-for arg in "$@"; do
-  case "${arg}" in
-    --no-cache) CACHE_FLAG="--no-cache"; echo "♻️  No-cache mode enabled (performing a fresh build)" ;;
-    *)
-      # We allow unknown tags to pass for now, or you can strictly fail.
-      # But usually build.sh is called like: ./build.sh --no-cache
-      ;;
-  esac
-done
 
 echo "⚙️  Target ENVIRONMENT: ${ENVIRONMENT}"
 echo "⚙️  Target API_DOMAIN: ${API_DOMAIN}"
@@ -107,14 +100,19 @@ export TAG
 
 echo "🏷️  Release tag: $TAG"
 
-
-# TODO uncomment this before pushing to server
 # Enforce deterministic build
-# if [[ -n "$(git status --porcelain)" ]]; then
-#   echo "🛑 ERROR: Working tree is dirty. Commit or stash changes first."
-#   git status --porcelain
-#   exit 1
-# fi
+if [[ -n "$(git status --porcelain)" ]]; then
+  if [[ "${EMERGENCY}" == "1" ]]; then
+    echo "⚠️  WARNING: Working tree is dirty — EMERGENCY bypass active. Proceeding anyway."
+    git status --porcelain
+  else
+    echo "🛑 ERROR: Working tree is dirty. Commit or stash changes first."
+    echo "👉 To bypass in an emergency: EMERGENCY=1 doppler run -- ./build.sh"
+    echo "   or: doppler run -- ./build.sh --emergency"
+    git status --porcelain
+    exit 1
+  fi
+fi
 
 
 # ------------------------------------------------------------------
@@ -130,10 +128,11 @@ echo "🏗️  Starting build..."
 docker build \
   ${CACHE_FLAG} \
   --pull \
+  -f docker/backend/Dockerfile \
   --target production \
   -t "${ENVIRONMENT}-be:${TAG}" \
   -t "${ENVIRONMENT}-worker:${TAG}" \
-  ./backend
+  .
 echo "✅ Backend & Worker images built"
 
 # ---------------- Frontend ----------------
@@ -141,14 +140,16 @@ echo "🌐 Building frontend image..."
 docker build \
   ${CACHE_FLAG} \
   --pull \
+  -f docker/frontend/Dockerfile \
   --target prod \
   --build-arg "SITE_DOMAIN=${SITE_DOMAIN}" \
   --build-arg "API_URL=https://${API_DOMAIN}" \
   --build-arg "GA_TRACKING_ID=${GA_TRACKING_ID}" \
   --build-arg "SENTRY_DSN_FE=${SENTRY_DSN_FE}" \
-  --build-arg "ENVIRONMENT=${ENVIRONMENT}" \
+  --build-arg "FRONTEND_PORT=${FRONTEND_PORT}" \
+  --build-arg "PROJECT_OWNER=${PROJECT_OWNER}" \
   -t "${ENVIRONMENT}-fe:${TAG}" \
-  ./frontend
+  .
 echo "✅ Frontend image built"
 
 
@@ -213,7 +214,7 @@ for repo in "${REPOS[@]}"; do
     [[ -n "$line" ]] && tags+=("$line")
   done < <(
     docker images "$repo" --format '{{.Tag}}' \
-    | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+" \
+    | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+" \
     | sort -V
   )
   # -----------------------------------------------

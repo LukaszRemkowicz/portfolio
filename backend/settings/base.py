@@ -29,6 +29,9 @@ SENTRY_DSN = env("SENTRY_DSN", default="")
 ENABLE_SENTRY = env.bool("ENABLE_SENTRY", default=True)
 ENVIRONMENT = env("ENVIRONMENT", default="development")
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = env.bool("DEBUG", default=cast(Any, False))
+
 if SENTRY_DSN and ENABLE_SENTRY:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
@@ -41,7 +44,7 @@ if SENTRY_DSN and ENABLE_SENTRY:
         # We recommend adjusting this value in production.
         traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
         # If you wish to associate users to errors (recommended)
-        send_default_pii=True,
+        send_default_pii=DEBUG,
         environment=ENVIRONMENT,
     )
 
@@ -51,17 +54,15 @@ if SENTRY_DSN and ENABLE_SENTRY:
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env("SECRET_KEY", default=cast(Any, "django-insecure-development-key"))
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool("DEBUG", default=cast(Any, False))
 
 # Security Hardening
 # https://docs.djangoproject.com/en/5.2/ref/settings/#security
-SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=not DEBUG)
 SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
 
-SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True)
-SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=True)
+SECURE_HSTS_SECONDS = env.bool("SECURE_HSTS_SECONDS", default=31536000 if not DEBUG else 0)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=not DEBUG)
+SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=not DEBUG)
 # These headers are set by Nginx — disable Django's duplicates where possible
 SECURE_CONTENT_TYPE_NOSNIFF = False
 SECURE_BROWSER_XSS_FILTER = False
@@ -304,15 +305,18 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Cache Configuration (Redist for production-grade caching)
+_redis_pwd = env.str("REDIS_PASSWORD", default="")
+_redis_auth = f":{_redis_pwd}@" if _redis_pwd else ""
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": env.str("REDIS_URL", default="redis://redis:6379/1"),
+        "LOCATION": env.str("REDIS_URL", default=f"redis://{_redis_auth}redis:6379/1"),
         "TIMEOUT": 3600,
     },
     "select2": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": env.str("REDIS_URL", default="redis://redis:6379/2"),
+        "LOCATION": env.str("REDIS_URL", default=f"redis://{_redis_auth}redis:6379/2"),
         "TIMEOUT": 3600,
     },
 }
@@ -599,8 +603,11 @@ CELERY_BEAT_SCHEDULE = {
 # ===========================
 
 # Redis connection for Celery broker and result backend
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://redis:6379/0")
-CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://redis:6379/0")
+_celery_redis_auth = f":{_redis_pwd}@" if _redis_pwd else ""
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=f"redis://{_celery_redis_auth}redis:6379/0")
+CELERY_RESULT_BACKEND = env(
+    "CELERY_RESULT_BACKEND", default=f"redis://{_celery_redis_auth}redis:6379/0"
+)
 
 # Celery task settings
 CELERY_ACCEPT_CONTENT = ["json"]

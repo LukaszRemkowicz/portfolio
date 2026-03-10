@@ -15,8 +15,8 @@ export default defineConfig({
         'logo512.png',
       ],
       manifest: {
-        short_name: 'Łukasz Remkowicz',
-        name: 'Łukasz Remkowicz - Portfolio & Astrophotography',
+        short_name: process.env.PROJECT_OWNER,
+        name: `${process.env.PROJECT_OWNER} - Portfolio & Astrophotography`,
         icons: [
           {
             src: 'favicon.ico',
@@ -48,7 +48,7 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 3000,
+    port: Number(process.env.FRONTEND_PORT) || 8080,
     allowedHosts: process.env.ALLOWED_HOSTS
       ? process.env.ALLOWED_HOSTS.split(',').map(h => h.trim())
       : ['portfolio.local', 'localhost'],
@@ -67,7 +67,7 @@ export default defineConfig({
   },
   preview: {
     host: '0.0.0.0',
-    port: 3000,
+    port: Number(process.env.FRONTEND_PORT) || 8080,
   },
   build: {
     outDir: 'dist',

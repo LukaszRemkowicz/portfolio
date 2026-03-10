@@ -2,37 +2,45 @@
 
 This repository uses shell scripts to manage deployments for both **Staging** and **Production** environments on a single VPS.
 
-- `build.sh` → **builds Docker images** with environment prefixes (e.g. `stage-v1.0.0`).
+- `build.sh` → **builds Docker images** with environment prefixes and service suffixes (e.g. `production-be:v1.0.0`).
 - `release.sh` → runs **one-shot release tasks** (migrations, collectstatic, etc.) targeting the correct environment services.
 - `deploy.sh` → performs the **deployment switch** and updates environment-specific rollback state.
 - `utils.sh` → shared utility functions used by the scripts above (e.g., directory resolution, state management).
 
 ---
 
-## Environment Variable: `ENVIRONMENT`
+## Environment Variables
 
-These scripts **require** the `ENVIRONMENT` variable to be set (typically via Doppler). This determines:
-1. **Image Tags**: Images are tagged as `${ENVIRONMENT}-${TAG}` (e.g. `stage-v1.2.3` or `production-v1.2.3`).
-2. **Service Mapping**: Scripts automatically target `stage-db`/`stage-redis` for staging, and `db`/`redis` for production.
-3. **Rollback State**: State is tracked separately for each environment.
+These scripts **require** several variables to be set (typically via Doppler).
+
+### Mandatory
+1. **`ENVIRONMENT`**: Determines tags and isolated state (e.g., `production`, `stg`).
+2. **`TAG`**: The git tag or version (e.g., `v1.2.3`).
+3. **`PROJECT_OWNER`**: Injected into frontend metadata.
+4. **`SITE_DOMAIN`** & **`API_DOMAIN`**: Used for Nginx templates and frontend builds.
+5. **`ALLOWED_HOSTS`**: Django security setting.
+
+### Optional
+- `FRONTEND_PORT`: Defaults to `8080`.
+- `DEBUG`: Set to `true` for staging logs.
 
 ---
 
 ## 1. Staging Workflow
 
-Used for testing on the staging stack (`docker-compose.stage.yml`).
+Used for testing on the staging stack (`docker-compose.stg.yml`).
 
 ```bash
 # 1. Build staging images
-# Tags as portfolio-backend:stage-v1.0.0-test, Tag is necessary to not overwrite production images. Also Staging wont be a strict connected to git tags.
-TAG=v1.0.0-test doppler run --config stg -- ./scripts/release/build.sh
+# Tags as stg-be:v1.0.0-test, stg-fe:v1.0.0-test, etc.
+TAG=v1.0.0-test ENVIRONMENT=stg doppler run -- ./scripts/release/build.sh
 
 # 2. Run release tasks (migrations/static)
-# Targets stage-db, stage-redis, stage-release
-TAG=v1.0.0-test COMPOSE_FILE=docker-compose.stage.yml DEBUG=true doppler run --config stg -- ./scripts/release/release.sh
+# Targets db, redis, release inside the stg project
+TAG=v1.0.0-test ENVIRONMENT=stg COMPOSE_FILE=docker-compose.stg.yml DEBUG=true doppler run -- ./scripts/release/release.sh
 
 # 3. Deploy (switches containers, runs health checks)
-TAG=v1.0.0-test COMPOSE_FILE=docker-compose.stage.yml DEBUG=true doppler run --config stg -- ./scripts/release/deploy.sh
+TAG=v1.0.0-test ENVIRONMENT=stg COMPOSE_FILE=docker-compose.stg.yml DEBUG=true doppler run -- ./scripts/release/deploy.sh
 ```
 
 ---
@@ -43,15 +51,13 @@ Used for the live stack (`docker-compose.prod.yml`).
 
 ```bash
 # 1. Build production images
-# Tags as portfolio-backend:production-v1.2.0. Tag is optional.
-TAG=v1.2.0 doppler run --config prd -- ./scripts/release/build.sh
+TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./scripts/release/build.sh
 
 # 2. Run release tasks
-# Targets db, redis, release
-TAG=v1.2.0 doppler run --config prd -- ./scripts/release/release.sh
+TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./scripts/release/release.sh
 
 # 3. Deploy
-TAG=v1.2.0 doppler run --config prd -- ./scripts/release/deploy.sh
+TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./scripts/release/deploy.sh
 ```
 
 ---
@@ -59,37 +65,21 @@ TAG=v1.2.0 doppler run --config prd -- ./scripts/release/deploy.sh
 ## Shared Conventions
 
 ### Tag Discipline
-- Deploy **only** tagged releases (example: `v1.2.3`).
-- The scripts enforce that the exact `${ENVIRONMENT}-${TAG}` image exists locally before proceeding.
+- Deploy **only** versioned releases (e.g., `v1.2.3` or `1.2.3`).
+- The scripts enforce that image exists locally before proceeding.
 
-### Compose File Overrides
-- `build.sh`: Automatically detects the environment.
-- `release.sh` / `deploy.sh`: Defaults to `docker-compose.prod.yml`. Always override for staging:
-  `COMPOSE_FILE=docker-compose.stage.yml`
-
-### Project Name
-The scripts default to `COMPOSE_PROJECT_NAME=landingpage` (matching the local repository folder).
-
-### Locking
-- These scripts use `flock` to prevent concurrent deployments.
-- **macOS Compatibility**: If `flock` is missing (common on macOS), the scripts will print a warning and proceed without a lock. This is intended for local testing only.
-
----
-
-## Rollback (Staging or Production)
-
-1. Check current/previous tags in `/var/lib/portfolio/<environment>/` or your local state dir.
-2. Re-deploy the previous tag:
-   ```bash
-   TAG="v1.1.0" ENVIRONMENT="production" doppler run -- ./scripts/release/deploy.sh
-   ```
+### Image Naming
+Images are tagged as follows:
+- Backend: `${ENVIRONMENT}-be:${TAG}`
+- Frontend: `${ENVIRONMENT}-fe:${TAG}`
+- Worker: `${ENVIRONMENT}-worker:${TAG}`
 
 ---
 
 ## Infrastructure
 
-- **PostgreSQL**: Version **17** (LTS) is used across all environments.
-- **Redis**: Version **7-alpine** is used across all environments.
+- **PostgreSQL**: Version **18** is used across all environments.
+- **Redis**: Version **alpine** (7.x) is used across all environments.
 
 ---
 

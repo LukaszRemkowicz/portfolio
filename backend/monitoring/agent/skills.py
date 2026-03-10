@@ -14,6 +14,7 @@ Usage:
 from monitoring.agent.context import (
     APPLICATION_MONITORING_CONTEXT,
     BOT_DETECTION_CONTEXT,
+    HISTORICAL_CONTEXT,
     NORMAL_PATTERNS_CONTEXT,
     OWASP_SECURITY_CONTEXT,
     PROJECT_CONTEXT,
@@ -23,7 +24,7 @@ from monitoring.agent.context import (
 )
 
 
-def build_monitoring_system_prompt_with_owasp() -> str:
+def build_monitoring_system_prompt_with_owasp(historical_context: str = "") -> str:
     """
     Full production prompt: project context + application monitoring + bot detection
     + OWASP security expertise.
@@ -31,6 +32,9 @@ def build_monitoring_system_prompt_with_owasp() -> str:
     Use for: nightly production log analysis where security awareness is critical.
     Cost: ~2.5k tokens for the system prompt.
     """
+    historical_section = (
+        HISTORICAL_CONTEXT.format(historical_data=historical_context) if historical_context else ""
+    )
     return (
         PROJECT_CONTEXT
         + NORMAL_PATTERNS_CONTEXT
@@ -39,11 +43,12 @@ def build_monitoring_system_prompt_with_owasp() -> str:
         + OWASP_SECURITY_CONTEXT
         + SEVERITY_GUIDE
         + RECOMMENDATIONS_GUIDE
+        + historical_section
         + RESPONSE_FORMAT
     )
 
 
-def build_monitoring_system_prompt_basic() -> str:
+def build_monitoring_system_prompt_basic(historical_context: str = "") -> str:
     """
     Lightweight prompt: project context + application monitoring only.
     No OWASP security expertise or bot detection.
@@ -52,11 +57,15 @@ def build_monitoring_system_prompt_basic() -> str:
     security analysis is not needed and cost matters.
     Cost: ~1k tokens for the system prompt.
     """
+    historical_section = (
+        HISTORICAL_CONTEXT.format(historical_data=historical_context) if historical_context else ""
+    )
     return (
         PROJECT_CONTEXT
         + NORMAL_PATTERNS_CONTEXT
         + APPLICATION_MONITORING_CONTEXT
         + SEVERITY_GUIDE
         + RECOMMENDATIONS_GUIDE
+        + historical_section
         + RESPONSE_FORMAT
     )

@@ -118,6 +118,7 @@ class LogAnalyzer:
         frontend_log_path: str,
         nginx_log_path: Optional[str] = None,
         collected_at: str = "",
+        historical_context: str = "",
     ) -> dict:
         """
         Analyze logs using LLM.
@@ -127,16 +128,21 @@ class LogAnalyzer:
             frontend_log_path: Path to frontend log file
             nginx_log_path: Optional path to nginx log file
             collected_at: ISO timestamp string from collected_at.txt
+            historical_context: Pre-formatted string from HistoricalContextBuilder
 
         Returns:
             Analysis result dict with keys: summary, severity, key_findings,
-            recommendations, gpt_tokens_used
+            recommendations, trend_summary, gpt_tokens_used
 
         Raises:
             ValueError: If analysis returns empty result
         """
         result = self.agent.analyze_logs_from_files(
-            backend_log_path, frontend_log_path, nginx_log_path, collected_at
+            backend_log_path,
+            frontend_log_path,
+            nginx_log_path,
+            collected_at,
+            historical_context=historical_context,
         )
 
         if not result:
@@ -228,6 +234,31 @@ class LogCleanupService:
         return deleted_count
 
 
+class HistoricalContextBuilder:
+    """
+    Formats LogAnalysis DB records into a prompt-ready markdown block for LLM context.
+
+    Responsibility: serialise raw queryset data into the text the LLM can understand.
+    Data access is delegated to LogAnalysis.objects.last_5_days().
+    """
+
+    @classmethod
+    def build(cls, exclude_date: date | None = None) -> str:
+        """Return formatted markdown block of last-5-day analyses, or '' if none exist."""
+        records = LogAnalysis.objects.last_5_days(exclude_date=exclude_date)
+        if not records.exists():
+            return ""
+        lines = []
+        for record in records:
+            lines.append(
+                f"## {record.analysis_date} \u2014 Severity: {record.severity}\n"
+                f"Summary: {record.summary}\n"
+                f"Key findings: {record.key_findings}\n"
+                f"Recommendations: {record.recommendations}"
+            )
+        return "\n\n".join(lines)
+
+
 class LogAnalysisOrchestrator:
     """Orchestrates the log analysis workflow."""
 
@@ -260,43 +291,23 @@ class LogAnalysisOrchestrator:
         start_time = time.time()
         backend_log_path = None
         frontend_log_path = None
+        nginx_log_path = None
 
         try:
-            # 1. Collect logs
-            backend_log_path, frontend_log_path, nginx_log_path = self.collector.collect_logs()
-            log_size = (
-                os.path.getsize(backend_log_path)
-                + os.path.getsize(frontend_log_path)
-                + (os.path.getsize(nginx_log_path) if nginx_log_path else 0)
+            backend_log_path, frontend_log_path, nginx_log_path, log_size = self._collect_logs()
+            historical_context = self._build_historical_context(analysis_date)
+            analysis_result = self._run_analysis(
+                backend_log_path, frontend_log_path, nginx_log_path, historical_context
             )
-
-            if log_size == 0:
-                logger.warning("No logs collected from Docker containers")
-
-            # 2. Collect collected_at metadata and analyze with LLM
-            collected_at = self.collector.get_collected_at()
-            analysis_result = self.analyzer.analyze_logs_from_files(
-                backend_log_path, frontend_log_path, nginx_log_path, collected_at
+            log_analysis = self._store_results(
+                analysis_date,
+                log_size,
+                analysis_result,
+                start_time,
+                backend_log_path,
+                frontend_log_path,
+                nginx_log_path,
             )
-
-            # 3. Store in database
-            log_analysis = self.storage.create_or_replace_analysis(
-                analysis_date=analysis_date,
-                log_size_bytes=log_size,
-                summary=analysis_result.get("summary", "No summary provided"),
-                severity=analysis_result.get("severity", "INFO"),
-                key_findings=analysis_result.get("key_findings", []),
-                recommendations=analysis_result.get("recommendations", ""),
-                execution_time_seconds=time.time() - start_time,
-                gpt_tokens_used=analysis_result.get("gpt_tokens_used", 0),
-                gpt_cost_usd=analysis_result.get("gpt_cost_usd", 0.0),
-            )
-
-            # 4. Attach log files
-            self.storage.attach_log_files(
-                log_analysis, backend_log_path, frontend_log_path, analysis_date, nginx_log_path
-            )
-
             logger.info(
                 "Log analysis complete for %s: record_id=%s, severity=%s",
                 analysis_date,
@@ -305,25 +316,116 @@ class LogAnalysisOrchestrator:
             )
             return log_analysis
 
-        except Exception as e:
+        except Exception as error:
             logger.exception("Log analysis failed for date %s", analysis_date)
-            # Store error
-            self.storage.create_or_replace_analysis(
-                analysis_date=analysis_date,
-                backend_logs=None,
-                frontend_logs=None,
-                error_message=str(e),
-                execution_time_seconds=time.time() - start_time,
-                severity=LogAnalysis.Severity.CRITICAL,
-                summary=f"Analysis Failed: {str(e)}",
+            self._store_error(
+                analysis_date,
+                error,
+                start_time,
+                backend_log_path,
+                frontend_log_path,
+                nginx_log_path,
             )
             raise
-        finally:
-            # Cleanup temp files
-            if backend_log_path and os.path.exists(backend_log_path):
-                os.remove(backend_log_path)
-            if frontend_log_path and os.path.exists(frontend_log_path):
-                os.remove(frontend_log_path)
+
+    # ---------------------------------------------------------------------------
+    # Private helpers
+    # ---------------------------------------------------------------------------
+
+    def _collect_logs(self) -> tuple[str, str, Optional[str], int]:
+        """Collect log files and return (backend_path, frontend_path, nginx_path, total_bytes)."""
+        backend_path, frontend_path, nginx_path = self.collector.collect_logs()
+        log_size = (
+            os.path.getsize(backend_path)
+            + os.path.getsize(frontend_path)
+            + (os.path.getsize(nginx_path) if nginx_path else 0)
+        )
+        if log_size == 0:
+            logger.warning("No logs collected from Docker containers")
+        return backend_path, frontend_path, nginx_path, log_size
+
+    def _build_historical_context(self, analysis_date: date) -> str:
+        """Fetch and format prior DB analyses into an LLM-ready context string."""
+        historical_context = HistoricalContextBuilder.build(exclude_date=analysis_date)
+        if historical_context:
+            logger.info("Historical context loaded (%d chars)", len(historical_context))
+        else:
+            logger.info("No historical context available (first run or all records older than 5d)")
+        return historical_context
+
+    def _run_analysis(
+        self,
+        backend_path: str,
+        frontend_path: str,
+        nginx_path: Optional[str],
+        historical_context: str,
+    ) -> dict:
+        """Run LLM analysis and return the result dict."""
+        collected_at = self.collector.get_collected_at()
+        return self.analyzer.analyze_logs_from_files(
+            backend_path,
+            frontend_path,
+            nginx_path,
+            collected_at,
+            historical_context=historical_context,
+        )
+
+    def _store_results(
+        self,
+        analysis_date: date,
+        log_size: int,
+        analysis_result: dict,
+        start_time: float,
+        backend_path: str,
+        frontend_path: str,
+        nginx_path: Optional[str],
+    ) -> LogAnalysis:
+        """Persist analysis results and attach log files."""
+        log_analysis = self.storage.create_or_replace_analysis(
+            analysis_date=analysis_date,
+            log_size_bytes=log_size,
+            summary=analysis_result.get("summary", "No summary provided"),
+            severity=analysis_result.get("severity", "INFO"),
+            key_findings=analysis_result.get("key_findings", []),
+            recommendations=analysis_result.get("recommendations", ""),
+            trend_summary=analysis_result.get("trend_summary", ""),
+            execution_time_seconds=time.time() - start_time,
+            gpt_tokens_used=analysis_result.get("gpt_tokens_used", 0),
+            gpt_cost_usd=analysis_result.get("gpt_cost_usd", 0.0),
+        )
+        self.storage.attach_log_files(
+            log_analysis, backend_path, frontend_path, analysis_date, nginx_path
+        )
+        return log_analysis
+
+    def _store_error(
+        self,
+        analysis_date: date,
+        error: Exception,
+        start_time: float,
+        backend_path: Optional[str] = None,
+        frontend_path: Optional[str] = None,
+        nginx_path: Optional[str] = None,
+    ) -> None:
+        """Persist a CRITICAL error record so the failure is visible in the admin."""
+        log_analysis = self.storage.create_or_replace_analysis(
+            analysis_date=analysis_date,
+            backend_logs=None,
+            frontend_logs=None,
+            error_message=str(error),
+            execution_time_seconds=time.time() - start_time,
+            severity=LogAnalysis.Severity.CRITICAL,
+            summary=f"Analysis Failed: {str(error)}",
+        )
+        if (
+            backend_path
+            and frontend_path
+            and os.path.exists(backend_path)
+            and os.path.exists(frontend_path)
+        ):
+            self.storage.attach_log_files(
+                log_analysis, backend_path, frontend_path, analysis_date, nginx_path
+            )
 
     @classmethod
     def create_default(cls) -> "LogAnalysisOrchestrator":

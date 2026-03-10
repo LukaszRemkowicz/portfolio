@@ -32,8 +32,8 @@ if [ -z "${POSTGRES_IMAGE:-}" ]; then
 fi
 
 if [ -z "${POSTGRES_IMAGE:-}" ]; then
-    echo "[WARN] Could not detect image from config. Falling back to postgres:15-alpine"
-    POSTGRES_IMAGE="postgres:15-alpine"
+    echo "[WARN] Could not detect image from config. Falling back to postgres:18"
+    POSTGRES_IMAGE="postgres:18"
 else
     echo "[INFO] Using image: $POSTGRES_IMAGE"
 fi
