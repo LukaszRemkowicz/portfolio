@@ -3,8 +3,10 @@ FROM python:3.13-slim AS base
 
 # Install shared runtime dependencies
 # libpq5 is always needed for psycopg2
+# gosu is needed to drop privileges from root to appuser after permission fixes
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 RUN addgroup --system appuser && adduser --system --group appuser
@@ -82,11 +84,12 @@ COPY --from=builder --chown=appuser:appuser /app /app
 ENTRYPOINT ["/entrypoint.sh"]
 EXPOSE 8000
 
-# Provide environment variables with defaults for Gunicorn
 ENV WEB_CONCURRENCY=2 \
     GUNICORN_THREADS=1
 
-USER appuser
+# Note: We do NOT use 'USER appuser' here because the entrypoint.sh
+# needs root privileges to fix permissions on mounted volumes.
+# entrypoint.sh will drop privileges to appuser using 'gosu' at the end.
 
 # Use sh -c to expand environment variables for workers and threads
 CMD ["sh", "-c", "gunicorn settings.wsgi:application --bind 0.0.0.0:8000 --workers ${WEB_CONCURRENCY} --threads ${GUNICORN_THREADS} --log-level info"]

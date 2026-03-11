@@ -18,6 +18,7 @@
 #   - Builds:
 #       portfolio-backend:<TAG>
 #       portfolio-frontend:<TAG>
+#       portfolio-nginx:<TAG>
 #   - Uses Docker BuildKit for consistent builds
 #   - Injects runtime configuration via environment variables
 #   - Cleans up old images while keeping:
@@ -38,6 +39,22 @@
 
 set -euo pipefail
 
+# ------------------------------------------------------------------
+# Setup & Context
+# ------------------------------------------------------------------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/utils.sh"
+
+PROJECT_DIR="$(get_project_dir)"
+
+echo "DEBUG: API_DOMAIN=${API_DOMAIN:-unset}"
+
+# ------------------------------------------------------------------
+# Emergency flag: --emergency or EMERGENCY=1
+# Bypasses the dirty working-tree guard for urgent hotfix deploys.
+# Usage: EMERGENCY=1 doppler run -- ./build.sh
+#   or:  doppler run -- ./build.sh --emergency
+# ------------------------------------------------------------------
 EMERGENCY="${EMERGENCY:-0}"
 CACHE_FLAG=""
 for arg in "$@"; do
@@ -47,16 +64,16 @@ for arg in "$@"; do
   esac
 done
 
-# ------------------------------------------------------------------
-# Setup & Context
-# ------------------------------------------------------------------
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/utils.sh"
 
-PROJECT_DIR="$(get_project_dir)"
 
 # ------------------------------------------------------------------
 # Required environment variables (injected by Doppler)
+#
+# These must be provided at runtime (not hardcoded defaults),
+# to avoid accidentally building a production image with "local" config.
+#
+# Usage example:
+#   doppler run -- ./build.sh
 # ------------------------------------------------------------------
 : "${API_DOMAIN:?API_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
 : "${GA_TRACKING_ID:?GA_TRACKING_ID is required (inject via: doppler run -- ./build.sh)}"
@@ -152,12 +169,22 @@ docker build \
   .
 echo "✅ Frontend image built"
 
+# ---------------- Nginx ----------------
+echo "🛡️  Building Nginx image..."
+docker build \
+  ${CACHE_FLAG} \
+  --pull \
+  -f docker/nginx/Dockerfile \
+  -t "${ENVIRONMENT}-nginx:${TAG}" \
+  .
+echo "✅ Nginx image built"
+
 
 # ------------------------------------------------------------------
 # Verify Built Images
 # ------------------------------------------------------------------
 echo "📦 Built images:"
-docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${ENVIRONMENT}-(be|fe|worker):${TAG}"
+docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${ENVIRONMENT}-(be|fe|worker|nginx):${TAG}"
 
 
 # ------------------------------------------------------------------
@@ -187,7 +214,7 @@ echo "📌 Keeping tags: build=$TAG current=${CURRENT_TAG:-none} prev=${PREV_TAG
 # Retention Policy - Keep last 5 versions for each service image.
 # ------------------------------------------------------------------
 KEEP_IMAGES=5
-REPOS=("${ENVIRONMENT}-be" "${ENVIRONMENT}-fe" "${ENVIRONMENT}-worker")
+REPOS=("${ENVIRONMENT}-be" "${ENVIRONMENT}-fe" "${ENVIRONMENT}-worker" "${ENVIRONMENT}-nginx")
 
 echo "🧹 Cleaning up images (keeping last $KEEP_IMAGES versions)..."
 

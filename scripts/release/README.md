@@ -22,13 +22,25 @@ These scripts **require** several variables to be set (typically via Doppler).
 
 ### Optional
 - `FRONTEND_PORT`: Defaults to `8080`.
-- `DEBUG`: Set to `true` for staging logs.
+### Emergency bypass (dirty working tree)
+If you **must** build from an uncommitted state (e.g., hotfix not yet committed), pass the `--emergency` flag or set `EMERGENCY=1`:
+
+```bash
+# via flag
+doppler run -- ./scripts/release/build.sh --emergency
+
+# via env var
+EMERGENCY=1 doppler run -- ./scripts/release/build.sh
+```
+
+> [!WARNING]
+> The working tree is still printed in the output so you know exactly what was uncommitted. Use only in genuine emergencies — always follow up with a proper commit + tagged build as soon as possible.
 
 ---
 
 ## 1. Staging Workflow
 
-Used for testing on the staging stack (`docker-compose.stg.yml`).
+Used for testing on the staging stack (`docker-compose.stage.yml`).
 
 ```bash
 # 1. Build staging images
@@ -62,6 +74,16 @@ TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./scripts/release/deploy.sh
 
 ---
 
+## 3. Rollback (Staging or Production)
+
+1. Check current/previous tags in `/var/lib/portfolio/<environment>/` or your local state dir.
+2. Re-deploy the previous tag:
+   ```bash
+   TAG="v1.1.0" ENVIRONMENT="production" doppler run -- ./scripts/release/deploy.sh
+   ```
+
+---
+
 ## Shared Conventions
 
 ### Tag Discipline
@@ -69,17 +91,19 @@ TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./scripts/release/deploy.sh
 - The scripts enforce that image exists locally before proceeding.
 
 ### Image Naming
-Images are tagged as follows:
-- Backend: `${ENVIRONMENT}-be:${TAG}`
-- Frontend: `${ENVIRONMENT}-fe:${TAG}`
 - Worker: `${ENVIRONMENT}-worker:${TAG}`
 
----
+### Compose File Overrides
+- `build.sh`: Automatically detects the environment.
+- `release.sh` / `deploy.sh`: Defaults to `docker-compose.prod.yml`. Always override for staging:
+  `COMPOSE_FILE=docker-compose.stage.yml`
 
-## Infrastructure
+### Project Name
+The scripts default to `COMPOSE_PROJECT_NAME=landingpage` (matching the local repository folder).
 
-- **PostgreSQL**: Version **18** is used across all environments.
-- **Redis**: Version **alpine** (7.x) is used across all environments.
+### Locking
+- These scripts use `flock` to prevent concurrent deployments.
+- **macOS Compatibility**: If `flock` is missing (common on macOS), the scripts will print a warning and proceed without a lock. This is intended for local testing only.
 
 ---
 

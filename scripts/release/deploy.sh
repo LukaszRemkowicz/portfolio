@@ -142,9 +142,9 @@ export TAG
 # ------------------------------------------------------------------
 echo "🔍 [DEPLOY] [1/6] Image preflight (verifying TAG=$TAG)"
 # Verify each service image for TAG=${TAG}
-# Implementation note: We check 'be', 'fe', 'celery-worker' and 'release'.
+# Implementation note: We check 'be', 'fe', 'celery-worker', 'nginx' and 'release'.
 # We dynamically resolve the image from compose config for each service.
-for svc in "be" "fe" "celery-worker" "release"; do
+for svc in "be" "fe" "celery-worker" "nginx" "release"; do
   image_to_check=$(get_compose_image "$svc" "${COMPOSE[@]}")
 
   # Fallback to standard naming convention if config resolution fails.

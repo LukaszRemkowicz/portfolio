@@ -1,0 +1,11 @@
+services:
+  nginx-blocklist-init:
+    image: alpine:latest
+    restart: "no"
+    volumes:
+      - ./scripts/download-blocklist.sh:/download.sh:ro
+      - nginx_blocklist:/etc/nginx/blocklist
+    command: /bin/sh /download.sh
+
+volumes:
+  nginx_blocklist:

@@ -94,7 +94,7 @@ RELEASE_SVC="release"
 # Dependency & Health Checks
 # ------------------------------------------------------------------
 check_health() {
-  echo "🔍 [RELEASE] [1/3] Checking dependencies..."
+  echo "🔍 [RELEASE] [1/4] Checking dependencies..."
 
   # Ensure containers are at least running
   # STRICT DRY_RUN: In dry-run mode, we do NOT attempt to start services.
@@ -191,7 +191,7 @@ check_health
 # ------------------------------------------------------------------
 # Image Preflight
 # ------------------------------------------------------------------
-echo "🔎 [RELEASE] [2/3] Checking release image..."
+echo "🔎 [RELEASE] [2/4] Checking release image..."
 
 RELEASE_IMAGE=$(get_compose_image "${RELEASE_SVC}" "${COMPOSE[@]}")
 
@@ -215,11 +215,22 @@ if [[ "${DRY_RUN}" == "true" ]]; then
   exit 0
 fi
 
+# ------------------------------------------------------------------
+# Loading blacklist
+# ------------------------------------------------------------------
+echo "🛡️ [RELEASE] [3/4] Downloading Nginx Bot Blocklist..."
+if ! "${COMPOSE[@]}" run --rm "nginx-blocklist-init"; then
+  echo "⚠️ WARNING: Blocklist download failed. Nginx will start with an empty list."
+fi
+
 LOG_DIR="$HOME/.portfolio-logs/${ENVIRONMENT}"
 LOG_FILE="${LOG_DIR}/release-${TAG}-$(date +%Y%m%d-%H%M%S).log"
 mkdir -p "$LOG_DIR" || { echo "❌ ERROR: Cannot create log dir $LOG_DIR"; exit 1; }
 
-echo "🚀 [RELEASE] [3/3] Running release job..."
+# ------------------------------------------------------------------
+# Releasing
+# ------------------------------------------------------------------
+echo "🚀 [RELEASE] [4/4] Running release job..."
 echo "📝 Logs: $LOG_FILE"
 
 if "${COMPOSE[@]}" run --rm "${RELEASE_SVC}" 2>&1 | tee "$LOG_FILE"; then

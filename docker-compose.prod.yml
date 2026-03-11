@@ -1,6 +1,9 @@
 networks:
   portfolio_network:
 
+include:
+  - docker-compose.common.yml
+
 
 # ---------- Backend Defaults ----------
 x-backend-defaults: &backend-defaults
@@ -130,6 +133,8 @@ services:
       VITE_SENTRY_DSN_FE: ${SENTRY_DSN_FE}
       VITE_ENVIRONMENT: ${ENVIRONMENT:-production}
       VITE_PROJECT_OWNER: ${PROJECT_OWNER}
+    volumes:
+      - nginx_blocklist:/etc/nginx/blocklist:ro
 
   # ---------- Backend ----------
   be:
@@ -152,7 +157,7 @@ services:
   # ---------- Nginx ----------
   # Service name must be "nginx" — deploy.sh uses: docker compose exec -T nginx nginx -s reload
   nginx:
-    image: nginx:1.25
+    image: ${ENVIRONMENT:-production}-nginx:${TAG}
     restart: always
     networks:
       - portfolio_network
@@ -161,17 +166,17 @@ services:
       - fe
     environment:
       # Injected by Doppler at runtime — envsubst replaces variable placeholders
-      SITE_DOMAIN: ${SITE_DOMAIN}
-      SSL_CERT_NAME: ${SSL_CERT_NAME}
-      SSL_KEY_NAME: ${SSL_KEY_NAME}
+      NGINX_SSL_CERT: ${SSL_CERT_NAME}
+      NGINX_SSL_KEY: ${SSL_KEY_NAME}
       FRONTEND_PORT: ${FRONTEND_PORT:-8080}
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+      NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_PORT"
     volumes:
-      - ./nginx/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
       - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
       - ${NGINX_LOG_DIR:-./nginx/logs}:/var/log/nginx
       - prod_media_data:/app/media:ro
       - prod_static_data:/app/staticfiles:ro
+      - nginx_blocklist:/etc/nginx/blocklist:ro
     ports:
       - "80:80"
       - "443:443"

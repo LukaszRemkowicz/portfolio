@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Something went wrong | portfolio</title>
+    <style>
+        :root {
+            /* Extracted from the React app theme variables */
+            --bg-primary: #0f172a; /* Slate 900 */
+            --text-primary: #f8fafc; /* Slate 100 */
+            --text-secondary: #94a3b8; /* Slate 400 */
+            --accent-glow: rgba(56, 189, 248, 0.15); /* Light blue glow */
+            --border-subtle: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stars-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+                radial-gradient(circle at 85% 30%, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 100px 100px, 150px 150px, 200px 200px;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 3rem;
+            max-width: 600px;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 0 40px var(--accent-glow);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+            background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.025em;
+        }
+
+        p {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .action-button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 9999px;
+            font-weight: 500;
+            border: 1px solid var(--border-subtle);
+            transition: all 0.2s ease;
+        }
+
+        .action-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .home-icon {
+            margin-right: 0.5rem;
+            display: inline-block;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="stars-bg"></div>
+    <div class="container">
+        <div class="icon">🌌</div>
+        <h1>A celestial anomaly occurred</h1>
+        <p>The signal was lost in transit or the destination no longer exists in this quadrant.</p>
+        <a href="/" class="action-button">
+            <span class="home-icon">🏠</span> Return to Base
+        </a>
+    </div>
+
+    <!-- Small script to try pulling the user out of a hard error loop if they press back -->
+    <script>
+        // If loaded in an iframe, attempt to break out
+        if (window.top !== window.self) {
+            window.top.location = window.self.location;
+        }
+
+        // Log to console for debugging
+        console.warn("Nginx Error Page Served. Status context is likely 404/50x.");
+    </script>
+</body>
+</html>

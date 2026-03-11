@@ -2,6 +2,26 @@
 
 A modern, API-driven personal portfolio web app with subpages for Astrophotography, Programming, and Contact. Built with React (frontend) and Django + Django Rest Framework (backend), fully dockerized and orchestrated with nginx for local HTTPS development.
 
+## 🌐 LIVE
+
+Check out the live version: **[lukaszremkowicz.com](https://lukaszremkowicz.com)**
+
+## 📸 Screenshots
+
+<details>
+<summary><b>Click to expand screenshots</b></summary>
+
+### Home Page
+![Home Page](screenshots/homepage.jpg)
+
+### Astrophotography Gallery
+![Gallery](screenshots/gallery.jpg)
+
+### Contact Form
+![Contact](screenshots/contact.jpg)
+
+</details>
+
 ## Quick Start
 
 ### 1. Clone the repository
@@ -10,22 +30,35 @@ git clone <your-repo-url>
 cd landingpage
 ```
 
-### 2. Start all services with Docker Compose
-```sh
-# For newer Docker versions (Docker Compose V2)
-docker compose up --build
+### 2. Configure Environment (Doppler)
 
-# For older Docker versions (Docker Compose V1)
-docker-compose up --build
+We use **Doppler** for secure secret management. Before starting, ensure you have the Doppler CLI installed and are logged in.
+
+```bash
+# Login to Doppler
+doppler login
+
+# Setup the project for the current directory
+doppler setup
 ```
 
-> **Note**: Docker Compose V2 uses `docker compose` (space), while V1 uses `docker-compose` (hyphen). Check your Docker version with `docker --version`.
+### 3. Start all services with Docker Compose
+
+Always use `doppler run` to inject secrets into your Docker containers. Use the `--config` flag to specify the environment.
+
+```bash
+# For local development (default dev config)
+doppler --config dev run -- docker compose up --build
+
+# For staging
+doppler --config staging run -- docker compose up --build
+```
+
 - Frontend: https://portfolio.local/
 - API: https://api.portfolio.local/
 - Backend Admin: https://admin.portfolio.local/
-- Media files: https://api.portfolio.local/media/
 
-> **Note:** You may need to add `portfolio.local`, `api.portfolio.local`, and `admin.portfolio.local` to your `/etc/hosts` file:
+> **Note:** You may need to add these domains to your `/etc/hosts` file:
 > ```
 > 127.0.0.1 portfolio.local api.portfolio.local admin.portfolio.local
 > ```
@@ -70,23 +103,24 @@ docker-compose exec portfolio-fe npm test    # Run frontend tests
 The project uses a standalone production configuration to ensure zero-downtime deployments and environment isolation.
 
 ### 1. Environment Secrets (Doppler)
-On production, move all variables from `backend/.env` to a **Doppler** project.
-- Use the Doppler CLI to inject variables: `doppler run -- ./scripts/release/deploy.sh`
-- Ensure critical variables like `SECRET_KEY`, `DB_PASSWORD`, and `ALLOWED_HOSTS` are properly set in the Doppler production config.
+The project uses **Doppler** for secure secret management across all environments.
+- **Local Dev**: Use `doppler setup --config dev`. Then run: `doppler run -- docker compose up`.
+- **Production**: Doppler injects variables automatically. Always specify the config: `doppler --config prod run -- ./scripts/release/deploy.sh`
+- Critical variables like `SECRET_KEY`, `DB_PASSWORD`, and `ALLOWED_HOSTS` are managed centrally in Doppler.
 
 ### 2. Building Images
 Use the centralized build script to create production-ready Docker images.
 ```bash
-# Build images with a specific tag (e.g., git commit hash or 'latest')
-TAG=v1.0.0 ./scripts/release/build.sh
+# Build images with a specific tag (e.g., git commit hash or 'latest'). TAG is optional.
+TAG=v1.0.0 doppler run -- ./scripts/release/build.sh
 ```
-This script builds both `portfolio-frontend` and `portfolio-backend` using production targets.
+This script builds `portfolio-frontend`, `portfolio-backend`, and `portfolio-nginx` using production targets.
 
 ### 3. Deploying
 The `deploy.sh` script handles the orchestration of the production stack.
 ```bash
-# Deploy using images with a specific tag
-TAG=v1.0.0 ./scripts/release/deploy.sh
+# Deploy using images with a specific tag. TAG is optional.
+TAG=v1.0.0 doppler run -- ./scripts/release/deploy.sh
 ```
 **What this script does:**
 - Verifies that the required images exist.
@@ -94,16 +128,14 @@ TAG=v1.0.0 ./scripts/release/deploy.sh
 - Performs a "hot swap" of the running containers with zero-downtime.
 
 ### 4. Nginx Production Config
-Before your first deployment, you **must** configure [nginx/prod/nginx.conf](nginx/prod/nginx.conf):
-- **Server Names**: Update `server_name` to your real domains (e.g., `example.com`).
-- **SSL Certificates**: Point `ssl_certificate` paths to your actual Certbot/LetsEncrypt certificates (usually mounted to `/etc/nginx/ssl/`).
-- **CORS/CSRF**: Ensure the domains in Nginx match your `CORS_ALLOWED_ORIGINS` in Doppler/Env.
+All config is placed in nginx/prod/TEMPLATE.conf. Environment variables are injected to configuration in build stage.
 
-### 5. Nginx Enviroment Variables
-The `docker-compose.prod.yml` uses the following environment variables to map Nginx paths locally on the host. These must be set in your `.env` or Doppler config:
-- `NGINX_CONF_PATH`: Path to the production `nginx.conf` file (e.g., `./nginx/prod/nginx.conf`).
-- `NGINX_SSL_DIR`: Directory containing your SSL certificates (e.g., `./nginx/ssl/certs`).
-- `NGINX_LOG_DIR`: Directory for Nginx logs (e.g., `./nginx/logs`).
+### 5. Nginx Environment Variables
+Nginx configuration is handled automatically. Variables are injected by Doppler and substituted into the template at runtime.
+The `docker-compose.prod.yml` uses these variables for path mapping:
+- `NGINX_CONF_PATH`: Path to the production template.
+- `NGINX_SSL_DIR`: Directory containing your SSL certificates.
+- `NGINX_LOG_DIR`: Directory for Nginx logs.
 
 ---
 
