@@ -81,18 +81,13 @@ docker compose up
 
 #### 💻 Native (Without Docker)
 
-You can run the frontend directly on your host machine:
+If you need to run the frontend natively on your host machine, ensure you use Doppler to inject the required `VITE_` variables:
 
-1.  **Environment Variables**: Set your API URL (defaults to production if unset):
-    ```bash
-    export API_URL="http://localhost:8000"
-    ```
-2.  **Start the App**:
-    ```bash
-    npm run dev
-    ```
+```bash
+doppler --config dev run -- npm run dev
+```
 
-- URL: `http://localhost:3000`
+- URL: `http://localhost:5173` (Vite default)
 
 ### Production Build
 

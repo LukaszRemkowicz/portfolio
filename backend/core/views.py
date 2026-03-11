@@ -6,7 +6,7 @@ import logging
 from typing import Any, Optional, cast
 
 from rest_framework import generics, permissions, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -48,6 +48,7 @@ class SettingsView(generics.RetrieveAPIView):
 
 @api_view(["GET"])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([])
 def health_check_view(request: Request) -> Response:
     """
     Simple health check endpoint returning 200 OK.
