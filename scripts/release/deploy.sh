@@ -40,19 +40,23 @@ set -euo pipefail
 # ------------------------------------------------------------------
 # Parse command-line arguments
 # ------------------------------------------------------------------
+ENVIRONMENT="${ENVIRONMENT:-}"
 DRY_RUN=false
-for arg in "$@"; do
-  case "${arg}" in
-    --dry-run) DRY_RUN=true; echo "🧪 Dry-run mode enabled" ;;
-    *)
-      echo "❌ ERROR: Unknown argument: ${arg}"
-      echo "✅ Usage: TAG=vX.Y.Z ENVIRONMENT=stg|prod doppler run -- ./deploy.sh [--dry-run]"
-      exit 1
-      ;;
+ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --env=*)    ENVIRONMENT="${1#*=}"; shift ;;
+    --env)      ENVIRONMENT="$2"; shift 2 ;;
+    --dry-run)  DRY_RUN=true; echo "🧪 Dry-run mode enabled"; shift ;;
+    *)          ARGS+=("$1"); shift ;;
   esac
 done
 
-: "${ENVIRONMENT:?ENVIRONMENT is required (inject via: doppler run -- ./deploy.sh)}"
+# Restore positional arguments
+[[ ${#ARGS[@]} -gt 0 ]] && set -- "${ARGS[@]}"
+
+: "${ENVIRONMENT:?ENVIRONMENT is required (set via --env=production|stage or ENVIRONMENT=...)}"
 
 # ------------------------------------------------------------------
 # Setup & Context
@@ -62,11 +66,17 @@ source "${SCRIPT_DIR}/utils.sh"
 
 PROJECT_DIR="$(get_project_dir)"
 
+# Map full environment names to internal shorthand
+ENV_SHORT="${ENVIRONMENT}"
+if [[ "${ENVIRONMENT}" == "production" ]]; then
+  ENV_SHORT="prod"
+fi
+
 # Dynamic validation: If the config file exists, the environment is valid.
 # This avoids hardcoding environment names and allows easy scaling (stage, prod, qa, etc).
-if [[ ! -f "${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml" ]]; then
-  echo "❌ ERROR: Configuration for environment '$ENVIRONMENT' not found." >&2
-  echo "� Expected: docker-compose.${ENVIRONMENT}.yml" >&2
+if [[ ! -f "${PROJECT_DIR}/docker-compose.${ENV_SHORT}.yml" ]]; then
+  echo "❌ ERROR: Configuration for environment '$ENVIRONMENT' (mapped to '$ENV_SHORT') not found." >&2
+  echo "📂 Expected: docker-compose.${ENV_SHORT}.yml" >&2
   exit 1
 fi
 
@@ -119,14 +129,18 @@ cd "$PROJECT_DIR"
 # ------------------------------------------------------------------
 # Resolve docker-compose production file
 # ------------------------------------------------------------------
-COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_DIR/docker-compose.prod.yml}"
+COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_DIR/docker-compose.${ENV_SHORT}.yml}"
 [[ -f "$COMPOSE_FILE" ]] || { echo "❌ ERROR: Missing compose file: $COMPOSE_FILE" >&2; exit 1; }
 echo "🧾 Using compose file: $COMPOSE_FILE"
 
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
 
 # Standardize project name by environment to ensure total isolation.
-COMPOSE_PROJECT_NAME="landingpage-${ENVIRONMENT}"
+if [[ "${ENV_SHORT}" == "prod" ]]; then
+  COMPOSE_PROJECT_NAME="portfolio"
+else
+  COMPOSE_PROJECT_NAME="portfolio-${ENV_SHORT}"
+fi
 export COMPOSE_PROJECT_NAME
 echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
 
@@ -144,15 +158,25 @@ echo "🔍 [DEPLOY] [1/6] Image preflight (verifying TAG=$TAG)"
 # Verify each service image for TAG=${TAG}
 # Implementation note: We check 'be', 'fe', 'celery-worker', 'nginx' and 'release'.
 # We dynamically resolve the image from compose config for each service.
-for svc in "be" "fe" "celery-worker" "nginx" "release"; do
+for svc in "be" "fe" "celery-worker" "nginx" "release" "redis"; do
   image_to_check=$(get_compose_image "$svc" "${COMPOSE[@]}")
 
   # Fallback to standard naming convention if config resolution fails.
   if [[ "${image_to_check}" =~ ^[[:space:]]*$ ]]; then
     echo "ℹ️  NOTE: Using naming fallback for '${svc}' (config resolution skipped)."
-    image_to_check="${ENVIRONMENT}-${svc}"
-    if [[ "$svc" == "release" ]]; then image_to_check="${ENVIRONMENT}-be"; fi
-    if [[ "$svc" == "celery-worker" ]]; then image_to_check="${ENVIRONMENT}-worker"; fi
+    if [[ "${ENV_SHORT}" == "prod" ]]; then
+      prefix="portfolio"
+    else
+      prefix="portfolio-${ENV_SHORT}"
+    fi
+
+    case "${svc}" in
+      be|release) image_to_check="${prefix}-backend" ;;
+      fe)         image_to_check="${prefix}-frontend" ;;
+      celery-worker) image_to_check="${prefix}-worker" ;;
+      nginx)      image_to_check="${prefix}-nginx" ;;
+      redis)      image_to_check="${prefix}-redis" ;;
+    esac
     image_to_check="${image_to_check}:$TAG"
   fi
 
@@ -164,6 +188,18 @@ for svc in "be" "fe" "celery-worker" "nginx" "release"; do
 done
 
 echo "✅ Images found. Proceeding with deployment."
+
+# ------------------------------------------------------------------
+# [DEPLOY] [1.5/6] Blocklist pre-flight
+# ------------------------------------------------------------------
+if [[ "${ENV_SHORT}" == "prod" ]]; then
+  echo "🛡️  [DEPLOY] [1.5/6] Pre-flight: Initializing Nginx Blocklist (production-only)"
+  # We run this ad-hoc to keep the compose file lean (image-only).
+  docker run --rm \
+    -v "./scripts/download-blocklist.sh:/download.sh:ro" \
+    -v "nginx_blocklist:/etc/nginx/blocklist" \
+    alpine:latest /bin/sh /download.sh
+fi
 
 echo "🧪 [DEPLOY] [2/6] Running release tasks (migrate/compilemessages/collectstatic/seeds)"
 

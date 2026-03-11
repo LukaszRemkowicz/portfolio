@@ -1,10 +1,3 @@
-networks:
-  portfolio_network:
-
-include:
-  - docker-compose.common.yml
-
-
 # ---------- Backend Defaults ----------
 x-backend-defaults: &backend-defaults
   volumes:
@@ -50,6 +43,8 @@ x-backend-defaults: &backend-defaults
     redis:
       condition: service_started
 
+networks:
+  portfolio_network:
 
 services:
   # ---------- Database ----------
@@ -74,8 +69,7 @@ services:
 
   # ---------- Redis ----------
   redis:
-    build:
-      context: ./docker/redis
+    image: portfolio-redis:${TAG}
     restart: always
     networks:
       - portfolio_network
@@ -92,7 +86,7 @@ services:
   # ---------- Celery Worker ----------
   celery-worker:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-production}-worker:${TAG}
+    image: portfolio-worker:${TAG}
     restart: always
     command: celery -A settings worker -l info -Q celery,monitoring --concurrency=4
     environment:
@@ -112,7 +106,7 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-production}-be:${TAG}
+    image: portfolio-backend:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
@@ -124,7 +118,7 @@ services:
 
   # ---------- Frontend ----------
   fe:
-    image: ${ENVIRONMENT:-production}-fe:${TAG}
+    image: portfolio-frontend:${TAG}
     restart: "always"
     networks:
       - portfolio_network
@@ -139,13 +133,13 @@ services:
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-production}-be:${TAG}
+    image: portfolio-backend:${TAG}
     restart: always
 
   # ---------- Release Job ----------
   release:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-production}-be:${TAG}
+    image: portfolio-backend:${TAG}
     restart: "no"
     command: >
       sh -c "
@@ -155,9 +149,8 @@ services:
       "
 
   # ---------- Nginx ----------
-  # Service name must be "nginx" — deploy.sh uses: docker compose exec -T nginx nginx -s reload
   nginx:
-    image: ${ENVIRONMENT:-production}-nginx:${TAG}
+    image: portfolio-nginx:${TAG}
     restart: always
     networks:
       - portfolio_network
@@ -165,7 +158,6 @@ services:
       - be
       - fe
     environment:
-      # Injected by Doppler at runtime — envsubst replaces variable placeholders
       NGINX_SSL_CERT: ${SSL_CERT_NAME}
       NGINX_SSL_KEY: ${SSL_KEY_NAME}
       FRONTEND_PORT: ${FRONTEND_PORT:-8080}
@@ -181,10 +173,9 @@ services:
       - "80:80"
       - "443:443"
 
-
 volumes:
-  postgres_data:
   postgres18_data:
   prod_media_data:
   prod_static_data:
   celerybeat_data:
+  nginx_blocklist:

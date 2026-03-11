@@ -1,10 +1,3 @@
-networks:
-  stage_network:
-
-include:
-  - docker-compose.common.yml
-
-
 # ---------- Backend Defaults ----------
 x-backend-defaults: &backend-defaults
   volumes:
@@ -52,11 +45,13 @@ x-backend-defaults: &backend-defaults
     redis:
       condition: service_started
 
+networks:
+  stage_network:
 
 services:
   # ---------- Database ----------
   db:
-    image: postgres:17
+    image: postgres:18
     restart: always
     networks:
       - stage_network
@@ -76,7 +71,7 @@ services:
 
   # ---------- Redis ----------
   redis:
-    image: redis:7-alpine
+    image: portfolio-stage-redis:${TAG}
     restart: always
     networks:
       - stage_network
@@ -91,7 +86,7 @@ services:
   # ---------- Celery Worker ----------
   celery-worker:
     <<: *backend-defaults
-    image: stage-worker:${TAG}
+    image: portfolio-stage-worker:${TAG}
     restart: always
     command: celery -A settings worker -l info -Q celery,monitoring --concurrency=2
     environment:
@@ -111,7 +106,7 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: stage-be:${TAG}
+    image: portfolio-stage-backend:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
@@ -123,7 +118,7 @@ services:
 
   # ---------- Frontend ----------
   fe:
-    image: stage-fe:${TAG}
+    image: portfolio-stage-frontend:${TAG}
     restart: always
     networks:
       - stage_network
@@ -138,13 +133,13 @@ services:
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
-    image: stage-be:${TAG}
+    image: portfolio-stage-backend:${TAG}
     restart: always
 
   # ---------- Release Job ----------
   release:
     <<: *backend-defaults
-    image: stage-be:${TAG}
+    image: portfolio-stage-backend:${TAG}
     restart: "no"
     command: >
       sh -c "
@@ -154,9 +149,8 @@ services:
       "
 
   # ---------- Nginx ----------
-  # Service name must be "nginx" — deploy.sh uses: docker compose exec -T nginx nginx -s reload
   nginx:
-    image: stage-nginx:${TAG}
+    image: portfolio-stage-nginx:${TAG}
     restart: always
     networks:
       - stage_network
@@ -182,9 +176,9 @@ services:
       - "8080:80"
       - "8443:443"
 
-
 volumes:
   stage_postgres_data:
   stage_media_data:
   stage_static_data:
   stage_celerybeat_data:
+  nginx_blocklist:
