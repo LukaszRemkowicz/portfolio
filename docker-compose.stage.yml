@@ -170,13 +170,14 @@ services:
       FRONTEND_PORT: ${FRONTEND_PORT:-8080}
       ALLOWED_IP: ${ALLOWED_IP:-127.0.0.1}
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-      NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_PORT"
+      NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_PORT|ALLOWED_IP"
     volumes:
       - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
       - ${NGINX_STAGE_LOG_DIR:-./nginx/logs/stage}:/var/log/nginx
       - stage_media_data:/app/media:ro
       - stage_static_data:/app/staticfiles:ro
       - nginx_blocklist:/etc/nginx/blocklist:ro
+      - ./nginx/stage/restrictions.conf.template:/etc/nginx/templates/restrictions.conf.template:ro
     ports:
       - "8080:80"
       - "8443:443"
