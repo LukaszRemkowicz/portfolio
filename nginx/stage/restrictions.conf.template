@@ -1,0 +1,11 @@
+# Allow access from the specified IP
+allow ${ALLOWED_IP};
+
+# Allow internal network access (Docker bridge & localhost) for health checks and internal service communication
+allow 127.0.0.1;
+allow 10.0.0.0/8;
+allow 172.16.0.0/12;
+allow 192.168.0.0/16;
+
+# Deny everything else
+deny all;

@@ -59,25 +59,25 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
    poetry install
    ```
 
-2. **Environment Configuration (Recommended: Doppler)**
+2. **Environment Configuration (Doppler)**
    We use **Doppler** for secure secret management.
    ```bash
    doppler login
    doppler setup
-   # No manual .env files needed!
    ```
-   *Note: For legacy setups, you can still copy `DEFAULT.env` to `.env`.*
+   *Note: For legacy setups, you can still copy `DEFAULT.env` to `.env`.* but remember to add this in docker-compose.yml file.
+   *Not: Have in mind, that DEFAULT.env having required env variables, so please copy them to doppler config.
 
 3. **Database & Translations**
    ```bash
    # Using Doppler to inject secrets
-   doppler run -- poetry run python manage.py migrate
-   doppler run -- poetry run python manage.py compilemessages
+   doppler --config dev run -- poetry run python manage.py migrate
+   doppler --config dev run -- poetry run python manage.py compilemessages
    ```
 
 4. **Run Server**
    ```bash
-   doppler run -- poetry run python manage.py runserver
+   doppler --config dev run -- poetry run python manage.py runserver
    ```
 
 ## 🧪 Testing & Quality
@@ -111,16 +111,16 @@ pre-commit run --all-files
 
 ## 🐳 Docker Integration (Recommended)
 
-### Pro Deployment (Recommended: Doppler)
+### Deployment
 ```bash
-# Run from the project root with centralized secrets
+# Run from the project root with centralized secrets. Based on environmet remember to use --config flag like --config dev, --config prod, --config staging
 doppler run -- docker compose up --build
 ```
 
 ### Standard Deployment
 ```bash
-# Legacy method using local .env files
-docker compose up --build
+# Local development with Doppler
+doppler --config dev run -- docker compose up --build
 ```
 
 #### Host File Configuration (Required for Docker)
@@ -130,7 +130,7 @@ To access the project via custom domains, add the following to your `/etc/hosts`
 127.0.0.1 admin.portfolio.local
 ```
 
-- **Backend API**: `https://admin.portfolio.local/api/v1/`
+- **Backend API**: `https://api.portfolio.local/v1/`
 - **Django Admin**: `https://admin.portfolio.local/admin/`
 - **Media Files**: `https://portfolio.local/media/`
 
@@ -158,27 +158,7 @@ We provide specialized "God-Tier" scripts for automated database backups and res
 ### 📸 Features & Processing
 - [ ] Implement image optimization pipeline (WebP conversion)
 - [ ] Prettify email messages (add HTML template)
-- [x] Singleton User & UUID migration for all models
-- [x] Contact form with throttling and honeypot
-- [x] Automatic thumbnail generation
 
 ### 🚀 API & Reliability
 - [ ] **Dynamic Sitemap** - Implement automatic sitemap generation using `django.contrib.sitemaps` (moved from frontend)
-- [ ] **API Documentation** - Add OpenAPI/Swagger documentation
 - [ ] **Structured Logging** - Implement JSON structured logs for production
-- [x] **Error Tracking** - Production Sentry integration with environment awareness
-- [x] **Rate Limiting** - Multi-layer DDoS protection implemented
-- [x] **Health Checks** - Django health endpoint configured
-
-### 🗄️ Database & Performance
-- [x] **Backup** - Atomic DB backup and "God-Tier" restore verification scripts
-- [x] **Redis Caching** - Configured for Select2 and select views with SCAN-based invalidation
-- [x] **Automated Migrations** - Integrated into Docker startup
-
-### 🔒 Security
-- [x] **Harden Container** - Non-root user with runtime volume permission mapping
-- [x] **Dependency Scanning** - GitHub Actions with Safety & Dependabot
-- [x] **ViewSet Hardening** - Minimalist ViewSets with strict method enforcement
-
-### 🎨 Admin UI
-- [ ] **django-jazzmin** - Replace the default Django Admin skin with [django-jazzmin](https://github.com/farridav/django-jazzmin) for a responsive, dark-mode Bootstrap 5 admin panel

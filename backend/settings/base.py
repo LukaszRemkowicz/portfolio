@@ -15,8 +15,10 @@ from django.utils.translation import gettext_lazy as _
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env(DEBUG=(bool, False))
-# reading .env file
-environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
+# reading .env file (optional for local development with Doppler)
+env_file = os.path.join(BASE_DIR, ".env")
+if os.path.exists(env_file):
+    environ.Env.read_env(env_file)
 
 # Project root (repository root where docker-compose.yml lives) for Docker Compose access
 PROJECT_ROOT = env.str("PROJECT_ROOT", default=str(BASE_DIR.parent))
@@ -82,13 +84,9 @@ SECURE_MEDIA_URL_EXPIRATION = env.int("SECURE_MEDIA_URL_EXPIRATION", default=360
 # Filter out empty values and consolidate hosts
 _base_hosts = [SITE_DOMAIN, ADMIN_DOMAIN, API_DOMAIN]
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + [h for h in _base_hosts if h]
+# Unconditionally allow local access for container health checks
+ALLOWED_HOSTS += ["localhost", "127.0.0.1", "0.0.0.0"]
 
-if DEBUG:
-    ALLOWED_HOSTS += [
-        "localhost",
-        "127.0.0.1",
-        "0.0.0.0",
-    ]
 
 USE_X_FORWARDED_HOST = True
 

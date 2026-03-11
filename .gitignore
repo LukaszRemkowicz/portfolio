@@ -146,3 +146,6 @@ coverage.xml
 
 # Celery
 celerybeat-schedule*
+
+# Security
+*.key
