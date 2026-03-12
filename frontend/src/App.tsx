@@ -72,7 +72,11 @@ const App: React.FC = () => {
                     <AstroGallery />
                   </MainLayout>
                 }
-              />
+              >
+                {/* Child route so /astrophotography/:slug is a valid path.
+                    AstroGallery reads the :slug param and opens the modal. */}
+                <Route path=':slug' element={null} />
+              </Route>
               <Route
                 path={APP_ROUTES.PROGRAMMING}
                 element={

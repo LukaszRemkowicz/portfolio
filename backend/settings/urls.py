@@ -12,10 +12,13 @@ This file defines the main routing table for the project, including:
 
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.http import Http404
 from django.urls import include, path
+from django.views.decorators.cache import cache_page
 from django.views.static import serve
 
+from core.sitemaps import AstroImageSitemap, StaticViewSitemap, TravelHighlightsSitemap
 from core.views import root_view
 
 from .api_urls import (
@@ -28,6 +31,11 @@ admin.site.site_header = "Portfolio Administration"
 admin.site.site_title = "Portfolio Admin Portal"
 admin.site.index_title = "Welcome to Portfolio Admin Portal"
 
+_sitemaps = {
+    "static": StaticViewSitemap,
+    "astro": AstroImageSitemap,
+    "travel": TravelHighlightsSitemap,
+}
 
 urlpatterns = [
     *api_v1_base_urlpatterns,
@@ -35,6 +43,13 @@ urlpatterns = [
     path("ckeditor5/", include("django_ckeditor_5.urls")),
     path("", include("translation.urls")),
     path("admin/", admin.site.urls),
+    # Sitemap at root so Google finds it at /sitemap.xml (cached 24 h)
+    path(
+        "sitemap.xml",
+        cache_page(86400)(sitemap),
+        {"sitemaps": _sitemaps},
+        name="sitemap",
+    ),
     path("", root_view, name="root"),
 ]
 

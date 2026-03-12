@@ -144,6 +144,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.postgres",
+    "django.contrib.sitemaps",
     # Third party apps
     "rest_framework",
     "corsheaders",

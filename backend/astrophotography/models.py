@@ -575,6 +575,16 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
             )
         ]
 
+    @property
+    def safe_country_slug(self) -> str:
+        """Returns country_slug or FALLBACK_URL_SLUG if empty."""
+        return self.country_slug or FALLBACK_URL_SLUG
+
+    @property
+    def safe_place_slug(self) -> str:
+        """Returns place_slug or FALLBACK_URL_SLUG if empty."""
+        return self.place_slug or FALLBACK_URL_SLUG
+
     def __str__(self) -> str:
         name = self.safe_translation_getter("highlight_name", any_language=True)
         if not name and self.place:

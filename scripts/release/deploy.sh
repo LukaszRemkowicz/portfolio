@@ -131,6 +131,27 @@ export COMPOSE_PROJECT_NAME
 echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
 
 # ------------------------------------------------------------------
+# Resolve pre-deploy state (for rollback)
+# ------------------------------------------------------------------
+STATE_DIR="$(get_state_dir "${ENVIRONMENT}")"
+CURRENT_FILE="$STATE_DIR/current_tag"
+SAFE_TAG_BEFORE_DEPLOY="$(cat "$CURRENT_FILE" 2>/dev/null || true)"
+SWITCHED_CONTAINERS=false
+
+error_handler() {
+  local exit_code=$?
+  if [[ "${SWITCHED_CONTAINERS}" == "true" && -n "${SAFE_TAG_BEFORE_DEPLOY}" && "${SAFE_TAG_BEFORE_DEPLOY}" != "${TAG}" ]]; then
+    echo "🚨 ERROR detected (exit code: $exit_code). Initiating automatic rollback to ${SAFE_TAG_BEFORE_DEPLOY}..."
+    TAG="${SAFE_TAG_BEFORE_DEPLOY}" "${COMPOSE[@]}" up -d --remove-orphans
+    echo "↩️  Rollback complete. System restored to ${SAFE_TAG_BEFORE_DEPLOY}."
+  else
+    echo "❌ ERROR detected (exit code: $exit_code). No rollback needed/possible."
+  fi
+  exit $exit_code
+}
+trap error_handler ERR
+
+# ------------------------------------------------------------------
 # Resolve release TAG
 # ------------------------------------------------------------------
 git fetch --tags >/dev/null 2>&1 || true
@@ -185,6 +206,7 @@ if [[ "${DRY_RUN}" == true ]]; then
   echo "🧾 DRY RUN: would execute: ${COMPOSE[*]} up -d --remove-orphans"
 else
   "${COMPOSE[@]}" up -d --remove-orphans
+  SWITCHED_CONTAINERS=true
 fi
 
 # ------------------------------------------------------------------
@@ -228,7 +250,7 @@ else
     sleep 3
     if [[ "$i" -eq "$MAX_RETRIES_FE" ]]; then
       echo "❌ Health check failed: frontend not reachable at https://${HEALTH_SITE_DOMAIN}/"
-      exit 1
+      false
     fi
   done
 
@@ -252,9 +274,16 @@ else
       local MAX_RETRIES_BE=60
       for ((i=1; i<=MAX_RETRIES_BE; i++)); do
         # Use python as curl/wget may be missing in production images.
+<<<<<<< Updated upstream
         # We connect to localhost (now that it's unconditionally allowed in ALLOWED_HOSTS).
         local python_health_cmd="import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
         if docker exec "${container}" python3 -c "${python_health_cmd}"; then
+=======
+        # We connect to 127.0.0.1 and pass X-Forwarded-Proto: https to bypass Django's SSL redirect.
+        # timeout=5 ensures the script doesn't hang if gunicorn is stuck.
+        local python_health_cmd="import urllib.request; req = urllib.request.Request('http://127.0.0.1:8000/v1/health', headers={'X-Forwarded-Proto': 'https'}); urllib.request.urlopen(req, timeout=5)"
+        if docker exec "${container}" python3 -c "${python_health_cmd}" >/dev/null 2>&1; then
+>>>>>>> Stashed changes
           echo "✅ Backend ${container} is healthy (/health)"
           break
         fi
@@ -263,7 +292,7 @@ else
         sleep "${sleep_time}"
         if [[ "$i" -eq "$MAX_RETRIES_BE" ]]; then
           echo "❌ Health check failed: ${container} not reachable after ${MAX_RETRIES_BE} attempts"
-          exit 1
+          false
         fi
       done
     done

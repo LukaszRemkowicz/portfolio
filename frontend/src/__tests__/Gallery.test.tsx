@@ -108,7 +108,7 @@ describe('Gallery Component', () => {
     });
   });
 
-  it('opens modal when image clicked', async () => {
+  it('navigates to /astrophotography/:slug when image is clicked', async () => {
     (useLatestAstroImages as jest.Mock).mockReturnValue({
       data: [
         {
@@ -126,7 +126,7 @@ describe('Gallery Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter initialEntries={['/']}>
           <Gallery />
         </MemoryRouter>
       );
@@ -137,7 +137,9 @@ describe('Gallery Component', () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText('View details for Test Image'));
 
-    expect(await screen.findByTestId('image-modal')).toBeInTheDocument();
+    // Gallery no longer shows an inline modal — clicking navigates to
+    // /astrophotography/:slug. The modal must NOT be rendered here.
+    expect(screen.queryByTestId('image-modal')).not.toBeInTheDocument();
   });
 
   it('renders nothing if feature disabled and no images', async () => {

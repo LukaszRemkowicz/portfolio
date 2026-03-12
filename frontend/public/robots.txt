@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://lukaszremkowicz.com/sitemap.xml
+Sitemap: https://__SITE_DOMAIN__/sitemap.xml

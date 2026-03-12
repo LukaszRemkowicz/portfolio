@@ -7,7 +7,6 @@ from rest_framework import serializers
 from django.conf import settings
 from django.utils import translation
 
-from common.constants import FALLBACK_URL_SLUG
 from common.serializers import TranslatedSerializerMixin
 from translation.services import TranslationService
 
@@ -188,6 +187,8 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
     full_location = serializers.SerializerMethodField()
     story_preview = serializers.SerializerMethodField()
     date_slug = serializers.ReadOnlyField()
+    place_slug = serializers.ReadOnlyField(source="safe_place_slug")
+    country_slug = serializers.ReadOnlyField(source="safe_country_slug")
 
     @staticmethod
     def format_date(dt: date) -> str:
@@ -249,13 +250,6 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
             instance=instance,
             fields=["highlight_name", "highlight_title", "story"],
         )
-        # Enforce strict 3-segment URL generation fallback
-        if not instance.place:
-            data["place_slug"] = FALLBACK_URL_SLUG
-            data["country_slug"] = FALLBACK_URL_SLUG
-        elif not data.get("country_slug"):
-            data["country_slug"] = FALLBACK_URL_SLUG
-
         return data
 
     class Meta:
