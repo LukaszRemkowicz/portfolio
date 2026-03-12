@@ -1,25 +1,12 @@
 # backend/core/tests/test_webp.py
 """Tests for WebP-related methods on BaseImage and LandingPageSettings."""
-from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PIL import Image
 
 from astrophotography.tests.factories import MainPageBackgroundImageFactory
 from core.models import LandingPageSettings
 from core.tests.factories import LandingPageSettingsFactory
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_jpeg_bytes() -> bytes:
-    buf = BytesIO()
-    Image.new("RGB", (20, 20), color=(10, 20, 30)).save(buf, "JPEG")
-    return buf.getvalue()
-
 
 # ---------------------------------------------------------------------------
 # LandingPageSettings.get_current()

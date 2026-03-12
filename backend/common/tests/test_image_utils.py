@@ -1,36 +1,11 @@
 # backend/common/tests/test_image_utils.py
 """Unit tests for common.utils.image — convert_to_webp utility."""
-from io import BytesIO
 from unittest.mock import MagicMock
 
 from PIL import Image
 
+from common.tests.image_helpers import NamedBytesIO, _jpeg_field, _png_field
 from common.utils.image import convert_to_webp
-
-# ---------------------------------------------------------------------------
-# Test helpers
-# ---------------------------------------------------------------------------
-
-
-class NamedBytesIO(BytesIO):
-    """BytesIO subclass that carries a filename — mirrors Django's ImageFieldFile."""
-
-    def __init__(self, data: bytes, name: str) -> None:
-        super().__init__(data)
-        self.name = name
-
-
-def _jpeg_field(name: str = "photo.jpg") -> NamedBytesIO:
-    buf = BytesIO()
-    Image.new("RGB", (10, 10), color=(100, 150, 200)).save(buf, "JPEG")
-    return NamedBytesIO(buf.getvalue(), name)
-
-
-def _png_field(name: str = "photo.png", mode: str = "RGB") -> NamedBytesIO:
-    buf = BytesIO()
-    Image.new(mode, (10, 10)).save(buf, "PNG")
-    return NamedBytesIO(buf.getvalue(), name)
-
 
 # ---------------------------------------------------------------------------
 # Tests

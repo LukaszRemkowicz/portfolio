@@ -13,6 +13,7 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 from astrophotography.models import AstroImage, MainPageBackgroundImage
+from common.utils.image import convert_to_webp
 from programming.models import ProjectImage
 from users.models import User
 
@@ -150,7 +151,6 @@ class Command(BaseCommand):
 
         try:
             webp_quality: int = getattr(type(obj), "webp_quality", 90)
-            from common.utils.image import convert_to_webp
 
             result = convert_to_webp(source, quality=webp_quality)
             if result is None:
@@ -208,7 +208,6 @@ class Command(BaseCommand):
             return "converted"
 
         try:
-            from common.utils.image import convert_to_webp
 
             result = convert_to_webp(source, quality=user.webp_quality)
             if result is None:

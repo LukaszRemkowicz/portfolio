@@ -1,38 +1,13 @@
 # backend/users/tests/test_webp.py
 """Tests for WebP-related methods on the User model."""
-from io import BytesIO
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-from PIL import Image
 
+from common.tests.image_helpers import _jpeg_field
 from core.models import LandingPageSettings
 from core.tests.factories import LandingPageSettingsFactory
 from users.tests.factories import UserFactory
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-class NamedBytesIO(BytesIO):
-    """BytesIO subclass that carries a filename — mirrors Django's ImageFieldFile."""
-
-    def __init__(self, data: bytes, name: str) -> None:
-        super().__init__(data)
-        self.name = name
-
-    # Provide a no-op save() so the code under test can call field.save(...)
-    def save(self, name, content, **kwargs) -> None:  # noqa: ANN001
-        pass
-
-
-def _jpeg_field(name: str = "avatar.jpg") -> NamedBytesIO:
-    """Return a NamedBytesIO backed by a real JPEG — PIL-compatible."""
-    buf = BytesIO()
-    Image.new("RGB", (10, 10), color=(10, 20, 30)).save(buf, "JPEG")
-    return NamedBytesIO(buf.getvalue(), name)
-
 
 # ---------------------------------------------------------------------------
 # User._convert_image_field_to_webp()

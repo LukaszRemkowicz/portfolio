@@ -274,16 +274,10 @@ else
       local MAX_RETRIES_BE=60
       for ((i=1; i<=MAX_RETRIES_BE; i++)); do
         # Use python as curl/wget may be missing in production images.
-<<<<<<< Updated upstream
-        # We connect to localhost (now that it's unconditionally allowed in ALLOWED_HOSTS).
-        local python_health_cmd="import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
-        if docker exec "${container}" python3 -c "${python_health_cmd}"; then
-=======
         # We connect to 127.0.0.1 and pass X-Forwarded-Proto: https to bypass Django's SSL redirect.
         # timeout=5 ensures the script doesn't hang if gunicorn is stuck.
         local python_health_cmd="import urllib.request; req = urllib.request.Request('http://127.0.0.1:8000/v1/health', headers={'X-Forwarded-Proto': 'https'}); urllib.request.urlopen(req, timeout=5)"
         if docker exec "${container}" python3 -c "${python_health_cmd}" >/dev/null 2>&1; then
->>>>>>> Stashed changes
           echo "✅ Backend ${container} is healthy (/health)"
           break
         fi
