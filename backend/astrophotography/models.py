@@ -218,7 +218,7 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
     """Model for astrophotography images"""
 
     # Track changes to the 'path' field (inherited from BaseImage)
-    path_tracker = FieldTracker(fields=["path"])
+    path_tracker = FieldTracker(fields=["path", "legacy_path"])
 
     # Translation trigger fields
     translation_service_method = "translate_astro_image"
@@ -363,7 +363,11 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
 class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
     """Images used as full-page backgrounds on the main portal."""
 
-    path_tracker = FieldTracker(fields=["path"])
+    # Background images sit behind text/overlay — 50% quality is visually
+    # indistinguishable at typical viewing sizes and saves ~850 KiB per image.
+    webp_quality: int = 50
+
+    path_tracker = FieldTracker(fields=["path", "legacy_path"])
 
     # Translation trigger fields
     translation_service_method = "translate_main_page_background_image"

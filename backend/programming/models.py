@@ -37,7 +37,7 @@ class Project(models.Model):
 class ProjectImage(AutomatedTranslationModelMixin, BaseImage):
     """Model for programming project images"""
 
-    path_tracker = FieldTracker(fields=["path"])
+    path_tracker = FieldTracker(fields=["path", "legacy_path"])
 
     # Translation trigger fields
     translation_service_method = "translate_project_image"

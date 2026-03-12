@@ -32,6 +32,25 @@ class UserSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     """Serializer for the User model profile with nested profiles"""
 
     profiles = ProfileSerializer(many=True, read_only=True)
+    avatar = serializers.SerializerMethodField()
+    about_me_image = serializers.SerializerMethodField()
+    about_me_image2 = serializers.SerializerMethodField()
+
+    def _build_url(self, obj: User, field_name: str, legacy_field_name: str) -> str:
+        relative_url: str = obj._get_serving_image_url(field_name, legacy_field_name)
+        request = self.context.get("request")
+        if relative_url and request:
+            return str(request.build_absolute_uri(relative_url))
+        return relative_url
+
+    def get_avatar(self, obj: User) -> str:
+        return self._build_url(obj, "avatar", "avatar_legacy")
+
+    def get_about_me_image(self, obj: User) -> str:
+        return self._build_url(obj, "about_me_image", "about_me_image_legacy")
+
+    def get_about_me_image2(self, obj: User) -> str:
+        return self._build_url(obj, "about_me_image2", "about_me_image2_legacy")
 
     def to_representation(self, instance: User) -> dict:
         data = super().to_representation(instance)

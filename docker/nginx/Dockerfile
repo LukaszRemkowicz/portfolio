@@ -1,4 +1,4 @@
-FROM nginx:1.25
+FROM nginx:latest
 
 # Copy the Nginx template into the image
 # This ensures that routing logic is versioned along with the image

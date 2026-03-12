@@ -1,3 +1,4 @@
+import os
 import uuid
 from io import BytesIO
 from typing import Any
@@ -10,6 +11,8 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
+from common.utils.image import convert_to_webp
 
 
 class BaseImage(TranslatableModel):
@@ -25,6 +28,18 @@ class BaseImage(TranslatableModel):
         verbose_name=_("Image File"),
         help_text=_("The actual image file to be displayed."),
     )
+    legacy_path = models.ImageField(
+        upload_to="images/",
+        blank=True,
+        null=True,
+        editable=False,
+        verbose_name=_("Legacy Image Path"),
+        help_text=_(
+            "Original file path before WebP conversion. "
+            "Used for rollback via the Admin serve_webp_images toggle. "
+            "TODO:Will be removed in future versions."
+        ),
+    )
 
     # Translations moved to concrete subclasses because BaseImage is abstract.
     # See AstroImage and ProjectImage.
@@ -33,8 +48,14 @@ class BaseImage(TranslatableModel):
         upload_to="thumbnails/", blank=True, null=True, editable=False, verbose_name=_("Thumbnail")
     )
 
-    # Track changes to the 'path' field to trigger thumbnail regeneration
-    path_tracker = FieldTracker(fields=["path"])
+    # Track path AND legacy_path so save() can detect whether _convert_to_webp() preserved
+    # the old file as a rollback target (and must not delete it).
+    path_tracker = FieldTracker(fields=["path", "legacy_path"])
+
+    # Subclasses override this to control WebP compression level.
+    # AstroImage/ProjectImage keep 90 (photography portfolio); backgrounds/user images
+    # use lower values set on those concrete classes.
+    webp_quality: int = 90
 
     class Meta:
         abstract = True
@@ -42,6 +63,10 @@ class BaseImage(TranslatableModel):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         path_changed: bool = self.path_tracker.has_changed("path")
+
+        # Auto-convert new uploads to WebP
+        if path_changed and self.path:
+            self._convert_to_webp()
 
         if self.path and (not self.thumbnail or path_changed):
             self.thumbnail = self.make_thumbnail(self.path)
@@ -51,17 +76,57 @@ class BaseImage(TranslatableModel):
             if old_path:
                 storage: Any = self.path.storage
                 old_path_str: str = str(old_path)
-                if old_path_str and storage.exists(old_path_str):
+                # If legacy_path was freshly set by _convert_to_webp(), the old file is now
+                # preserved as the rollback target — do not delete it.
+                legacy_was_set: bool = self.path_tracker.has_changed("legacy_path") and bool(
+                    self.legacy_path
+                )
+                if old_path_str and not legacy_was_set and storage.exists(old_path_str):
                     storage.delete(old_path_str)
 
         super().save(*args, **kwargs)
+
+    def _convert_to_webp(self) -> None:
+        """Convert the current path image to WebP using self.webp_quality.
+
+        Stores the original file path in legacy_path for rollback purposes.
+        No-op if the image is already in WebP format or conversion fails.
+        """
+        result: tuple[str, Any] | None = convert_to_webp(self.path, quality=self.webp_quality)
+        if result is None:
+            return
+        original_name, webp_content = result
+        self.legacy_path = original_name
+        self.path.save(webp_content.name, webp_content, save=False)
+
+    def get_serving_path(self) -> Any:
+        """Return the image field to serve based on the serve_webp_images Admin toggle.
+
+        When serve_webp_images=True → serve WebP (self.path).
+        When serve_webp_images=False → serve legacy original if available, else WebP.
+        TODO: will be removed in future versions.
+        """
+        settings_obj: LandingPageSettings | None = LandingPageSettings.get_current()
+        if settings_obj and settings_obj.serve_webp_images:
+            return self.path
+        return self.legacy_path or self.path
+
+    def get_serving_url(self) -> str:
+        """Return the URL string of the image to serve."""
+        serving_field: Any = self.get_serving_path()
+        if serving_field:
+            try:
+                return str(serving_field.url)
+            except ValueError:
+                pass
+        return ""
 
     def __str__(self) -> str:
         name = self.safe_translation_getter("name", any_language=True)
         return name if name else str(self.id)
 
     def make_thumbnail(self, image: Any, size: tuple[int, int] = (400, 400)) -> ContentFile:
-        """Generates a thumbnail for the image."""
+        """Generates a WebP thumbnail for the image."""
         img: Any = Image.open(image)
         # Handle transparency: create a white background if image has alpha channel
         if img.mode in ("RGBA", "P"):
@@ -73,8 +138,9 @@ class BaseImage(TranslatableModel):
             img = img.convert("RGB")
         img.thumbnail(size)
         thumb_io = BytesIO()
-        img.save(thumb_io, "JPEG", quality=85)
-        thumbnail_name = f"thumb_{getattr(image, 'name', 'unknown').split('/')[-1]}"
+        img.save(thumb_io, "WEBP", quality=85)
+        original_name = getattr(image, "name", "unknown").split("/")[-1]
+        thumbnail_name = "thumb_" + os.path.splitext(original_name)[0] + ".webp"
         return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
 
     def get_thumbnail_url(self) -> str:
@@ -120,6 +186,15 @@ class LandingPageSettings(SingletonModel):
     lastimages_enabled = models.BooleanField(
         default=True, verbose_name=_("Last Images Section Enabled")
     )
+    serve_webp_images = models.BooleanField(
+        default=False,
+        verbose_name=_("Serve WebP Images"),
+        help_text=_(
+            "When enabled, serves WebP-converted images. "
+            "Disable to fall back to the original legacy images for rollback. "
+            "Will be removed in future."
+        ),
+    )
     meteors = models.ForeignKey(
         "astrophotography.MeteorsMainPageConfig",
         on_delete=models.SET_NULL,
@@ -132,6 +207,15 @@ class LandingPageSettings(SingletonModel):
     class Meta:
         verbose_name = _("Landing Page Settings")
         verbose_name_plural = _("Landing Page Settings")
+
+    @classmethod
+    def get_current(cls) -> "LandingPageSettings | None":
+        """Return the singleton LandingPageSettings instance, or None if not yet created.
+
+        Use this instead of .objects.last() so caching can be added here in future
+        without touching any caller.
+        """
+        return cls.objects.last()
 
     def __str__(self) -> str:
         return str(_("Landing Page Settings"))

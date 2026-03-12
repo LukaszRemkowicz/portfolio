@@ -153,7 +153,10 @@ class AstroImageSerializer(AstroImageBaseSerializer):
 
 
 class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
-    url = serializers.ImageField(source="path", read_only=True)
+    url = serializers.SerializerMethodField()
+
+    def get_url(self, obj: MainPageBackgroundImage) -> str:
+        return obj.get_serving_url()
 
     class Meta:
         model = MainPageBackgroundImage

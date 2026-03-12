@@ -173,7 +173,7 @@ services:
     build:
       context: .
       dockerfile: docker/nginx/Dockerfile
-    image: nginx:1.25
+    image: nginx:latest
     networks:
       - portfolio_network
     depends_on:
@@ -188,7 +188,8 @@ services:
       NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_PORT"
     ports:
       - "80:80"
-      - "443:443"
+      - "443:443/tcp"
+      - "443:443/udp"
     volumes:
       - ./nginx/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
       - ./nginx/ssl/certs:/etc/nginx/ssl:ro

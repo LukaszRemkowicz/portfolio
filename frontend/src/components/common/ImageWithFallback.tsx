@@ -6,7 +6,7 @@ interface ImageWithFallbackProps extends ImgHTMLAttributes<HTMLImageElement> {
 
 const ImageWithFallback = ({
   src,
-  fallbackSrc = '/landscape.png',
+  fallbackSrc = '/landscape.webp',
   alt,
   className,
   onLoad,
