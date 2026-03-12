@@ -1,6 +1,4 @@
-// frontend/src/index.tsx
 import { createRoot } from 'react-dom/client';
-import * as Sentry from '@sentry/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import App from './App';
@@ -14,20 +12,21 @@ const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Root element not found');
 }
-
-// Initialize Sentry
+// Initialize Sentry lazily to reduce initial bundle size (~44 KiB for Replay)
 const sentryDsn = getEnv('SENTRY_DSN_FE');
 if (sentryDsn) {
-  Sentry.init({
-    dsn: sentryDsn,
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(),
-    ],
-    tracesSampleRate: 1.0,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
-    environment: getEnv('ENVIRONMENT', 'development'),
+  import('@sentry/react').then(Sentry => {
+    Sentry.init({
+      dsn: sentryDsn,
+      integrations: [
+        Sentry.browserTracingIntegration(),
+        Sentry.replayIntegration(),
+      ],
+      tracesSampleRate: 1.0,
+      replaysSessionSampleRate: 0.1,
+      replaysOnErrorSampleRate: 1.0,
+      environment: getEnv('ENVIRONMENT', 'development'),
+    });
   });
 }
 
