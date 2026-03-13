@@ -52,6 +52,7 @@ class TestAstroImageModel:
     def test_thumbnail_generation(self) -> None:
         """Test that a thumbnail is automatically generated on save"""
         image: AstroImage = AstroImageFactory(name="Test Nebula")
+        image.refresh_from_db()
         assert image.thumbnail is not None
         assert image.thumbnail.name.startswith("thumbnails/thumb_")
 
@@ -90,6 +91,7 @@ class TestAstroImageModel:
         This tests the inherited logic from BaseImage.
         """
         image: AstroImage = AstroImageFactory()
+        image.refresh_from_db()
         url: str = image.get_thumbnail_url()
         assert url
         assert "/media/thumbnails/" in url or "/media/images/" in url
@@ -305,6 +307,7 @@ class TestImageUpdateLogic:
         file1 = SimpleUploadedFile("shared.jpg", img_data1.getvalue(), content_type="image/jpeg")
 
         image: AstroImage = AstroImageFactory(path=file1)
+        image.refresh_from_db()
         initial_thumb_name = image.thumbnail.name
         initial_thumb_content = image.thumbnail.read()
 
@@ -331,6 +334,7 @@ class TestImageUpdateLogic:
         Verify that the thumbnail is NOT regenerated if we save without changing the image.
         """
         image: AstroImage = AstroImageFactory(name="Stationary Image")
+        image.refresh_from_db()
         initial_thumb_name = image.thumbnail.name
 
         # Save again without changing path

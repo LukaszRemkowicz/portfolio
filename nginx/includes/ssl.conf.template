@@ -1,0 +1,24 @@
+# ==============================================================================
+# Shared TLS / SSL configuration
+# Included by all HTTPS server blocks.
+# Note: listen directives and reuseport stay in each server block since they
+#       differ (reuseport on first block only, no reuseport on api/admin).
+# ==============================================================================
+
+ssl_certificate     /etc/nginx/ssl/$NGINX_SSL_CERT;
+ssl_certificate_key /etc/nginx/ssl/$NGINX_SSL_KEY;
+
+ssl_protocols TLSv1.2 TLSv1.3;
+
+# Strong cipher suite — prefer ChaCha20-Poly1305 for mobile clients lacking AES-NI,
+# AES-GCM for desktop/server. ssl_prefer_server_ciphers off lets the client pick the
+# best cipher it supports (correct for TLS 1.3 / QUIC).
+ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+ssl_prefer_server_ciphers off;
+
+ssl_session_cache   shared:SSL:10m;
+ssl_session_timeout 1d;
+ssl_session_tickets off;
+
+# 0-RTT early data for QUIC/HTTP3 performance
+ssl_early_data on;

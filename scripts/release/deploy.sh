@@ -30,6 +30,11 @@
 # Typical usage:
 #   TAG=v1.2.3 doppler run -- ./deploy.sh
 #
+# Parameters (Environment Variables):
+#   ENVIRONMENT   - Target environment (required: 'production', 'dev', etc.)
+#   TAG           - Release tag (vX.Y.Z). Required.
+#   COMPOSE_FILE  - Path to the docker-compose file. Defaults to docker-compose.${ENVIRONMENT}.yml.
+#
 # Optional:
 #   --dry-run   Print what would happen without making changes
 #
@@ -62,15 +67,17 @@ source "${SCRIPT_DIR}/utils.sh"
 
 PROJECT_DIR="$(get_project_dir)"
 
+# Resolve Compose File
+COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml}"
+
 # Dynamic validation: If the config file exists, the environment is valid.
-# This avoids hardcoding environment names and allows easy scaling (stage, prod, qa, etc).
-if [[ ! -f "${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml" ]]; then
-  echo "❌ ERROR: Configuration for environment '$ENVIRONMENT' not found." >&2
-  echo "� Expected: docker-compose.${ENVIRONMENT}.yml" >&2
+if [[ ! -f "$COMPOSE_FILE" ]]; then
+  echo "❌ ERROR: Configuration file not found: $COMPOSE_FILE" >&2
   exit 1
 fi
 
 echo "⚙️  Environment: ${ENVIRONMENT}"
+echo "🧾 Using compose file: $COMPOSE_FILE"
 
 # ------------------------------------------------------------------
 # Deploy lock (prevents concurrent deploys)
@@ -119,14 +126,10 @@ cd "$PROJECT_DIR"
 # ------------------------------------------------------------------
 # Resolve docker-compose production file
 # ------------------------------------------------------------------
-COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_DIR/docker-compose.prod.yml}"
-[[ -f "$COMPOSE_FILE" ]] || { echo "❌ ERROR: Missing compose file: $COMPOSE_FILE" >&2; exit 1; }
-echo "🧾 Using compose file: $COMPOSE_FILE"
-
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
 
 # Standardize project name by environment to ensure total isolation.
-COMPOSE_PROJECT_NAME="landingpage-${ENVIRONMENT}"
+COMPOSE_PROJECT_NAME="$(get_project_name)"
 export COMPOSE_PROJECT_NAME
 echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
 
@@ -195,7 +198,7 @@ echo "🧪 Running release tasks via release.sh..."
 if [[ "${DRY_RUN}" == true ]]; then
   echo "🧾 DRY RUN: would execute: TAG=${TAG} ENVIRONMENT=${ENVIRONMENT} $SCRIPT_DIR/release.sh"
 else
-  ENVIRONMENT="${ENVIRONMENT}" TAG="${TAG}" "$SCRIPT_DIR/release.sh"
+  ENVIRONMENT="${ENVIRONMENT}" TAG="${TAG}" COMPOSE_FILE="${COMPOSE_FILE}" "$SCRIPT_DIR/release.sh"
 fi
 
 # ------------------------------------------------------------------
@@ -216,10 +219,27 @@ if [[ "${DRY_RUN}" == true ]]; then
   echo "🧾 DRY RUN: would reload Nginx config"
 else
   echo "🔄 [DEPLOY] [4/6] Reloading Nginx configuration..."
-  if "${COMPOSE[@]}" exec -T "nginx" nginx -s reload 2>/dev/null; then
-    echo "✅ Nginx config reloaded successfully"
-  else
-    echo "⚠️  Nginx reload skipped (container may not be running)"
+  RELOAD_SUCCESS=false
+  MAX_RELOAD_RETRIES=5
+  for ((i=1; i<=MAX_RELOAD_RETRIES; i++)); do
+    # check if container is running before attempting exec
+    if [[ "$("${COMPOSE[@]}" ps nginx --format '{{.Status}}')" == *"Up"* ]]; then
+      if "${COMPOSE[@]}" exec -T "nginx" nginx -s reload; then
+        echo "✅ Nginx config reloaded successfully"
+        RELOAD_SUCCESS=true
+        break
+      fi
+    fi
+    echo "⏳ Waiting for Nginx to be ready for reload... ($i/$MAX_RELOAD_RETRIES)"
+    sleep 2
+  done
+
+  if [[ "${RELOAD_SUCCESS}" != "true" ]]; then
+    echo "❌ ERROR: Nginx reload failed. Checking container status..."
+    "${COMPOSE[@]}" ps "nginx"
+    echo "📝 Recent Nginx logs:"
+    "${COMPOSE[@]}" logs --tail 20 "nginx"
+    exit 1
   fi
 fi
 

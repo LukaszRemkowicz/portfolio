@@ -6,8 +6,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#02040a" />
-  <link rel="preload" href="/fonts/fonts.css" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/fonts/fonts.css" /></noscript>
+  <!-- Full Critical CSS Inlining (Variables & Theme) -->
+  <style>
+    /* variables.css content */
+    :root {
+      --primary-color: #007bff;
+      --primary-dark: #0056b3;
+      --primary-light: #66b3ff;
+      --secondary-color: #6c757d;
+      --secondary-dark: #495057;
+      --secondary-light: #adb5bd;
+      --celestial-bg: #02040a;
+      --celestial-bg-accent: #0c1120;
+      --celestial-blue: #38bdf8;
+      --celestial-white: #f8fafc;
+      --celestial-glass: rgba(15, 23, 42, 0.6);
+      --nebula-glow: rgba(56, 189, 248, 0.07);
+      --portfolio-bg-dark: var(--celestial-bg);
+      --text-light: var(--celestial-white);
+      --text-muted: #94a3b8;
+      --accent-primary: var(--celestial-blue);
+      --accent-gold: #e2c275;
+      --accent-blue: #17a2b8;
+      --accent-green: #28a745;
+      --accent-red: #dc3545;
+      --font-family-primary: 'Inter', sans-serif;
+      --font-family-heading: 'Space Grotesk', sans-serif;
+      --font-family-mono: 'Courier New', monospace;
+      --font-size-base: 1rem;
+      --line-height-normal: 1.5;
+      --space-4: 1rem;
+      --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    body { background-color: var(--celestial-bg); color: var(--celestial-white); margin: 0; font-family: var(--font-family-primary); }
+  </style>
+
+  <!-- Inlining Fonts configuration to avoid extra request -->
+  <style>
+    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 300; font-display: swap; src: url(/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2) format('woff2'); }
+    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2) format('woff2'); }
+    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap; src: url(/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2) format('woff2'); }
+    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 300; font-display: swap; src: url(/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4C_k3HqU.woff2) format('woff2'); }
+    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: swap; src: url(/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4C_k3HqU.woff2) format('woff2'); }
+  </style>
+
+  <!-- Preload LCP Background Image -->
+  <link rel="preload" href="/landscape.webp" as="image" fetchpriority="high" />
+
   <!-- Preconnect to API to save ~300ms on first API request -->
   <link rel="preconnect" href="https://api.__SITE_DOMAIN__" crossorigin />
 
@@ -54,6 +99,7 @@
 
 <body>
   <div id="root"></div>
+  <link rel="modulepreload" href="/src/index.tsx" />
   <script type="module" src="/src/index.tsx"></script>
 </body>
 

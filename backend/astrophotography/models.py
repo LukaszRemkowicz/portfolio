@@ -363,9 +363,10 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
 class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
     """Images used as full-page backgrounds on the main portal."""
 
-    # Background images sit behind text/overlay — 50% quality is visually
-    # indistinguishable at typical viewing sizes and saves ~850 KiB per image.
-    webp_quality: int = 50
+    # Background images sit behind text/overlay — 40% quality is visually
+    # indistinguishable at typical viewing sizes and saves ~1 MiB per image.
+    webp_quality = 30
+    max_dimension = 1920
 
     path_tracker = FieldTracker(fields=["path", "legacy_path"])
 

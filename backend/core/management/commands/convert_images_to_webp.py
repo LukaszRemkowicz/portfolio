@@ -151,8 +151,9 @@ class Command(BaseCommand):
 
         try:
             webp_quality: int = getattr(type(obj), "webp_quality", 90)
+            max_dim: int | None = getattr(obj, "max_dimension", None)
 
-            result = convert_to_webp(source, quality=webp_quality)
+            result = convert_to_webp(source, quality=webp_quality, max_dimension=max_dim)
             if result is None:
                 self.stderr.write(self.style.ERROR(f"  [ERR ] {name} — conversion returned None"))
                 return "error"
@@ -209,7 +210,19 @@ class Command(BaseCommand):
 
         try:
 
-            result = convert_to_webp(source, quality=user.webp_quality)
+            # Use specific capping matching the User model
+            optimization_config = {
+                "avatar": {
+                    "dimension": 264,
+                    "quality": 20,
+                },  # Perfect 1:1 display size Match for Lighthouse
+                "about_me_image": {"dimension": 800, "quality": 50},
+                "about_me_image2": {"dimension": 800, "quality": 50},
+            }
+            config = optimization_config.get(field_name, {"dimension": 800, "quality": 50})
+            result = convert_to_webp(
+                source, quality=config["quality"], max_dimension=config["dimension"]
+            )
             if result is None:
                 self.stderr.write(
                     self.style.ERROR(f"  [ERR ] {field_name} — conversion returned None")

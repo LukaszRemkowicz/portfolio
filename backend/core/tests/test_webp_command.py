@@ -69,7 +69,9 @@ class TestConvertImagesToWebpCommand:
             "test.jpg",
             ContentFile(b"fake webp content", name="test.webp"),
         )
-        astro_img = AstroImageFactory()
+        # Prevent automatic task execution during factory creation for this test
+        with mocker.patch("core.models.transaction.on_commit", side_effect=lambda f: None):
+            astro_img = AstroImageFactory()
         path_before = astro_img.path.name
 
         call_command("convert_images_to_webp", dry_run=True)
@@ -91,7 +93,9 @@ class TestConvertImagesToWebpCommand:
             "test.jpg",
             ContentFile(b"fake webp content", name="test.webp"),
         )
-        astro_img = AstroImageFactory()
+        # Prevent automatic task execution during factory creation for this test
+        with mocker.patch("core.models.transaction.on_commit", side_effect=lambda f: None):
+            astro_img = AstroImageFactory()
         call_command("convert_images_to_webp")
 
         astro_img.refresh_from_db()

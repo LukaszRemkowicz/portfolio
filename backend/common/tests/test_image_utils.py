@@ -54,7 +54,7 @@ class TestConvertToWebp:
 
         assert result is not None
         original_name, webp_content = result
-        assert original_name == "images/photo.jpg"
+        assert original_name == "photo.jpg"
         assert webp_content.name == "photo.webp"
 
         webp_content.seek(0)

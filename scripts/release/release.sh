@@ -13,6 +13,11 @@
 #
 # Typical usage:
 #   TAG=v1.2.3 ENVIRONMENT=stage doppler run -- ./release.sh
+#
+# Parameters (Environment Variables):
+#   ENVIRONMENT   - Target environment (required: 'production', 'dev', etc.)
+#   TAG           - Release tag (vX.Y.Z). Defaults to 'git describe'.
+#   COMPOSE_FILE  - Path to the docker-compose file. Defaults to docker-compose.${ENVIRONMENT}.yml.
 ###############################################################################
 
 set -euo pipefail
@@ -27,14 +32,20 @@ source "${SCRIPT_DIR}/utils.sh"
 
 PROJECT_DIR="$(get_project_dir)"
 
+# Resolve Compose File
+COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml}"
+
 # Dynamic validation: If the config file exists, the environment is valid.
-if [[ ! -f "${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml" ]]; then
-  echo "❌ ERROR: Configuration for environment '$ENVIRONMENT' not found." >&2
+if [[ ! -f "$COMPOSE_FILE" ]]; then
+  echo "❌ ERROR: Configuration file not found: $COMPOSE_FILE" >&2
   exit 1
 fi
 
+echo "⚙️  Environment: ${ENVIRONMENT}"
+echo "🧾 Using compose file: $COMPOSE_FILE"
+
 cd "${PROJECT_DIR}"
-COMPOSE_PROJECT_NAME="landingpage-${ENVIRONMENT}"
+COMPOSE_PROJECT_NAME="$(get_project_name)"
 export COMPOSE_PROJECT_NAME
 
 # ------------------------------------------------------------------
@@ -81,8 +92,7 @@ TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || true)}"
 validate_tag "$TAG"
 export TAG
 
-COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.prod.yml}"
-[[ -f "$COMPOSE_FILE" ]] || { echo "❌ ERROR: Missing $COMPOSE_FILE"; exit 1; }
+export COMPOSE_FILE
 export COMPOSE_FILE
 COMPOSE=(docker compose -f "${COMPOSE_FILE}")
 

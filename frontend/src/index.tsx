@@ -12,22 +12,29 @@ const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Root element not found');
 }
-// Initialize Sentry lazily to reduce initial bundle size (~44 KiB for Replay)
 const sentryDsn = getEnv('SENTRY_DSN_FE');
-if (sentryDsn) {
-  import('@sentry/react').then(Sentry => {
-    Sentry.init({
-      dsn: sentryDsn,
-      integrations: [
-        Sentry.browserTracingIntegration(),
-        Sentry.replayIntegration(),
-      ],
-      tracesSampleRate: 1.0,
-      replaysSessionSampleRate: 0.1,
-      replaysOnErrorSampleRate: 1.0,
-      environment: getEnv('ENVIRONMENT', 'development'),
-    });
-  });
+const environment = getEnv('ENVIRONMENT', 'development');
+
+if (sentryDsn && !['development', 'dev'].includes(environment)) {
+  // Lazily load Sentry only in production with minimal integrations
+  setTimeout(() => {
+    import('@sentry/react')
+      .then(Sentry => {
+        if (Sentry && Sentry.init) {
+          Sentry.init({
+            dsn: sentryDsn,
+            // Selective integrations for minimal impact
+            defaultIntegrations: false,
+            integrations: Sentry.browserTracingIntegration
+              ? [Sentry.browserTracingIntegration()]
+              : [],
+            tracesSampleRate: 0.1,
+            environment: environment,
+          });
+        }
+      })
+      .catch(err => console.warn('Sentry failed to load:', err));
+  }, 1500); // Defer Sentry to post-load
 }
 
 const queryClient = new QueryClient({

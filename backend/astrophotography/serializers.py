@@ -181,7 +181,7 @@ class AstroImageThumbnailSerializer(AstroImageBaseSerializer):
 class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
     place = PlaceSerializer(read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
-    background_image = serializers.ImageField(source="background_image.path", read_only=True)
+    background_image = serializers.SerializerMethodField()
     background_image_thumbnail = serializers.ImageField(
         source="background_image.thumbnail", read_only=True
     )
@@ -197,6 +197,11 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
     def format_date(dt: date) -> str:
         """Format: 20 Jan 2026"""
         return dt.strftime("%-d %b %Y")
+
+    def get_background_image(self, obj: MainPageLocation) -> str:
+        if obj.background_image:
+            return str(obj.background_image.get_serving_url())
+        return ""
 
     def get_full_location(self, obj: MainPageLocation) -> str:
         request = self.context.get("request")

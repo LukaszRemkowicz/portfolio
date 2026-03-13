@@ -6,9 +6,29 @@
 #   Build versioned Docker images for production in a deterministic,
 #   reproducible, and rollback-safe way.
 #
+# Usage:
+#   [ENVIRONMENT=prod] [TAG=v1.2.3] doppler run -- ./build.sh [ARGS]
+#
+# Parameters (Environment Variables):
+#   ENVIRONMENT   - Target environment (required: 'production', 'dev', etc.)
+#   TAG           - Release tag (vX.Y.Z). If omitted, uses 'git describe'.
+#   COMPOSE_FILE  - Path to the docker-compose file. Defaults to docker-compose.${ENVIRONMENT}.yml.
+#   EMERGENCY     - Set to '1' to bypass dirty git status check.
+#
+#   Domain & Analytics (Required via Doppler):
+#     API_DOMAIN, SITE_DOMAIN, GA_TRACKING_ID, SENTRY_DSN_FE,
+#     ALLOWED_HOSTS, PROJECT_OWNER
+#
+#   Optional:
+#     FRONTEND_PORT - Port for frontend service (default: 8080)
+#
+# Arguments (CLI):
+#   --emergency   - Bypass dirty git status check (same as EMERGENCY=1).
+#   --no-cache    - Force a fresh build without using Docker layer cache.
+#
 # High-level behavior:
 #   - Refuses to run outside a git repository
-#   - Refuses to run if the working tree is dirty
+#   - Refuses to run if the working tree is dirty (unless --emergency is used)
 #   - Requires an exact git tag on HEAD (tag == release)
 #   - Builds backend and frontend Docker images for that tag
 #   - Does NOT deploy anything
@@ -84,15 +104,18 @@ done
 : "${PROJECT_OWNER:?PROJECT_OWNER is required (inject via: doppler run -- ./build.sh)}"
 : "${FRONTEND_PORT:=8080}"
 
+# Resolve Compose File
+COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml}"
+
 # Dynamic validation: If the config file exists, the environment is valid.
-if [[ ! -f "${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml" ]]; then
-  echo "❌ ERROR: Configuration for environment '$ENVIRONMENT' not found." >&2
-  echo "📂 Expected: docker-compose.${ENVIRONMENT}.yml" >&2
+if [[ ! -f "$COMPOSE_FILE" ]]; then
+  echo "❌ ERROR: Configuration file not found: $COMPOSE_FILE" >&2
   exit 1
 fi
 
 echo "⚙️  Target ENVIRONMENT: ${ENVIRONMENT}"
 echo "⚙️  Target API_DOMAIN: ${API_DOMAIN}"
+echo "⚙️  Compose File: ${COMPOSE_FILE}"
 
 
 # ------------------------------------------------------------------
@@ -116,6 +139,11 @@ validate_tag "$TAG"
 export TAG
 
 echo "🏷️  Release tag: $TAG"
+
+# Standardize project name for tagging/logging
+COMPOSE_PROJECT_NAME="$(get_project_name)"
+export COMPOSE_PROJECT_NAME
+echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
 
 # Enforce deterministic build
 if [[ -n "$(git status --porcelain)" ]]; then

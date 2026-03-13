@@ -9,10 +9,11 @@ from PIL import Image
 
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 
 from common.utils.image import convert_to_webp
+from core.tasks import process_image_task
 
 
 class BaseImage(TranslatableModel):
@@ -56,20 +57,26 @@ class BaseImage(TranslatableModel):
     # AstroImage/ProjectImage keep 90 (photography portfolio); backgrounds/user images
     # use lower values set on those concrete classes.
     webp_quality: int = 90
+    max_dimension: int | None = None
 
     class Meta:
         abstract = True
         ordering = ["-created_at"]
 
     def save(self, *args: Any, **kwargs: Any) -> None:
+        is_new = self._state.adding
         path_changed: bool = self.path_tracker.has_changed("path")
 
-        # Auto-convert new uploads to WebP
-        if path_changed and self.path:
-            self._convert_to_webp()
+        super().save(*args, **kwargs)
 
-        if self.path and (not self.thumbnail or path_changed):
-            self.thumbnail = self.make_thumbnail(self.path)
+        if (is_new or path_changed) and self.path and not kwargs.get("update_fields"):
+            # Trigger background task after save() and inside on_commit to ensure
+            # the record exists in the database for the task fetcher.
+            transaction.on_commit(
+                lambda: process_image_task.delay(
+                    self._meta.app_label, self._meta.model_name, str(self.pk)
+                )
+            )
 
         if self.pk and path_changed:
             old_path: Any = self.path_tracker.previous("path")
@@ -84,20 +91,21 @@ class BaseImage(TranslatableModel):
                 if old_path_str and not legacy_was_set and storage.exists(old_path_str):
                     storage.delete(old_path_str)
 
-        super().save(*args, **kwargs)
-
-    def _convert_to_webp(self) -> None:
+    def _convert_to_webp(self) -> bool:
         """Convert the current path image to WebP using self.webp_quality.
 
         Stores the original file path in legacy_path for rollback purposes.
         No-op if the image is already in WebP format or conversion fails.
         """
-        result: tuple[str, Any] | None = convert_to_webp(self.path, quality=self.webp_quality)
+        result: tuple[str, Any] | None = convert_to_webp(
+            self.path, quality=self.webp_quality, max_dimension=self.max_dimension
+        )
         if result is None:
-            return
+            return False
         original_name, webp_content = result
         self.legacy_path = original_name
         self.path.save(webp_content.name, webp_content, save=False)
+        return True
 
     def get_serving_path(self) -> Any:
         """Return the image field to serve based on the serve_webp_images Admin toggle.
@@ -125,8 +133,8 @@ class BaseImage(TranslatableModel):
         name = self.safe_translation_getter("name", any_language=True)
         return name if name else str(self.id)
 
-    def make_thumbnail(self, image: Any, size: tuple[int, int] = (400, 400)) -> ContentFile:
-        """Generates a WebP thumbnail for the image."""
+    def make_thumbnail(self, image: Any, size: tuple[int, int] = (300, 300)) -> ContentFile:
+        """Generates a high-compression WebP thumbnail for the image."""
         img: Any = Image.open(image)
         # Handle transparency: create a white background if image has alpha channel
         if img.mode in ("RGBA", "P"):
@@ -138,7 +146,8 @@ class BaseImage(TranslatableModel):
             img = img.convert("RGB")
         img.thumbnail(size)
         thumb_io = BytesIO()
-        img.save(thumb_io, "WEBP", quality=85)
+        # Aggressive WebP settings for thumbnails (Lighthouse target)
+        img.save(thumb_io, "WEBP", quality=60)
         original_name = getattr(image, "name", "unknown").split("/")[-1]
         thumbnail_name = "thumb_" + os.path.splitext(original_name)[0] + ".webp"
         return ContentFile(thumb_io.getvalue(), name=thumbnail_name)

@@ -1,0 +1,11 @@
+# ==============================================================================
+# Shared error page configuration for all HTTPS server blocks.
+# ==============================================================================
+
+error_page 403 404 500 502 503 504 /error.html;
+location = /error.html {
+    root /usr/share/nginx/html/errors;
+    internal;
+}
+
+proxy_intercept_errors on;

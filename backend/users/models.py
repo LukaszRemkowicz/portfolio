@@ -8,12 +8,13 @@ from parler.managers import TranslatableManager
 from parler.models import TranslatableModel, TranslatedFields
 
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.db import IntegrityError, models
+from django.db import IntegrityError, models, transaction
 from django.utils.translation import gettext_lazy as _
 
 from common.utils.image import convert_to_webp
 from core.models import LandingPageSettings, SingletonModel
 from translation.mixins import AutomatedTranslationModelMixin
+from users.tasks import process_user_images_task
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +47,8 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
     translation_trigger_fields = ["short_description", "bio"]
 
     # Avatar and about_me images are visible but not portfolio photography —
-    # 70% quality gives good fidelity at significantly smaller file sizes.
-    webp_quality: int = 70
+    # 35% quality gives good fidelity at significantly smaller file sizes.
+    webp_quality: int = 35
 
     username = None  # type: ignore[assignment]  # Remove username field - use email instead
     email = models.EmailField(_("email address"), unique=True)
@@ -129,27 +130,33 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
         super().clean()
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        """Enforce singleton on save and trigger translations"""
+        """Enforce singleton on save and trigger translations/image processing"""
         try:
-            # Auto-convert changed image fields to WebP
-            for field, legacy_field in [
-                ("avatar", "avatar_legacy"),
-                ("about_me_image", "about_me_image_legacy"),
-                ("about_me_image2", "about_me_image2_legacy"),
-            ]:
-                if self.image_tracker.has_changed(field):
-                    self._convert_image_field_to_webp(field, legacy_field)
+            changed_image_fields = []
+            for field_name in ["avatar", "about_me_image", "about_me_image2"]:
+                if self.image_tracker.has_changed(field_name):
+                    changed_image_fields.append(field_name)
 
             self.clean()
             super().save(*args, **kwargs)
+
+            if changed_image_fields and not kwargs.get("update_fields"):
+                transaction.on_commit(
+                    lambda: process_user_images_task.delay(self.pk, changed_image_fields)
+                )
+
             self.trigger_translations()
         except IntegrityError as exc:
             raise ValueError("Failed to save user. Only one user is allowed.") from exc
 
-    def _convert_image_field_to_webp(self, field_name: str, legacy_field_name: str) -> None:
+    def _convert_image_field_to_webp(
+        self, field_name: str, legacy_field_name: str, max_dimension: int, quality: int
+    ) -> None:
         """Convert a single ImageField to WebP and store the original as legacy."""
         field: Any = getattr(self, field_name)
-        result: tuple[str, Any] | None = convert_to_webp(field, quality=self.webp_quality)
+        result: tuple[str, Any] | None = convert_to_webp(
+            field, quality=quality, max_dimension=max_dimension
+        )
         if result is None:
             setattr(self, legacy_field_name, None)
             return
@@ -183,9 +190,8 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
 
     def get_avatar_url(self) -> str:
         """Get avatar URL or default placeholder."""
-        if self.avatar:
-            return self.avatar.url  # type: ignore[no-any-return]
-        return "/static/images/default-avatar.png"
+        url = self._get_serving_image_url("avatar", "avatar_legacy")
+        return url if url else "/static/images/default-avatar.png"
 
     def has_complete_profile(self) -> bool:
         """Check if user has completed their profile."""

@@ -20,7 +20,7 @@ class TestUserConvertImageFieldToWebp:
         """If the field has no image, legacy must not be set."""
         user = UserFactory.create_superuser()
         # avatar is empty by default
-        user._convert_image_field_to_webp("avatar", "avatar_legacy")
+        user._convert_image_field_to_webp("avatar", "avatar_legacy", 1000, 80)
         # legacy should be cleared (None), not set to a path
         assert not user.avatar_legacy
 
@@ -32,7 +32,7 @@ class TestUserConvertImageFieldToWebp:
         field.name = "avatar.webp"
         user.avatar = field
 
-        user._convert_image_field_to_webp("avatar", "avatar_legacy")
+        user._convert_image_field_to_webp("avatar", "avatar_legacy", 1000, 80)
         assert not user.avatar_legacy
 
     def test_converts_and_sets_legacy(self):
@@ -41,7 +41,7 @@ class TestUserConvertImageFieldToWebp:
         field = _jpeg_field("avatar.jpg")
         user.avatar = field
 
-        user._convert_image_field_to_webp("avatar", "avatar_legacy")
+        user._convert_image_field_to_webp("avatar", "avatar_legacy", 1000, 80)
 
         # legacy set to original filename
         assert user.avatar_legacy == "avatar.jpg"
@@ -56,7 +56,7 @@ class TestUserConvertImageFieldToWebp:
         user.avatar = field
 
         # Should not raise
-        user._convert_image_field_to_webp("avatar", "avatar_legacy")
+        user._convert_image_field_to_webp("avatar", "avatar_legacy", 1000, 80)
         assert not user.avatar_legacy
 
 

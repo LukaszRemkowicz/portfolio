@@ -4,31 +4,29 @@ from io import BytesIO
 
 from PIL import Image
 
+from django.core.files.uploadedfile import SimpleUploadedFile
+
 
 class NamedBytesIO(BytesIO):
-    """BytesIO subclass that carries a filename — mirrors Django's ImageFieldFile."""
+    """BytesIO with a .name attribute for mock file handling."""
 
-    def __init__(self, data: bytes, name: str) -> None:
-        super().__init__(data)
+    def __init__(self, content: bytes, name: str):
+        super().__init__(content)
         self.name = name
 
-    # Provide a no-op save() so the code under test can call field.save(...)
-    def save(self, name, content, **kwargs) -> None:  # noqa: ANN001
-        pass
 
-
-def _jpeg_field(name: str = "avatar.jpg", color: tuple = (10, 20, 30)) -> NamedBytesIO:
-    """Return a NamedBytesIO backed by a real JPEG — PIL-compatible."""
+def _jpeg_field(name: str = "avatar.jpg", color: tuple = (10, 20, 30)) -> SimpleUploadedFile:
+    """Return a SimpleUploadedFile backed by a real JPEG — PIL-compatible."""
     buf = BytesIO()
     Image.new("RGB", (10, 10), color=color).save(buf, "JPEG")
-    return NamedBytesIO(buf.getvalue(), name)
+    return SimpleUploadedFile(name, buf.getvalue(), content_type="image/jpeg")
 
 
-def _png_field(name: str = "photo.png", mode: str = "RGB") -> NamedBytesIO:
-    """Return a NamedBytesIO backed by a real PNG — PIL-compatible."""
+def _png_field(name: str = "photo.png", mode: str = "RGB") -> SimpleUploadedFile:
+    """Return a SimpleUploadedFile backed by a real PNG — PIL-compatible."""
     buf = BytesIO()
     Image.new(mode, (10, 10)).save(buf, "PNG")
-    return NamedBytesIO(buf.getvalue(), name)
+    return SimpleUploadedFile(name, buf.getvalue(), content_type="image/png")
 
 
 def _make_jpeg_bytes(size: tuple = (20, 20), color: tuple = (10, 20, 30)) -> bytes:

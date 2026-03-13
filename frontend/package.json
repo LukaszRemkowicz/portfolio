@@ -81,8 +81,10 @@
     "serialize-javascript": "^7.0.3"
   },
   "browserslist": [
-    ">0.5%",
     "last 2 versions",
-    "not dead"
+    "not dead",
+    "Chrome >= 100",
+    "Firefox >= 100",
+    "Safari >= 15"
   ]
 }

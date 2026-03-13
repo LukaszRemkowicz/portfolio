@@ -66,11 +66,14 @@ const AstroGallery: React.FC = () => {
   // Smooth scroll to results on filter/tag change (Mobile only)
   useEffect(() => {
     if (window.innerWidth <= 992 && resultsRef.current) {
-      const yOffset = -100; // Offset for sticky navbar/header
-      const element = resultsRef.current;
-      const y =
-        element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
+      requestAnimationFrame(() => {
+        if (!resultsRef.current) return;
+        const yOffset = -100; // Offset for sticky navbar/header
+        const element = resultsRef.current;
+        const y =
+          element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      });
     }
   }, [selectedFilter, selectedTag]);
 

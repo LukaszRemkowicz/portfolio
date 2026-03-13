@@ -12,6 +12,7 @@ from django.core.files.base import ContentFile
 def convert_to_webp(
     image_field: Any,
     quality: int = 90,
+    max_dimension: int | None = None,
 ) -> tuple[str, ContentFile] | None:
     """Convert an open ImageField to WebP format.
 
@@ -30,7 +31,10 @@ def convert_to_webp(
     if not image_field:
         return None
 
+    # Capture current name to return as 'original_name' (legacy_path) for rollbacks.
     current_name: str = str(image_field.name)
+
+    # Do not re-compress if the file is already a WebP image.
     if current_name.lower().endswith(".webp"):
         return None
 
@@ -38,6 +42,12 @@ def convert_to_webp(
         img: Any = Image.open(image_field)
         if img.mode not in ("RGB", "RGBA"):
             img = img.convert("RGB")
+
+        # Proportional resizing if max_dimension is set
+        if max_dimension:
+            # thumbnail() resizes the image to be no larger than the given size,
+            # preserving the aspect ratio.
+            img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
 
         output: BytesIO = BytesIO()
         img.save(output, "WEBP", quality=quality)

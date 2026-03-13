@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,10 +8,14 @@
     <style>
         :root {
             /* Extracted from the React app theme variables */
-            --bg-primary: #0f172a; /* Slate 900 */
-            --text-primary: #f8fafc; /* Slate 100 */
-            --text-secondary: #94a3b8; /* Slate 400 */
-            --accent-glow: rgba(56, 189, 248, 0.15); /* Light blue glow */
+            --bg-primary: #0f172a;
+            /* Slate 900 */
+            --text-primary: #f8fafc;
+            /* Slate 100 */
+            --text-secondary: #94a3b8;
+            /* Slate 400 */
+            --accent-glow: rgba(56, 189, 248, 0.15);
+            /* Light blue glow */
             --border-subtle: rgba(255, 255, 255, 0.1);
         }
 
@@ -57,16 +62,24 @@
         }
 
         @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
         }
 
         .icon {
             font-size: 4rem;
             margin-bottom: 1rem;
             opacity: 0.9;
-            filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
         }
 
         h1 {
@@ -111,6 +124,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="stars-bg"></div>
     <div class="container">
@@ -133,4 +147,5 @@
         console.warn("Nginx Error Page Served. Status context is likely 404/50x.");
     </script>
 </body>
+
 </html>

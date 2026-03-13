@@ -71,6 +71,7 @@ export default defineConfig({
     port: Number(process.env.FRONTEND_PORT) || 8080,
   },
   build: {
+    target: 'es2022',
     outDir: 'dist',
     sourcemap: true,
     rollupOptions: {
