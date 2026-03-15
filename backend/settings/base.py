@@ -11,6 +11,8 @@ from sentry_sdk.integrations.django import DjangoIntegration
 
 from django.utils.translation import gettext_lazy as _
 
+from common.utils.image import ImageSpec
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -338,6 +340,15 @@ FILE_UPLOAD_PERMISSIONS = 0o644
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+
+# Image Optimization Settings
+IMAGE_OPTIMIZATION_SPECS = {
+    "AVATAR": ImageSpec(dimension=280, quality=10),
+    "PORTRAIT": ImageSpec(dimension=800, quality=35),
+    "LANDSCAPE": ImageSpec(dimension=1920, quality=90),
+    "THUMBNAIL": ImageSpec(dimension=400, quality=60),
+    "DEFAULT": ImageSpec(dimension=1200, quality=75),
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

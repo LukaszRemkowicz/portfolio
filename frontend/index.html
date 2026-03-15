@@ -4,11 +4,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Critical Resource Priority -->
+  <link rel="preload" href="/landscape.webp" as="image" fetchpriority="high" />
+  <link rel="preload" href="/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4C_k3HqU.woff2" as="font" type="font/woff2" crossorigin />
+  <script type="module" src="/src/index.tsx"></script>
+
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#02040a" />
+
+  <!-- Preconnect to API (Actually Used) -->
+  <link rel="preconnect" href="https://api.__SITE_DOMAIN__" crossorigin />
+
   <!-- Full Critical CSS Inlining (Variables & Theme) -->
   <style>
-    /* variables.css content */
     :root {
       --primary-color: #007bff;
       --primary-dark: #0056b3;
@@ -32,30 +42,44 @@
       --accent-red: #dc3545;
       --font-family-primary: 'Inter', sans-serif;
       --font-family-heading: 'Space Grotesk', sans-serif;
-      --font-family-mono: 'Courier New', monospace;
       --font-size-base: 1rem;
       --line-height-normal: 1.5;
       --space-4: 1rem;
       --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --navbar-height: 80px;
     }
-    body { background-color: var(--celestial-bg); color: var(--celestial-white); margin: 0; font-family: var(--font-family-primary); }
+
+    /* Critical Hero CSS */
+    #home {
+      position: relative;
+      padding: calc(80px + var(--navbar-height)) 1.5rem 80px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+      background-image: linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(/landscape.webp);
+      background-size: cover;
+      background-position: center;
+    }
+
+    body {
+      background-color: var(--celestial-bg);
+      color: var(--celestial-white);
+      margin: 0;
+      font-family: var(--font-family-primary);
+    }
   </style>
 
   <!-- Inlining Fonts configuration to avoid extra request -->
   <style>
-    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 300; font-display: swap; src: url(/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2) format('woff2'); }
-    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2) format('woff2'); }
-    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap; src: url(/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2) format('woff2'); }
-    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 300; font-display: swap; src: url(/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4C_k3HqU.woff2) format('woff2'); }
-    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: swap; src: url(/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4C_k3HqU.woff2) format('woff2'); }
+    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 300 700; font-display: block; src: url(/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2) format('woff2'); }
+    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: block; src: url(/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4C_k3HqU.woff2) format('woff2'); }
   </style>
-
-  <!-- Preload LCP Background Image -->
-  <link rel="preload" href="/landscape.webp" as="image" fetchpriority="high" />
-
-  <!-- Preconnect to API to save ~300ms on first API request -->
-  <link rel="preconnect" href="https://api.__SITE_DOMAIN__" crossorigin />
-
 
   <link rel="icon" type="image/png" href="/telescope.png" />
   <link rel="apple-touch-icon" href="/telescope.png" />
@@ -99,8 +123,6 @@
 
 <body>
   <div id="root"></div>
-  <link rel="modulepreload" href="/src/index.tsx" />
-  <script type="module" src="/src/index.tsx"></script>
 </body>
 
 </html>

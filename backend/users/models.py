@@ -7,11 +7,12 @@ from model_utils import FieldTracker
 from parler.managers import TranslatableManager
 from parler.models import TranslatableModel, TranslatedFields
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import IntegrityError, models, transaction
 from django.utils.translation import gettext_lazy as _
 
-from common.utils.image import convert_to_webp
+from common.utils.image import ImageSpec, convert_to_webp
 from core.models import LandingPageSettings, SingletonModel
 from translation.mixins import AutomatedTranslationModelMixin
 from users.tasks import process_user_images_task
@@ -177,6 +178,14 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
             except ValueError:
                 pass
         return ""
+
+    def get_avatar_spec(self) -> ImageSpec:
+        """Return dimensions and quality for the avatar field."""
+        return settings.IMAGE_OPTIMIZATION_SPECS["AVATAR"]
+
+    def get_portrait_spec(self) -> ImageSpec:
+        """Return dimensions and quality for portrait-style fields."""
+        return settings.IMAGE_OPTIMIZATION_SPECS["PORTRAIT"]
 
     # Domain Logic Methods
 

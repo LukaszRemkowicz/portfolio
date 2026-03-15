@@ -1,12 +1,19 @@
-"""Image processing utilities shared across all apps."""
-
 import os
+from dataclasses import dataclass
 from io import BytesIO
 from typing import Any
 
 from PIL import Image
 
 from django.core.files.base import ContentFile
+
+
+@dataclass(frozen=True)
+class ImageSpec:
+    """Configuration for image optimization."""
+
+    dimension: int
+    quality: int
 
 
 def convert_to_webp(

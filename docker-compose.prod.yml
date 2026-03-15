@@ -126,15 +126,8 @@ services:
   fe:
     image: ${ENVIRONMENT:-production}-fe:${TAG}
     restart: "always"
-    networks:
-      - portfolio_network
-    environment:
-      VITE_GA_TRACKING_ID: ${GA_TRACKING_ID}
-      VITE_SENTRY_DSN_FE: ${SENTRY_DSN_FE}
-      VITE_ENVIRONMENT: ${ENVIRONMENT:-production}
-      VITE_PROJECT_OWNER: ${PROJECT_OWNER}
     volumes:
-      - nginx_blocklist:/etc/nginx/blocklist:ro
+      - frontend_dist:/frontend_dist
 
   # ---------- Backend ----------
   be:
@@ -178,6 +171,7 @@ services:
       - prod_media_data:/app/media:ro
       - prod_static_data:/app/staticfiles:ro
       - nginx_blocklist:/etc/nginx/blocklist:ro
+      - frontend_dist:/usr/share/nginx/html:ro
     ports:
       - "80:80"
       - "443:443/tcp"
@@ -190,3 +184,4 @@ volumes:
   prod_media_data:
   prod_static_data:
   celerybeat_data:
+  frontend_dist:

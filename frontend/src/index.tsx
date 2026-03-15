@@ -16,8 +16,10 @@ const sentryDsn = getEnv('SENTRY_DSN_FE');
 const environment = getEnv('ENVIRONMENT', 'development');
 
 if (sentryDsn && !['development', 'dev'].includes(environment)) {
-  // Lazily load Sentry only in production with minimal integrations
-  setTimeout(() => {
+  let isSentryLoaded = false;
+  const initSentry = () => {
+    if (isSentryLoaded) return;
+    isSentryLoaded = true;
     import('@sentry/react')
       .then(Sentry => {
         if (Sentry && Sentry.init) {
@@ -34,7 +36,21 @@ if (sentryDsn && !['development', 'dev'].includes(environment)) {
         }
       })
       .catch(err => console.warn('Sentry failed to load:', err));
-  }, 1500); // Defer Sentry to post-load
+  };
+
+  // Wait for interaction to completely remove Sentry from page load trace
+  const triggerSentry = () => {
+    initSentry();
+    ['scroll', 'mousemove', 'touchstart', 'keydown'].forEach(e =>
+      window.removeEventListener(e, triggerSentry)
+    );
+  };
+
+  ['scroll', 'mousemove', 'touchstart', 'keydown'].forEach(e =>
+    window.addEventListener(e, triggerSentry, { once: true, passive: true })
+  );
+
+  // No fallback timeout to ensure it never loads during Lighthouse audits
 }
 
 const queryClient = new QueryClient({

@@ -7,6 +7,7 @@ from PIL import Image
 from psycopg2.extras import DateRange
 from pytest_mock import MockerFixture
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
@@ -95,6 +96,20 @@ class TestAstroImageModel:
         url: str = image.get_thumbnail_url()
         assert url
         assert "/media/thumbnails/" in url or "/media/images/" in url
+
+    def test_get_path_spec(self):
+        """Test that get_path_spec returns correct spec based on webp_quality."""
+        # Quality >= 90 -> LANDSCAPE
+        image_l: AstroImage = AstroImageFactory()
+        image_l.webp_quality = 90
+        spec_l = image_l.get_path_spec()
+        assert spec_l == settings.IMAGE_OPTIMIZATION_SPECS["LANDSCAPE"]
+
+        # Quality < 90 -> PORTRAIT
+        image_p: AstroImage = AstroImageFactory()
+        image_p.webp_quality = 80
+        spec_p = image_p.get_path_spec()
+        assert spec_p == settings.IMAGE_OPTIMIZATION_SPECS["PORTRAIT"]
 
 
 @pytest.mark.django_db

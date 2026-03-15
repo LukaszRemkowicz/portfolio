@@ -13,7 +13,7 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 from astrophotography.models import AstroImage, MainPageBackgroundImage
-from common.utils.image import convert_to_webp
+from common.utils.image import ImageSpec, convert_to_webp
 from programming.models import ProjectImage
 from users.models import User
 
@@ -150,10 +150,8 @@ class Command(BaseCommand):
             return "converted"
 
         try:
-            webp_quality: int = getattr(type(obj), "webp_quality", 90)
-            max_dim: int | None = getattr(obj, "max_dimension", None)
-
-            result = convert_to_webp(source, quality=webp_quality, max_dimension=max_dim)
+            spec: ImageSpec = obj.get_image_spec("path")
+            result = convert_to_webp(source, quality=spec.quality, max_dimension=spec.dimension)
             if result is None:
                 self.stderr.write(self.style.ERROR(f"  [ERR ] {name} — conversion returned None"))
                 return "error"
@@ -209,20 +207,11 @@ class Command(BaseCommand):
             return "converted"
 
         try:
+            # Determine which spec method to call based on the field name
+            spec_method_name = "get_avatar_spec" if field_name == "avatar" else "get_portrait_spec"
+            spec: ImageSpec = getattr(user, spec_method_name)()
 
-            # Use specific capping matching the User model
-            optimization_config = {
-                "avatar": {
-                    "dimension": 264,
-                    "quality": 20,
-                },  # Perfect 1:1 display size Match for Lighthouse
-                "about_me_image": {"dimension": 800, "quality": 50},
-                "about_me_image2": {"dimension": 800, "quality": 50},
-            }
-            config = optimization_config.get(field_name, {"dimension": 800, "quality": 50})
-            result = convert_to_webp(
-                source, quality=config["quality"], max_dimension=config["dimension"]
-            )
+            result = convert_to_webp(source, quality=spec.quality, max_dimension=spec.dimension)
             if result is None:
                 self.stderr.write(
                     self.style.ERROR(f"  [ERR ] {field_name} — conversion returned None")

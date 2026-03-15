@@ -23,12 +23,6 @@ def process_user_images_task(user_id: int, changed_field_names: List[str]) -> No
         logger.error(f"User with id {user_id} not found for image processing.")
         return
 
-    optimization_config = {
-        "avatar": {"dimension": 264, "quality": 20},
-        "about_me_image": {"dimension": 800, "quality": 50},
-        "about_me_image2": {"dimension": 800, "quality": 50},
-    }
-
     updated_fields = []
 
     for field_name in changed_field_names:
@@ -36,7 +30,10 @@ def process_user_images_task(user_id: int, changed_field_names: List[str]) -> No
         if not hasattr(user, field_name) or not hasattr(user, legacy_field_name):
             continue
 
-        field_settings = optimization_config.get(field_name, {"dimension": 800, "quality": 50})
+        if field_name == "avatar":
+            spec = user.get_avatar_spec()
+        else:
+            spec = user.get_portrait_spec()
         image_field = getattr(user, field_name)
 
         if not image_field:
@@ -45,8 +42,8 @@ def process_user_images_task(user_id: int, changed_field_names: List[str]) -> No
         # Perform conversion
         result = convert_to_webp(
             image_field,
-            quality=field_settings["quality"],
-            max_dimension=field_settings["dimension"],
+            quality=spec.quality,
+            max_dimension=spec.dimension,
         )
 
         if result:

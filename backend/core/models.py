@@ -1,18 +1,19 @@
 import os
 import uuid
 from io import BytesIO
-from typing import Any
+from typing import Any, cast
 
 from model_utils import FieldTracker
 from parler.models import TranslatableModel
 from PIL import Image
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 
-from common.utils.image import convert_to_webp
+from common.utils.image import ImageSpec, convert_to_webp
 from core.tasks import process_image_task
 
 
@@ -59,6 +60,20 @@ class BaseImage(TranslatableModel):
     webp_quality: int = 90
     max_dimension: int | None = None
 
+    def get_path_spec(self) -> ImageSpec:
+        """Default specification provider for the 'path' field."""
+        key = "LANDSCAPE" if self.webp_quality >= 90 else "PORTRAIT"
+        return settings.IMAGE_OPTIMIZATION_SPECS[key]
+
+    def get_image_spec(self, field_name: str) -> ImageSpec:
+        """Return the ImageSpec for a given field by dispatching to specialized methods."""
+        method_name = f"get_{field_name}_spec"
+        if hasattr(self, method_name):
+            return cast(ImageSpec, getattr(self, method_name)())
+        return settings.IMAGE_OPTIMIZATION_SPECS.get(
+            "DEFAULT", ImageSpec(dimension=1200, quality=75)
+        )
+
     class Meta:
         abstract = True
         ordering = ["-created_at"]
@@ -92,13 +107,14 @@ class BaseImage(TranslatableModel):
                     storage.delete(old_path_str)
 
     def _convert_to_webp(self) -> bool:
-        """Convert the current path image to WebP using self.webp_quality.
+        """Convert the current path image to WebP using self.get_image_spec().
 
         Stores the original file path in legacy_path for rollback purposes.
         No-op if the image is already in WebP format or conversion fails.
         """
+        spec = self.get_image_spec("path")
         result: tuple[str, Any] | None = convert_to_webp(
-            self.path, quality=self.webp_quality, max_dimension=self.max_dimension
+            self.path, quality=spec.quality, max_dimension=spec.dimension
         )
         if result is None:
             return False
@@ -146,8 +162,8 @@ class BaseImage(TranslatableModel):
             img = img.convert("RGB")
         img.thumbnail(size)
         thumb_io = BytesIO()
-        # Aggressive WebP settings for thumbnails (Lighthouse target)
-        img.save(thumb_io, "WEBP", quality=60)
+        spec = settings.IMAGE_OPTIMIZATION_SPECS["THUMBNAIL"]
+        img.save(thumb_io, "WEBP", quality=spec.quality)
         original_name = getattr(image, "name", "unknown").split("/")[-1]
         thumbnail_name = "thumb_" + os.path.splitext(original_name)[0] + ".webp"
         return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
