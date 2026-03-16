@@ -203,18 +203,20 @@
 
 .syncIndicator {
   position: fixed;
-  top: 1.5rem;
-  right: 1.5rem;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1000;
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(8px);
-  padding: 0.75rem 1.25rem;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  padding: 0.625rem 1.25rem;
   border-radius: 9999px;
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  border: 1px solid rgba(56, 189, 248, 0.15);
   display: flex !important;
   align-items: center;
   gap: 0.75rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+  pointer-events: none; /* Ensure it doesn't block clicks */
 }
 
 .deferredLoading {

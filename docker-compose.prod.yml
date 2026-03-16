@@ -163,8 +163,11 @@ services:
       NGINX_SSL_CERT: ${SSL_CERT_NAME}
       NGINX_SSL_KEY: ${SSL_KEY_NAME}
       FRONTEND_PORT: ${FRONTEND_PORT:-8080}
+      FRONTEND_ASSETS_LOGIC: "try_files $$uri =404;"
+      FRONTEND_ROOT_LOGIC: "try_files $$uri $$uri/ /index.html;"
+      FRONTEND_STATIC_EXT_LOGIC: "try_files $$uri =404;"
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-      NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_PORT"
+      NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|FRONTEND_PORT|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_ASSETS_LOGIC|FRONTEND_ROOT_LOGIC|FRONTEND_STATIC_EXT_LOGIC"
     volumes:
       - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
       - ${NGINX_LOG_DIR:-./nginx/logs}:/var/log/nginx
