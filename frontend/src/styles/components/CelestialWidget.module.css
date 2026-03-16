@@ -34,7 +34,7 @@
   font-size: 0.6rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  opacity: 0.5;
+  color: var(--text-muted);
   margin-bottom: 2px;
 }
 
@@ -60,7 +60,8 @@
 
 .statusText {
   font-size: 0.7rem;
-  opacity: 0.7;
+  color: var(--text-light);
+  /* Full contrast */
 }
 
 @media (max-width: 900px) {

@@ -16,7 +16,7 @@ exec su-exec nginx sh -c '
   echo "Clearing old assets..."
   rm -rf /frontend_dist/*
   echo "Copying new assets..."
-  cp -a /usr/share/nginx/html/. /frontend_dist/
+  cp -r /usr/share/nginx/html/. /frontend_dist/
   echo "Synchronization complete. Keeping container alive..."
   tail -f /dev/null
 '

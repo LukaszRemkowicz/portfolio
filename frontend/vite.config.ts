@@ -19,7 +19,7 @@ export default defineConfig({
       transformIndexHtml: {
         order: 'post',
         handler(html, ctx) {
-          // Remove non-critical Sentry preloads to prevent them from competing for bandwidth with LCP assets
+          // Remove non-critical Sentry preloads
           html = html.replace(
             /<link rel="modulepreload"[^>]*href="[^"]*sentry-[^"]*\.js"[^>]*>\s*/gi,
             ''

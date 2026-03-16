@@ -28,6 +28,7 @@ const Home: FC<HomeProps> = ({
   }, [backgroundUrl]);
 
   const displayDescription = shortDescription || t('hero.defaultDescription');
+
   return (
     <section id='home' className={styles.heroSection}>
       {/* Background Layer for smooth fade-in */}
@@ -38,6 +39,7 @@ const Home: FC<HomeProps> = ({
           backgroundImage: backgroundUrl
             ? `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${backgroundUrl})`
             : 'none',
+          transition: 'opacity 1.5s ease-in-out',
         }}
       />
       <ShootingStars />

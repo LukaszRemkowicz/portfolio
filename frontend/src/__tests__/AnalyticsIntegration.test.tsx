@@ -31,7 +31,12 @@ const TestComponent: React.FC<{ hasConsented: boolean }> = ({
 
 describe('Analytics Integration', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   test('calls loadGoogleAnalytics and trackPageView on mount when consented', () => {
@@ -40,6 +45,14 @@ describe('Analytics Integration', () => {
         <TestComponent hasConsented={true} />
       </MemoryRouter>
     );
+
+    // Should not have been called yet due to 3.5s delay
+    expect(analytics.loadGoogleAnalytics).not.toHaveBeenCalled();
+
+    // Advance timers
+    act(() => {
+      jest.advanceTimersByTime(3500);
+    });
 
     expect(analytics.loadGoogleAnalytics).toHaveBeenCalledTimes(1);
     expect(analytics.trackPageView).toHaveBeenCalledWith('/');
@@ -51,6 +64,10 @@ describe('Analytics Integration', () => {
         <TestComponent hasConsented={false} />
       </MemoryRouter>
     );
+
+    act(() => {
+      jest.runAllTimers();
+    });
 
     expect(analytics.loadGoogleAnalytics).not.toHaveBeenCalled();
     expect(analytics.trackPageView).not.toHaveBeenCalled();
@@ -64,12 +81,20 @@ describe('Analytics Integration', () => {
     );
 
     // Initial hit
+    act(() => {
+      jest.advanceTimersByTime(3500);
+    });
     expect(analytics.trackPageView).toHaveBeenCalledWith('/');
 
     // Navigate to /about
     const aboutLink = screen.getByText('About');
     await act(async () => {
       aboutLink.click();
+    });
+
+    // Advance timers for the new page view
+    act(() => {
+      jest.advanceTimersByTime(3500);
     });
 
     // Check second hit

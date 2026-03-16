@@ -125,7 +125,7 @@
   letter-spacing: 0.4em;
   text-transform: uppercase;
   color: var(--celestial-blue);
-  opacity: 0.8;
+  /* Full opacity for accessibility */
   font-family: var(--font-family-heading);
 }
 

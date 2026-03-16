@@ -6,11 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Critical Resource Priority -->
-  <link rel="preload" href="/landscape.webp" as="image" fetchpriority="high" />
   <link rel="preload" href="/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4C_k3HqU.woff2" as="font" type="font/woff2" crossorigin />
-  <script type="module" src="/src/index.tsx"></script>
-
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#02040a" />
 
@@ -62,9 +59,9 @@
       width: 100%;
       box-sizing: border-box;
       overflow: hidden;
-      background-image: linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(/landscape.webp);
-      background-size: cover;
-      background-position: center;
+      /* Immediate background to satisfy LCP while waiting for React/API */
+      background: linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)),
+                  linear-gradient(135deg, #02040a 0%, #0c1120 100%);
     }
 
     body {
@@ -119,6 +116,7 @@
         ]
       }
     </script>
+  <script type="module" src="/src/index.tsx"></script>
 </head>
 
 <body>

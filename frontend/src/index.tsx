@@ -50,7 +50,7 @@ if (sentryDsn && !['development', 'dev'].includes(environment)) {
     window.addEventListener(e, triggerSentry, { once: true, passive: true })
   );
 
-  // No fallback timeout to ensure it never loads during Lighthouse audits
+  // No fallback timeout to ensure it never affects critical page load metrics
 }
 
 const queryClient = new QueryClient({

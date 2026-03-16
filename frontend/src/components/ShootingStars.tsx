@@ -211,7 +211,7 @@ const ShootingStars: FC<ShootingStarsProps> = ({
       // Generate smoke segments for bolids (Zig-Zag "Burn" - Line style)
       const dustParticles: DustParticle[] = [];
       if (isBolid) {
-        const segmentCount = 20 + Math.floor(Math.random() * 10); // 20-30 pieces for continuous look
+        const segmentCount = 12; // Reduced from 20-30 to minimize DOM churn
         const smokeOpacityRange = getVal('smokeOpacityRange');
         for (let i = 0; i < segmentCount; i++) {
           // Spread pieces along the flight path (roughly 30% to 90% of duration)

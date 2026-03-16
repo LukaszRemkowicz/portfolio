@@ -36,11 +36,8 @@ const HomePage: React.FC = () => {
       ? 'The cosmic archives are temporarily unreachable.'
       : null;
 
-  if (isProfileLoading || isBackgroundLoading) {
-    return <LoadingScreen message='Synchronizing...' />;
-  }
-
-  // Graceful degradation: If error occurs, render content anyway with a notification
+  // Unblock LCP: Render the Hero (Home) section skeleton immediately
+  // instead of a full-screen LoadingScreen.
   return (
     <div className={styles.appContainer}>
       <SEO />
@@ -56,6 +53,16 @@ const HomePage: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Non-blocking sync indicator to satisfy both performance and aesthetic */}
+      {(isProfileLoading || isBackgroundLoading) && (
+        <LoadingScreen
+          fullScreen={false}
+          message='Synchronizing...'
+          className={styles.syncIndicator}
+        />
+      )}
+
       <StarBackground />
       <Navbar transparent />
       <main className={styles.mainContent}>
@@ -66,7 +73,11 @@ const HomePage: React.FC = () => {
         />
         <Suspense
           fallback={
-            <LoadingScreen fullScreen={false} message='Aligning sectors...' />
+            <LoadingScreen
+              fullScreen={false}
+              message='Aligning sectors...'
+              className={styles.deferredLoading}
+            />
           }
         >
           <ErrorBoundary>
