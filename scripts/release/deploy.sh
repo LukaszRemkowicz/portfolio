@@ -30,7 +30,13 @@
 # Typical usage:
 #   TAG=v1.2.3 doppler run -- ./deploy.sh
 #
+# Parameters (Environment Variables):
+#   ENVIRONMENT   - Target environment (required: 'production', 'dev', etc.)
+#   TAG           - Release tag (vX.Y.Z). Required.
+#   COMPOSE_FILE  - Path to the docker-compose file. Defaults to docker-compose.${ENVIRONMENT}.yml.
+#
 # Optional:
+#   NGINX_HTTPS_PORT - Port for Nginx HTTPS (defaults to 8443 for non-production)
 #   --dry-run   Print what would happen without making changes
 #
 ###############################################################################
@@ -38,49 +44,51 @@
 set -euo pipefail
 
 # ------------------------------------------------------------------
-# Parse command-line arguments
+# 1. Configuration & Required Variables
 # ------------------------------------------------------------------
-ENVIRONMENT="${ENVIRONMENT:-}"
-DRY_RUN=false
-ARGS=()
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --env=*)    ENVIRONMENT="${1#*=}"; shift ;;
-    --env)      ENVIRONMENT="$2"; shift 2 ;;
-    --dry-run)  DRY_RUN=true; echo "🧪 Dry-run mode enabled"; shift ;;
-    *)          ARGS+=("$1"); shift ;;
+# Required variables (fails if not provided)
+: "${ENVIRONMENT:?ENVIRONMENT is required (stg|prod) (inject via: doppler run -- ./deploy.sh)}"
+: "${TAG:?TAG is required (vX.Y.Z)}"
+
+# Optional / Dynamic variables with defaults
+NGINX_HTTPS_PORT="${NGINX_HTTPS_PORT:-8443}"
+DEBUG="${DEBUG:-false}"
+DRY_RUN=false
+
+# ------------------------------------------------------------------
+# 2. Parse command-line arguments (Overrides DRY_RUN)
+# ------------------------------------------------------------------
+for arg in "$@"; do
+  case "${arg}" in
+    --dry-run) DRY_RUN=true; echo "🧪 Dry-run mode enabled" ;;
+    *)
+      echo "❌ ERROR: Unknown argument: ${arg}"
+      echo "✅ Usage: TAG=vX.Y.Z ENVIRONMENT=stg|prod NGINX_HTTPS_PORT=8443 doppler run -- ./deploy.sh [--dry-run]"
+      exit 1
+      ;;
   esac
 done
 
-# Restore positional arguments
-[[ ${#ARGS[@]} -gt 0 ]] && set -- "${ARGS[@]}"
-
-: "${ENVIRONMENT:?ENVIRONMENT is required (set via --env=production|stage or ENVIRONMENT=...)}"
-
 # ------------------------------------------------------------------
-# Setup & Context
+# 3. Setup & Context
 # ------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/utils.sh"
 
 PROJECT_DIR="$(get_project_dir)"
 
-# Map full environment names to internal shorthand
-ENV_SHORT="${ENVIRONMENT}"
-if [[ "${ENVIRONMENT}" == "production" ]]; then
-  ENV_SHORT="prod"
-fi
+# Resolve Compose File (Dynamic based on ENVIRONMENT)
+COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml}"
 
 # Dynamic validation: If the config file exists, the environment is valid.
-# This avoids hardcoding environment names and allows easy scaling (stage, prod, qa, etc).
-if [[ ! -f "${PROJECT_DIR}/docker-compose.${ENV_SHORT}.yml" ]]; then
-  echo "❌ ERROR: Configuration for environment '$ENVIRONMENT' (mapped to '$ENV_SHORT') not found." >&2
-  echo "📂 Expected: docker-compose.${ENV_SHORT}.yml" >&2
+if [[ ! -f "$COMPOSE_FILE" ]]; then
+  echo "❌ ERROR: Configuration file not found: $COMPOSE_FILE" >&2
   exit 1
 fi
 
 echo "⚙️  Environment: ${ENVIRONMENT}"
+echo "🧾 Using compose file: $COMPOSE_FILE"
 
 # ------------------------------------------------------------------
 # Deploy lock (prevents concurrent deploys)
@@ -129,20 +137,33 @@ cd "$PROJECT_DIR"
 # ------------------------------------------------------------------
 # Resolve docker-compose production file
 # ------------------------------------------------------------------
-COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_DIR/docker-compose.${ENV_SHORT}.yml}"
-[[ -f "$COMPOSE_FILE" ]] || { echo "❌ ERROR: Missing compose file: $COMPOSE_FILE" >&2; exit 1; }
-echo "🧾 Using compose file: $COMPOSE_FILE"
-
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
 
 # Standardize project name by environment to ensure total isolation.
-if [[ "${ENV_SHORT}" == "prod" ]]; then
-  COMPOSE_PROJECT_NAME="portfolio"
-else
-  COMPOSE_PROJECT_NAME="portfolio-${ENV_SHORT}"
-fi
+COMPOSE_PROJECT_NAME="$(get_project_name)"
 export COMPOSE_PROJECT_NAME
 echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
+
+# ------------------------------------------------------------------
+# Resolve pre-deploy state (for rollback)
+# ------------------------------------------------------------------
+STATE_DIR="$(get_state_dir "${ENVIRONMENT}")"
+CURRENT_FILE="$STATE_DIR/current_tag"
+SAFE_TAG_BEFORE_DEPLOY="$(cat "$CURRENT_FILE" 2>/dev/null || true)"
+SWITCHED_CONTAINERS=false
+
+error_handler() {
+  local exit_code=$?
+  if [[ "${SWITCHED_CONTAINERS}" == "true" && -n "${SAFE_TAG_BEFORE_DEPLOY}" && "${SAFE_TAG_BEFORE_DEPLOY}" != "${TAG}" ]]; then
+    echo "🚨 ERROR detected (exit code: $exit_code). Initiating automatic rollback to ${SAFE_TAG_BEFORE_DEPLOY}..."
+    TAG="${SAFE_TAG_BEFORE_DEPLOY}" "${COMPOSE[@]}" up -d --remove-orphans
+    echo "↩️  Rollback complete. System restored to ${SAFE_TAG_BEFORE_DEPLOY}."
+  else
+    echo "❌ ERROR detected (exit code: $exit_code). No rollback needed/possible."
+  fi
+  exit $exit_code
+}
+trap error_handler ERR
 
 # ------------------------------------------------------------------
 # Resolve release TAG
@@ -158,25 +179,15 @@ echo "🔍 [DEPLOY] [1/6] Image preflight (verifying TAG=$TAG)"
 # Verify each service image for TAG=${TAG}
 # Implementation note: We check 'be', 'fe', 'celery-worker', 'nginx' and 'release'.
 # We dynamically resolve the image from compose config for each service.
-for svc in "be" "fe" "celery-worker" "nginx" "release" "redis"; do
+for svc in "be" "fe" "celery-worker" "nginx" "release"; do
   image_to_check=$(get_compose_image "$svc" "${COMPOSE[@]}")
 
   # Fallback to standard naming convention if config resolution fails.
   if [[ "${image_to_check}" =~ ^[[:space:]]*$ ]]; then
     echo "ℹ️  NOTE: Using naming fallback for '${svc}' (config resolution skipped)."
-    if [[ "${ENV_SHORT}" == "prod" ]]; then
-      prefix="portfolio"
-    else
-      prefix="portfolio-${ENV_SHORT}"
-    fi
-
-    case "${svc}" in
-      be|release) image_to_check="${prefix}-backend" ;;
-      fe)         image_to_check="${prefix}-frontend" ;;
-      celery-worker) image_to_check="${prefix}-worker" ;;
-      nginx)      image_to_check="${prefix}-nginx" ;;
-      redis)      image_to_check="${prefix}-redis" ;;
-    esac
+    image_to_check="${ENVIRONMENT}-${svc}"
+    if [[ "$svc" == "release" ]]; then image_to_check="${ENVIRONMENT}-be"; fi
+    if [[ "$svc" == "celery-worker" ]]; then image_to_check="${ENVIRONMENT}-worker"; fi
     image_to_check="${image_to_check}:$TAG"
   fi
 
@@ -189,18 +200,6 @@ done
 
 echo "✅ Images found. Proceeding with deployment."
 
-# ------------------------------------------------------------------
-# [DEPLOY] [1.5/6] Blocklist pre-flight
-# ------------------------------------------------------------------
-if [[ "${ENV_SHORT}" == "prod" ]]; then
-  echo "🛡️  [DEPLOY] [1.5/6] Pre-flight: Initializing Nginx Blocklist (production-only)"
-  # We run this ad-hoc to keep the compose file lean (image-only).
-  docker run --rm \
-    -v "./scripts/download-blocklist.sh:/download.sh:ro" \
-    -v "nginx_blocklist:/etc/nginx/blocklist" \
-    alpine:latest /bin/sh /download.sh
-fi
-
 echo "🧪 [DEPLOY] [2/6] Running release tasks (migrate/compilemessages/collectstatic/seeds)"
 
 # ------------------------------------------------------------------
@@ -210,7 +209,7 @@ echo "🧪 Running release tasks via release.sh..."
 if [[ "${DRY_RUN}" == true ]]; then
   echo "🧾 DRY RUN: would execute: TAG=${TAG} ENVIRONMENT=${ENVIRONMENT} $SCRIPT_DIR/release.sh"
 else
-  ENVIRONMENT="${ENVIRONMENT}" TAG="${TAG}" "$SCRIPT_DIR/release.sh"
+  ENVIRONMENT="${ENVIRONMENT}" TAG="${TAG}" COMPOSE_FILE="${COMPOSE_FILE}" "$SCRIPT_DIR/release.sh"
 fi
 
 # ------------------------------------------------------------------
@@ -221,6 +220,7 @@ if [[ "${DRY_RUN}" == true ]]; then
   echo "🧾 DRY RUN: would execute: ${COMPOSE[*]} up -d --remove-orphans"
 else
   "${COMPOSE[@]}" up -d --remove-orphans
+  SWITCHED_CONTAINERS=true
 fi
 
 # ------------------------------------------------------------------
@@ -230,10 +230,27 @@ if [[ "${DRY_RUN}" == true ]]; then
   echo "🧾 DRY RUN: would reload Nginx config"
 else
   echo "🔄 [DEPLOY] [4/6] Reloading Nginx configuration..."
-  if "${COMPOSE[@]}" exec -T "nginx" nginx -s reload 2>/dev/null; then
-    echo "✅ Nginx config reloaded successfully"
-  else
-    echo "⚠️  Nginx reload skipped (container may not be running)"
+  RELOAD_SUCCESS=false
+  MAX_RELOAD_RETRIES=5
+  for ((i=1; i<=MAX_RELOAD_RETRIES; i++)); do
+    # check if container is running before attempting exec
+    if [[ "$("${COMPOSE[@]}" ps nginx --format '{{.Status}}')" == *"Up"* ]]; then
+      if "${COMPOSE[@]}" exec -T "nginx" nginx -s reload; then
+        echo "✅ Nginx config reloaded successfully"
+        RELOAD_SUCCESS=true
+        break
+      fi
+    fi
+    echo "⏳ Waiting for Nginx to be ready for reload... ($i/$MAX_RELOAD_RETRIES)"
+    sleep 2
+  done
+
+  if [[ "${RELOAD_SUCCESS}" != "true" ]]; then
+    echo "❌ ERROR: Nginx reload failed. Checking container status..."
+    "${COMPOSE[@]}" ps "nginx"
+    echo "📝 Recent Nginx logs:"
+    "${COMPOSE[@]}" logs --tail 20 "nginx"
+    exit 1
   fi
 fi
 
@@ -243,28 +260,38 @@ fi
 if [[ "${DRY_RUN}" == true ]]; then
   echo "🩺 DRY RUN: skipping health checks."
 else
-  CURL_OPTS="-fsS -o /dev/null"
+  CURL_OPTS="-fsSk -o /dev/null"
 
   echo "🩺 [DEPLOY] [5/6] Health check (Frontend)..."
+
+  # Determine health check target based on ENVIRONMENT
   HEALTH_SITE_DOMAIN="${SITE_DOMAIN}"
 
-  # Only bypass SSL validation in DEBUG environments (local development).
-  if [[ "${DEBUG:-false}" == "true" || "${DEBUG:-}" == "1" ]]; then
-    CURL_OPTS="${CURL_OPTS} -k"
+  if [[ "${ENVIRONMENT}" == "production" ]]; then
+    HEALTH_PORT="443"
+    export NGINX_HTTPS_PORT="" # Empty for production to trigger Nginx mapping suffix ""
+    HEALTH_URL="https://${HEALTH_SITE_DOMAIN}/"
+  else
+    HEALTH_PORT="${NGINX_HTTPS_PORT}"
+    export NGINX_HTTPS_PORT="${NGINX_HTTPS_PORT}"
+    # If a custom port is used, we hit 127.0.0.1 with Host header for local verification
+    HEALTH_URL="https://127.0.0.1:${HEALTH_PORT}/"
+    CURL_OPTS="${CURL_OPTS} -H \"Host: ${HEALTH_SITE_DOMAIN}\""
   fi
 
   # Retry loop for frontend accessibility (accounts for slow Nginx or SSL generation).
   MAX_RETRIES_FE=20 # Extended to 60s (20 * 3s) for certificates and warmup.
   for ((i=1; i<=MAX_RETRIES_FE; i++)); do
-    if curl ${CURL_OPTS} "https://${HEALTH_SITE_DOMAIN}/" 2>/dev/null; then
-      echo "✅ Frontend is reachable at https://${HEALTH_SITE_DOMAIN}/"
+    # Use eval to handle the Host header correctly in CURL_OPTS
+    if eval "curl ${CURL_OPTS} \"${HEALTH_URL}\"" 2>/dev/null; then
+      echo "✅ Frontend is reachable at ${HEALTH_URL}"
       break
     fi
     echo "⏳ Waiting for frontend to become reachable… ($i/$MAX_RETRIES_FE)"
     sleep 3
     if [[ "$i" -eq "$MAX_RETRIES_FE" ]]; then
-      echo "❌ Health check failed: frontend not reachable at https://${HEALTH_SITE_DOMAIN}/"
-      exit 1
+      echo "❌ Health check failed: frontend not reachable at ${HEALTH_URL}"
+      false
     fi
   done
 
@@ -291,7 +318,7 @@ else
         # We connect to 127.0.0.1 and pass X-Forwarded-Proto: https to bypass Django's SSL redirect.
         # timeout=5 ensures the script doesn't hang if gunicorn is stuck.
         local python_health_cmd="import urllib.request; req = urllib.request.Request('http://127.0.0.1:8000/v1/health', headers={'X-Forwarded-Proto': 'https'}); urllib.request.urlopen(req, timeout=5)"
-        if docker exec "${container}" python3 -c "${python_health_cmd}"; then
+        if docker exec "${container}" python3 -c "${python_health_cmd}" >/dev/null 2>&1; then
           echo "✅ Backend ${container} is healthy (/health)"
           break
         fi
@@ -300,7 +327,7 @@ else
         sleep "${sleep_time}"
         if [[ "$i" -eq "$MAX_RETRIES_BE" ]]; then
           echo "❌ Health check failed: ${container} not reachable after ${MAX_RETRIES_BE} attempts"
-          exit 1
+          false
         fi
       done
     done

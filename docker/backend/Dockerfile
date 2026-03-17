@@ -92,5 +92,4 @@ ENV WEB_CONCURRENCY=2 \
 # entrypoint.sh will drop privileges to appuser using 'gosu' at the end.
 
 # Use sh -c to expand environment variables for workers and threads
-# Added --timeout 120 and --preload to handle cold starts on smaller droplets
-CMD ["sh", "-c", "gunicorn settings.wsgi:application --bind 0.0.0.0:8000 --workers ${WEB_CONCURRENCY} --threads ${GUNICORN_THREADS} --timeout 120 --preload --log-level info"]
+CMD ["sh", "-c", "gunicorn settings.wsgi:application --bind 0.0.0.0:8000 --workers ${WEB_CONCURRENCY} --threads ${GUNICORN_THREADS} --keep-alive 60 --log-level info"]

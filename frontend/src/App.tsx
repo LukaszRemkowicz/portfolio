@@ -2,7 +2,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
-import HomePage from './HomePage';
+const HomePage = lazy(() => import('./HomePage'));
 import { hasAnalyticsConsent } from './utils/analytics';
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
 
@@ -72,7 +72,11 @@ const App: React.FC = () => {
                     <AstroGallery />
                   </MainLayout>
                 }
-              />
+              >
+                {/* Child route so /astrophotography/:slug is a valid path.
+                    AstroGallery reads the :slug param and opens the modal. */}
+                <Route path=':slug' element={null} />
+              </Route>
               <Route
                 path={APP_ROUTES.PROGRAMMING}
                 element={

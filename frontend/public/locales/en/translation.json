@@ -1,0 +1,103 @@
+{
+  "nav": {
+    "home": "Home",
+    "astrophotography": "Astrophotography",
+    "programming": "Programming",
+    "about": "About",
+    "contact": "Contact"
+  },
+  "common": {
+    "en": "EN",
+    "pl": "PL",
+    "privacyPolicy": "Privacy Policy",
+    "cookieSettings": "Cookie Settings",
+    "decline": "Decline",
+    "accept": "Accept",
+    "noDescription": "No description available for this image.",
+    "scanning": "Scanning deep space sectors...",
+    "syncCosmos": "Synchronizing with the Cosmos",
+    "compiling": "Compiling projects...",
+    "gallery": "Gallery",
+    "gallerySubtitle": "Filter by category or explore images using the tags below.",
+    "exploreTags": "Explore Tags",
+    "tags": "Tags",
+    "allTags": "All Tags",
+    "categories": "Categories",
+    "noImagesFound": "No images found for this filter.",
+    "noImagesHint": "Try selecting a different category or tag to see more images."
+  },
+  "programming": {
+    "title": "Project Archive",
+    "subtitle": "A collection of software engineering projects, from microservices to creative frontend experiments.",
+    "source": "Source",
+    "liveDemo": "Live Demo",
+    "empty": "The archives appear to be empty. Check back later for new transmissions."
+  },
+  "footer": {
+    "rights": "Łukasz Remkowicz © 2026"
+  },
+  "about": {
+    "title": "Beyond the Atmosphere.",
+    "defaultBio": "Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye.",
+    "siteQuality": "Site Quality",
+    "primaryOptics": "Primary Optics"
+  },
+  "cookie": {
+    "title": "Cookie Consent",
+    "description": "We use cookies to enhance your experience, analyze traffic, and personalize your journey through the cosmos. By using our site, you agree to our"
+  },
+  "travel": {
+    "title": "Travel Highlights",
+    "subtitle": "Exploring the world's most remote locations in pursuit of the perfect cosmic capture.",
+    "adventureDate": "ADVENTURE DATE",
+    "exploringCosmic": "Exploring the cosmic wonders of"
+  },
+  "hero": {
+    "subtitle": "Documenting the Cosmos",
+    "titlePart1": "The Beauty of",
+    "titlePart2": "Ancient Light.",
+    "viewPortfolio": "View Portfolio",
+    "aboutMe": "About Me",
+    "defaultDescription": "I am a professional astrophotographer capturing the silent majesty of deep-space phenomena. My work bridges the gap between scientific observation and cinematic fine art."
+  },
+  "categories": {
+    "Landscape": "Landscape",
+    "Deep Sky": "Deep Sky",
+    "Startrails": "Startrails",
+    "Solar System": "Solar System",
+    "Milky Way": "Milky Way",
+    "Northern Lights": "Northern Lights"
+  },
+  "gallery": {
+    "title": "Latest images",
+    "all": "All Works",
+    "astrolandscape": "Astrolandscape",
+    "timelapses": "Timelapses",
+    "loading": "Loading Portfolio...",
+    "empty": "No works found in this category."
+  },
+  "contact": {
+    "title": "Direct Inquiry",
+    "subtitle": "Interested in prints or technical collaboration? Let's connect.",
+    "identity": "Identity",
+    "namePlaceholder": "Your Name",
+    "communication": "Communication",
+    "emailPlaceholder": "Email Address",
+    "topic": "Topic",
+    "subjectPlaceholder": "Subject",
+    "transmission": "Transmission",
+    "messagePlaceholder": "How can I help you?",
+    "submit": "Submit Inquiry",
+    "sending": "Sending...",
+    "success": "Thank you! Your message has been sent successfully.",
+    "error": "Transmission failure. Please check your signal or try again later.",
+    "validationError": "One or more details in your inquiry require adjustment.",
+    "errors": {
+      "name": "Name must be at least 2 characters long.",
+      "email": "Please provide a valid email address.",
+      "subject": "Subject must be at least 5 characters long.",
+      "message": "Message must be at least 10 characters long.",
+      "honeypot": "Please correct the errors above and try again."
+    }
+  }
+}

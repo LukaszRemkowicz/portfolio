@@ -1,6 +1,7 @@
 # backend/astrophotography/tests/test_views.py
 from datetime import date
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from psycopg2.extras import DateRange
@@ -27,6 +28,7 @@ from astrophotography.tests.factories import (
 from astrophotography.utils import get_celestial_categories
 from common.constants import FALLBACK_URL_SLUG
 from common.utils.signing import generate_signed_url_params
+from core.tasks import process_image_task
 
 # URL Names
 ASTROIMAGE_LIST_URL_NAME: str = "astroimages:astroimage-list"
@@ -217,8 +219,15 @@ class TestTravelHighlightsBySlugView:
             story="A long time ago...",
             adventure_date=DateRange(date(2024, 1, 1), date(2024, 1, 31)),
         )
-        AstroImageFactory(place=place)
-        slider.images.add(AstroImageFactory(place=place))
+        # Prevent automatic task execution during factory creation for this test
+        with patch("core.models.transaction.on_commit", side_effect=lambda f: None):
+            img = AstroImageFactory(place=place)
+
+        # Now manually call the task
+        process_image_task("astrophotography", "AstroImage", img.pk)
+        img.refresh_from_db()  # Refresh the object to get the updated path
+
+        slider.images.add(img)
 
         url: str = reverse(
             TRAVEL_BY_COUNTRY_PLACE_DATE_URL_NAME,
@@ -525,6 +534,7 @@ class TestAstroImageAdminSecureMediaView:
         sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_path"
         params: dict[str, Any] = generate_signed_url_params(sig_id)
         response = admin_client.get(url, params)
+        astro_image.refresh_from_db()
         assert response.status_code == status.HTTP_200_OK
         assert "X-Accel-Redirect" in response
         assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.path.name}"

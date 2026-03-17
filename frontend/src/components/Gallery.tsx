@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { APP_ROUTES } from '../api/constants';
 import styles from '../styles/components/Gallery.module.css';
 import { AstroImage } from '../types';
-import ImageModal from './common/ImageModal';
 import GalleryCard from './common/GalleryCard';
 import GallerySkeleton from './skeletons/GallerySkeleton';
 import { useSettings } from '../hooks/useSettings';
@@ -12,24 +12,16 @@ import { useLatestAstroImages } from '../hooks/useLatestAstroImages';
 const Gallery: React.FC = () => {
   const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
-  const [searchParams, setSearchParams] = useSearchParams();
-  const imgId = searchParams.get('img');
+  const navigate = useNavigate();
 
   const { data: settings } = useSettings();
-  const features = settings; // Map settings back to features for consistency
+  const features = settings;
   const {
     data: images = [],
     isLoading: loading,
     error: queryError,
   } = useLatestAstroImages();
   const error = queryError ? 'Failed to load latest images.' : null;
-
-  const modalImage = useMemo(() => {
-    if (!imgId) return null;
-    return (
-      images.find(i => i.slug === imgId || i.pk.toString() === imgId) || null
-    );
-  }, [imgId, images]);
 
   const filteredImages = useMemo(() => {
     if (filter === 'all') return images.slice(0, 9);
@@ -54,18 +46,11 @@ const Gallery: React.FC = () => {
 
   const handleImageClick = useCallback(
     (image: AstroImage): void => {
-      console.log('Card clicked!', image.name);
-      // Use URL params for modal state to support browser back button
-      searchParams.set('img', image.slug);
-      setSearchParams(searchParams);
+      // Navigate to the full gallery page with the modal pre-opened
+      navigate(`${APP_ROUTES.ASTROPHOTOGRAPHY}/${image.slug}`);
     },
-    [searchParams, setSearchParams]
+    [navigate]
   );
-
-  const closeModal = useCallback(() => {
-    searchParams.delete('img');
-    setSearchParams(searchParams);
-  }, [searchParams, setSearchParams]);
 
   // Hide the entire section if disabled via admin toggle or if no images
   if (features?.lastimages === false || (!loading && images.length === 0)) {
@@ -129,8 +114,6 @@ const Gallery: React.FC = () => {
           <div className={styles.noResults}>{t('gallery.empty')}</div>
         )}
       </div>
-
-      <ImageModal image={modalImage} onClose={closeModal} />
     </section>
   );
 };

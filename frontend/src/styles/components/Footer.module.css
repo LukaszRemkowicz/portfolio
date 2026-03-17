@@ -41,8 +41,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4em;
-  color: #64748b;
-  /* text-slate-500 */
+  color: #94a3b8;
+  /* text-slate-400 */
   font-family: var(--font-family-heading);
 }
 
@@ -67,8 +67,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #64748b;
-  /* text-slate-500 */
+  color: #94a3b8;
+  /* text-slate-400 */
   text-decoration: none;
   transition: color var(--transition-fast);
   font-family: var(--font-family-heading);

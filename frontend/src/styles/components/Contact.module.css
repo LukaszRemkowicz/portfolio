@@ -78,8 +78,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  color: #64748b;
-  /* text-slate-500 */
+  color: #94a3b8;
+  /* text-slate-400 */
   margin-left: 0.25rem;
   font-family: var(--font-family-heading);
 }

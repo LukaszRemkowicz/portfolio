@@ -42,6 +42,9 @@ RUN npm run build && ./scripts/inject-metadata.sh && rm -rf ./scripts
 FROM nginx:alpine AS prod
 WORKDIR /usr/share/nginx/html
 
+# Install su-exec for safe non-root transitions
+RUN apk add --no-cache su-exec
+
 # Create non-root user for nginx
 RUN touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
@@ -49,11 +52,9 @@ RUN touch /var/run/nginx.pid && \
 # Copy built assets
 COPY --from=build /app/dist .
 
-# Copy internal nginx config
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
-
-# Use non-root user
-USER nginx
+# Copy entrypoint script
+COPY docker/frontend/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

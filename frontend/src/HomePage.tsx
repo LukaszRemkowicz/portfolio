@@ -17,8 +17,6 @@ import LoadingScreen from './components/common/LoadingScreen';
 import { useProfile } from './hooks/useProfile';
 import { useBackground } from './hooks/useBackground';
 
-const DEFAULT_PORTRAIT = '/portrait_default.png';
-
 const HomePage: React.FC = () => {
   const {
     data: profile,
@@ -32,16 +30,14 @@ const HomePage: React.FC = () => {
   } = useBackground();
   const [isErrorDismissed, setIsErrorDismissed] = useState(false);
 
-  const loading = isProfileLoading || isBackgroundLoading;
   const rawError = profileError || backgroundError;
   const error =
     !isErrorDismissed && rawError
       ? 'The cosmic archives are temporarily unreachable.'
       : null;
 
-  if (loading) return <LoadingScreen />;
-
-  // Graceful degradation: If error occurs, render content anyway with a notification
+  // Unblock LCP: Render the Hero (Home) section skeleton immediately
+  // instead of a full-screen LoadingScreen.
   return (
     <div className={styles.appContainer}>
       <SEO />
@@ -57,17 +53,31 @@ const HomePage: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Non-blocking sync indicator to satisfy both performance and aesthetic */}
+      {(isProfileLoading || isBackgroundLoading) && (
+        <LoadingScreen
+          fullScreen={false}
+          message='Synchronizing...'
+          className={styles.syncIndicator}
+        />
+      )}
+
       <StarBackground />
       <Navbar transparent />
       <main className={styles.mainContent}>
         <Home
-          portraitUrl={profile?.avatar || DEFAULT_PORTRAIT}
+          portraitUrl={profile?.avatar || ''}
           shortDescription={profile?.short_description || ''}
           backgroundUrl={backgroundUrl}
         />
         <Suspense
           fallback={
-            <LoadingScreen fullScreen={false} message='Aligning sectors...' />
+            <LoadingScreen
+              fullScreen={false}
+              message='Aligning sectors...'
+              className={styles.deferredLoading}
+            />
           }
         >
           <ErrorBoundary>

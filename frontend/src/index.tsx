@@ -1,6 +1,4 @@
-// frontend/src/index.tsx
 import { createRoot } from 'react-dom/client';
-import * as Sentry from '@sentry/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import App from './App';
@@ -14,21 +12,45 @@ const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Root element not found');
 }
-
-// Initialize Sentry
 const sentryDsn = getEnv('SENTRY_DSN_FE');
-if (sentryDsn) {
-  Sentry.init({
-    dsn: sentryDsn,
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(),
-    ],
-    tracesSampleRate: 1.0,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
-    environment: getEnv('ENVIRONMENT', 'development'),
-  });
+const environment = getEnv('ENVIRONMENT', 'development');
+
+if (sentryDsn && !['development', 'dev'].includes(environment)) {
+  let isSentryLoaded = false;
+  const initSentry = () => {
+    if (isSentryLoaded) return;
+    isSentryLoaded = true;
+    import('@sentry/react')
+      .then(Sentry => {
+        if (Sentry && Sentry.init) {
+          Sentry.init({
+            dsn: sentryDsn,
+            // Selective integrations for minimal impact
+            defaultIntegrations: false,
+            integrations: Sentry.browserTracingIntegration
+              ? [Sentry.browserTracingIntegration()]
+              : [],
+            tracesSampleRate: 0.1,
+            environment: environment,
+          });
+        }
+      })
+      .catch(err => console.warn('Sentry failed to load:', err));
+  };
+
+  // Wait for interaction to completely remove Sentry from page load trace
+  const triggerSentry = () => {
+    initSentry();
+    ['scroll', 'mousemove', 'touchstart', 'keydown'].forEach(e =>
+      window.removeEventListener(e, triggerSentry)
+    );
+  };
+
+  ['scroll', 'mousemove', 'touchstart', 'keydown'].forEach(e =>
+    window.addEventListener(e, triggerSentry, { once: true, passive: true })
+  );
+
+  // No fallback timeout to ensure it never affects critical page load metrics
 }
 
 const queryClient = new QueryClient({

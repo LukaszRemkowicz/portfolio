@@ -1,10 +1,5 @@
-# backend/conftest.py
-"""
-Root conftest.py for pytest
-Imports shared fixtures from core.fixtures
-"""
-
 import uuid
+from typing import Generator
 from unittest.mock import patch
 
 import pytest
@@ -12,6 +7,16 @@ import pytest
 # Import all fixtures from core.fixtures to make them available globally
 from core.fixtures import *  # noqa: F401,F403
 from translation.fixtures import *  # noqa: F401,F403
+
+
+@pytest.fixture(autouse=True)
+def execute_on_commit() -> Generator[None, None, None]:
+    """
+    Ensure transaction.on_commit hooks execute immediately in tests.
+    By default, they don't run in standard TestCase/TestCase-like tests.
+    """
+    with patch("django.db.transaction.on_commit", side_effect=lambda func: func()):
+        yield
 
 
 @pytest.fixture(autouse=True)

@@ -1,0 +1,19 @@
+# ==============================================================================
+# Shared security headers for all HTTPS server blocks.
+# Does NOT include CSP — that is server-specific and stays in each block.
+# ==============================================================================
+
+# HTTP Strict Transport Security
+add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+
+# Prevent MIME-type sniffing
+add_header X-Content-Type-Options "nosniff" always;
+
+# Prevent clickjacking
+add_header X-Frame-Options "DENY" always;
+
+# Control referrer information leakage
+add_header Referrer-Policy "no-referrer-when-downgrade" always;
+
+# Advertise HTTP/3 support to browsers
+add_header Alt-Svc 'h3=":443"; ma=86400' always;

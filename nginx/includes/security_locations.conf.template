@@ -1,0 +1,25 @@
+# ==============================================================================
+# Shared security location blocks for all HTTPS server blocks.
+# Blocks hidden files, dangerous extensions, and CMS path probing.
+# ==============================================================================
+
+# Block hidden files and directories (except .well-known and .vite for local dev)
+location ~ /\.(?!well-known|vite).* {
+    access_log off;
+    log_not_found off;
+    return 404;
+}
+
+# Block prohibited extensions and scripts
+location ~ \.(php|py|pl|sh|lua|sql|cgi|bak|old|ini|7z|zip|rar|tar|gz)$ {
+    access_log off;
+    log_not_found off;
+    return 404;
+}
+
+# Block malicious CMS paths probing
+location ~* /(wp-admin|wp-login|wp-content|xmlrpc\.php|setup\.php|config\.php|eval-stdin\.php) {
+    access_log off;
+    log_not_found off;
+    return 404;
+}

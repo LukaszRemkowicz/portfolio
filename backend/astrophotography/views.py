@@ -190,7 +190,7 @@ class AstroImageSecureView(SecureMediaView):
 
     def get_file_path(self, obj: Model) -> str:
         assert isinstance(obj, AstroImage)
-        return str(obj.path.name)
+        return str(obj.get_serving_path())
 
     def get_signature_id(self) -> str:
         return str(self.kwargs.get("slug", ""))

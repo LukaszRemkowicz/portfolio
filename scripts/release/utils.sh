@@ -73,6 +73,16 @@ get_compose_image() {
 }
 
 # ------------------------------------------------------------------
+# get_project_name
+#   Resolves the Docker project name consistently.
+#   Prioritizes $COMPOSE_PROJECT_NAME, defaults to 'landingpage'.
+# ------------------------------------------------------------------
+get_project_name() {
+  # If COMPOSE_PROJECT_NAME is unset, use the basename of the parent of 'scripts'
+  echo "${COMPOSE_PROJECT_NAME:-$(basename "$(get_project_dir)")}"
+}
+
+# ------------------------------------------------------------------
 # validate_tag
 #   Ensures the provided tag exists and is SemVer-like.
 # ------------------------------------------------------------------

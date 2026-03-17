@@ -19,7 +19,6 @@ export const API_ROUTES: ApiRoutes = {
 // Centralized asset fallbacks
 export const ASSETS = {
   logo: '/logo.png',
-  defaultPortrait: '/portrait_default.png',
   underConstruction: '/underconstruction.jpg',
   galleryFallback: '/startrails.jpeg',
 };

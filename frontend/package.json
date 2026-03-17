@@ -29,6 +29,7 @@
     "dompurify": "^3.3.1",
     "i18next": "^25.8.0",
     "i18next-browser-languagedetector": "^8.2.0",
+    "i18next-http-backend": "^3.0.2",
     "lucide-react": "0.563.0",
     "qs": "^6.15.0",
     "react": "^18.0.0",
@@ -80,8 +81,10 @@
     "serialize-javascript": "^7.0.3"
   },
   "browserslist": [
-    ">0.5%",
     "last 2 versions",
-    "not dead"
+    "not dead",
+    "Chrome >= 100",
+    "Firefox >= 100",
+    "Safari >= 15"
   ]
 }

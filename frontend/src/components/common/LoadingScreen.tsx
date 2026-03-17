@@ -5,18 +5,20 @@ import styles from '../../styles/components/LoadingScreen.module.css';
 interface LoadingScreenProps {
   message?: string;
   fullScreen?: boolean;
+  className?: string;
 }
 
 const LoadingScreen: React.FC<LoadingScreenProps> = ({
   message,
   fullScreen = true,
+  className = '',
 }) => {
   const { t } = useTranslation();
   const displayMessage = message || t('common.syncCosmos');
 
   return (
     <div
-      className={fullScreen ? styles.loadingScreen : ''}
+      className={`${fullScreen ? styles.loadingScreen : ''} ${className}`.trim()}
       data-testid='loading-screen'
     >
       <div className={styles.spinner} />

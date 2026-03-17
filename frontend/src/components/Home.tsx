@@ -1,9 +1,12 @@
 // frontend/src/components/Home.tsx
-import { type FC } from 'react';
+import { type FC, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import styles from '../styles/components/App.module.css';
 import { HomeProps } from '../types';
+// - [x] Remove redundant `frontend_upstream` from `TEMPLATE.conf`
+// - [x] Finalize commit message and implementation plan alignment
+// - [x] Final Polish & Documentation
 import ShootingStars from './ShootingStars';
 import { APP_ROUTES } from '../api/constants';
 import ImageWithFallback from './common/ImageWithFallback';
@@ -14,21 +17,31 @@ const Home: FC<HomeProps> = ({
   backgroundUrl,
 }) => {
   const { t } = useTranslation();
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (backgroundUrl) {
+      const img = new Image();
+      img.src = backgroundUrl;
+      img.onload = () => setIsLoaded(true);
+    }
+  }, [backgroundUrl]);
+
   const displayDescription = shortDescription || t('hero.defaultDescription');
+
   return (
-    <section
-      id='home'
-      className={styles.heroSection}
-      style={
-        backgroundUrl
-          ? {
-              backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${backgroundUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }
-          : undefined
-      }
-    >
+    <section id='home' className={styles.heroSection}>
+      {/* Background Layer for smooth fade-in */}
+      <div
+        className={styles.heroBackground}
+        style={{
+          opacity: isLoaded ? 1 : 0,
+          backgroundImage: backgroundUrl
+            ? `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${backgroundUrl})`
+            : 'none',
+          transition: 'opacity 1.5s ease-in-out',
+        }}
+      />
       <ShootingStars />
       <div className={styles.heroContent}>
         <span className={styles.heroSubtitle}>{t('hero.subtitle')}</span>
@@ -44,6 +57,8 @@ const Home: FC<HomeProps> = ({
               src={portraitUrl}
               alt='Portrait'
               className={styles.heroPortrait}
+              width={140}
+              height={140}
               loading='eager'
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               {...({ fetchpriority: 'high' } as any)}

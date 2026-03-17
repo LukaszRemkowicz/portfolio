@@ -1,0 +1,103 @@
+{
+  "nav": {
+    "home": "Start",
+    "astrophotography": "Astrofotografia",
+    "programming": "Programowanie",
+    "about": "O mnie",
+    "contact": "Kontakt"
+  },
+  "common": {
+    "en": "EN",
+    "pl": "PL",
+    "privacyPolicy": "Polityka Prywatności",
+    "cookieSettings": "Ustawienia Cookies",
+    "decline": "Odrzuć",
+    "accept": "Akceptuj",
+    "noDescription": "Niestety nie ma jeszcze opisu zdjecia dla jezyka Polskiego.",
+    "scanning": "Skanowanie sektorów głębokiego kosmosu...",
+    "syncCosmos": "Synchronizacja z kosmosem",
+    "compiling": "Kompilowanie projektów...",
+    "gallery": "Galeria",
+    "gallerySubtitle": "Filtruj według kategorii lub przeglądaj zdjęcia za pomocą tagów poniżej.",
+    "exploreTags": "Przeglądaj Tagi",
+    "tags": "Tagi",
+    "allTags": "Wszystkie Tagi",
+    "categories": "Kategorie",
+    "noImagesFound": "Nie znaleziono zdjęć dla tego filtra.",
+    "noImagesHint": "Spróbuj wybrać inną kategorię lub tag, aby zobaczyć więcej zdjęć."
+  },
+  "programming": {
+    "title": "Archiwum Projektów",
+    "subtitle": "Kolekcja projektów inżynierii oprogramowania, od mikroserwisów po kreatywne eksperymenty frontendowe.",
+    "source": "Kod źródłowy",
+    "liveDemo": "Demo Live",
+    "empty": "Archiwa wydają się być puste. Wróć później po nowe transmisje."
+  },
+  "footer": {
+    "rights": "Łukasz Remkowicz © 2026"
+  },
+  "about": {
+    "title": "Ponad Atmosferą.",
+    "defaultBio": "Astrofotografia to techniczny taniec z fizyką. Moja podróż składa się z tysięcy klatek, godzin integracji i poświęcenia w odkrywaniu tego, co pozostaje niewidoczne dla gołego oka.",
+    "siteQuality": "Jakość Nieba",
+    "primaryOptics": "Główna Optyka"
+  },
+  "cookie": {
+    "title": "Zgoda na Cookies",
+    "description": "Używamy plików cookie, aby ulepszyć Twoje doświadczenie, analizować ruch i spersonalizować Twoją podróż przez kosmos. Korzystając z naszej strony, akceptujesz naszą"
+  },
+  "travel": {
+    "title": "Najciekawsze Podróże",
+    "subtitle": "Podróże do różnych zakątków świata, w poszukiwaniu idealnego ujęcia.",
+    "adventureDate": "DATA PRZYGODY",
+    "exploringCosmic": "Kosmiczna przygoda w"
+  },
+  "hero": {
+    "subtitle": "Dokumentacja Kosmosu",
+    "titlePart1": "Piękno Świata",
+    "titlePart2": "sprzed milionów lat.",
+    "viewPortfolio": "Zobacz Portfolio",
+    "aboutMe": "O mnie",
+    "defaultDescription": "Jestem profesjonalnym astrofotografem, uchwycającym cichy majestat zjawisk głębokiego nieba. Moja praca łączy obserwację naukową z artystyczną wizją."
+  },
+  "categories": {
+    "Landscape": "Krajobraz",
+    "Deep Sky": "Głębokie Niebo",
+    "Startrails": "Startrails",
+    "Solar System": "Układ Słoneczny",
+    "Milky Way": "Droga Mleczna",
+    "Northern Lights": "Zorza Polarna"
+  },
+  "gallery": {
+    "title": "Ostatnie zdjęcia",
+    "all": "Wszystkie",
+    "astrolandscape": "Astrokrajobraz",
+    "timelapses": "Timelapsy",
+    "loading": "Ładowanie portfolio...",
+    "empty": "Nie znaleziono prac w tej kategorii."
+  },
+  "contact": {
+    "title": "Zapytanie",
+    "subtitle": "Interesują Cię wydruki lub współpraca? Napisz do mnie!",
+    "identity": "Imię",
+    "namePlaceholder": "Twoje Imię",
+    "communication": "Email",
+    "emailPlaceholder": "Adres Email",
+    "topic": "Temat",
+    "subjectPlaceholder": "Temat wiadomości",
+    "transmission": "Wiadomość",
+    "messagePlaceholder": "W czym mogę Ci pomóc?",
+    "submit": "Wyślij zapytanie",
+    "sending": "Wysyłanie...",
+    "success": "Dziękujemy! Twoja wiadomość została wysłana pomyślnie.",
+    "error": "Błąd transmisji. Sprawdź sygnał lub spróbuj ponownie później.",
+    "validationError": "Jedna lub więcej szczegółów zapytania wymaga korekty.",
+    "errors": {
+      "name": "Imię musi mieć co najmniej 2 znaki.",
+      "email": "Podaj prawidłowy adres email.",
+      "subject": "Temat musi mieć co najmniej 5 znaków.",
+      "message": "Wiadomość musi mieć co najmniej 10 znaków.",
+      "honeypot": "Popraw błędy powyżej i spróbuj ponownie."
+    }
+  }
+}

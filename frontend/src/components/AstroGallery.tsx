@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from '../styles/components/AstroGallery.module.css';
 import { ASSETS } from '../api/routes';
@@ -19,14 +19,15 @@ import { useBackground } from '../hooks/useBackground';
 import { useImageUrls } from '../hooks/useImageUrls';
 
 const AstroGallery: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const { slug: imgSlug } = useParams<{ slug?: string }>();
+  const navigate = useNavigate();
   const [isTagsDrawerOpen, setIsTagsDrawerOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const selectedFilter = searchParams.get('filter') as FilterType | null;
   const selectedTag = searchParams.get('tag');
-  const imgParam = searchParams.get('img');
 
   const { t } = useTranslation();
 
@@ -55,44 +56,51 @@ const AstroGallery: React.FC = () => {
   const isInitialLoading = isImagesLoading && images.length === 0 && !error;
 
   const modalImage = useMemo(() => {
-    if (!imgParam) return null;
+    if (!imgSlug) return null;
     return (
-      images.find(i => i.slug === imgParam || i.pk.toString() === imgParam) ||
+      images.find(i => i.slug === imgSlug || i.pk.toString() === imgSlug) ||
       null
     );
-  }, [imgParam, images]);
+  }, [imgSlug, images]);
 
   // Smooth scroll to results on filter/tag change (Mobile only)
   useEffect(() => {
     if (window.innerWidth <= 992 && resultsRef.current) {
-      const yOffset = -100; // Offset for sticky navbar/header
-      const element = resultsRef.current;
-      const y =
-        element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
+      requestAnimationFrame(() => {
+        if (!resultsRef.current) return;
+        const yOffset = -100; // Offset for sticky navbar/header
+        const element = resultsRef.current;
+        const y =
+          element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      });
     }
   }, [selectedFilter, selectedTag]);
 
   const handleFilterClick = (filter: FilterType): void => {
-    const nextParams = new URLSearchParams(searchParams);
+    // Build clean params from known state — never copy from searchParams
+    // to avoid leaking stale params (e.g. ?img=) into the URL.
+    const nextParams = new URLSearchParams();
     if (selectedFilter === filter) {
-      nextParams.delete('filter');
+      // deselect — drop filter entirely
     } else {
       nextParams.set('filter', filter);
-      nextParams.delete('tag');
-      setIsFiltersOpen(false); // Close menu on selection
+      setIsFiltersOpen(false);
     }
-    setSearchParams(nextParams);
+    // Keep active tag unless it was cleared
+    if (selectedTag && selectedFilter !== filter)
+      nextParams.set('tag', selectedTag);
+    const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
+    navigate(`/astrophotography${qs}`);
   };
 
   const handleTagSelect = (tagSlug: string | null): void => {
-    const nextParams = new URLSearchParams(searchParams);
-    if (tagSlug) {
-      nextParams.set('tag', tagSlug);
-    } else {
-      nextParams.delete('tag');
-    }
-    setSearchParams(nextParams);
+    // Same: build fresh params, never inherit from searchParams.
+    const nextParams = new URLSearchParams();
+    if (tagSlug) nextParams.set('tag', tagSlug);
+    if (selectedFilter) nextParams.set('filter', selectedFilter);
+    const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
+    navigate(`/astrophotography${qs}`);
     setIsTagsDrawerOpen(false);
   };
 
@@ -107,15 +115,21 @@ const AstroGallery: React.FC = () => {
   };
 
   const handleImageClick = (image: AstroImage): void => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('img', image.slug);
-    setSearchParams(nextParams);
+    // Build clean params from known state — only filter and tag.
+    const nextParams = new URLSearchParams();
+    if (selectedFilter) nextParams.set('filter', selectedFilter);
+    if (selectedTag) nextParams.set('tag', selectedTag);
+    const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
+    navigate(`/astrophotography/${image.slug}${qs}`);
   };
 
   const closeModal = (): void => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete('img');
-    setSearchParams(nextParams);
+    // Build clean params from known state — only filter and tag.
+    const nextParams = new URLSearchParams();
+    if (selectedFilter) nextParams.set('filter', selectedFilter);
+    if (selectedTag) nextParams.set('tag', selectedTag);
+    const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
+    navigate(`/astrophotography${qs}`);
   };
 
   if (isInitialLoading) return <LoadingScreen />;

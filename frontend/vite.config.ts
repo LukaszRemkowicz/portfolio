@@ -4,10 +4,63 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  esbuild: {
+    target: 'es2022',
+  },
+  define: {
+    'Array.from': 'Array.from',
+  },
   plugins: [
     react(),
+    {
+      // Optimize the critical rendering path by inlining CSS and removing non-essential preloads
+      name: 'critical-path-optimization',
+      enforce: 'post',
+      transformIndexHtml: {
+        order: 'post',
+        handler(html, ctx) {
+          // Remove non-critical Sentry preloads
+          html = html.replace(
+            /<link rel="modulepreload"[^>]*href="[^"]*sentry-[^"]*\.js"[^>]*>\s*/gi,
+            ''
+          );
+
+          // Inline character-critical CSS directly into the HTML to eliminate render-blocking stylesheet requests
+          if (ctx.bundle) {
+            let cssContent = '';
+            for (const [fileName, file] of Object.entries(ctx.bundle)) {
+              if (
+                fileName.endsWith('.css') &&
+                file.type === 'asset' &&
+                typeof file.source === 'string'
+              ) {
+                cssContent += file.source;
+                html = html.replace(
+                  new RegExp(
+                    `<link[^>]*href="[^"]*${fileName}"[^>]*>\\s*`,
+                    'g'
+                  ),
+                  ''
+                );
+              }
+            }
+            if (cssContent) {
+              const headEndIndex = html.indexOf('</head>');
+              if (headEndIndex !== -1) {
+                html =
+                  html.slice(0, headEndIndex) +
+                  `<style>${cssContent}</style>\n` +
+                  html.slice(headEndIndex);
+              }
+            }
+          }
+          return html;
+        },
+      },
+    },
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'script-defer',
       includeAssets: [
         'favicon.ico',
         'robots.txt',
@@ -70,12 +123,22 @@ export default defineConfig({
     port: Number(process.env.FRONTEND_PORT) || 8080,
   },
   build: {
+    target: 'es2022',
     outDir: 'dist',
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
+        manualChunks(id) {
+          if (id.includes('node_modules/@sentry')) {
+            return 'sentry';
+          }
+          if (
+            id.includes('node_modules/react') ||
+            id.includes('node_modules/react-dom') ||
+            id.includes('node_modules/react-router-dom')
+          ) {
+            return 'vendor';
+          }
         },
       },
     },
