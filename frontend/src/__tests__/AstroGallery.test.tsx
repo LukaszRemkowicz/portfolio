@@ -113,9 +113,11 @@ describe('AstroGallery Component', () => {
   it('renders the gallery title and filter boxes after loading', async () => {
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
+        <MemoryRouter initialEntries={['/astrophotography']}>
           <Routes>
-            <Route path='/' element={<AstroGallery />} />
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
           </Routes>
         </MemoryRouter>
       );
@@ -154,9 +156,11 @@ describe('AstroGallery Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
+        <MemoryRouter initialEntries={['/astrophotography']}>
           <Routes>
-            <Route path='/' element={<AstroGallery />} />
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
           </Routes>
         </MemoryRouter>
       );
@@ -193,9 +197,11 @@ describe('AstroGallery Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
+        <MemoryRouter initialEntries={['/astrophotography']}>
           <Routes>
-            <Route path='/' element={<AstroGallery />} />
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
           </Routes>
         </MemoryRouter>
       );
@@ -236,9 +242,11 @@ describe('AstroGallery Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
+        <MemoryRouter initialEntries={['/astrophotography']}>
           <Routes>
-            <Route path='/' element={<AstroGallery />} />
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
           </Routes>
         </MemoryRouter>
       );
@@ -263,7 +271,7 @@ describe('AstroGallery Component', () => {
     // We implicitly trust that the hook behaves well when state changes.
   });
 
-  it('opens modal when image is clicked', async () => {
+  it('opens modal when slug is in the URL path', async () => {
     const mockImages: AstroImage[] = [
       {
         pk: '1',
@@ -279,45 +287,36 @@ describe('AstroGallery Component', () => {
       isLoading: false,
     });
 
+    // Start with the slug already in the URL — this is what happens when
+    // a user navigates directly to /astrophotography/:slug or clicks a card.
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
+        <MemoryRouter initialEntries={['/astrophotography/test-image-1']}>
           <Routes>
-            <Route path='/' element={<AstroGallery />} />
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
           </Routes>
         </MemoryRouter>
       );
     });
 
-    // Wait for loading screen to be removed first to ensure stable rendering
+    // Wait for loading screen to be removed first
     await waitFor(() => {
       expect(screen.queryByTestId('loading-screen')).not.toBeInTheDocument();
     });
 
-    // Wait for the button to be present and stable before clicking
+    // With the slug in the URL, AstroGallery reads it via useParams and
+    // opens the modal immediately without any click.
     await waitFor(
       () => {
+        const modal = screen.getByTestId('image-modal');
         expect(
-          screen.getByRole('button', {
-            name: /View details for Test Image 1/i,
-          })
+          within(modal).getByText(/Test description 1/)
         ).toBeInTheDocument();
       },
       { timeout: 4000 }
     );
-
-    const firstImageButton = screen.getByRole('button', {
-      name: /View details for Test Image 1/i,
-    });
-
-    await act(async () => {
-      fireEvent.click(firstImageButton);
-    });
-
-    await waitFor(() => {
-      const modal = screen.getByTestId('image-modal');
-      expect(within(modal).getByText(/Test description 1/)).toBeInTheDocument();
-    });
   });
 
   it('renders tags in Sidebar and filters by them', async () => {
@@ -332,9 +331,11 @@ describe('AstroGallery Component', () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
+        <MemoryRouter initialEntries={['/astrophotography']}>
           <Routes>
-            <Route path='/' element={<AstroGallery />} />
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
           </Routes>
         </MemoryRouter>
       );

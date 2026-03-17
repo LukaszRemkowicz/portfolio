@@ -7,7 +7,6 @@ from rest_framework import serializers
 from django.conf import settings
 from django.utils import translation
 
-from common.constants import FALLBACK_URL_SLUG
 from common.serializers import TranslatedSerializerMixin
 from translation.services import TranslationService
 
@@ -154,7 +153,10 @@ class AstroImageSerializer(AstroImageBaseSerializer):
 
 
 class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
-    url = serializers.ImageField(source="path", read_only=True)
+    url = serializers.SerializerMethodField()
+
+    def get_url(self, obj: MainPageBackgroundImage) -> str:
+        return obj.get_serving_url()
 
     class Meta:
         model = MainPageBackgroundImage
@@ -179,7 +181,7 @@ class AstroImageThumbnailSerializer(AstroImageBaseSerializer):
 class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
     place = PlaceSerializer(read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
-    background_image = serializers.ImageField(source="background_image.path", read_only=True)
+    background_image = serializers.SerializerMethodField()
     background_image_thumbnail = serializers.ImageField(
         source="background_image.thumbnail", read_only=True
     )
@@ -188,11 +190,18 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
     full_location = serializers.SerializerMethodField()
     story_preview = serializers.SerializerMethodField()
     date_slug = serializers.ReadOnlyField()
+    place_slug = serializers.ReadOnlyField(source="safe_place_slug")
+    country_slug = serializers.ReadOnlyField(source="safe_country_slug")
 
     @staticmethod
     def format_date(dt: date) -> str:
         """Format: 20 Jan 2026"""
         return dt.strftime("%-d %b %Y")
+
+    def get_background_image(self, obj: MainPageLocation) -> str:
+        if obj.background_image:
+            return str(obj.background_image.get_serving_url())
+        return ""
 
     def get_full_location(self, obj: MainPageLocation) -> str:
         request = self.context.get("request")
@@ -249,13 +258,6 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
             instance=instance,
             fields=["highlight_name", "highlight_title", "story"],
         )
-        # Enforce strict 3-segment URL generation fallback
-        if not instance.place:
-            data["place_slug"] = FALLBACK_URL_SLUG
-            data["country_slug"] = FALLBACK_URL_SLUG
-        elif not data.get("country_slug"):
-            data["country_slug"] = FALLBACK_URL_SLUG
-
         return data
 
     class Meta:

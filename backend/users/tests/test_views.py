@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
+from core.tests.factories import LandingPageSettingsFactory
 from users.tests.factories import AstroProfileFactory, ProgrammingProfileFactory, UserFactory
 
 User = get_user_model()
@@ -180,3 +181,61 @@ def test_profile_endpoint_returns_404_when_no_user(api_client: APIClient) -> Non
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "detail" in response.data
     assert "No user found" in response.data["detail"]
+
+
+# ---------------------------------------------------------------------------
+# WebP toggle integration tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_profile_avatar_serves_webp_url_when_toggle_enabled(api_client: APIClient) -> None:
+    """Integration: profile endpoint returns a .webp avatar URL when serve_webp_images=True.
+
+    We simulate a post-conversion state by writing the field names directly to the
+    DB (bypassing save() to avoid running PIL), then flip the toggle and assert
+    the serializer picks the .webp path.
+    """
+    user = UserFactory()
+    # Simulate converted state: .webp in avatar, original .jpg in legacy
+    User.objects.filter(pk=user.pk).update(
+        avatar="avatars/photo.webp",
+        avatar_legacy="avatars/photo_legacy.jpg",
+    )
+    LandingPageSettingsFactory(serve_webp_images=True)
+
+    url = reverse("users:profile-profile")
+    response = api_client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    avatar_url: str = response.data["avatar"]
+    assert avatar_url, "avatar URL should not be empty"
+    assert avatar_url.endswith(
+        ".webp"
+    ), f"Expected .webp extension when toggle is ON, got: {avatar_url}"
+
+
+@pytest.mark.django_db
+def test_profile_avatar_serves_legacy_url_when_toggle_disabled(api_client: APIClient) -> None:
+    """Integration: profile endpoint returns the legacy .jpg avatar URL when
+    serve_webp_images=False.
+
+    Mirrors the above test with the toggle OFF — the serializer must fall back
+    to the legacy path even though the primary field points to a .webp file.
+    """
+    user = UserFactory()
+    User.objects.filter(pk=user.pk).update(
+        avatar="avatars/photo.webp",
+        avatar_legacy="avatars/photo_legacy.jpg",
+    )
+    LandingPageSettingsFactory(serve_webp_images=False)
+
+    url = reverse("users:profile-profile")
+    response = api_client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    avatar_url: str = response.data["avatar"]
+    assert avatar_url, "avatar URL should not be empty"
+    assert avatar_url.endswith(
+        ".jpg"
+    ), f"Expected .jpg extension when toggle is OFF, got: {avatar_url}"

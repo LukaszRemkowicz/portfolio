@@ -13,11 +13,16 @@
 #
 # Typical usage:
 #   TAG=v1.2.3 ENVIRONMENT=stage doppler run -- ./release.sh
+#
+# Parameters (Environment Variables):
+#   ENVIRONMENT   - Target environment (required: 'production', 'dev', etc.)
+#   TAG           - Release tag (vX.Y.Z). Defaults to 'git describe'.
+#   COMPOSE_FILE  - Path to the docker-compose file. Defaults to docker-compose.${ENVIRONMENT}.yml.
 ###############################################################################
 
 set -euo pipefail
 
-ENVIRONMENT="${ENVIRONMENT:-}"
+: "${ENVIRONMENT:?ENVIRONMENT is required (inject via: doppler run -- ./release.sh)}"
 
 # ------------------------------------------------------------------
 # Setup & Context
@@ -27,45 +32,35 @@ source "${SCRIPT_DIR}/utils.sh"
 
 PROJECT_DIR="$(get_project_dir)"
 
-# Map full environment names to internal shorthand
-ENV_SHORT="${ENVIRONMENT}"
-if [[ "${ENVIRONMENT}" == "production" ]]; then
-  ENV_SHORT="prod"
-fi
+# Resolve Compose File
+COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml}"
 
 # Dynamic validation: If the config file exists, the environment is valid.
-if [[ ! -f "${PROJECT_DIR}/docker-compose.${ENV_SHORT}.yml" ]]; then
-  echo "❌ ERROR: Configuration for environment '$ENVIRONMENT' (mapped to '$ENV_SHORT') not found." >&2
+if [[ ! -f "$COMPOSE_FILE" ]]; then
+  echo "❌ ERROR: Configuration file not found: $COMPOSE_FILE" >&2
   exit 1
 fi
 
+echo "⚙️  Environment: ${ENVIRONMENT}"
+echo "🧾 Using compose file: $COMPOSE_FILE"
+
 cd "${PROJECT_DIR}"
-# Standardize project name by environment to ensure total isolation.
-if [[ "${ENV_SHORT}" == "prod" ]]; then
-  COMPOSE_PROJECT_NAME="portfolio"
-else
-  COMPOSE_PROJECT_NAME="portfolio-${ENV_SHORT}"
-fi
+COMPOSE_PROJECT_NAME="$(get_project_name)"
 export COMPOSE_PROJECT_NAME
 
 # ------------------------------------------------------------------
 # Parse arguments
 # ------------------------------------------------------------------
 DRY_RUN=false
-ARGS=()
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --env=*)    ENVIRONMENT="${1#*=}"; shift ;;
-    --env)      ENVIRONMENT="$2"; shift 2 ;;
-    --dry-run)  DRY_RUN=true; echo "🧪 Dry-run mode enabled"; shift ;;
-    *)          ARGS+=("$1"); shift ;;
+for arg in "$@"; do
+  case "${arg}" in
+    --dry-run) DRY_RUN=true; echo "🧪 Dry-run mode enabled" ;;
+    *)
+      echo "❌ ERROR: Unknown argument: ${arg}"
+      exit 1
+      ;;
   esac
 done
-
-[[ ${#ARGS[@]} -gt 0 ]] && set -- "${ARGS[@]}"
-
-: "${ENVIRONMENT:?ENVIRONMENT is required (set via --env=production|stage or ENVIRONMENT=...)}"
 
 # ------------------------------------------------------------------
 # Concurrency Lock
@@ -97,8 +92,7 @@ TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || true)}"
 validate_tag "$TAG"
 export TAG
 
-COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENV_SHORT}.yml}"
-[[ -f "$COMPOSE_FILE" ]] || { echo "❌ ERROR: Missing $COMPOSE_FILE"; exit 1; }
+export COMPOSE_FILE
 export COMPOSE_FILE
 COMPOSE=(docker compose -f "${COMPOSE_FILE}")
 
@@ -213,10 +207,8 @@ RELEASE_IMAGE=$(get_compose_image "${RELEASE_SVC}" "${COMPOSE[@]}")
 
 if [[ "${RELEASE_IMAGE}" =~ ^[[:space:]]*$ ]]; then
   echo "ℹ️  NOTE: Using naming fallback for release image (config resolution skipped)."
-  # Standardized prefix logic
-  if [[ "${ENV_SHORT}" == "prod" ]]; then prefix="portfolio"; else prefix="portfolio-${ENV_SHORT}"; fi
-  RELEASE_IMAGE="${prefix}-backend:${TAG}"
-  echo "👉 Fallback image: ${RELEASE_IMAGE}"
+  echo "👉 Fallback image: ${ENVIRONMENT}-be:${TAG}"
+  RELEASE_IMAGE="${ENVIRONMENT}-be:${TAG}"
 fi
 
 if ! docker image inspect "${RELEASE_IMAGE}" >/dev/null 2>&1; then
@@ -233,7 +225,13 @@ if [[ "${DRY_RUN}" == "true" ]]; then
   exit 0
 fi
 
-# Blocklist download is now handled as a pre-flight task in deploy.sh.
+# ------------------------------------------------------------------
+# Loading blacklist
+# ------------------------------------------------------------------
+echo "🛡️ [RELEASE] [3/4] Downloading Nginx Bot Blocklist..."
+if ! "${COMPOSE[@]}" run --rm "nginx-blocklist-init"; then
+  echo "⚠️ WARNING: Blocklist download failed. Nginx will start with an empty list."
+fi
 
 LOG_DIR="$HOME/.portfolio-logs/${ENVIRONMENT}"
 LOG_FILE="${LOG_DIR}/release-${TAG}-$(date +%Y%m%d-%H%M%S).log"

@@ -62,7 +62,7 @@ const CookieConsent: React.FC<CookieConsentProps> = ({ onAccept }) => {
             <Cookie className={styles.icon} />
           </div>
           <div className={styles.textContent}>
-            <h4 className={styles.title}>{t('cookie.title')}</h4>
+            <h2 className={styles.title}>{t('cookie.title')}</h2>
             <p className={styles.description}>
               {t('cookie.description')}{' '}
               <Link to='/privacy-policy' className={styles.learnMore}>

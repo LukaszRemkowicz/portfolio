@@ -69,7 +69,8 @@ services:
 
   # ---------- Redis ----------
   redis:
-    image: portfolio-redis:${TAG}
+    build:
+      context: ./docker/redis
     restart: always
     networks:
       - portfolio_network
@@ -86,7 +87,7 @@ services:
   # ---------- Celery Worker ----------
   celery-worker:
     <<: *backend-defaults
-    image: portfolio-worker:${TAG}
+    image: ${ENVIRONMENT:-production}-worker:${TAG}
     restart: always
     command: celery -A settings worker -l info -Q celery,monitoring --concurrency=4
     environment:
@@ -106,7 +107,7 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: portfolio-backend:${TAG}
+    image: ${ENVIRONMENT:-production}-be:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
@@ -118,28 +119,21 @@ services:
 
   # ---------- Frontend ----------
   fe:
-    image: portfolio-frontend:${TAG}
+    image: ${ENVIRONMENT:-production}-fe:${TAG}
     restart: "always"
-    networks:
-      - portfolio_network
-    environment:
-      VITE_GA_TRACKING_ID: ${GA_TRACKING_ID}
-      VITE_SENTRY_DSN_FE: ${SENTRY_DSN_FE}
-      VITE_ENVIRONMENT: ${ENVIRONMENT:-production}
-      VITE_PROJECT_OWNER: ${PROJECT_OWNER}
     volumes:
-      - nginx_blocklist:/etc/nginx/blocklist:ro
+      - frontend_dist:/frontend_dist
 
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
-    image: portfolio-backend:${TAG}
+    image: ${ENVIRONMENT:-production}-be:${TAG}
     restart: always
 
   # ---------- Release Job ----------
   release:
     <<: *backend-defaults
-    image: portfolio-backend:${TAG}
+    image: ${ENVIRONMENT:-production}-be:${TAG}
     restart: "no"
     command: >
       sh -c "
@@ -149,8 +143,9 @@ services:
       "
 
   # ---------- Nginx ----------
+  # Service name must be "nginx" — deploy.sh uses: docker compose exec -T nginx nginx -s reload
   nginx:
-    image: portfolio-nginx:${TAG}
+    image: ${ENVIRONMENT:-production}-nginx:${TAG}
     restart: always
     networks:
       - portfolio_network
@@ -158,21 +153,30 @@ services:
       - be
       - fe
     environment:
+      # Injected by Doppler at runtime — envsubst replaces variable placeholders
       SITE_DOMAIN: ${SITE_DOMAIN}
       NGINX_SSL_CERT: ${SSL_CERT_NAME}
       NGINX_SSL_KEY: ${SSL_KEY_NAME}
+      NGINX_HTTPS_PORT: ""
+      NGINX_PORT_SUFFIX: ""
+      NGINX_FORWARDED_PORT: "443"
       FRONTEND_PORT: ${FRONTEND_PORT:-8080}
+      FRONTEND_ASSETS_LOGIC: "try_files $$uri =404;"
+      FRONTEND_ROOT_LOGIC: "try_files $$uri $$uri/ /index.html;"
+      FRONTEND_STATIC_EXT_LOGIC: "try_files $$uri =404;"
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-      NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_PORT"
+      NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|FRONTEND_PORT|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_ASSETS_LOGIC|FRONTEND_ROOT_LOGIC|FRONTEND_STATIC_EXT_LOGIC|NGINX_HTTPS_PORT|NGINX_PORT_SUFFIX|NGINX_FORWARDED_PORT"
     volumes:
       - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
       - ${NGINX_LOG_DIR:-./nginx/logs}:/var/log/nginx
       - prod_media_data:/app/media:ro
       - prod_static_data:/app/staticfiles:ro
       - nginx_blocklist:/etc/nginx/blocklist:ro
+      - frontend_dist:/usr/share/nginx/html:ro
     ports:
       - "80:80"
-      - "443:443"
+      - "443:443/tcp"
+      - "443:443/udp"
 
 volumes:
   postgres18_data:
@@ -180,3 +184,4 @@ volumes:
   prod_static_data:
   celerybeat_data:
   nginx_blocklist:
+  frontend_dist:

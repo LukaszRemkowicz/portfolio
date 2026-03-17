@@ -55,6 +55,16 @@ class LandingPageSettingsAdmin(admin.ModelAdmin):
                 )
             },
         ),
+        (
+            "Image Quality",
+            {
+                "fields": ("serve_webp_images",),
+                "description": (
+                    "Enable WebP serving after running the "
+                    "'convert_images_to_webp' management command."
+                ),
+            },
+        ),
     )
     list_display = (
         "__str__",
@@ -62,5 +72,6 @@ class LandingPageSettingsAdmin(admin.ModelAdmin):
         "travel_highlights_enabled",
         "programming_enabled",
         "lastimages_enabled",
+        "serve_webp_images",
         "meteors",
     )

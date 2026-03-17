@@ -7,8 +7,12 @@ export const useGoogleAnalytics = (hasConsented: boolean) => {
 
   useEffect(() => {
     if (hasConsented) {
-      loadGoogleAnalytics();
-      trackPageView(location.pathname + location.search);
+      // Defer non-critical analytics to preserve main-thread availability during boot
+      const timeout = setTimeout(() => {
+        loadGoogleAnalytics();
+        trackPageView(location.pathname + location.search);
+      }, 3500);
+      return () => clearTimeout(timeout);
     }
   }, [hasConsented, location.pathname, location.search]);
 };

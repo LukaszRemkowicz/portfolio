@@ -6,9 +6,29 @@
 #   Build versioned Docker images for production in a deterministic,
 #   reproducible, and rollback-safe way.
 #
+# Usage:
+#   [ENVIRONMENT=prod] [TAG=v1.2.3] doppler run -- ./build.sh [ARGS]
+#
+# Parameters (Environment Variables):
+#   ENVIRONMENT   - Target environment (required: 'production', 'dev', etc.)
+#   TAG           - Release tag (vX.Y.Z). If omitted, uses 'git describe'.
+#   COMPOSE_FILE  - Path to the docker-compose file. Defaults to docker-compose.${ENVIRONMENT}.yml.
+#   EMERGENCY     - Set to '1' to bypass dirty git status check.
+#
+#   Domain & Analytics (Required via Doppler):
+#     API_DOMAIN, SITE_DOMAIN, GA_TRACKING_ID, SENTRY_DSN_FE,
+#     ALLOWED_HOSTS, PROJECT_OWNER
+#
+#   Optional:
+#     FRONTEND_PORT - Port for frontend service (default: 8080)
+#
+# Arguments (CLI):
+#   --emergency   - Bypass dirty git status check (same as EMERGENCY=1).
+#   --no-cache    - Force a fresh build without using Docker layer cache.
+#
 # High-level behavior:
 #   - Refuses to run outside a git repository
-#   - Refuses to run if the working tree is dirty
+#   - Refuses to run if the working tree is dirty (unless --emergency is used)
 #   - Requires an exact git tag on HEAD (tag == release)
 #   - Builds backend and frontend Docker images for that tag
 #   - Does NOT deploy anything
@@ -55,23 +75,14 @@ echo "DEBUG: API_DOMAIN=${API_DOMAIN:-unset}"
 # Usage: EMERGENCY=1 doppler run -- ./build.sh
 #   or:  doppler run -- ./build.sh --emergency
 # ------------------------------------------------------------------
-ENVIRONMENT="${ENVIRONMENT:-}"
 EMERGENCY="${EMERGENCY:-0}"
 CACHE_FLAG=""
-ARGS=()
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --env=*)    ENVIRONMENT="${1#*=}"; shift ;;
-    --env)      ENVIRONMENT="$2"; shift 2 ;;
-    --emergency) EMERGENCY=1; shift ;;
-    --no-cache)  CACHE_FLAG="--no-cache"; echo "♻️  No-cache mode enabled (fresh build)"; shift ;;
-    *)           ARGS+=("$1"); shift ;;
+for arg in "$@"; do
+  case "${arg}" in
+    --emergency) EMERGENCY=1 ;;
+    --no-cache)  CACHE_FLAG="--no-cache"; echo "♻️  No-cache mode enabled (fresh build)" ;;
   esac
 done
-
-# Restore positional arguments if needed
-[[ ${#ARGS[@]} -gt 0 ]] && set -- "${ARGS[@]}"
 
 
 
@@ -89,33 +100,22 @@ done
 : "${SITE_DOMAIN:?SITE_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
 : "${SENTRY_DSN_FE:?SENTRY_DSN_FE is required (inject via: doppler run -- ./build.sh)}"
 : "${ALLOWED_HOSTS:?ALLOWED_HOSTS is required (inject via: doppler run -- ./build.sh)}"
-: "${ENVIRONMENT:?ENVIRONMENT is required (set via --env=production|stage or ENVIRONMENT=...)}"
+: "${ENVIRONMENT:?ENVIRONMENT is required (inject via: doppler run -- ./build.sh)}"
 : "${PROJECT_OWNER:?PROJECT_OWNER is required (inject via: doppler run -- ./build.sh)}"
 : "${FRONTEND_PORT:=8080}"
 
-# Map full environment names to internal shorthand
-ENV_SHORT="${ENVIRONMENT}"
-if [[ "${ENVIRONMENT}" == "production" ]]; then
-  ENV_SHORT="prod"
-fi
+# Resolve Compose File
+COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml}"
 
 # Dynamic validation: If the config file exists, the environment is valid.
-if [[ ! -f "${PROJECT_DIR}/docker-compose.${ENV_SHORT}.yml" ]]; then
-  echo "❌ ERROR: Configuration for environment '$ENVIRONMENT' (mapped to '$ENV_SHORT') not found." >&2
-  echo "📂 Expected: docker-compose.${ENV_SHORT}.yml" >&2
+if [[ ! -f "$COMPOSE_FILE" ]]; then
+  echo "❌ ERROR: Configuration file not found: $COMPOSE_FILE" >&2
   exit 1
 fi
 
-# Define Image Naming Convention
-if [[ "${ENV_SHORT}" == "prod" ]]; then
-  IMAGE_PREFIX="portfolio"
-else
-  IMAGE_PREFIX="portfolio-${ENV_SHORT}"
-fi
-
-echo "⚙️  Target ENVIRONMENT: ${ENVIRONMENT} (using: ${ENV_SHORT})"
-echo "⚙️  Image Prefix: ${IMAGE_PREFIX}"
+echo "⚙️  Target ENVIRONMENT: ${ENVIRONMENT}"
 echo "⚙️  Target API_DOMAIN: ${API_DOMAIN}"
+echo "⚙️  Compose File: ${COMPOSE_FILE}"
 
 
 # ------------------------------------------------------------------
@@ -139,6 +139,11 @@ validate_tag "$TAG"
 export TAG
 
 echo "🏷️  Release tag: $TAG"
+
+# Standardize project name for tagging/logging
+COMPOSE_PROJECT_NAME="$(get_project_name)"
+export COMPOSE_PROJECT_NAME
+echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
 
 # Enforce deterministic build
 if [[ -n "$(git status --porcelain)" ]]; then
@@ -170,8 +175,8 @@ docker build \
   --pull \
   -f docker/backend/Dockerfile \
   --target production \
-  -t "${IMAGE_PREFIX}-backend:${TAG}" \
-  -t "${IMAGE_PREFIX}-worker:${TAG}" \
+  -t "${ENVIRONMENT}-be:${TAG}" \
+  -t "${ENVIRONMENT}-worker:${TAG}" \
   .
 echo "✅ Backend & Worker images built"
 
@@ -188,7 +193,7 @@ docker build \
   --build-arg "SENTRY_DSN_FE=${SENTRY_DSN_FE}" \
   --build-arg "FRONTEND_PORT=${FRONTEND_PORT}" \
   --build-arg "PROJECT_OWNER=${PROJECT_OWNER}" \
-  -t "${IMAGE_PREFIX}-frontend:${TAG}" \
+  -t "${ENVIRONMENT}-fe:${TAG}" \
   .
 echo "✅ Frontend image built"
 
@@ -198,25 +203,16 @@ docker build \
   ${CACHE_FLAG} \
   --pull \
   -f docker/nginx/Dockerfile \
-  -t "${IMAGE_PREFIX}-nginx:${TAG}" \
+  -t "${ENVIRONMENT}-nginx:${TAG}" \
   .
 echo "✅ Nginx image built"
-# ---------------- Redis ----------------
-echo "🔋 Building Redis image..."
-docker build \
-  ${CACHE_FLAG} \
-  --pull \
-  -f docker/redis/Dockerfile \
-  -t "${IMAGE_PREFIX}-redis:${TAG}" \
-  ./docker/redis
-echo "✅ Redis image built"
 
 
 # ------------------------------------------------------------------
 # Verify Built Images
 # ------------------------------------------------------------------
 echo "📦 Built images:"
-docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${IMAGE_PREFIX}-(backend|frontend|worker|nginx|redis):${TAG}"
+docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${ENVIRONMENT}-(be|fe|worker|nginx):${TAG}"
 
 
 # ------------------------------------------------------------------
@@ -246,7 +242,7 @@ echo "📌 Keeping tags: build=$TAG current=${CURRENT_TAG:-none} prev=${PREV_TAG
 # Retention Policy - Keep last 5 versions for each service image.
 # ------------------------------------------------------------------
 KEEP_IMAGES=5
-REPOS=("${IMAGE_PREFIX}-backend" "${IMAGE_PREFIX}-frontend" "${IMAGE_PREFIX}-worker" "${IMAGE_PREFIX}-nginx" "${IMAGE_PREFIX}-redis")
+REPOS=("${ENVIRONMENT}-be" "${ENVIRONMENT}-fe" "${ENVIRONMENT}-worker" "${ENVIRONMENT}-nginx")
 
 echo "🧹 Cleaning up images (keeping last $KEEP_IMAGES versions)..."
 
@@ -291,8 +287,5 @@ for repo in "${REPOS[@]}"; do
     echo "✔️ Nothing to clean for $repo"
   fi
 done
-
-echo "🧹 Removing any remaining dangling images..."
-docker image prune -f
 
 echo "🎉 Build completed successfully for tag: $TAG"

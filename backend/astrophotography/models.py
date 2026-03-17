@@ -218,7 +218,7 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
     """Model for astrophotography images"""
 
     # Track changes to the 'path' field (inherited from BaseImage)
-    path_tracker = FieldTracker(fields=["path"])
+    path_tracker = FieldTracker(fields=["path", "legacy_path"])
 
     # Translation trigger fields
     translation_service_method = "translate_astro_image"
@@ -363,7 +363,12 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
 class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
     """Images used as full-page backgrounds on the main portal."""
 
-    path_tracker = FieldTracker(fields=["path"])
+    # Background images sit behind text/overlay — 40% quality is visually
+    # indistinguishable at typical viewing sizes and saves ~1 MiB per image.
+    webp_quality = 30
+    max_dimension = 1920
+
+    path_tracker = FieldTracker(fields=["path", "legacy_path"])
 
     # Translation trigger fields
     translation_service_method = "translate_main_page_background_image"
@@ -574,6 +579,16 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
                 ),
             )
         ]
+
+    @property
+    def safe_country_slug(self) -> str:
+        """Returns country_slug or FALLBACK_URL_SLUG if empty."""
+        return self.country_slug or FALLBACK_URL_SLUG
+
+    @property
+    def safe_place_slug(self) -> str:
+        """Returns place_slug or FALLBACK_URL_SLUG if empty."""
+        return self.place_slug or FALLBACK_URL_SLUG
 
     def __str__(self) -> str:
         name = self.safe_translation_getter("highlight_name", any_language=True)
