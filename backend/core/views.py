@@ -5,7 +5,7 @@ Shared views and utility endpoints for the core application.
 import logging
 from typing import Any, Optional, cast
 
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, renderers, status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -103,7 +103,16 @@ class SecureMediaView(APIView):
     """
 
     permission_classes = [permissions.AllowAny]
+    renderer_classes = [renderers.StaticHTMLRenderer]
     content_disposition: str = "inline"
+
+    def perform_content_negotiation(self, request, force=False):
+        """
+        Bypass content negotiation to allow any Accept header.
+        Since we return a raw HttpResponse (X-Accel-Redirect),
+        DRF's renderer negotiation is unnecessary and can cause 406 errors.
+        """
+        return (renderers.StaticHTMLRenderer(), "text/html")
 
     def get_object(self) -> Model:
         raise NotImplementedError("Subclasses must implement get_object")

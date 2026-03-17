@@ -36,6 +36,7 @@
 #   COMPOSE_FILE  - Path to the docker-compose file. Defaults to docker-compose.${ENVIRONMENT}.yml.
 #
 # Optional:
+#   NGINX_HTTPS_PORT - Port for Nginx HTTPS (defaults to 8443 for non-production)
 #   --dry-run   Print what would happen without making changes
 #
 ###############################################################################
@@ -43,31 +44,41 @@
 set -euo pipefail
 
 # ------------------------------------------------------------------
-# Parse command-line arguments
+# 1. Configuration & Required Variables
 # ------------------------------------------------------------------
+
+# Required variables (fails if not provided)
+: "${ENVIRONMENT:?ENVIRONMENT is required (stg|prod) (inject via: doppler run -- ./deploy.sh)}"
+: "${TAG:?TAG is required (vX.Y.Z)}"
+
+# Optional / Dynamic variables with defaults
+NGINX_HTTPS_PORT="${NGINX_HTTPS_PORT:-8443}"
+DEBUG="${DEBUG:-false}"
 DRY_RUN=false
+
+# ------------------------------------------------------------------
+# 2. Parse command-line arguments (Overrides DRY_RUN)
+# ------------------------------------------------------------------
 for arg in "$@"; do
   case "${arg}" in
     --dry-run) DRY_RUN=true; echo "🧪 Dry-run mode enabled" ;;
     *)
       echo "❌ ERROR: Unknown argument: ${arg}"
-      echo "✅ Usage: TAG=vX.Y.Z ENVIRONMENT=stg|prod doppler run -- ./deploy.sh [--dry-run]"
+      echo "✅ Usage: TAG=vX.Y.Z ENVIRONMENT=stg|prod NGINX_HTTPS_PORT=8443 doppler run -- ./deploy.sh [--dry-run]"
       exit 1
       ;;
   esac
 done
 
-: "${ENVIRONMENT:?ENVIRONMENT is required (inject via: doppler run -- ./deploy.sh)}"
-
 # ------------------------------------------------------------------
-# Setup & Context
+# 3. Setup & Context
 # ------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/utils.sh"
 
 PROJECT_DIR="$(get_project_dir)"
 
-# Resolve Compose File
+# Resolve Compose File (Dynamic based on ENVIRONMENT)
 COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml}"
 
 # Dynamic validation: If the config file exists, the environment is valid.
@@ -249,27 +260,37 @@ fi
 if [[ "${DRY_RUN}" == true ]]; then
   echo "🩺 DRY RUN: skipping health checks."
 else
-  CURL_OPTS="-fsS -o /dev/null"
+  CURL_OPTS="-fsSk -o /dev/null"
 
   echo "🩺 [DEPLOY] [5/6] Health check (Frontend)..."
+
+  # Determine health check target based on ENVIRONMENT
   HEALTH_SITE_DOMAIN="${SITE_DOMAIN}"
 
-  # Only bypass SSL validation in DEBUG environments (local development).
-  if [[ "${DEBUG:-false}" == "true" || "${DEBUG:-}" == "1" ]]; then
-    CURL_OPTS="${CURL_OPTS} -k"
+  if [[ "${ENVIRONMENT}" == "production" ]]; then
+    HEALTH_PORT="443"
+    export NGINX_HTTPS_PORT="" # Empty for production to trigger Nginx mapping suffix ""
+    HEALTH_URL="https://${HEALTH_SITE_DOMAIN}/"
+  else
+    HEALTH_PORT="${NGINX_HTTPS_PORT}"
+    export NGINX_HTTPS_PORT="${NGINX_HTTPS_PORT}"
+    # If a custom port is used, we hit 127.0.0.1 with Host header for local verification
+    HEALTH_URL="https://127.0.0.1:${HEALTH_PORT}/"
+    CURL_OPTS="${CURL_OPTS} -H \"Host: ${HEALTH_SITE_DOMAIN}\""
   fi
 
   # Retry loop for frontend accessibility (accounts for slow Nginx or SSL generation).
   MAX_RETRIES_FE=20 # Extended to 60s (20 * 3s) for certificates and warmup.
   for ((i=1; i<=MAX_RETRIES_FE; i++)); do
-    if curl ${CURL_OPTS} "https://${HEALTH_SITE_DOMAIN}/" 2>/dev/null; then
-      echo "✅ Frontend is reachable at https://${HEALTH_SITE_DOMAIN}/"
+    # Use eval to handle the Host header correctly in CURL_OPTS
+    if eval "curl ${CURL_OPTS} \"${HEALTH_URL}\"" 2>/dev/null; then
+      echo "✅ Frontend is reachable at ${HEALTH_URL}"
       break
     fi
     echo "⏳ Waiting for frontend to become reachable… ($i/$MAX_RETRIES_FE)"
     sleep 3
     if [[ "$i" -eq "$MAX_RETRIES_FE" ]]; then
-      echo "❌ Health check failed: frontend not reachable at https://${HEALTH_SITE_DOMAIN}/"
+      echo "❌ Health check failed: frontend not reachable at ${HEALTH_URL}"
       false
     fi
   done

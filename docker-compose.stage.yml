@@ -1,10 +1,3 @@
-networks:
-  stage_network:
-
-include:
-  - docker-compose.common.yml
-
-
 # ---------- Backend Defaults ----------
 x-backend-defaults: &backend-defaults
   volumes:
@@ -24,6 +17,7 @@ x-backend-defaults: &backend-defaults
     DB_PORT: 5432
     ADMIN_DOMAIN: ${ADMIN_DOMAIN}
     API_DOMAIN: ${API_DOMAIN}
+    SITE_DOMAIN: ${SITE_DOMAIN}
     CSRF_COOKIE_DOMAIN: ${CSRF_COOKIE_DOMAIN}
     ALLOWED_HOSTS: ${ALLOWED_HOSTS}
     CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
@@ -52,11 +46,13 @@ x-backend-defaults: &backend-defaults
     redis:
       condition: service_started
 
+networks:
+  stage_network:
 
 services:
   # ---------- Database ----------
   db:
-    image: postgres:17
+    image: postgres:18
     restart: always
     networks:
       - stage_network
@@ -72,11 +68,12 @@ services:
     ports:
       - "127.0.0.1:5434:5432"
     volumes:
-      - stage_postgres_data:/var/lib/postgresql/data
+      - stage_postgres_data:/var/lib/postgresql
 
   # ---------- Redis ----------
   redis:
-    image: redis:7-alpine
+    build:
+      context: ./docker/redis
     restart: always
     networks:
       - stage_network
@@ -91,7 +88,7 @@ services:
   # ---------- Celery Worker ----------
   celery-worker:
     <<: *backend-defaults
-    image: stage-worker:${TAG}
+    image: ${ENVIRONMENT:-stage}-worker:${TAG}
     restart: always
     command: celery -A settings worker -l info -Q celery,monitoring --concurrency=2
     environment:
@@ -111,7 +108,7 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: stage-be:${TAG}
+    image: ${ENVIRONMENT:-stage}-be:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
@@ -123,28 +120,23 @@ services:
 
   # ---------- Frontend ----------
   fe:
-    image: stage-fe:${TAG}
+    image: ${ENVIRONMENT:-stage}-fe:${TAG}
     restart: always
     networks:
       - stage_network
-    environment:
-      VITE_GA_TRACKING_ID: ${GA_TRACKING_ID:-}
-      VITE_SENTRY_DSN_FE: ${SENTRY_DSN_FE:-}
-      VITE_ENVIRONMENT: ${ENVIRONMENT:-stage}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
     volumes:
-      - nginx_blocklist:/etc/nginx/blocklist:ro
+      - stage_frontend_dist:/frontend_dist
 
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
-    image: stage-be:${TAG}
+    image: ${ENVIRONMENT:-stage}-be:${TAG}
     restart: always
 
   # ---------- Release Job ----------
   release:
     <<: *backend-defaults
-    image: stage-be:${TAG}
+    image: ${ENVIRONMENT:-stage}-be:${TAG}
     restart: "no"
     command: >
       sh -c "
@@ -154,9 +146,8 @@ services:
       "
 
   # ---------- Nginx ----------
-  # Service name must be "nginx" — deploy.sh uses: docker compose exec -T nginx nginx -s reload
   nginx:
-    image: stage-nginx:${TAG}
+    image: ${ENVIRONMENT:-stage}-nginx:${TAG}
     restart: always
     networks:
       - stage_network
@@ -167,13 +158,16 @@ services:
       SITE_DOMAIN: ${SITE_DOMAIN}
       NGINX_SSL_CERT: ${SSL_CERT_NAME}
       NGINX_SSL_KEY: ${SSL_KEY_NAME}
+      NGINX_HTTPS_PORT: ${NGINX_HTTPS_PORT:-8443}
+      NGINX_PORT_SUFFIX: ":${NGINX_HTTPS_PORT:-8443}"
+      NGINX_FORWARDED_PORT: "${NGINX_HTTPS_PORT:-8443}"
       FRONTEND_PORT: ${FRONTEND_PORT:-8080}
       FRONTEND_ASSETS_LOGIC: "try_files $$uri =404;"
       FRONTEND_ROOT_LOGIC: "try_files $$uri $$uri/ /index.html;"
       FRONTEND_STATIC_EXT_LOGIC: "try_files $$uri =404;"
       ALLOWED_IP: ${ALLOWED_IP:-127.0.0.1}
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-      NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_PORT|ALLOWED_IP|FRONTEND_ASSETS_LOGIC|FRONTEND_ROOT_LOGIC|FRONTEND_STATIC_EXT_LOGIC"
+      NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_PORT|ALLOWED_IP|FRONTEND_ASSETS_LOGIC|FRONTEND_ROOT_LOGIC|FRONTEND_STATIC_EXT_LOGIC|NGINX_HTTPS_PORT|NGINX_PORT_SUFFIX|NGINX_FORWARDED_PORT"
     volumes:
       - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
       - ${NGINX_STAGE_LOG_DIR:-./nginx/logs/stage}:/var/log/nginx
@@ -181,13 +175,16 @@ services:
       - stage_static_data:/app/staticfiles:ro
       - nginx_blocklist:/etc/nginx/blocklist:ro
       - ./nginx/stage/restrictions.conf.template:/etc/nginx/templates/restrictions.conf.template:ro
+      - ./nginx/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
+      - stage_frontend_dist:/usr/share/nginx/html:ro
     ports:
       - "8080:80"
       - "8443:443"
-
 
 volumes:
   stage_postgres_data:
   stage_media_data:
   stage_static_data:
   stage_celerybeat_data:
+  nginx_blocklist:
+  stage_frontend_dist:

@@ -4,7 +4,7 @@ Dynamic sitemap for the portfolio frontend.
 Django generates XML using its built-in sitemaps framework.
 All location() methods return PATHS only (e.g. /astrophotography/slug).
 Django automatically prepends the protocol + host from the incoming request,
-so the final <loc> URLs will correctly point to portfolio.local.
+so the final <loc> URLs will correctly point to SITE_DOMAIN.
 """
 
 from django.contrib.sitemaps import Sitemap
