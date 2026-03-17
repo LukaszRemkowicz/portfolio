@@ -36,7 +36,10 @@ export default defineConfig({
               ) {
                 cssContent += file.source;
                 html = html.replace(
-                  new RegExp(`<link[^>]*href="[^"]*${fileName}"[^>]*>\s*`, 'g'),
+                  new RegExp(
+                    `<link[^>]*href="[^"]*${fileName}"[^>]*>\\s*`,
+                    'g'
+                  ),
                   ''
                 );
               }

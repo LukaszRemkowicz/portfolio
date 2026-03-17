@@ -80,4 +80,5 @@ class TestConvertToWebp:
         assert result is not None
         _, webp_content = result
         webp_content.seek(0)
-        assert Image.open(webp_content).format == "WEBP"
+        img = Image.open(webp_content)
+        assert img.format == "WEBP"
