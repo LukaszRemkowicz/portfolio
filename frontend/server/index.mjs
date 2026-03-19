@@ -154,16 +154,13 @@ function logRequest(info) {
 }
 
 async function renderDocument(url, acceptLanguage, requestOrigin) {
-  const [{ render }, template] = await Promise.all([
+  const [{ renderStream }, template] = await Promise.all([
     import(pathToFileURL(serverEntryPath).href),
     readFile(indexHtmlPath, 'utf8'),
   ]);
 
-  const { html, helmetContext, dehydratedState, language } = await render(
-    url,
-    acceptLanguage,
-    requestOrigin
-  );
+  const { stream, helmetContext, dehydratedState, language, abort } =
+    await renderStream(url, acceptLanguage, requestOrigin);
   const { bodyAttributes, headMarkup, htmlAttributes } =
     renderHelmet(helmetContext);
   const initialLanguageScript = `<script>window.__INITIAL_LANGUAGE__ = ${JSON.stringify(
@@ -173,18 +170,99 @@ async function renderDocument(url, acceptLanguage, requestOrigin) {
     dehydratedState
   )};</script>`;
 
-  return injectTagAttributes(
+  const rootMarker = '<div id="root"></div>';
+  const processedTemplate = injectTagAttributes(
     injectTagAttributes(
-      template
-        .replace('</head>', `${headMarkup}${initialLanguageScript}</head>`)
-        .replace('<div id="root"></div>', `<div id="root">${html}</div>`)
-        .replace('</body>', `${dehydratedStateScript}</body>`),
+      template.replace(
+        '</head>',
+        `${headMarkup}${initialLanguageScript}</head>`
+      ),
       'html',
       htmlAttributes
     ),
     'body',
     bodyAttributes
   );
+
+  const parts = processedTemplate.split(rootMarker);
+  if (parts.length !== 2) {
+    abort();
+    throw new Error('SSR template root marker not found exactly once.');
+  }
+
+  return {
+    abort,
+    language,
+    stream,
+    suffix: parts[1].replace('</body>', `${dehydratedStateScript}</body>`),
+    prefix: `${parts[0]}<div id="root">`,
+  };
+}
+
+async function pipeDocument(req, res, requestUrl, start, url, acceptLanguage) {
+  const requestOrigin = getRequestOrigin(req);
+  const { abort, language, stream, prefix, suffix } = await renderDocument(
+    url,
+    acceptLanguage,
+    requestOrigin
+  );
+
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    const onClientClose = () => {
+      if (!finished) {
+        abort();
+      }
+    };
+
+    const complete = () => {
+      if (finished) {
+        return;
+      }
+
+      finished = true;
+      logRequest({
+        kind: 'document',
+        method: req.method,
+        path: requestUrl.pathname,
+        query: requestUrl.search || '',
+        host: req.headers.host || 'localhost',
+        language: String(req.headers['accept-language'] || language),
+        status: 200,
+        duration_ms: Date.now() - start,
+        streaming: true,
+      });
+      resolve();
+    };
+
+    const fail = error => {
+      if (finished) {
+        return;
+      }
+
+      finished = true;
+      req.off('close', onClientClose);
+      abort();
+      reject(error);
+    };
+
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'X-Accel-Buffering': 'no',
+    });
+    req.on('close', onClientClose);
+    res.write(prefix);
+    res.flushHeaders?.();
+
+    stream.on('error', fail);
+    stream.on('end', () => {
+      req.off('close', onClientClose);
+      res.end(suffix);
+      complete();
+    });
+    stream.pipe(res, { end: false });
+  });
 }
 
 const server = http.createServer(async (req, res) => {
@@ -217,30 +295,22 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const html = await renderDocument(
+    await pipeDocument(
+      req,
+      res,
+      requestUrl,
+      start,
       requestUrl.pathname + requestUrl.search,
-      req.headers['accept-language'] || 'en',
-      getRequestOrigin(req)
+      req.headers['accept-language'] || 'en'
     );
-    res.writeHead(200, {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-    });
-    res.end(html);
-    logRequest({
-      kind: 'document',
-      method: req.method,
-      path: requestUrl.pathname,
-      query: requestUrl.search || '',
-      host,
-      language: String(req.headers['accept-language'] || 'en'),
-      status: 200,
-      duration_ms: Date.now() - start,
-    });
   } catch (error) {
     console.error('[frontend-ssr] request failed', error);
-    res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Internal Server Error');
+    if (!res.headersSent) {
+      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Internal Server Error');
+    } else {
+      res.destroy(error instanceof Error ? error : undefined);
+    }
     logRequest({
       kind: 'document',
       method: req.method,

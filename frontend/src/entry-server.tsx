@@ -9,6 +9,7 @@ import { StaticRouter } from 'react-router-dom/server';
 import { DehydratedState, dehydrate, QueryClient } from '@tanstack/react-query';
 import { matchPath } from 'react-router-dom';
 import type { HelmetServerState } from 'react-helmet-async';
+import { PassThrough, Writable } from 'node:stream';
 import AppShell from './AppShell';
 import App from './App';
 import { createApiClient } from './api/api';
@@ -17,17 +18,27 @@ import {
   fetchBackground,
   fetchCategories,
   fetchProfile,
+  fetchSettings,
   fetchTags,
+  fetchTravelHighlights,
+  fetchLatestAstroImages,
 } from './api/services';
 import { fetchTravelHighlightDetail } from './hooks/useTravelHighlightDetail';
 import { APP_ROUTES } from './api/constants';
-import { Writable } from 'node:stream';
 
 export interface RenderResult {
   html: string;
   helmetContext: { helmet?: HelmetServerState };
   dehydratedState: DehydratedState;
   language: string;
+}
+
+export interface StreamRenderResult {
+  stream: PassThrough;
+  helmetContext: { helmet?: HelmetServerState };
+  dehydratedState: DehydratedState;
+  language: string;
+  abort: () => void;
 }
 
 async function renderAppToString(element: React.ReactElement): Promise<string> {
@@ -107,16 +118,31 @@ async function prefetchRouteQueries(
   const requestUrl = new URL(url, 'http://frontend.local');
   const pathname = requestUrl.pathname;
   const searchParams = requestUrl.searchParams;
+  const commonPrefetches = [
+    prefetchQuerySafely(queryClient, {
+      queryKey: ['settings'],
+      queryFn: () => fetchSettings(client),
+    }),
+    prefetchQuerySafely(queryClient, {
+      queryKey: ['profile'],
+      queryFn: () => fetchProfile(client),
+    }),
+  ];
 
   if (pathname === APP_ROUTES.HOME) {
     await Promise.all([
-      prefetchQuerySafely(queryClient, {
-        queryKey: ['profile'],
-        queryFn: () => fetchProfile(client),
-      }),
+      ...commonPrefetches,
       prefetchQuerySafely(queryClient, {
         queryKey: ['background'],
         queryFn: () => fetchBackground(client),
+      }),
+      prefetchQuerySafely(queryClient, {
+        queryKey: ['travel-highlights'],
+        queryFn: () => fetchTravelHighlights(client),
+      }),
+      prefetchQuerySafely(queryClient, {
+        queryKey: ['latest-astro-images'],
+        queryFn: () => fetchLatestAstroImages(client),
       }),
     ]);
     return;
@@ -129,6 +155,7 @@ async function prefetchRouteQueries(
   if (travelMatch?.params.countrySlug) {
     const { countrySlug, placeSlug, dateSlug } = travelMatch.params;
     await Promise.all([
+      ...commonPrefetches,
       prefetchQuerySafely(queryClient, {
         queryKey: ['background'],
         queryFn: () => fetchBackground(client),
@@ -159,6 +186,7 @@ async function prefetchRouteQueries(
     };
 
     await Promise.all([
+      ...commonPrefetches,
       prefetchQuerySafely(queryClient, {
         queryKey: ['background'],
         queryFn: () => fetchBackground(client),
@@ -176,27 +204,33 @@ async function prefetchRouteQueries(
         queryFn: () => fetchAstroImages(imageParams, client),
       }),
     ]);
+    return;
   }
+
+  await Promise.all(commonPrefetches);
 }
 
-export async function render(
+interface PreparedRenderContext {
+  element: React.ReactElement;
+  helmetContext: { helmet?: HelmetServerState };
+  dehydratedState: DehydratedState;
+  language: string;
+}
+
+async function prepareRenderContext(
   url: string,
   acceptLanguage = 'en',
   requestOrigin?: string
-): Promise<RenderResult> {
+): Promise<PreparedRenderContext> {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
         retry: false,
-        // On the server, never refetch — data is prefetched explicitly (Phase 3)
         staleTime: Infinity,
       },
     },
   });
 
-  // Use i18n.server.ts for per-request initialisation (Phase 4).
-  // For now, import the shared singleton which is set up in i18n.server.ts.
-  // We import lazily to avoid the singleton being cached across requests.
   const { createServerI18n } = await import('./i18n.server');
   const i18nInstance = await createServerI18n(acceptLanguage);
 
@@ -205,24 +239,102 @@ export async function render(
   const helmetContext: { helmet?: HelmetServerState } = {};
   const dehydratedState = dehydrate(queryClient);
 
-  const html = await renderAppToString(
-    <AppShell
-      queryClient={queryClient}
-      i18nInstance={i18nInstance}
-      helmetContext={helmetContext}
-      dehydratedState={dehydratedState}
-      requestOrigin={requestOrigin}
-    >
-      <StaticRouter location={url}>
-        <App />
-      </StaticRouter>
-    </AppShell>
-  );
-
   return {
-    html,
+    element: (
+      <AppShell
+        queryClient={queryClient}
+        i18nInstance={i18nInstance}
+        helmetContext={helmetContext}
+        dehydratedState={dehydratedState}
+        requestOrigin={requestOrigin}
+      >
+        <StaticRouter location={url}>
+          <App />
+        </StaticRouter>
+      </AppShell>
+    ),
     helmetContext,
     dehydratedState,
     language: i18nInstance.resolvedLanguage || i18nInstance.language || 'en',
+  };
+}
+
+export async function renderStream(
+  url: string,
+  acceptLanguage = 'en',
+  requestOrigin?: string
+): Promise<StreamRenderResult> {
+  const prepared = await prepareRenderContext(
+    url,
+    acceptLanguage,
+    requestOrigin
+  );
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const stream = new PassThrough();
+
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        abort();
+        reject(new Error('SSR stream timed out while waiting for shellReady.'));
+      }
+    }, 10000);
+
+    stream.on('error', error => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timeout);
+        reject(error);
+      }
+    });
+
+    const { abort, pipe } = renderToPipeableStream(prepared.element, {
+      onShellReady() {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        clearTimeout(timeout);
+        pipe(stream);
+        resolve({
+          ...prepared,
+          stream,
+          abort,
+        });
+      },
+      onShellError(error) {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timeout);
+          reject(error);
+        }
+      },
+      onError(error) {
+        console.error('[frontend-ssr] render error', error);
+      },
+    });
+  });
+}
+
+export async function render(
+  url: string,
+  acceptLanguage = 'en',
+  requestOrigin?: string
+): Promise<RenderResult> {
+  const prepared = await prepareRenderContext(
+    url,
+    acceptLanguage,
+    requestOrigin
+  );
+  const html = await renderAppToString(prepared.element);
+
+  return {
+    html,
+    helmetContext: prepared.helmetContext,
+    dehydratedState: prepared.dehydratedState,
+    language: prepared.language,
   };
 }

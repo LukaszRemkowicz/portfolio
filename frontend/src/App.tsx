@@ -1,7 +1,7 @@
 // frontend/src/App.tsx
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
-const HomePage = lazy(() => import('./HomePage'));
+import HomePage from './HomePage';
 import { hasAnalyticsConsent } from './utils/analytics';
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
 
@@ -43,50 +43,56 @@ const App: React.FC = () => {
         <ScrollToHash />
         <ClientDocumentGuards />
       </ClientOnly>
-      <Suspense fallback={<LoadingScreen />}>
-        <ErrorBoundary>
-          <Routes>
-            <Route path={APP_ROUTES.HOME} element={<HomePage />} />
-            <Route
-              path={APP_ROUTES.ASTROPHOTOGRAPHY}
-              element={
-                <MainLayout>
+      <ErrorBoundary>
+        <Routes>
+          <Route path={APP_ROUTES.HOME} element={<HomePage />} />
+          <Route
+            path={APP_ROUTES.ASTROPHOTOGRAPHY}
+            element={
+              <MainLayout>
+                <Suspense fallback={<LoadingScreen fullScreen={false} />}>
                   <AstroGallery />
-                </MainLayout>
-              }
-            >
-              {/* Child route so /astrophotography/:slug is a valid path.
-                  AstroGallery reads the :slug param and opens the modal. */}
-              <Route path=':slug' element={null} />
-            </Route>
-            <Route
-              path={APP_ROUTES.PROGRAMMING}
-              element={
-                <MainLayout>
+                </Suspense>
+              </MainLayout>
+            }
+          >
+            {/* Child route so /astrophotography/:slug is a valid path.
+                AstroGallery reads the :slug param and opens the modal. */}
+            <Route path=':slug' element={null} />
+          </Route>
+          <Route
+            path={APP_ROUTES.PROGRAMMING}
+            element={
+              <MainLayout>
+                <Suspense fallback={<LoadingScreen fullScreen={false} />}>
                   <Programming />
-                </MainLayout>
-              }
-            />
-            <Route
-              path={`${APP_ROUTES.TRAVEL_HIGHLIGHTS}/:countrySlug/:placeSlug/:dateSlug`}
-              element={
-                <MainLayout>
+                </Suspense>
+              </MainLayout>
+            }
+          />
+          <Route
+            path={`${APP_ROUTES.TRAVEL_HIGHLIGHTS}/:countrySlug/:placeSlug/:dateSlug`}
+            element={
+              <MainLayout>
+                <Suspense fallback={<LoadingScreen fullScreen={false} />}>
                   <TravelHighlightsPage />
-                </MainLayout>
-              }
-            />
+                </Suspense>
+              </MainLayout>
+            }
+          />
 
-            <Route
-              path={APP_ROUTES.PRIVACY}
-              element={
-                <MainLayout>
+          <Route
+            path={APP_ROUTES.PRIVACY}
+            element={
+              <MainLayout>
+                <Suspense fallback={<LoadingScreen fullScreen={false} />}>
                   <PrivacyPolicy />
-                </MainLayout>
-              }
-            />
-          </Routes>
-        </ErrorBoundary>
-      </Suspense>
+                </Suspense>
+              </MainLayout>
+            }
+          />
+        </Routes>
+      </ErrorBoundary>
       <ClientOnly>
         <CookieConsent onAccept={() => setHasConsented(true)} />
       </ClientOnly>
