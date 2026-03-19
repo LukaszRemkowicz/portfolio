@@ -6,7 +6,7 @@ import { MainPageLocation } from '../types';
 export const useTravelHighlights = (enabled = true) =>
   useQuery<MainPageLocation[], Error>({
     queryKey: ['travel-highlights'],
-    queryFn: fetchTravelHighlights,
+    queryFn: () => fetchTravelHighlights(),
     enabled,
     staleTime: 5 * 60 * 1000,
   });

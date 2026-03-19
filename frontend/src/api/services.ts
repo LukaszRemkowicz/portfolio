@@ -1,4 +1,4 @@
-import { AxiosResponse } from 'axios';
+import { AxiosInstance, AxiosResponse } from 'axios';
 import { API_ROUTES, getMediaUrl } from './routes';
 import { api } from './api';
 import {
@@ -25,9 +25,11 @@ const handleResponse = <T>(response: AxiosResponse<T>): T => {
   throw new Error('Invalid response from server.');
 };
 
-export const fetchProfile = async (): Promise<UserProfile> => {
+export const fetchProfile = async (
+  client: AxiosInstance = api
+): Promise<UserProfile> => {
   try {
-    const response: AxiosResponse<UserProfile> = await api.get(
+    const response: AxiosResponse<UserProfile> = await client.get(
       API_ROUTES.profile
     );
     const data = handleResponse<UserProfile>(response);
@@ -63,9 +65,11 @@ export const fetchProfile = async (): Promise<UserProfile> => {
   }
 };
 
-export const fetchBackground = async (): Promise<string | null> => {
+export const fetchBackground = async (
+  client: AxiosInstance = api
+): Promise<string | null> => {
   try {
-    const response: AxiosResponse<BackgroundImage> = await api.get(
+    const response: AxiosResponse<BackgroundImage> = await client.get(
       API_ROUTES.background
     );
     const data = handleResponse<BackgroundImage>(response);
@@ -83,9 +87,10 @@ export const fetchBackground = async (): Promise<string | null> => {
 };
 
 export const fetchAstroImages = async (
-  params: FilterParams = {}
+  params: FilterParams = {},
+  client: AxiosInstance = api
 ): Promise<AstroImage[]> => {
-  const response: AxiosResponse<AstroImage[]> = await api.get(
+  const response: AxiosResponse<AstroImage[]> = await client.get(
     API_ROUTES.astroImages,
     { params }
   );
@@ -99,8 +104,10 @@ export const fetchAstroImages = async (
   return data;
 };
 
-export const fetchLatestAstroImages = async (): Promise<AstroImage[]> => {
-  const response: AxiosResponse<AstroImage[]> = await api.get(
+export const fetchLatestAstroImages = async (
+  client: AxiosInstance = api
+): Promise<AstroImage[]> => {
+  const response: AxiosResponse<AstroImage[]> = await client.get(
     `${API_ROUTES.astroImages}latest/`
   );
   const data = handleResponse<AstroImage[]>(response);
@@ -114,9 +121,10 @@ export const fetchLatestAstroImages = async (): Promise<AstroImage[]> => {
 };
 
 export const fetchAstroImageDetail = async (
-  slug: string
+  slug: string,
+  client: AxiosInstance = api
 ): Promise<AstroImage> => {
-  const response: AxiosResponse<AstroImage> = await api.get(
+  const response: AxiosResponse<AstroImage> = await client.get(
     `${API_ROUTES.astroImages}${slug}/`
   );
   const data = handleResponse<AstroImage>(response);
@@ -130,31 +138,37 @@ export const fetchAstroImageDetail = async (
 };
 
 export const fetchContact = async (
-  contactData: ContactFormData
+  contactData: ContactFormData,
+  client: AxiosInstance = api
 ): Promise<void> => {
   if (!contactData) throw new Error('contactData is required');
 
-  const response: AxiosResponse<void> = await api.post(
+  const response: AxiosResponse<void> = await client.post(
     API_ROUTES.contact,
     contactData
   );
   return handleResponse<void>(response);
 };
 
-export const fetchTags = async (category_filter?: string): Promise<Tag[]> => {
+export const fetchTags = async (
+  category_filter?: string,
+  client: AxiosInstance = api
+): Promise<Tag[]> => {
   const params: { filter?: string } = {};
   if (category_filter) {
     params.filter = category_filter;
   }
-  const response: AxiosResponse<Tag[]> = await api.get(API_ROUTES.tags, {
+  const response: AxiosResponse<Tag[]> = await client.get(API_ROUTES.tags, {
     params,
   });
   return handleResponse<Tag[]>(response);
 };
 
-export const fetchSettings = async (): Promise<EnabledFeatures> => {
+export const fetchSettings = async (
+  client: AxiosInstance = api
+): Promise<EnabledFeatures> => {
   try {
-    const response: AxiosResponse<EnabledFeatures> = await api.get(
+    const response: AxiosResponse<EnabledFeatures> = await client.get(
       API_ROUTES.settings
     );
     return handleResponse<EnabledFeatures>(response);
@@ -183,8 +197,10 @@ export const fetchProjects = async (): Promise<Project[]> => {
   return [];
 };
 
-export const fetchTravelHighlights = async (): Promise<MainPageLocation[]> => {
-  const response: AxiosResponse<MainPageLocation[]> = await api.get(
+export const fetchTravelHighlights = async (
+  client: AxiosInstance = api
+): Promise<MainPageLocation[]> => {
+  const response: AxiosResponse<MainPageLocation[]> = await client.get(
     API_ROUTES.travelHighlights
   );
   const data = handleResponse<MainPageLocation[]>(response);
@@ -201,8 +217,10 @@ export const fetchTravelHighlights = async (): Promise<MainPageLocation[]> => {
   return [];
 };
 
-export const fetchCategories = async (): Promise<string[]> => {
-  const response: AxiosResponse<string[]> = await api.get(
+export const fetchCategories = async (
+  client: AxiosInstance = api
+): Promise<string[]> => {
+  const response: AxiosResponse<string[]> = await client.get(
     API_ROUTES.categories
   );
   return handleResponse<string[]>(response);

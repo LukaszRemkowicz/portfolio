@@ -92,18 +92,34 @@ function renderHelmet(helmetContext) {
   ].join('');
 }
 
-async function renderDocument(url) {
+function serializeStateForHtml(state) {
+  return JSON.stringify(state)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+async function renderDocument(url, acceptLanguage) {
   const [{ render }, template] = await Promise.all([
     import(pathToFileURL(serverEntryPath).href),
     readFile(indexHtmlPath, 'utf8'),
   ]);
 
-  const { html, helmetContext } = await render(url);
+  const { html, helmetContext, dehydratedState } = await render(
+    url,
+    acceptLanguage
+  );
   const headMarkup = renderHelmet(helmetContext);
+  const dehydratedStateScript = `<script>window.__REACT_QUERY_STATE__ = ${serializeStateForHtml(
+    dehydratedState
+  )};</script>`;
 
   return template
     .replace('</head>', `${headMarkup}</head>`)
-    .replace('<div id="root"></div>', `<div id="root">${html}</div>`);
+    .replace('<div id="root"></div>', `<div id="root">${html}</div>`)
+    .replace('</body>', `${dehydratedStateScript}</body>`);
 }
 
 const server = http.createServer(async (req, res) => {
@@ -121,7 +137,10 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const html = await renderDocument(requestUrl.pathname + requestUrl.search);
+    const html = await renderDocument(
+      requestUrl.pathname + requestUrl.search,
+      req.headers['accept-language'] || 'en'
+    );
     res.writeHead(200, {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'no-cache, no-store, must-revalidate',

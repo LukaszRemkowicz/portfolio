@@ -5,6 +5,6 @@ import { fetchBackground } from '../api/services';
 export const useBackground = () =>
   useQuery<string | null, Error>({
     queryKey: ['background'],
-    queryFn: fetchBackground,
+    queryFn: () => fetchBackground(),
     staleTime: 10 * 60 * 1000,
   });

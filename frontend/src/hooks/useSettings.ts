@@ -10,6 +10,6 @@ export interface SettingsResult extends EnabledFeatures {
 export const useSettings = () =>
   useQuery<SettingsResult, Error>({
     queryKey: ['settings'],
-    queryFn: fetchSettings,
+    queryFn: () => fetchSettings(),
     staleTime: 10 * 60 * 1000,
   });

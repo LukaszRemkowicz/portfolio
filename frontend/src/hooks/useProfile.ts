@@ -6,6 +6,6 @@ import { UserProfile } from '../types';
 export const useProfile = () =>
   useQuery<UserProfile, Error>({
     queryKey: ['profile'],
-    queryFn: fetchProfile,
+    queryFn: () => fetchProfile(),
     staleTime: 5 * 60 * 1000,
   });

@@ -5,7 +5,7 @@
 // This is the ONLY file allowed to import browser-only code at the top level.
 
 import { createRoot, hydrateRoot } from 'react-dom/client';
-import { QueryClient } from '@tanstack/react-query';
+import { DehydratedState, QueryClient } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter } from 'react-router-dom';
 import './i18n.client';
@@ -24,6 +24,13 @@ const queryClient = new QueryClient({
   },
 });
 
+type QueryStateWindow = Window &
+  typeof globalThis & {
+    __REACT_QUERY_STATE__?: DehydratedState;
+  };
+
+const dehydratedState = (window as QueryStateWindow).__REACT_QUERY_STATE__;
+
 // Wire language getter so axios interceptor reads live i18n language
 setLanguageGetter(() => i18n.language || 'en');
 
@@ -39,7 +46,11 @@ const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');
 
 const tree = (
-  <AppShell queryClient={queryClient} i18nInstance={i18n}>
+  <AppShell
+    queryClient={queryClient}
+    i18nInstance={i18n}
+    dehydratedState={dehydratedState}
+  >
     <BrowserRouter
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
     >

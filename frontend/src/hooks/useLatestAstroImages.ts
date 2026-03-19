@@ -6,7 +6,7 @@ import { AstroImage } from '../types';
 export const useLatestAstroImages = (enabled: boolean = true) =>
   useQuery<AstroImage[], Error>({
     queryKey: ['latest-astro-images'],
-    queryFn: fetchLatestAstroImages,
+    queryFn: () => fetchLatestAstroImages(),
     enabled,
     staleTime: 5 * 60 * 1000,
   });

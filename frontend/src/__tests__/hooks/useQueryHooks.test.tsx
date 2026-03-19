@@ -12,7 +12,6 @@ import { useProjects } from '../../hooks/useProjects';
 import { useTravelHighlights } from '../../hooks/useTravelHighlights';
 import { useTravelHighlightDetail } from '../../hooks/useTravelHighlightDetail';
 import { useImageUrls } from '../../hooks/useImageUrls';
-import * as services from '../../api/services';
 
 describe('TanStack Query Hooks', () => {
   beforeEach(() => {
@@ -24,7 +23,7 @@ describe('TanStack Query Hooks', () => {
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['profile'],
-        queryFn: services.fetchProfile,
+        queryFn: expect.any(Function),
       })
     );
   });
@@ -34,7 +33,7 @@ describe('TanStack Query Hooks', () => {
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['background'],
-        queryFn: services.fetchBackground,
+        queryFn: expect.any(Function),
       })
     );
   });
@@ -44,7 +43,7 @@ describe('TanStack Query Hooks', () => {
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['settings'],
-        queryFn: services.fetchSettings,
+        queryFn: expect.any(Function),
       })
     );
   });
@@ -74,7 +73,7 @@ describe('TanStack Query Hooks', () => {
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['latest-astro-images'],
-        queryFn: services.fetchLatestAstroImages,
+        queryFn: expect.any(Function),
       })
     );
   });
@@ -84,7 +83,7 @@ describe('TanStack Query Hooks', () => {
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['categories'],
-        queryFn: services.fetchCategories,
+        queryFn: expect.any(Function),
       })
     );
   });
@@ -104,7 +103,7 @@ describe('TanStack Query Hooks', () => {
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['projects'],
-        queryFn: services.fetchProjects,
+        queryFn: expect.any(Function),
       })
     );
   });
@@ -114,7 +113,7 @@ describe('TanStack Query Hooks', () => {
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['travel-highlights'],
-        queryFn: services.fetchTravelHighlights,
+        queryFn: expect.any(Function),
       })
     );
   });

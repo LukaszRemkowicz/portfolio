@@ -1,6 +1,7 @@
 // frontend/src/hooks/useTravelHighlightDetail.ts
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/api';
+import type { AxiosInstance } from 'axios';
 import { API_ROUTES, getMediaUrl } from '../api/routes';
 import { AstroImage } from '../types';
 
@@ -18,16 +19,18 @@ export interface TravelHighlightDetail {
   images: ExtendedAstroImage[];
 }
 
-const fetchTravelHighlightDetail = async ({
+export const fetchTravelHighlightDetail = async ({
   countrySlug,
   placeSlug,
   dateSlug,
+  client = api,
 }: {
   countrySlug: string;
   placeSlug: string;
   dateSlug: string;
+  client?: AxiosInstance;
 }): Promise<TravelHighlightDetail> => {
-  const response = await api.get(
+  const response = await client.get(
     `${API_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`
   );
 
