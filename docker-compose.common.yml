@@ -3,7 +3,7 @@ services:
     image: alpine:latest
     restart: "no"
     volumes:
-      - ./scripts/download-blocklist.sh:/download.sh:ro
+      - ./infra/scripts/download-blocklist.sh:/download.sh:ro
       - nginx_blocklist:/etc/nginx/blocklist
     command: /bin/sh /download.sh
 

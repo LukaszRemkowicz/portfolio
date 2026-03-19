@@ -147,11 +147,11 @@ docker compose exec portfolio-be pytest
 
 We provide specialized "God-Tier" scripts for automated database backups and restore verification.
 
-- **Atomic Backups**: `scripts/db_backup/backup_db.sh` creates validated, timestamped dumps with overlap protection.
-- **Restore Verification**: `scripts/db_backup/test_restore.sh` automatically verifies that backups are healthy by performing a full restore in a temporary container.
+- **Atomic Backups**: `infra/scripts/db_backup/backup_db.sh` creates validated, timestamped dumps with overlap protection.
+- **Restore Verification**: `infra/scripts/db_backup/test_restore.sh` automatically verifies that backups are healthy by performing a full restore in a temporary container.
 
 > [!TIP]
-> For detailed instructions on configuration (Doppler/Env), retention policies, and restore procedures, see the [Database Maintenance Guide](../scripts/db_backup/MAINTENANCE.md).
+> For detailed instructions on configuration (Doppler/Env), retention policies, and restore procedures, see the [Database Maintenance Guide](../infra/scripts/db_backup/MAINTENANCE.md).
 
 ##  TODO - Backend Improvements
 

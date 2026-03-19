@@ -1,17 +1,20 @@
+name: portfolio-stage
+
 # ---------- Backend Defaults ----------
 x-backend-defaults: &backend-defaults
   volumes:
-    - stage_media_data:/app/media
-    - stage_static_data:/app/staticfiles
+    - portfolio_staging_media_data:/app/media
+    - portfolio_staging_static_data:/app/staticfiles
   networks:
     - stage_network
+    - traefik_proxy
   environment: &backend-defaults-env
     DEBUG: "False"
     DOCKER_ENV: "true"
     PYTHONPATH: "."
     SECRET_KEY: ${SECRET_KEY}
-    DB_NAME: ${DB_NAME:-portfolio_stage}
-    DB_USER: ${DB_USER}
+    DB_NAME: portfolio_stage
+    DB_USER: ${DB_USER:-portfolio}
     DB_PASSWORD: ${DB_PASSWORD}
     DB_HOST: db
     DB_PORT: 5432
@@ -32,7 +35,7 @@ x-backend-defaults: &backend-defaults
     SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN}
     SENTRY_DSN: ${SENTRY_DSN:-}
     ENABLE_SENTRY: ${ENABLE_SENTRY:-false}
-    ENVIRONMENT: ${ENVIRONMENT:-stage}
+    ENVIRONMENT: stage
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.0}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
     PROJECT_OWNER: ${PROJECT_OWNER:-Lukasz}
@@ -48,6 +51,8 @@ x-backend-defaults: &backend-defaults
 
 networks:
   stage_network:
+  traefik_proxy:
+    external: true
 
 services:
   # ---------- Database ----------
@@ -57,18 +62,16 @@ services:
     networks:
       - stage_network
     environment:
-      POSTGRES_DB: ${DB_NAME:-portfolio_stage}
+      POSTGRES_DB: portfolio_stage
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - portfolio_staging_db_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME:-portfolio_stage}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d portfolio_stage"]
       interval: 5s
       timeout: 5s
       retries: 5
-    ports:
-      - "127.0.0.1:5434:5432"
-    volumes:
-      - stage_postgres_data:/var/lib/postgresql
 
   # ---------- Redis ----------
   redis:
@@ -77,8 +80,6 @@ services:
     restart: always
     networks:
       - stage_network
-    ports:
-      - "127.0.0.1:6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -88,15 +89,15 @@ services:
   # ---------- Celery Worker ----------
   celery-worker:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-stage}-worker:${TAG}
+    image: stage-worker:${TAG}
     restart: always
-    command: celery -A settings worker -l info -Q celery,monitoring --concurrency=2
+    command: celery -A settings worker -l info -Q celery,monitoring --concurrency=${CELERY_WORKERS:-2}
     environment:
       <<: *backend-defaults-env
       MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
     volumes:
-      - stage_media_data:/app/media
-      - stage_static_data:/app/staticfiles
+      - portfolio_staging_media_data:/app/media
+      - portfolio_staging_static_data:/app/staticfiles
       - ${DOCKER_LOGS_DIR:-/tmp/stage-docker-logs}:/app/docker-logs
     healthcheck:
       test: ["CMD-SHELL", "celery -A settings inspect ping -d celery@$$HOSTNAME"]
@@ -108,35 +109,49 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-stage}-be:${TAG}
+    image: stage-be:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
       <<: *backend-defaults-env
     volumes:
-      - stage_media_data:/app/media
-      - stage_static_data:/app/staticfiles
-      - stage_celerybeat_data:/app/celerybeat
+      - portfolio_staging_media_data:/app/media
+      - portfolio_staging_static_data:/app/staticfiles
+      - portfolio_staging_celerybeat_data:/app/celerybeat
 
   # ---------- Frontend ----------
   fe:
-    image: ${ENVIRONMENT:-stage}-fe:${TAG}
+    image: stage-fe:${TAG}
     restart: always
     networks:
       - stage_network
     volumes:
-      - stage_frontend_dist:/frontend_dist
+      - portfolio_staging_frontend_dist:/frontend_dist
 
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-stage}-be:${TAG}
+    image: stage-be:${TAG}
     restart: always
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python3 -c \"import sys, urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5); sys.exit(0)\" >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   # ---------- Release Job ----------
   release:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-stage}-be:${TAG}
+    image: stage-be:${TAG}
     restart: "no"
     command: >
       sh -c "
@@ -147,44 +162,58 @@ services:
 
   # ---------- Nginx ----------
   nginx:
-    image: ${ENVIRONMENT:-stage}-nginx:${TAG}
+    image: stage-nginx:${TAG}
     restart: always
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - stage_network
-    depends_on:
-      - be
-      - fe
-    environment:
-      SITE_DOMAIN: ${SITE_DOMAIN}
-      NGINX_SSL_CERT: ${SSL_CERT_NAME}
-      NGINX_SSL_KEY: ${SSL_KEY_NAME}
-      NGINX_HTTPS_PORT: ${NGINX_HTTPS_PORT:-8443}
-      NGINX_PORT_SUFFIX: ":${NGINX_HTTPS_PORT:-8443}"
-      NGINX_FORWARDED_PORT: "${NGINX_HTTPS_PORT:-8443}"
-      FRONTEND_PORT: ${FRONTEND_PORT:-8080}
-      FRONTEND_ASSETS_LOGIC: "try_files $$uri =404;"
-      FRONTEND_ROOT_LOGIC: "try_files $$uri $$uri/ /index.html;"
-      FRONTEND_STATIC_EXT_LOGIC: "try_files $$uri =404;"
-      ALLOWED_IP: ${ALLOWED_IP:-127.0.0.1}
-      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-      NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_PORT|ALLOWED_IP|FRONTEND_ASSETS_LOGIC|FRONTEND_ROOT_LOGIC|FRONTEND_STATIC_EXT_LOGIC|NGINX_HTTPS_PORT|NGINX_PORT_SUFFIX|NGINX_FORWARDED_PORT"
+      - traefik_proxy
     volumes:
-      - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
-      - ${NGINX_STAGE_LOG_DIR:-./nginx/logs/stage}:/var/log/nginx
-      - stage_media_data:/app/media:ro
-      - stage_static_data:/app/staticfiles:ro
-      - nginx_blocklist:/etc/nginx/blocklist:ro
-      - ./nginx/stage/restrictions.conf.template:/etc/nginx/templates/restrictions.conf.template:ro
-      - ./nginx/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
-      - stage_frontend_dist:/usr/share/nginx/html:ro
-    ports:
-      - "8080:80"
-      - "8443:443"
+      - ${NGINX_LOG_DIR:-/var/log/portfolio/nginx/stage}:/var/log/nginx
+      - portfolio_staging_media_data:/app/media:ro
+      - portfolio_staging_static_data:/app/staticfiles:ro
+      - portfolio_staging_nginx_blocklist:/etc/nginx/blocklist:ro
+      - portfolio_staging_frontend_dist:/usr/share/nginx/html:ro
+    labels:
+      - "traefik.enable=true"
+      # Main site routing
+      - "traefik.http.routers.staging-site.rule=Host(`${SITE_DOMAIN}`)"
+      - "traefik.http.routers.staging-site.entrypoints=websecure"
+      - "traefik.http.routers.staging-site.tls=true"
+      - "traefik.http.routers.staging-site.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.staging-site.middlewares=staging-whitelist@docker,staging-security@file"
+
+      # Admin/API routing (Everything goes to Nginx now)
+      - "traefik.http.routers.staging-api.rule=Host(`api.${SITE_DOMAIN}`) || Host(`admin.${SITE_DOMAIN}`)"
+      - "traefik.http.routers.staging-api.entrypoints=websecure"
+      - "traefik.http.routers.staging-api.tls=true"
+      - "traefik.http.routers.staging-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.staging-api.middlewares=staging-whitelist@docker,staging-security@file,rate-limit@file"
+      - "traefik.http.routers.staging-api.priority=2"
+
+      - "traefik.http.services.staging-site.loadbalancer.server.port=80"
 
 volumes:
-  stage_postgres_data:
-  stage_media_data:
-  stage_static_data:
-  stage_celerybeat_data:
-  nginx_blocklist:
-  stage_frontend_dist:
+  portfolio_staging_db_data:
+    external: true
+  portfolio_staging_media_data:
+    external: true
+  portfolio_staging_static_data:
+    external: true
+  portfolio_staging_celerybeat_data:
+    external: true
+  portfolio_staging_nginx_blocklist:
+    external: true
+  portfolio_staging_frontend_dist:
+    external: true

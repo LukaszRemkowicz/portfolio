@@ -4,7 +4,7 @@ This document outlines the procedures for database backups and restores for the 
 
 ## 🛡️ Database Backups
 
-The `scripts/db_backup/backup_db.sh` script is a production-grade utility that creates compressed, timestamped backups using PostgreSQL's custom format (`-Fc`).
+The `infra/scripts/db_backup/backup_db.sh` script is a production-grade utility that creates compressed, timestamped backups using PostgreSQL's custom format (`-Fc`).
 
 ### Features
 - **Robustness**: Uses `set -euo pipefail` to ensure any failure stops the script.
@@ -17,7 +17,7 @@ The `scripts/db_backup/backup_db.sh` script is a production-grade utility that c
 #### Manual Backup
 Run the script from the project root:
 ```bash
-./scripts/db_backup/backup_db.sh
+./infra/scripts/db_backup/backup_db.sh
 ```
 
 #### Environment Variables
@@ -53,12 +53,12 @@ pg_restore -U postgres -d portfolio --clean --no-owner < path/to/backup.dump
 
 ## 🧼 Automated Restore Testing
 
-Backups are only useful if they can be restored. The `scripts/db_backup/test_restore.sh` script automates the verification process by spinning up a temporary "clean" Postgres container and attempting a full restore.
+Backups are only useful if they can be restored. The `infra/scripts/db_backup/test_restore.sh` script automates the verification process by spinning up a temporary "clean" Postgres container and attempting a full restore.
 
 ### How to Verify Backups
 Run this utility to ensure your backups are not just "present" but actually "healthy":
 ```bash
-BACKUP_DIR=path/to/dumps ./scripts/db_backup/test_restore.sh
+BACKUP_DIR=path/to/dumps ./infra/scripts/db_backup/test_restore.sh
 ```
 The script performs a **Truly Professional Verification**:
 1. **Env Guard**: Fails immediately with help instructions if `BACKUP_DIR` is missing.
@@ -107,8 +107,8 @@ For production and shared local environments, we use **Doppler** to manage envir
 ### 📦 Integrated Backups & Tests
 Our scripts are designed to work seamlessly with Doppler. Use `doppler run` to provide database credentials without manual `.env` files:
 ```bash
-doppler run -- ./scripts/db_backup/backup_db.sh
-doppler run -- ./scripts/db_backup/test_restore.sh
+doppler run -- ./infra/scripts/db_backup/backup_db.sh
+doppler run -- ./infra/scripts/db_backup/test_restore.sh
 ```
 
 ---

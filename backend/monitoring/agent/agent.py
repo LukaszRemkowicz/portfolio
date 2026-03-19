@@ -22,7 +22,6 @@ class LogAnalysisAgent:
     def analyze_logs_from_files(
         self,
         backend_log_path: str,
-        frontend_log_path: str,
         nginx_log_path: Optional[str] = None,
         collected_at: str = "",
         historical_context: str = "",
@@ -46,14 +45,11 @@ class LogAnalysisAgent:
         MAX_CHARS_PER_LOG = 25000
 
         backend_content = self._read_file_tail(backend_log_path, MAX_CHARS_PER_LOG)
-        frontend_content = self._read_file_tail(frontend_log_path, MAX_CHARS_PER_LOG)
         nginx_content = (
             self._read_file_tail(nginx_log_path, MAX_CHARS_PER_LOG) if nginx_log_path else ""
         )
 
-        return self.analyze_logs(
-            backend_content, frontend_content, nginx_content, collected_at, historical_context
-        )
+        return self.analyze_logs(backend_content, nginx_content, collected_at, historical_context)
 
     def _read_file_tail(self, file_path: str, max_chars: int) -> str:
         """Reads the last max_chars from a file efficiently."""
@@ -70,7 +66,6 @@ class LogAnalysisAgent:
     def analyze_logs(
         self,
         backend_logs: str,
-        frontend_logs: str,
         nginx_logs: str = "",
         collected_at: str = "",
         historical_context: str = "",
@@ -90,7 +85,7 @@ class LogAnalysisAgent:
         logger.info("Preparing prompt for LLM")
 
         prompt = build_prompt(historical_context=historical_context)
-        combined_logs = self._prepare_logs(backend_logs, frontend_logs, nginx_logs, collected_at)
+        combined_logs = self._prepare_logs(backend_logs, nginx_logs, collected_at)
 
         logger.info("Sending request to LLM provider (prompt size: %d chars)", len(combined_logs))
         result, usage = self.provider.ask_question_with_usage(
@@ -123,7 +118,6 @@ class LogAnalysisAgent:
     def _prepare_logs(
         self,
         backend: str,
-        frontend: str,
         nginx: str = "",
         collected_at: str = "",
     ) -> str:
@@ -131,11 +125,8 @@ class LogAnalysisAgent:
         MAX_CHARS = 50000  # ~12k tokens
 
         # Smart truncation: keep recent logs
-        backend_truncated = backend[-MAX_CHARS // 3 :] if len(backend) > MAX_CHARS // 3 else backend
-        frontend_truncated = (
-            frontend[-MAX_CHARS // 3 :] if len(frontend) > MAX_CHARS // 3 else frontend
-        )
-        nginx_truncated = nginx[-MAX_CHARS // 3 :] if len(nginx) > MAX_CHARS // 3 else nginx
+        backend_truncated = backend[-MAX_CHARS // 2 :] if len(backend) > MAX_CHARS // 2 else backend
+        nginx_truncated = nginx[-MAX_CHARS // 2 :] if len(nginx) > MAX_CHARS // 2 else nginx
 
         nginx_section = (
             f"\n        === NGINX LOGS ===\n        {nginx_truncated}\n" if nginx_truncated else ""
@@ -146,7 +137,6 @@ class LogAnalysisAgent:
         return (
             f"{metadata}"
             f"\n        === BACKEND LOGS ===\n        {backend_truncated}"
-            f"\n        === FRONTEND LOGS ===\n        {frontend_truncated}"
             f"{nginx_section}"
         )
 

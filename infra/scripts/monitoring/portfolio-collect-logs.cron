@@ -5,4 +5,4 @@
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-0 0 * * * lukasz DOCKER_LOGS_DIR=/var/log/portfolio/docker-logs COMPOSE_FILE=/home/lukasz/portfolio/docker-compose.prod.yml /home/lukasz/portfolio/scripts/monitoring/collect-logs.sh >> /var/log/portfolio/collect-logs.log 2>&1
+0 0 * * * lukasz DOCKER_LOGS_DIR=/var/log/portfolio/docker-logs COMPOSE_FILE=/home/lukasz/portfolio/docker-compose.prod.yml /home/lukasz/portfolio/infra/scripts/monitoring/collect-logs.sh >> /var/log/portfolio/collect-logs.log 2>&1

@@ -1,5 +1,9 @@
+name: portfolio-dev
+
 networks:
   portfolio_network:
+  traefik_proxy:
+    external: true
 
 include:
   - docker-compose.common.yml
@@ -14,13 +18,13 @@ x-backend-common: &backend-common
     - portfolio_network
   volumes:
     - ./backend:/app
-    - local_static_data:/app/staticfiles
+    - portfolio_dev_static_data:/app/staticfiles
   environment:
     DOCKER_ENV: "true"
     PYTHONPATH: "."
     TZ: "Europe/Warsaw"
     SECRET_KEY: ${SECRET_KEY}
-    DB_NAME: ${DB_NAME}
+    DB_NAME: portfolio_dev
     DB_USER: ${DB_USER}
     DB_PASSWORD: ${DB_PASSWORD}
     DB_HOST: ${DB_HOST:-db}
@@ -63,6 +67,27 @@ x-frontend-common: &frontend-common
     - ./frontend:/app
     - fe_node_modules:/app/node_modules
 
+x-local-nginx-common: &local-nginx-common
+  image: nginx:latest
+  depends_on:
+    - fe
+    - be
+  environment:
+    SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}
+    NGINX_SSL_CERT: ${SSL_CERT_NAME:-portfolio.local.crt}
+    NGINX_SSL_KEY: ${SSL_KEY_NAME:-portfolio.local.key}
+    FRONTEND_PORT: ${FRONTEND_PORT:-8080}
+    NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+    NGINX_ENVSUBST_FILTER: SITE_DOMAIN|FRONTEND_PORT|NGINX_SSL_CERT|NGINX_SSL_KEY|NGINX_ENVSUBST_OUTPUT_DIR
+  volumes:
+    - ./infra/nginx/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
+    - ./infra/nginx/includes/:/etc/nginx/templates/includes/:ro
+    - ./infra/nginx/ssl/certs:/etc/nginx/ssl:ro
+    - ./infra/nginx/logs:/var/log/nginx
+    - ./backend/media:/app/media:ro
+    - ./frontend/public:/usr/share/nginx/html/errors:ro
+    - portfolio_dev_static_data:/app/staticfiles:ro
+
 services:
   fe:
     <<: *frontend-common
@@ -76,9 +101,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./frontend:/app
-      - fe_node_modules:/app/node_modules
-      - ./nginx/ssl/certs:/etc/nginx/ssl:ro
-      - nginx_blocklist:/etc/nginx/blocklist:ro
+      - portfolio_dev_fe_node_modules:/app/node_modules
+      - ./infra/nginx/ssl/certs:/etc/nginx/ssl:ro
 
   be:
     <<: *backend-common
@@ -92,6 +116,15 @@ services:
         python manage.py collectstatic --noinput &&
         python manage.py runserver 0.0.0.0:8000
       "
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python3 -c \"import sys, urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5); sys.exit(0)\" >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   fe-test:
     <<: *frontend-common
@@ -109,18 +142,18 @@ services:
     networks:
       - portfolio_network
     environment:
-      POSTGRES_DB: ${DB_NAME:-portfolio}
+      POSTGRES_DB: portfolio_dev
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5436:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${DB_USER:-postgres} -d $${DB_NAME:-portfolio}"]
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER:-postgres} -d portfolio_dev"]
       interval: 5s
       timeout: 5s
       retries: 5
     volumes:
-      - postgres18_data:/var/lib/postgresql
+      - portfolio_dev_db_data:/var/lib/postgresql
 
 
   redis:
@@ -132,7 +165,7 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:6382:6379"
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping || redis-cli ping"]
       interval: 5s
@@ -170,41 +203,36 @@ services:
         condition: service_healthy
 
   nginx:
-    build:
-      context: .
-      dockerfile: docker/nginx/Dockerfile
-    image: nginx:latest
+    <<: *local-nginx-common
     networks:
       - portfolio_network
-    depends_on:
-      - fe
-      - be
-    environment:
-      SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}
-      NGINX_SSL_CERT: ${SSL_CERT_NAME:-portfolio.local.crt}
-      NGINX_SSL_KEY: ${SSL_KEY_NAME:-portfolio.local.key}
-      FRONTEND_PORT: ${FRONTEND_PORT:-8080}
-      FRONTEND_ASSETS_LOGIC: "proxy_pass http://fe:8080;"
-      FRONTEND_ROOT_LOGIC: "proxy_pass http://fe:8080;"
-      FRONTEND_STATIC_EXT_LOGIC: "proxy_pass http://fe:8080;"
-      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-      NGINX_ENVSUBST_FILTER: SITE_DOMAIN|FRONTEND_PORT|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_ASSETS_LOGIC|FRONTEND_ROOT_LOGIC|FRONTEND_STATIC_EXT_LOGIC|NGINX_ENVSUBST_OUTPUT_DIR
     ports:
-      - "80:80"
-      - "443:443/tcp"
-      - "443:443/udp"
-    volumes:
-      - ./nginx/TEMPLATE.conf:/etc/nginx/templates/nginx.conf.template:ro
-      - ./nginx/includes/:/etc/nginx/templates/includes/:ro
-      - ./nginx/ssl/certs:/etc/nginx/ssl:ro
-      - ./nginx/logs:/var/log/nginx
-      - ./backend/media:/app/media:ro
-      - ./frontend/public:/usr/share/nginx/html/errors:ro
-      - local_static_data:/app/staticfiles:ro
-      - nginx_blocklist:/etc/nginx/blocklist:ro
+      - "127.0.0.1:8080:80"
+      - "127.0.0.1:8443:443/tcp"
+      - "127.0.0.1:8443:443/udp"
+
+  nginx-traefik:
+    <<: *local-nginx-common
+    profiles: ["traefik"]
+    networks:
+      - portfolio_network
+      - traefik_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portfolio-dev.rule=Host(`${SITE_DOMAIN:-portfolio.local}`)"
+      - "traefik.http.routers.portfolio-dev.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-dev.tls=true"
+      - "traefik.http.routers.portfolio-dev.middlewares=public-security@file"
+      - "traefik.http.routers.portfolio-dev-api.rule=Host(`api.${SITE_DOMAIN:-portfolio.local}`) || Host(`admin.${SITE_DOMAIN:-portfolio.local}`)"
+      - "traefik.http.routers.portfolio-dev-api.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-dev-api.tls=true"
+      - "traefik.http.routers.portfolio-dev-api.middlewares=admin-api-security@file,rate-limit@file"
+      - "traefik.http.services.portfolio-dev.loadbalancer.server.port=80"
 
 volumes:
-  postgres_data:
-  postgres18_data:
-  fe_node_modules:
-  local_static_data:
+  portfolio_dev_db_data:
+    external: true
+  portfolio_dev_fe_node_modules:
+    external: true
+  portfolio_dev_static_data:
+    external: true

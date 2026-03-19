@@ -1,5 +1,12 @@
+name: portfolio-prod
+
 # ---------- Backend Defaults ----------
 x-backend-defaults: &backend-defaults
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
   volumes:
     - prod_media_data:/app/media
     - prod_static_data:/app/staticfiles
@@ -10,7 +17,7 @@ x-backend-defaults: &backend-defaults
     DOCKER_ENV: "true"
     PYTHONPATH: "."
     SECRET_KEY: ${SECRET_KEY}
-    DB_NAME: ${DB_NAME}
+    DB_NAME: portfolio_prod
     DB_USER: ${DB_USER}
     DB_PASSWORD: ${DB_PASSWORD}
     DB_HOST: ${DB_HOST:-db}
@@ -30,7 +37,7 @@ x-backend-defaults: &backend-defaults
     CONTACT_EMAIL: ${CONTACT_EMAIL}
     SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN}
     SENTRY_DSN: ${SENTRY_DSN}
-    ENVIRONMENT: ${ENVIRONMENT:-production}
+    ENVIRONMENT: prod
     MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
     PROJECT_OWNER: ${PROJECT_OWNER}
     REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -45,6 +52,8 @@ x-backend-defaults: &backend-defaults
 
 networks:
   portfolio_network:
+  traefik_proxy:
+    external: true
 
 services:
   # ---------- Database ----------
@@ -54,18 +63,36 @@ services:
     networks:
       - portfolio_network
     environment:
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_DB: portfolio_prod
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d portfolio_prod" ]
       interval: 5s
       timeout: 5s
       retries: 5
-    ports:
-      - "127.0.0.1:5432:5432"
     volumes:
       - postgres18_data:/var/lib/postgresql
+
+  # ---------- Database Backup (Audit 3) ----------
+  db-backup:
+    image: prodrigestivill/postgres-backup-local:18
+    restart: always
+    networks:
+      - portfolio_network
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: portfolio_prod
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: 7
+      BACKUP_SUFFIX: ".sql.gz"
+    volumes:
+      - ${DB_BACKUP_DIR:-/var/backups/portfolio/prod}:/backups
+    depends_on:
+      db:
+        condition: service_healthy
 
   # ---------- Redis ----------
   redis:
@@ -76,8 +103,6 @@ services:
       - portfolio_network
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-    ports:
-      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping || redis-cli ping"]
       interval: 5s
@@ -87,9 +112,9 @@ services:
   # ---------- Celery Worker ----------
   celery-worker:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-production}-worker:${TAG}
+    image: prod-worker:${TAG}
     restart: always
-    command: celery -A settings worker -l info -Q celery,monitoring --concurrency=4
+    command: celery -A settings worker -l info -Q celery,monitoring --concurrency=${CELERY_WORKERS:-4}
     environment:
       <<: *backend-defaults-env
       MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
@@ -107,7 +132,7 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-production}-be:${TAG}
+    image: prod-be:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
@@ -119,7 +144,7 @@ services:
 
   # ---------- Frontend ----------
   fe:
-    image: ${ENVIRONMENT:-production}-fe:${TAG}
+    image: prod-fe:${TAG}
     restart: "always"
     volumes:
       - frontend_dist:/frontend_dist
@@ -127,13 +152,22 @@ services:
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-production}-be:${TAG}
+    image: prod-be:${TAG}
     restart: always
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python3 -c \"import sys, urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5); sys.exit(0)\" >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # ---------- Release Job ----------
   release:
     <<: *backend-defaults
-    image: ${ENVIRONMENT:-production}-be:${TAG}
+    image: prod-be:${TAG}
     restart: "no"
     command: >
       sh -c "
@@ -145,43 +179,69 @@ services:
   # ---------- Nginx ----------
   # Service name must be "nginx" — deploy.sh uses: docker compose exec -T nginx nginx -s reload
   nginx:
-    image: ${ENVIRONMENT:-production}-nginx:${TAG}
+    image: prod-nginx:${TAG}
     restart: always
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - portfolio_network
+      - traefik_proxy
+    labels:
+      - "traefik.enable=true"
+      # Main Site Router
+      - "traefik.http.routers.portfolio-prod.rule=Host(`${SITE_DOMAIN}`)"
+      - "traefik.http.routers.portfolio-prod.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-prod.tls=true"
+      - "traefik.http.routers.portfolio-prod.tls.certresolver=letsencrypt"
+
+      # API & Admin Router (Routes to Nginx for X-Accel-Redirect)
+      - "traefik.http.routers.portfolio-prod-api.rule=Host(`api.${SITE_DOMAIN}`) || Host(`admin.${SITE_DOMAIN}`)"
+      - "traefik.http.routers.portfolio-prod-api.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-prod-api.tls=true"
+      - "traefik.http.routers.portfolio-prod-api.tls.certresolver=letsencrypt"
+
+      # Middlewares (Security Headers, HSTS, and Rate Limiting)
+      - "traefik.http.routers.portfolio-prod.middlewares=public-security@file"
+      - "traefik.http.routers.portfolio-prod-api.middlewares=admin-api-security@file,rate-limit@file"
+
+      # Explicit service port (Nginx listens on 80)
+      - "traefik.http.services.portfolio-prod.loadbalancer.server.port=80"
     depends_on:
       - be
       - fe
-    environment:
-      # Injected by Doppler at runtime — envsubst replaces variable placeholders
-      SITE_DOMAIN: ${SITE_DOMAIN}
-      NGINX_SSL_CERT: ${SSL_CERT_NAME}
-      NGINX_SSL_KEY: ${SSL_KEY_NAME}
-      NGINX_HTTPS_PORT: ""
-      NGINX_PORT_SUFFIX: ""
-      NGINX_FORWARDED_PORT: "443"
-      FRONTEND_PORT: ${FRONTEND_PORT:-8080}
-      FRONTEND_ASSETS_LOGIC: "try_files $$uri =404;"
-      FRONTEND_ROOT_LOGIC: "try_files $$uri $$uri/ /index.html;"
-      FRONTEND_STATIC_EXT_LOGIC: "try_files $$uri =404;"
-      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-      NGINX_ENVSUBST_FILTER: "SITE_DOMAIN|FRONTEND_PORT|NGINX_SSL_CERT|NGINX_SSL_KEY|FRONTEND_ASSETS_LOGIC|FRONTEND_ROOT_LOGIC|FRONTEND_STATIC_EXT_LOGIC|NGINX_HTTPS_PORT|NGINX_PORT_SUFFIX|NGINX_FORWARDED_PORT"
     volumes:
-      - ${NGINX_SSL_DIR:-./nginx/ssl/certs}:/etc/nginx/ssl:ro
-      - ${NGINX_LOG_DIR:-./nginx/logs}:/var/log/nginx
+      - ${NGINX_LOG_DIR:-/var/log/portfolio/nginx/prod}:/var/log/nginx
       - prod_media_data:/app/media:ro
       - prod_static_data:/app/staticfiles:ro
       - nginx_blocklist:/etc/nginx/blocklist:ro
       - frontend_dist:/usr/share/nginx/html:ro
-    ports:
-      - "80:80"
-      - "443:443/tcp"
-      - "443:443/udp"
 
 volumes:
   postgres18_data:
+    name: portfolio_prod_db_data
+    external: true
   prod_media_data:
+    name: portfolio_prod_media_data
+    external: true
   prod_static_data:
+    name: portfolio_prod_static_data
+    external: true
   celerybeat_data:
+    name: portfolio_prod_celerybeat_data
+    external: true
   nginx_blocklist:
+    name: portfolio_prod_nginx_blocklist
+    external: true
   frontend_dist:
+    name: portfolio_prod_frontend_dist
+    external: true
