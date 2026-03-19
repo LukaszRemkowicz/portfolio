@@ -9,14 +9,26 @@ import {
   AppError,
 } from './errors';
 
-import i18n from '../i18n';
+// Language getter — safe to call in both the browser and the Node SSR runtime.
+// On the client: lazily reads the language from the i18n singleton after it has
+// been initialised. On the server: i18n is not initialised here, so it falls
+// back to 'en' (server-side language is handled per-request in Phase 3+).
+let _getLanguage: (() => string) | null = null;
+
+export function setLanguageGetter(getter: () => string): void {
+  _getLanguage = getter;
+}
+
+function getCurrentLanguage(): string {
+  return _getLanguage?.() ?? 'en';
+}
 
 export const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
 });
 
 api.interceptors.request.use(config => {
-  const lang = i18n.language || 'en';
+  const lang = getCurrentLanguage();
   const shortLang = lang.split('-')[0];
 
   config.params = {

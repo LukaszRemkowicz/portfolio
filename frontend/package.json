@@ -19,6 +19,7 @@
     "type-check": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "smoke:ssr": "tsx scripts/ssr-smoke-test.ts",
     "ci": "npm run type-check && npm run lint && npm run format:check && npm run build && npm run test:coverage"
   },
   "dependencies": {
@@ -51,7 +52,7 @@
     "@testing-library/react": "^14.0.0",
     "@types/babel__template": "^7.4.4",
     "@types/jest": "^29.5.14",
-    "@types/node": "^20.19.33",
+    "@types/node": "^24.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@vitejs/plugin-react": "^4.0.0",
@@ -67,6 +68,7 @@
     "jest-environment-jsdom": "^30.2.0",
     "prettier": "^3.0.0",
     "test-exclude": "^7.0.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.56.1",
     "vite": "^6.4.1",

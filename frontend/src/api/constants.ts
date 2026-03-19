@@ -1,7 +1,9 @@
 // frontend/src/api/constants.ts
-import { getEnv } from '../utils/env';
+import { getSharedEnv } from '../utils/env.shared';
 
-export const API_BASE_URL = getEnv('API_URL');
+// getSharedEnv reads from process.env in Node (SSR) and VITE_* in the browser build.
+// env.ts is NOT imported here — import.meta.env crashes in Node at module level.
+export const API_BASE_URL = getSharedEnv('API_URL');
 
 if (!API_BASE_URL) {
   console.warn(
@@ -17,6 +19,7 @@ export const APP_ROUTES = {
   ASTROPHOTOGRAPHY: '/astrophotography',
   PROGRAMMING: '/programming',
   CONTACT: '/contact',
+  // Corrected from /travel-highlights — matches App.tsx route definition
   TRAVEL_HIGHLIGHTS: '/travel',
   PRIVACY: '/privacy',
 };
