@@ -89,7 +89,7 @@ services:
   # ---------- Celery Worker ----------
   celery-worker:
     <<: *backend-defaults
-    image: stage-worker:${TAG}
+    image: ${ENVIRONMENT}-worker:${TAG}
     restart: always
     command: celery -A settings worker -l info -Q celery,monitoring --concurrency=${CELERY_WORKERS:-2}
     environment:
@@ -109,7 +109,7 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: stage-be:${TAG}
+    image: ${ENVIRONMENT}-be:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
@@ -121,7 +121,7 @@ services:
 
   # ---------- Frontend ----------
   fe:
-    image: stage-fe:${TAG}
+    image: ${ENVIRONMENT}-fe:${TAG}
     restart: always
     networks:
       - stage_network
@@ -131,7 +131,7 @@ services:
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
-    image: stage-be:${TAG}
+    image: ${ENVIRONMENT}-be:${TAG}
     restart: always
     healthcheck:
       test:
@@ -151,7 +151,7 @@ services:
   # ---------- Release Job ----------
   release:
     <<: *backend-defaults
-    image: stage-be:${TAG}
+    image: ${ENVIRONMENT}-be:${TAG}
     restart: "no"
     command: >
       sh -c "
@@ -162,7 +162,7 @@ services:
 
   # ---------- Nginx ----------
   nginx:
-    image: stage-nginx:${TAG}
+    image: ${ENVIRONMENT}-nginx:${TAG}
     restart: always
     read_only: true
     security_opt:

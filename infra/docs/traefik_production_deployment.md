@@ -117,6 +117,8 @@ sudo mkdir -p /var/log/portfolio/nginx/prod
 sudo mkdir -p /var/log/portfolio/nginx/stage
 sudo mkdir -p /var/backups/portfolio/prod
 sudo mkdir -p /var/backups/portfolio/pre_release/prod
+sudo chown -R <user>:<user> /var/backups/portfolio
+sudo chmod -R u+rwX /var/backups/portfolio
 ```
 
 ## Required Docker Volumes
@@ -224,6 +226,8 @@ sudo mkdir -p /var/backups/portfolio/prod
 sudo mkdir -p /var/backups/portfolio/pre_release/prod
 sudo mkdir -p /var/log/portfolio/nginx/prod
 sudo mkdir -p /var/log/portfolio/nginx/stage
+sudo chown -R <user>:<user> /var/backups/portfolio
+sudo chmod -R u+rwX /var/backups/portfolio
 ```
 
 Production also refreshes the nginx bot blocklist during release. Staging relies primarily on the Traefik IP allowlist and does not require the blocklist refresh step for access control.

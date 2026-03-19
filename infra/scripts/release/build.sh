@@ -110,6 +110,7 @@ COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENV_SUFFIX}.yml}"
 # Dynamic validation: If the config file exists, the environment is valid.
 if [[ ! -f "$COMPOSE_FILE" ]]; then
   echo "❌ ERROR: Configuration file not found: $COMPOSE_FILE" >&2
+  echo "👉 Check environment naming and compose selection in infra/scripts/README.md" >&2
   exit 1
 fi
 
@@ -133,6 +134,7 @@ TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || true)}"
 if [[ -z "$TAG" ]]; then
   echo "🛑 ERROR: No Git tag on HEAD."
   echo "👉 Fix: git tag vX.Y.Z && git push origin vX.Y.Z"
+  echo "👉 See release tagging guidance in infra/scripts/README.md"
   exit 1
 fi
 validate_tag "$TAG"
@@ -154,6 +156,7 @@ if [[ -n "$(git status --porcelain)" ]]; then
     echo "🛑 ERROR: Working tree is dirty. Commit or stash changes first."
     echo "👉 To bypass in an emergency: EMERGENCY=1 doppler run -- ./build.sh"
     echo "   or: doppler run -- ./build.sh --emergency"
+    echo "👉 See emergency build guidance in infra/scripts/README.md"
     git status --porcelain
     exit 1
   fi
@@ -211,7 +214,11 @@ echo "✅ Nginx image built"
 # Verify Built Images
 # ------------------------------------------------------------------
 echo "📦 Built images:"
-docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${ENVIRONMENT}-(be|fe|worker|nginx):${TAG}"
+if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${ENVIRONMENT}-(be|fe|worker|nginx):${TAG}"; then
+  echo "❌ ERROR: Expected built images were not found after build."
+  echo "👉 Check image naming in infra/scripts/README.md"
+  exit 1
+fi
 
 
 # ------------------------------------------------------------------

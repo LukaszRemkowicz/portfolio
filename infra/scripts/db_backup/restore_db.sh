@@ -7,15 +7,25 @@ set -euo pipefail
 
 # 1. Paths & Environment
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../../.." && pwd )"
 
 source "$PROJECT_ROOT/infra/scripts/utils.sh"
 
 # Default configuration (can be overridden by env vars)
 DB_USER="${DB_USER:-postgres}"
-DB_NAME="${DB_NAME:-$(get_db_name)}"
+STANDARD_DB_NAME="$(get_db_name)"
+DB_NAME="${DB_NAME:-$STANDARD_DB_NAME}"
 TARGET_DB="${TARGET_DB:-db}"
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/docker-compose.yml}"
+
+case "${ENVIRONMENT:-}" in
+    production|prod|staging|stage|stg)
+        if [ "${DB_NAME}" != "${STANDARD_DB_NAME}" ]; then
+            echo "⚠️  Overriding DB_NAME=${DB_NAME} with standardized ${STANDARD_DB_NAME} for ENVIRONMENT=${ENVIRONMENT}"
+            DB_NAME="${STANDARD_DB_NAME}"
+        fi
+        ;;
+esac
 
 # Validating COMPOSE_FILE: If it's a directory, look for docker-compose.yml inside
 if [ -d "$COMPOSE_FILE" ]; then

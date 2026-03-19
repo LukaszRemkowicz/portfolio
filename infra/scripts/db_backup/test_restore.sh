@@ -7,14 +7,7 @@ set -euo pipefail
 
 # 1) Paths & Environment Check
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
-
-if [ -z "${BACKUP_DIR:-}" ]; then
-    echo "[ERROR] BACKUP_DIR is not set."
-    echo "Please set it via environment variable, e.g.:"
-    echo "  export BACKUP_DIR=/var/backups/portfolio-db/"
-    exit 1
-fi
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../../.." && pwd )"
 
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/docker-compose.yml}"
 
@@ -38,15 +31,34 @@ else
     echo "[INFO] Using image: $POSTGRES_IMAGE"
 fi
 
-# 3) Find latest backup
-LATEST_BACKUP=$(ls -t "$BACKUP_DIR"/backup_* 2>/dev/null | head -n 1 || true)
-
-if [ -z "$LATEST_BACKUP" ]; then
-    echo "[ERROR] No backup files found in $BACKUP_DIR"
+# 3) Resolve backup source
+if [ "$#" -gt 1 ]; then
+    echo "[ERROR] Usage: $0 [path_to_backup_file]"
     exit 1
 fi
 
-echo "[DB] Found latest backup: $(basename "$LATEST_BACKUP")"
+if [ "$#" -eq 1 ]; then
+    LATEST_BACKUP="$1"
+    if [ ! -f "$LATEST_BACKUP" ]; then
+        echo "[ERROR] Backup file not found: $LATEST_BACKUP"
+        exit 1
+    fi
+    echo "[DB] Using explicit backup: $(basename "$LATEST_BACKUP")"
+else
+    if [ -z "${BACKUP_DIR:-}" ]; then
+        echo "[ERROR] BACKUP_DIR is not set."
+        echo "Please set it via environment variable, e.g.:"
+        echo "  export BACKUP_DIR=/var/backups/portfolio/"
+        exit 1
+    fi
+
+    LATEST_BACKUP=$(ls -t "$BACKUP_DIR"/backup_* 2>/dev/null | head -n 1 || true)
+    if [ -z "$LATEST_BACKUP" ]; then
+        echo "[ERROR] No backup files found in $BACKUP_DIR"
+        exit 1
+    fi
+    echo "[DB] Found latest backup: $(basename "$LATEST_BACKUP")"
+fi
 
 # 4) Parameters for temporary test container
 TEST_CONTAINER="postgres_restore_test"
@@ -90,7 +102,7 @@ RESTORE_CMD=""
 # We use 'sh -c' to ensure we have the correct path for pg_restore
 if docker exec "$TEST_CONTAINER" sh -c "pg_restore -l /tmp/backup >/dev/null 2>&1"; then
     echo "[FORMAT] PostgreSQL Custom/Tar format detected."
-    RESTORE_CMD="pg_restore -U postgres -d $TEST_DB /tmp/backup"
+    RESTORE_CMD="pg_restore -U postgres -d $TEST_DB --no-owner --no-privileges /tmp/backup"
 else
     echo "[FORMAT] Plain SQL format detected."
     RESTORE_CMD="psql -U postgres -d $TEST_DB -f /tmp/backup"

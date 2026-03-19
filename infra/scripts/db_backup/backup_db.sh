@@ -7,14 +7,26 @@ set -euo pipefail
 
 # 2. Paths & Environment Check
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../../.." && pwd )"
 source "$PROJECT_ROOT/infra/scripts/utils.sh"
 
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 DB_USER="${DB_USER:-postgres}"
-DB_NAME="${DB_NAME:-$(get_db_name)}"
+STANDARD_DB_NAME="$(get_db_name)"
+DB_NAME="${DB_NAME:-$STANDARD_DB_NAME}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PASSWORD="${DB_PASSWORD:-postgres}"
+
+# For managed prod/stage environments, prefer the standardized DB name derived
+# from ENVIRONMENT over any stale injected DB_NAME value.
+case "${ENVIRONMENT:-}" in
+    production|prod|staging|stage|stg)
+        if [ "${DB_NAME}" != "${STANDARD_DB_NAME}" ]; then
+            echo "⚠️  Overriding DB_NAME=${DB_NAME} with standardized ${STANDARD_DB_NAME} for ENVIRONMENT=${ENVIRONMENT}"
+            DB_NAME="${STANDARD_DB_NAME}"
+        fi
+        ;;
+esac
 
 # Anchor compose file to project root
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/docker-compose.yml}"
@@ -32,11 +44,18 @@ LOCK_FILE="$BACKUP_DIR/.backup.lock"
 
 mkdir -p "$BACKUP_DIR"
 
+if [ ! -w "$BACKUP_DIR" ]; then
+    echo "❌ ERROR: Backup directory is not writable: $BACKUP_DIR"
+    echo "👉 Ensure the deploy user owns the backup path. See infra/scripts/README.md"
+    exit 1
+fi
+
 # 4. Lock Management (Overlap Protection)
 if command -v flock >/dev/null 2>&1; then
     exec 9>"$LOCK_FILE"
     if ! flock -n 9; then
         echo "❌ Another backup is already running (lock: $LOCK_FILE)"
+        echo "👉 If this is unexpected, check the backup troubleshooting notes in infra/scripts/README.md"
         exit 1
     fi
 else
