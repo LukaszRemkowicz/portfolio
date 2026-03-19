@@ -40,10 +40,12 @@ COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENV_SUFFIX}.yml}"
 # Dynamic validation: If the config file exists, the environment is valid.
 if [[ ! -f "$COMPOSE_FILE" ]]; then
   echo "❌ ERROR: Configuration file not found: $COMPOSE_FILE" >&2
+  echo "👉 Check environment naming and compose selection in infra/scripts/README.md" >&2
   exit 1
 fi
 if [[ ! -f "$COMMON_COMPOSE_FILE" ]]; then
   echo "❌ ERROR: Common compose file not found: $COMMON_COMPOSE_FILE" >&2
+  echo "👉 Check repository layout and deploy docs in infra/scripts/README.md" >&2
   exit 1
 fi
 
@@ -64,6 +66,7 @@ for arg in "$@"; do
     --dry-run) DRY_RUN=true; echo "🧪 Dry-run mode enabled" ;;
     *)
       echo "❌ ERROR: Unknown argument: ${arg}"
+      echo "👉 Supported usage is documented in infra/scripts/README.md"
       exit 1
       ;;
   esac
@@ -77,6 +80,7 @@ if command -v flock >/dev/null 2>&1; then
   exec 9>"$LOCK_FILE"
   if ! flock -n -w 300 9; then
     echo "❌ ERROR: Another release is running (lock: $LOCK_FILE). Timed out." >&2
+    echo "👉 Check release troubleshooting in infra/scripts/README.md" >&2
     exit 1
   fi
   # Automatically remove the lock file when the script exits.
@@ -160,7 +164,7 @@ check_health() {
       local sleep_time=$(( i < 10 ? 1 : i / 10 ))
       echo "⏳ Waiting for ${container}... ($i/$db_timeout, sleep ${sleep_time}s)"
       sleep "${sleep_time}"
-      [[ "$i" -eq "$db_timeout" ]] && { echo "❌ ERROR: Database ${container} timeout"; exit 1; }
+      [[ "$i" -eq "$db_timeout" ]] && { echo "❌ ERROR: Database ${container} timeout"; echo "👉 Check release troubleshooting in infra/scripts/README.md" >&2; exit 1; }
     done
   done
 
@@ -197,6 +201,7 @@ check_health() {
 
     if [[ "${redis_ok}" != "true" ]]; then
       echo "❌ ERROR: Redis ${container} not ready after ${redis_timeout}s." >&2
+      echo "👉 Check release troubleshooting in infra/scripts/README.md" >&2
       exit 1
     fi
   done
@@ -219,6 +224,7 @@ fi
 
 if ! docker image inspect "${RELEASE_IMAGE}" >/dev/null 2>&1; then
   echo "❌ Error: Missing image ${RELEASE_IMAGE}"
+  echo "👉 Check image naming and build order in infra/scripts/README.md" >&2
   exit 1
 fi
 echo "✅ Image found: ${RELEASE_IMAGE}"
@@ -244,6 +250,7 @@ if [[ "${ENV_SUFFIX}" == "prod" ]]; then
        BACKUP_DIR="${BACKUP_DIR}" \
        "${PROJECT_DIR}/infra/scripts/db_backup/backup_db.sh"; then
     echo "❌ ERROR: Pre-release database backup failed. Refusing to run migrations." >&2
+    echo "👉 Check backup directory ownership and setup in infra/scripts/README.md and infra/docs/traefik_production_deployment.md" >&2
     exit 1
   fi
 fi

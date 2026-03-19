@@ -1,3 +1,5 @@
+name: portfolio-traefik
+
 services:
   traefik:
     build:
@@ -41,7 +43,7 @@ services:
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
-      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@file,admin-api-security@file"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-slash@file,dashboard-auth@file,admin-api-security@file"
 
       # Global Middleware Definitions
       - "traefik.http.middlewares.staging-whitelist.ipallowlist.sourcerange=${STAGING_ALLOWED_IPS:-127.0.0.1,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}"
