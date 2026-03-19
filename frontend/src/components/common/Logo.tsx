@@ -2,6 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from '../../styles/components/Logo.module.css';
 
+declare const __PROJECT_OWNER__: string;
+
+const projectOwner =
+  typeof __PROJECT_OWNER__ !== 'undefined'
+    ? __PROJECT_OWNER__
+    : process.env.PROJECT_OWNER || 'Portfolio Owner';
+
 const Logo: React.FC = () => {
   return (
     <Link to='/' className={styles.logo}>
@@ -72,7 +79,7 @@ const Logo: React.FC = () => {
       </div>
       <div className={styles.logoTextWrapper}>
         <div className={styles.logoNameWrapper}>
-          <span className={styles.logoName}>Łukasz Remkowicz</span>
+          <span className={styles.logoName}>{projectOwner}</span>
         </div>
         <div className={styles.logoSubtitleWrapper}>
           <div className={styles.logoAccentLine}></div>

@@ -8,12 +8,13 @@ cp -r public/* dist/
 mv dist/_index.html dist/index.html
 
 # 2. Replace placeholders in all SEO and metadata files
-# We target index.html (for OG/Twitter/JSON-LD/Analytics), sitemap.xml, and robots.txt
+# We target index.html, static manifests, robots.txt, and locale bundles.
 # Using a temp file approach for cross-platform 'sed' compatibility (Mac/Linux)
-for file in dist/index.html dist/sitemap.xml dist/robots.txt; do
+for file in dist/index.html dist/sitemap.xml dist/robots.txt dist/manifest.json dist/locales/en/translation.json dist/locales/pl/translation.json; do
     if [ -f "$file" ]; then
         echo "Updating placeholders in $file..."
         sed "s/__SITE_DOMAIN__/${SITE_DOMAIN}/g" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
         sed "s/__GA_TRACKING_ID__/${VITE_GA_TRACKING_ID}/g" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+        sed "s/__PROJECT_OWNER__/${PROJECT_OWNER}/g" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
     fi
 done

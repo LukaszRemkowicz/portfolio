@@ -6,6 +6,8 @@ import Navbar from '../components/Navbar';
 import { useSettings } from '../hooks/useSettings';
 import { APP_ROUTES } from '../api/constants';
 
+const PROJECT_OWNER = process.env.PROJECT_OWNER || 'Portfolio Owner';
+
 // Mock the services
 jest.mock('../api/services', () => ({
   fetchSettings: jest.fn(),
@@ -38,7 +40,7 @@ describe('Navbar Component', () => {
     });
     renderWithRouter(<Navbar />);
 
-    expect(screen.getByText('Łukasz Remkowicz')).toBeInTheDocument();
+    expect(screen.getByText(PROJECT_OWNER)).toBeInTheDocument();
     expect(screen.getAllByText('Home')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Astrophotography')[0]).toBeInTheDocument();
     expect(screen.getByText('About')).toBeInTheDocument();
@@ -55,7 +57,7 @@ describe('Navbar Component', () => {
     });
     renderWithRouter(<Navbar />);
 
-    expect(screen.getByText('Łukasz Remkowicz')).toBeInTheDocument();
+    expect(screen.getByText(PROJECT_OWNER)).toBeInTheDocument();
     expect(screen.getAllByText('Astrophotography')[0]).toBeInTheDocument();
 
     await waitFor(() => {
@@ -93,7 +95,7 @@ describe('Navbar Component', () => {
   it('highlights Astrophotography when on its route', () => {
     renderWithRouter(<Navbar />, [APP_ROUTES.ASTROPHOTOGRAPHY]);
 
-    // The logo also contains 'Astrophotography' as a subtitle, but matches 'Łukasz Remkowicz Astrophotography'
+    // The logo also contains the subtitle, so target the navigation link specifically.
     // We want the navigation link specifically.
     const astroLinks = screen.getAllByRole('link', {
       name: 'Astrophotography',

@@ -37,6 +37,7 @@ services:
       - SITE_DOMAIN=${SITE_DOMAIN}
       - TRAEFIK_USER=${TRAEFIK_USER}
       - TRAEFIK_PASSWORD=${TRAEFIK_PASSWORD}
+      - STAGING_ALLOWED_IPS=${STAGING_ALLOWED_IPS}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_DASHBOARD_HOST:-traefik.portfolio.local}`)"
@@ -55,3 +56,4 @@ networks:
 volumes:
   traefik_acme:
     name: portfolio_traefik_acme
+    external: true

@@ -1,4 +1,4 @@
-FROM traefik:v3.1
+FROM traefik:latest
 
 # Install apache2-utils for htpasswd and gettext for envsubst.
 RUN apk add --no-cache apache2-utils gettext

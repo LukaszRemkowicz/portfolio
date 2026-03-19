@@ -1,5 +1,7 @@
 import '@testing-library/jest-dom';
 
+const mockProjectOwner = process.env.PROJECT_OWNER || 'Portfolio Owner';
+
 // Ensure API_URL is defined for tests that directly use process.env (legacy paths)
 // Main env access is now via import.meta.env (shimmed in jest.config.js globals)
 
@@ -80,7 +82,7 @@ jest.mock('react-i18next', () => ({
         'common.noImagesFound': 'No images found for this filter.',
         'common.noImagesHint':
           'Try selecting a different category or tag to see more images.',
-        'footer.rights': 'Łukasz Remkowicz © 2026',
+        'footer.rights': `${mockProjectOwner} © 2026`,
         'about.title': 'Beyond the Atmosphere.',
         'about.defaultBio':
           'Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye.',

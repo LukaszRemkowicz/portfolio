@@ -9,6 +9,9 @@ export default defineConfig({
   },
   define: {
     'Array.from': 'Array.from',
+    __PROJECT_OWNER__: JSON.stringify(
+      process.env.PROJECT_OWNER || 'Portfolio Owner'
+    ),
   },
   plugins: [
     react(),
