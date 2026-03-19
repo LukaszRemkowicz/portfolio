@@ -38,7 +38,6 @@
 #   - Builds:
 #       portfolio-backend:<TAG>
 #       portfolio-frontend:<TAG>
-#       portfolio-nginx:<TAG>
 #   - Uses Docker BuildKit for consistent builds
 #   - Injects runtime configuration via environment variables
 #   - Cleans up old images while keeping:
@@ -63,7 +62,7 @@ set -euo pipefail
 # Setup & Context
 # ------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/utils.sh"
+source "${SCRIPT_DIR}/../utils.sh"
 
 PROJECT_DIR="$(get_project_dir)"
 
@@ -105,7 +104,8 @@ done
 : "${FRONTEND_PORT:=8080}"
 
 # Resolve Compose File
-COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml}"
+ENV_SUFFIX=$(get_env_suffix "${ENVIRONMENT}")
+COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENV_SUFFIX}.yml}"
 
 # Dynamic validation: If the config file exists, the environment is valid.
 if [[ ! -f "$COMPOSE_FILE" ]]; then
@@ -198,7 +198,7 @@ docker build \
 echo "✅ Frontend image built"
 
 # ---------------- Nginx ----------------
-echo "🛡️  Building Nginx image..."
+echo "🌍 Building nginx release image..."
 docker build \
   ${CACHE_FLAG} \
   --pull \
@@ -206,7 +206,6 @@ docker build \
   -t "${ENVIRONMENT}-nginx:${TAG}" \
   .
 echo "✅ Nginx image built"
-
 
 # ------------------------------------------------------------------
 # Verify Built Images
@@ -264,22 +263,33 @@ for repo in "${REPOS[@]}"; do
   echo "➡️ Repo: $repo"
 
   # --- Universal Tag Discovery (macOS + Linux) ---
+  # Sort by CreatedAt (newest first) to accurately identify "last versions"
   tags=()
-  while IFS= read -r line; do
-    [[ -n "$line" ]] && tags+=("$line")
+  while IFS=$'\t' read -r _ tag; do
+    if [[ -n "$tag" && "$tag" != "<none>" ]]; then
+      # Only include tags matching our SemVer pattern
+      if [[ "$tag" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+        tags+=("$tag")
+      fi
+    fi
   done < <(
-    docker images "$repo" --format '{{.Tag}}' \
-    | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+" \
-    | sort -V
+    docker images "$repo" --format '{{.CreatedAt}}\t{{.Tag}}' | sort -r
   )
   # -----------------------------------------------
 
   # Check if we have more tags than our retention window allows.
   if (( ${#tags[@]} > KEEP_IMAGES )); then
-    remove_count=$((${#tags[@]} - KEEP_IMAGES))
-    # Remove the oldest tags first (at the start of the sorted list).
-    for ((i=0; i<remove_count; i++)); do
+    # Since tags are sorted newest-first, we keep the first KEEP_IMAGES (0..4)
+    # and remove everything from index 5 onwards.
+    for ((i=KEEP_IMAGES; i<${#tags[@]}; i++)); do
       t="${tags[$i]}"
+
+      # NEVER remove the tag we just built, or the ones currently/previously live.
+      if [[ "$t" == "$TAG" ]] || [[ -n "$CURRENT_TAG" && "$t" == "$CURRENT_TAG" ]] || [[ -n "$PREV_TAG" && "$t" == "$PREV_TAG" ]]; then
+        echo "📌 Skipping protective tag: $repo:$t"
+        continue
+      fi
+
       echo "🗑️ Removing old image: $repo:$t"
       docker image rm -f "$repo:$t" >/dev/null 2>&1 || true
     done

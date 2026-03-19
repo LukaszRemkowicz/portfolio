@@ -1,4 +1,4 @@
-# scripts/monitoring/README.md
+# infra/scripts/monitoring/README.md
 
 ## Monitoring Scripts
 
@@ -13,8 +13,8 @@ This is **Phase 1** of the AgentLog pipeline. It runs as a daily Ubuntu cron job
 
 **What it does:**
 1. Clears any existing log files in `DOCKER_LOGS_DIR` (no stale data)
-2. Runs `docker compose logs` for backend and frontend containers
-3. Writes `backend.log` and `frontend.log` to `DOCKER_LOGS_DIR`
+2. Collects Docker logs for backend and reverse-proxy containers
+3. Writes `backend.log` and `nginx.log` to `DOCKER_LOGS_DIR` when available
 4. Writes `collected_at.txt` with an ISO timestamp so the Celery worker can detect stale/missing data
 
 **Environment variables:**
@@ -25,11 +25,12 @@ This is **Phase 1** of the AgentLog pipeline. It runs as a daily Ubuntu cron job
 | `COMPOSE_FILE` | No | `/home/lukasz/portfolio/docker-compose.prod.yml` | Path to docker compose file |
 | `LOG_TAIL` | No | `2000` | Number of log lines to collect per container |
 | `BACKEND_SERVICE` | No | `portfolio-be` | Docker Compose service name for backend |
-| `FRONTEND_SERVICE` | No | `portfolio-fe` | Docker Compose service name for frontend |
+| `NGINX_SERVICE` | No | `nginx` | Docker Compose service name for Nginx |
+| `TRAEFIK_SERVICE` | No | `traefik` | Docker Compose service name for Traefik |
 
 **Manual run:**
 ```bash
-DOCKER_LOGS_DIR=/var/log/portfolio/docker-logs /home/lukasz/portfolio/scripts/monitoring/collect-logs.sh
+DOCKER_LOGS_DIR=/var/log/portfolio/docker-logs /home/lukasz/portfolio/infra/scripts/monitoring/collect-logs.sh
 ```
 
 ---
@@ -60,9 +61,9 @@ sudo chown lukasz:lukasz /var/log/portfolio
 sudo chown lukasz:lukasz /var/log/portfolio/docker-logs
 
 # Make script executable
-chmod +x /home/lukasz/portfolio/scripts/monitoring/collect-logs.sh
+chmod +x /home/lukasz/portfolio/infra/scripts/monitoring/collect-logs.sh
 
 # Install cron job
-sudo cp /home/lukasz/portfolio/scripts/monitoring/portfolio-collect-logs.cron /etc/cron.d/portfolio-collect-logs
+sudo cp /home/lukasz/portfolio/infra/scripts/monitoring/portfolio-collect-logs.cron /etc/cron.d/portfolio-collect-logs
 sudo chmod 644 /etc/cron.d/portfolio-collect-logs
 ```

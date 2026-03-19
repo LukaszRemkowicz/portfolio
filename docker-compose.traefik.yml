@@ -1,0 +1,55 @@
+services:
+  traefik:
+    build:
+      context: ./docker/traefik
+    container_name: traefik
+    restart: always
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - traefik_proxy
+    ports:
+      # Temporary ports for initial
+      - "80:80"
+      - "443:443"
+      - "8081:8080" # Dashboard API
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml.template:ro
+      - ./infra/traefik/dynamic_conf.yml:/etc/traefik/dynamic_conf.yml.template:ro
+      - traefik_acme:/letsencrypt
+    tmpfs:
+      - /tmp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - TZ=UTC
+      - CONTACT_EMAIL=${CONTACT_EMAIL}
+      - SITE_DOMAIN=${SITE_DOMAIN}
+      - TRAEFIK_USER=${TRAEFIK_USER}
+      - TRAEFIK_PASSWORD=${TRAEFIK_PASSWORD}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_DASHBOARD_HOST:-traefik.portfolio.local}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@file,admin-api-security@file"
+
+      # Global Middleware Definitions
+      - "traefik.http.middlewares.staging-whitelist.ipallowlist.sourcerange=${STAGING_ALLOWED_IPS:-127.0.0.1,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}"
+
+networks:
+  traefik_proxy:
+    external: true
+
+volumes:
+  traefik_acme:
+    name: portfolio_traefik_acme

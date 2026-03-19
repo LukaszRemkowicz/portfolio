@@ -1,5 +1,0 @@
-# Bad Bot Protection
-# Uses the $should_block_bot map defined in http level of nginx.conf
-if ($should_block_bot) {
-    return 403;
-}

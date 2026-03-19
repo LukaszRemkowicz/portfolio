@@ -28,21 +28,28 @@ set -euo pipefail
 # Setup & Context
 # ------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/utils.sh"
+source "${SCRIPT_DIR}/../utils.sh"
 
 PROJECT_DIR="$(get_project_dir)"
+COMMON_COMPOSE_FILE="${PROJECT_DIR}/docker-compose.common.yml"
 
 # Resolve Compose File
-COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENVIRONMENT}.yml}"
+ENV_SUFFIX=$(get_env_suffix "${ENVIRONMENT}")
+COMPOSE_FILE="${COMPOSE_FILE:-${PROJECT_DIR}/docker-compose.${ENV_SUFFIX}.yml}"
 
 # Dynamic validation: If the config file exists, the environment is valid.
 if [[ ! -f "$COMPOSE_FILE" ]]; then
   echo "❌ ERROR: Configuration file not found: $COMPOSE_FILE" >&2
   exit 1
 fi
+if [[ ! -f "$COMMON_COMPOSE_FILE" ]]; then
+  echo "❌ ERROR: Common compose file not found: $COMMON_COMPOSE_FILE" >&2
+  exit 1
+fi
 
 echo "⚙️  Environment: ${ENVIRONMENT}"
 echo "🧾 Using compose file: $COMPOSE_FILE"
+echo "🧾 Using common compose file: $COMMON_COMPOSE_FILE"
 
 cd "${PROJECT_DIR}"
 COMPOSE_PROJECT_NAME="$(get_project_name)"
@@ -93,8 +100,7 @@ validate_tag "$TAG"
 export TAG
 
 export COMPOSE_FILE
-export COMPOSE_FILE
-COMPOSE=(docker compose -f "${COMPOSE_FILE}")
+COMPOSE=(docker compose -f "${COMMON_COMPOSE_FILE}" -f "${COMPOSE_FILE}")
 
 DB_SVC="db"
 REDIS_SVC="redis"
@@ -225,12 +231,21 @@ if [[ "${DRY_RUN}" == "true" ]]; then
   exit 0
 fi
 
-# ------------------------------------------------------------------
-# Loading blacklist
-# ------------------------------------------------------------------
-echo "🛡️ [RELEASE] [3/4] Downloading Nginx Bot Blocklist..."
-if ! "${COMPOSE[@]}" run --rm "nginx-blocklist-init"; then
-  echo "⚠️ WARNING: Blocklist download failed. Nginx will start with an empty list."
+if [[ "${ENV_SUFFIX}" == "prod" ]]; then
+  echo "🛡️ [RELEASE] Downloading Nginx bot blocklist..."
+  if ! "${COMPOSE[@]}" run --rm "nginx-blocklist-init"; then
+    echo "⚠️ WARNING: Blocklist download failed. Nginx will start with an empty list."
+  fi
+
+  BACKUP_DIR="${BACKUP_DIR:-/var/backups/portfolio/pre_release/prod}"
+  echo "💾 [RELEASE] Creating pre-release database backup in ${BACKUP_DIR}..."
+  if ! ENVIRONMENT="${ENVIRONMENT}" \
+       COMPOSE_FILE="${COMPOSE_FILE}" \
+       BACKUP_DIR="${BACKUP_DIR}" \
+       "${PROJECT_DIR}/infra/scripts/db_backup/backup_db.sh"; then
+    echo "❌ ERROR: Pre-release database backup failed. Refusing to run migrations." >&2
+    exit 1
+  fi
 fi
 
 LOG_DIR="$HOME/.portfolio-logs/${ENVIRONMENT}"
@@ -240,7 +255,7 @@ mkdir -p "$LOG_DIR" || { echo "❌ ERROR: Cannot create log dir $LOG_DIR"; exit 
 # ------------------------------------------------------------------
 # Releasing
 # ------------------------------------------------------------------
-echo "🚀 [RELEASE] [4/4] Running release job..."
+echo "🚀 [RELEASE] [3/3] Running release job..."
 echo "📝 Logs: $LOG_FILE"
 
 if "${COMPOSE[@]}" run --rm "${RELEASE_SVC}" 2>&1 | tee "$LOG_FILE"; then

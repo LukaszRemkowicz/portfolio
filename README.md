@@ -98,66 +98,70 @@ docker-compose exec portfolio-fe npm test    # Run frontend tests
 ```
 
 
-## 🚀 Production Deployment
+## 🏗️ Architecture
 
-The project uses a standalone production configuration to ensure zero-downtime deployments and environment isolation.
+The project follows a modern, highly decoupled architecture for performance and security:
 
-### 1. Environment Secrets (Doppler)
-The project uses **Doppler** for secure secret management across all environments.
-- **Local Dev**: Use `doppler setup --config dev`. Then run: `doppler run -- docker compose up`.
-- **Production**: Doppler injects variables automatically. Always specify the config: `doppler --config prod run -- ./scripts/release/deploy.sh`
-- Critical variables like `SECRET_KEY`, `DB_PASSWORD`, and `ALLOWED_HOSTS` are managed centrally in Doppler.
+## 🏗️ Architecture
 
-### 2. Building Images
-Use the centralized build script to create production-ready Docker images.
+The project follows a modern, highly decoupled architecture for performance and security. It supports **Environment Isolation** (Production & Staging) on the server, with an identical stack for **Development** (Local):
+
+![Architecture Illustration](infra/docs/architecture.png)
+
+### Key Components:
+- **Traefik (Edge Proxy)**: The central entry point for all subdomains. Handles SSL, HSTS, and routing.
+- **Environment Isolation**: Parallel stacks (`PROD` and `STAGE`) ensure zero-collision deployments.
+- **Development Stack**: Local development uses the exact same `Traefik + Nginx + Django + PostgreSQL` architecture via `portfolio-dev`.
+- **Doppler**: Centralized, secure secret management across **all** environments (Local & Server).
+
+---
+
+## 🚀 Deployment & Environments
+
+The project uses isolated naming conventions to ensure zero-collision between environments:
+
+### 1. Project Naming (Standardized)
+- **Production**: `portfolio-prod`
+- **Staging**: `portfolio-stage`
+- **Development**: `portfolio-dev` (Local machine)
+
+### 2. Deployment Commands
+Always use the explicit Doppler configuration to avoid accidents:
+
 ```bash
-# Build images with a specific tag (e.g., git commit hash or 'latest'). TAG is optional.
-TAG=v1.0.0 doppler run -- ./scripts/release/build.sh
+# BUILD:
+doppler run -p portfolio -c portfolio-prod -- ./infra/scripts/release/build.sh
+
+# DEPLOY:
+cd ~/portfolio
+doppler run -p portfolio -c portfolio-prod -- ./infra/scripts/release/deploy.sh
 ```
-This script builds `portfolio-frontend`, `portfolio-backend`, and `portfolio-nginx` using production targets.
 
-### 3. Deploying
-The `deploy.sh` script handles the orchestration of the production stack.
-```bash
-# Deploy using images with a specific tag. TAG is optional.
-TAG=v1.0.0 doppler run -- ./scripts/release/deploy.sh
-```
-**What this script does:**
-- Verifies that the required images exist.
-- Runs database migrations and collects static files via a temporary `release` container.
-- Performs a "hot swap" of the running containers with zero-downtime.
-
-### 4. Nginx Production Config
-All config is placed in nginx/prod/TEMPLATE.conf. Environment variables are injected to configuration in build stage.
-
-### 5. Nginx Environment Variables
-Nginx configuration is handled automatically. Variables are injected by Doppler and substituted into the template at runtime.
-The `docker-compose.prod.yml` uses these variables for path mapping:
-- `NGINX_CONF_PATH`: Path to the production template.
-- `NGINX_SSL_DIR`: Directory containing your SSL certificates.
-- `NGINX_LOG_DIR`: Directory for Nginx logs.
+**What the deployment script handles:**
+- **Auto-Switch**: Detects and stops any legacy container naming before starting the new stack.
+- **HSTS/CSP**: Applied automatically via Traefik middlewares.
 
 ---
 
 ## 💾 Database Backup & Maintenance
 
-Database maintenance scripts are located in `scripts/db_backup/`.
+Database maintenance scripts are located in `infra/scripts/db_backup/`.
 
 ### 1. Manual Backup
 Create a compressed SQL dump of the production database:
 ```bash
-./scripts/db_backup/backup_db.sh
+./infra/scripts/db_backup/backup_db.sh
 ```
-The backup will be stored in `scripts/db_backup/backups/`.
+The backup should be stored outside the repository, for example in `/var/backups/portfolio/`.
 
 ### 2. Testing Restores
 Always verify your backups by running a test restore:
 ```bash
-./scripts/db_backup/test_restore.sh
+./infra/scripts/db_backup/test_restore.sh
 ```
 This script creates a temporary container and verifies that the SQL dump is valid and can be fully imported.
 
-See [Backup Maintenance Guide](file:///Users/lukaszremkowicz/Projects/landingpage/scripts/db_backup/MAINTENANCE.md) for more details.
+See [Backup Maintenance Guide](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/db_backup/MAINTENANCE.md) for more details.
 
 ## Testing
 
@@ -195,7 +199,7 @@ To ensure version traceability and zero-downtime, follow this mandatory flow for
 On your production server, simply run:
 ```bash
 # TAG is auto-detected from the Git tag on main
-./scripts/release/deploy.sh
+./infra/scripts/release/deploy.sh
 ```
 
 > [!IMPORTANT]

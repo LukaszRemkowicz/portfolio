@@ -9,9 +9,11 @@ set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
 
+source "$PROJECT_ROOT/infra/scripts/utils.sh"
+
 # Default configuration (can be overridden by env vars)
 DB_USER="${DB_USER:-postgres}"
-DB_NAME="${DB_NAME:-portfolio}"
+DB_NAME="${DB_NAME:-$(get_db_name)}"
 TARGET_DB="${TARGET_DB:-db}"
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/docker-compose.yml}"
 
@@ -23,8 +25,8 @@ fi
 # 2. Argument Parsing (Backup File)
 if [ "$#" -ne 1 ]; then
     echo "Usage: $0 <path_to_backup_file>"
-    echo "Available backups in ${BACKUP_DIR:-scripts/db_backup}:"
-    ls -lh "${BACKUP_DIR:-$PROJECT_ROOT/scripts/db_backup}"/*.dump 2>/dev/null | awk '{print "  " $9 " (" $5 ")"}'
+    echo "Available backups in ${BACKUP_DIR:-/var/backups/portfolio}:"
+    find "${BACKUP_DIR:-/var/backups/portfolio}" -maxdepth 3 \( -name '*.dump' -o -name '*.sql' -o -name '*.sql.gz' \) -type f 2>/dev/null | sort | sed 's/^/  /'
     exit 1
 fi
 

@@ -8,13 +8,11 @@ set -euo pipefail
 # 2. Paths & Environment Check
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
-
-# Hard requirement: BACKUP_DIR must be set
-: "${BACKUP_DIR:?❌ ERROR: BACKUP_DIR must be set (e.g. export BACKUP_DIR=/var/backups/portfolio-db)}"
+source "$PROJECT_ROOT/infra/scripts/utils.sh"
 
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 DB_USER="${DB_USER:-postgres}"
-DB_NAME="${DB_NAME:-portfolio}"
+DB_NAME="${DB_NAME:-$(get_db_name)}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PASSWORD="${DB_PASSWORD:-postgres}"
 

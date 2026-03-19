@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class DockerLogCollector:
     """Reads pre-collected logs from a volume-mounted directory.
 
-    Logs are collected daily by `scripts/monitoring/collect-logs.sh` (host cron job)
+    Logs are collected daily by `infra/scripts/monitoring/collect-logs.sh` (host cron job)
     and written to DOCKER_LOGS_DIR, which is mounted read-only into this container.
     """
 
@@ -57,28 +57,26 @@ class DockerLogCollector:
         return ""
 
     @classmethod
-    def collect_logs(cls) -> tuple[str, str, Optional[str]]:
+    def collect_logs(cls) -> tuple[str, Optional[str]]:
         """Return paths to pre-collected log files from the mounted volume.
 
         Returns:
-            Tuple of (backend_log_path, frontend_log_path, nginx_log_path|None)
+            Tuple of (backend_log_path, nginx_log_path|None)
             nginx_log_path is None if nginx.log was not collected (warns, doesn't fail).
 
         Raises:
-            FileNotFoundError: If backend or frontend log files are missing (cron hasn't run)
+            FileNotFoundError: If backend log file is missing (cron hasn't run)
         """
         logs_dir: str = settings.DOCKER_LOGS_DIR
 
         backend_log_path = os.path.join(logs_dir, "backend.log")
-        frontend_log_path = os.path.join(logs_dir, "frontend.log")
         nginx_log_path = os.path.join(logs_dir, "nginx.log")
 
-        for path in (backend_log_path, frontend_log_path):
-            if not os.path.exists(path):
-                raise FileNotFoundError(
-                    f"Log file not found: {path}. "
-                    "Ensure the collect-logs.sh cron job has run successfully."
-                )
+        if not os.path.exists(backend_log_path):
+            raise FileNotFoundError(
+                f"Log file not found: {backend_log_path}. "
+                "Ensure the collect-logs.sh cron job has run successfully."
+            )
 
         cls._check_staleness(logs_dir)
 
@@ -95,15 +93,13 @@ class DockerLogCollector:
             nginx_size = 0
 
         be_size = os.path.getsize(backend_log_path)
-        fe_size = os.path.getsize(frontend_log_path)
         logger.info(
-            "Read logs: backend=%d bytes, frontend=%d bytes, nginx=%d bytes",
+            "Read logs: backend=%d bytes, nginx=%d bytes",
             be_size,
-            fe_size,
             nginx_size,
         )
 
-        return backend_log_path, frontend_log_path, nginx_path
+        return backend_log_path, nginx_path
 
 
 class LogAnalyzer:
@@ -115,7 +111,6 @@ class LogAnalyzer:
     def analyze_logs_from_files(
         self,
         backend_log_path: str,
-        frontend_log_path: str,
         nginx_log_path: Optional[str] = None,
         collected_at: str = "",
         historical_context: str = "",
@@ -125,7 +120,6 @@ class LogAnalyzer:
 
         Args:
             backend_log_path: Path to backend log file
-            frontend_log_path: Path to frontend log file
             nginx_log_path: Optional path to nginx log file
             collected_at: ISO timestamp string from collected_at.txt
             historical_context: Pre-formatted string from HistoricalContextBuilder
@@ -139,7 +133,6 @@ class LogAnalyzer:
         """
         result = self.agent.analyze_logs_from_files(
             backend_log_path,
-            frontend_log_path,
             nginx_log_path,
             collected_at,
             historical_context=historical_context,
@@ -186,7 +179,6 @@ class LogStorageService:
         cls,
         log_analysis: LogAnalysis,
         backend_path: str,
-        frontend_path: str,
         analysis_date: date,
         nginx_path: Optional[str] = None,
     ) -> None:
@@ -196,15 +188,11 @@ class LogStorageService:
         Args:
             log_analysis: LogAnalysis instance to attach files to
             backend_path: Path to backend log file
-            frontend_path: Path to frontend log file
             analysis_date: Date for filename generation
             nginx_path: Optional path to nginx combined log file
         """
         with open(backend_path, "rb") as f:
             log_analysis.backend_logs.save(f"backend_{analysis_date}.log", File(f))
-
-        with open(frontend_path, "rb") as f:
-            log_analysis.frontend_logs.save(f"frontend_{analysis_date}.log", File(f))
 
         if nginx_path and os.path.exists(nginx_path):
             with open(nginx_path, "rb") as f:
@@ -290,14 +278,13 @@ class LogAnalysisOrchestrator:
 
         start_time = time.time()
         backend_log_path = None
-        frontend_log_path = None
         nginx_log_path = None
 
         try:
-            backend_log_path, frontend_log_path, nginx_log_path, log_size = self._collect_logs()
+            backend_log_path, nginx_log_path, log_size = self._collect_logs()
             historical_context = self._build_historical_context(analysis_date)
             analysis_result = self._run_analysis(
-                backend_log_path, frontend_log_path, nginx_log_path, historical_context
+                backend_log_path, nginx_log_path, historical_context
             )
             log_analysis = self._store_results(
                 analysis_date,
@@ -305,7 +292,6 @@ class LogAnalysisOrchestrator:
                 analysis_result,
                 start_time,
                 backend_log_path,
-                frontend_log_path,
                 nginx_log_path,
             )
             logger.info(
@@ -323,7 +309,6 @@ class LogAnalysisOrchestrator:
                 error,
                 start_time,
                 backend_log_path,
-                frontend_log_path,
                 nginx_log_path,
             )
             raise
@@ -332,17 +317,15 @@ class LogAnalysisOrchestrator:
     # Private helpers
     # ---------------------------------------------------------------------------
 
-    def _collect_logs(self) -> tuple[str, str, Optional[str], int]:
-        """Collect log files and return (backend_path, frontend_path, nginx_path, total_bytes)."""
-        backend_path, frontend_path, nginx_path = self.collector.collect_logs()
-        log_size = (
-            os.path.getsize(backend_path)
-            + os.path.getsize(frontend_path)
-            + (os.path.getsize(nginx_path) if nginx_path else 0)
+    def _collect_logs(self) -> tuple[str, Optional[str], int]:
+        """Collect log files and return (backend_path, nginx_path, total_bytes)."""
+        backend_path, nginx_path = self.collector.collect_logs()
+        log_size = os.path.getsize(backend_path) + (
+            os.path.getsize(nginx_path) if nginx_path else 0
         )
         if log_size == 0:
             logger.warning("No logs collected from Docker containers")
-        return backend_path, frontend_path, nginx_path, log_size
+        return backend_path, nginx_path, log_size
 
     def _build_historical_context(self, analysis_date: date) -> str:
         """Fetch and format prior DB analyses into an LLM-ready context string."""
@@ -356,7 +339,6 @@ class LogAnalysisOrchestrator:
     def _run_analysis(
         self,
         backend_path: str,
-        frontend_path: str,
         nginx_path: Optional[str],
         historical_context: str,
     ) -> dict:
@@ -364,7 +346,6 @@ class LogAnalysisOrchestrator:
         collected_at = self.collector.get_collected_at()
         return self.analyzer.analyze_logs_from_files(
             backend_path,
-            frontend_path,
             nginx_path,
             collected_at,
             historical_context=historical_context,
@@ -377,7 +358,6 @@ class LogAnalysisOrchestrator:
         analysis_result: dict,
         start_time: float,
         backend_path: str,
-        frontend_path: str,
         nginx_path: Optional[str],
     ) -> LogAnalysis:
         """Persist analysis results and attach log files."""
@@ -393,9 +373,7 @@ class LogAnalysisOrchestrator:
             gpt_tokens_used=analysis_result.get("gpt_tokens_used", 0),
             gpt_cost_usd=analysis_result.get("gpt_cost_usd", 0.0),
         )
-        self.storage.attach_log_files(
-            log_analysis, backend_path, frontend_path, analysis_date, nginx_path
-        )
+        self.storage.attach_log_files(log_analysis, backend_path, analysis_date, nginx_path)
         return log_analysis
 
     def _store_error(
@@ -404,7 +382,6 @@ class LogAnalysisOrchestrator:
         error: Exception,
         start_time: float,
         backend_path: Optional[str] = None,
-        frontend_path: Optional[str] = None,
         nginx_path: Optional[str] = None,
     ) -> None:
         """Persist a CRITICAL error record so the failure is visible in the admin."""
@@ -417,15 +394,8 @@ class LogAnalysisOrchestrator:
             severity=LogAnalysis.Severity.CRITICAL,
             summary=f"Analysis Failed: {str(error)}",
         )
-        if (
-            backend_path
-            and frontend_path
-            and os.path.exists(backend_path)
-            and os.path.exists(frontend_path)
-        ):
-            self.storage.attach_log_files(
-                log_analysis, backend_path, frontend_path, analysis_date, nginx_path
-            )
+        if backend_path and os.path.exists(backend_path):
+            self.storage.attach_log_files(log_analysis, backend_path, analysis_date, nginx_path)
 
     @classmethod
     def create_default(cls) -> "LogAnalysisOrchestrator":

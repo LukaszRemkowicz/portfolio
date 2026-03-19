@@ -17,8 +17,11 @@ import os
 os.environ.setdefault("ADMIN_DOMAIN", "testadmin.local")
 os.environ.setdefault("API_DOMAIN", "testapi.local")
 os.environ.setdefault("CSRF_COOKIE_DOMAIN", ".testapi.local")
-# Override DB_HOST for local test execution (tests run outside Docker)
-os.environ.setdefault("DB_HOST", "localhost")
+# Use Docker service discovery when tests run in containers, otherwise localhost.
+if os.environ.get("DOCKER_ENV") == "true":
+    os.environ.setdefault("DB_HOST", "db")
+else:
+    os.environ.setdefault("DB_HOST", "localhost")
 
 from .base import *  # noqa: F401,F403,E402
 

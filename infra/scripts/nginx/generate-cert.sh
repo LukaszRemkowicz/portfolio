@@ -2,7 +2,7 @@
 
 # Get the directory where the script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Target the nginx/ssl/certs directory relative to this script
+# Target the infra/nginx/ssl/certs directory relative to this script
 SSL_DIR="$(cd "$SCRIPT_DIR/../../nginx/ssl/certs" 2>/dev/null || mkdir -p "$SCRIPT_DIR/../../nginx/ssl/certs" && cd "$SCRIPT_DIR/../../nginx/ssl/certs" && pwd)"
 
 echo "Generating certificates in: $SSL_DIR"

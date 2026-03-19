@@ -5,7 +5,7 @@ This repository uses shell scripts to manage deployments for both **Staging** an
 - `build.sh` → **builds Docker images** with environment prefixes and service suffixes (e.g. `production-be:v1.0.0`).
 - `release.sh` → runs **one-shot release tasks** (migrations, collectstatic, etc.) targeting the correct environment services.
 - `deploy.sh` → performs the **deployment switch** and updates environment-specific rollback state.
-- `utils.sh` → shared utility functions used by the scripts above (e.g., directory resolution, state management).
+- `../utils.sh` → shared utility functions used by release, backup, monitoring, and related infra scripts.
 
 ---
 
@@ -27,10 +27,10 @@ If you **must** build from an uncommitted state (e.g., hotfix not yet committed)
 
 ```bash
 # via flag
-doppler run -- ./scripts/release/build.sh --emergency
+doppler run -- ./infra/scripts/release/build.sh --emergency
 
 # via env var
-EMERGENCY=1 doppler run -- ./scripts/release/build.sh
+EMERGENCY=1 doppler run -- ./infra/scripts/release/build.sh
 ```
 
 > [!WARNING]
@@ -45,14 +45,14 @@ Used for testing on the staging stack (`docker-compose.stage.yml`).
 ```bash
 # 1. Build staging images
 # Tags as stg-be:v1.0.0-test, stg-fe:v1.0.0-test, etc.
-TAG=v1.0.0-test ENVIRONMENT=stg doppler run -- ./scripts/release/build.sh
+TAG=v1.0.0-test ENVIRONMENT=stg doppler run -- ./infra/scripts/release/build.sh
 
 # 2. Run release tasks (migrations/static)
-# Targets db, redis, release inside the stg project
-TAG=v1.0.0-test ENVIRONMENT=stg COMPOSE_FILE=docker-compose.stg.yml DEBUG=true doppler run -- ./scripts/release/release.sh
+# Targets db, redis, release inside the staging project
+TAG=v1.0.0-test ENVIRONMENT=stg COMPOSE_FILE=docker-compose.stage.yml DEBUG=true doppler run -- ./infra/scripts/release/release.sh
 
 # 3. Deploy (switches containers, runs health checks)
-TAG=v1.0.0-test ENVIRONMENT=stg COMPOSE_FILE=docker-compose.stg.yml DEBUG=true doppler run -- ./scripts/release/deploy.sh
+TAG=v1.0.0-test ENVIRONMENT=stg COMPOSE_FILE=docker-compose.stage.yml DEBUG=true doppler run -- ./infra/scripts/release/deploy.sh
 ```
 
 ---
@@ -63,13 +63,13 @@ Used for the live stack (`docker-compose.prod.yml`).
 
 ```bash
 # 1. Build production images
-TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./scripts/release/build.sh
+TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/build.sh
 
 # 2. Run release tasks
-TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./scripts/release/release.sh
+TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/release.sh
 
 # 3. Deploy
-TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./scripts/release/deploy.sh
+TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.sh
 ```
 
 ---
@@ -79,7 +79,7 @@ TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./scripts/release/deploy.sh
 1. Check current/previous tags in `/var/lib/portfolio/<environment>/` or your local state dir.
 2. Re-deploy the previous tag:
    ```bash
-   TAG="v1.1.0" ENVIRONMENT="production" doppler run -- ./scripts/release/deploy.sh
+   TAG="v1.1.0" ENVIRONMENT="production" doppler run -- ./infra/scripts/release/deploy.sh
    ```
 
 ---
@@ -109,7 +109,7 @@ The scripts default to `COMPOSE_PROJECT_NAME=landingpage` (matching the local re
 
 ## Troubleshooting
 
-### “FATAL: database portfolio-stage does not exist”
+### “FATAL: database portfolio_stage does not exist”
 If you changed project names or moved volumes, the staging database might need a fresh initialization:
 ```bash
 docker compose -f docker-compose.stage.yml down -v

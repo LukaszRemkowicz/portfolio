@@ -3,8 +3,8 @@
 # utils.sh
 #
 # Purpose:
-#   Shared utility functions for release scripts.
-#   Should be sourced by other scripts in this directory.
+#   Shared utility functions for infrastructure scripts.
+#   May be sourced by release, backup, monitoring, and related script groups.
 ###############################################################################
 
 # ------------------------------------------------------------------
@@ -16,8 +16,8 @@ get_project_dir() {
   local dir
   dir="$(git rev-parse --show-toplevel 2>/dev/null || true)"
   if [[ -z "${dir}" ]]; then
-    echo "❌ ERROR: Script must be run inside a Git repository." >&2
-    exit 1
+    # Fallback to current directory for prod/environments without .git
+    dir="$(pwd)"
   fi
   echo "${dir}"
 }
@@ -75,11 +75,61 @@ get_compose_image() {
 # ------------------------------------------------------------------
 # get_project_name
 #   Resolves the Docker project name consistently.
-#   Prioritizes $COMPOSE_PROJECT_NAME, defaults to 'landingpage'.
+#   Prioritizes $COMPOSE_PROJECT_NAME, defaults to folder/git-derived naming.
 # ------------------------------------------------------------------
 get_project_name() {
-  # If COMPOSE_PROJECT_NAME is unset, use the basename of the parent of 'scripts'
-  echo "${COMPOSE_PROJECT_NAME:-$(basename "$(get_project_dir)")}"
+  local base_name="${COMPOSE_PROJECT_NAME:-}"
+
+  # 1. Try extracting name from COMPOSE_FILE if it exists
+  if [[ -z "${base_name}" && -n "${COMPOSE_FILE:-}" && -f "${COMPOSE_FILE}" ]]; then
+    base_name=$(grep -E "^name:[[:space:]]+" "${COMPOSE_FILE}" | awk '{print $2}' | tr -d '"'\'' ' | head -n 1)
+  fi
+
+  # 2. Fallback to folder name
+  if [[ -z "${base_name}" ]]; then
+    base_name=$(basename "$(get_project_dir)")
+  fi
+
+  # 3. Handle suffixing if ENVIRONMENT is set
+  if [[ -n "${ENVIRONMENT:-}" ]]; then
+    local suffix
+    suffix=$(get_env_suffix "${ENVIRONMENT}")
+    if [[ "${base_name}" == *"${suffix}"* ]]; then
+      echo "${base_name}"
+    else
+      echo "${base_name}-${suffix}"
+    fi
+  else
+    echo "${base_name}"
+  fi
+}
+
+# ------------------------------------------------------------------
+# get_db_name
+#   Resolves the standardized database name based on ENVIRONMENT.
+# ------------------------------------------------------------------
+get_db_name() {
+  case "${ENVIRONMENT:-}" in
+    production|prod) echo "portfolio_prod" ;;
+    staging|stage|stg) echo "portfolio_stage" ;;
+    *) echo "portfolio_dev" ;;
+  esac
+}
+
+# ------------------------------------------------------------------
+# get_env_suffix
+#   Maps environment names to Docker Compose filename suffixes.
+# ------------------------------------------------------------------
+get_env_suffix() {
+  local env="$1"
+  case "${env}" in
+    production) echo "prod" ;;
+    prod)       echo "prod" ;;
+    staging)    echo "stage" ;;
+    stage)      echo "stage" ;;
+    stg)        echo "stage" ;;
+    *)          echo "${env}" ;;
+  esac
 }
 
 # ------------------------------------------------------------------

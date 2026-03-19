@@ -28,7 +28,7 @@ class TestLogAnalysisAgent:
         mock_usage = {"total_tokens": 100, "cost_usd": 0.005}
         mock_llm_provider.ask_question_with_usage.return_value = (mock_response, mock_usage)
 
-        result = agent.analyze_logs("backend logs", "frontend logs")
+        result = agent.analyze_logs("backend logs")
 
         assert result is not None
         assert result["summary"] == "Test summary"
