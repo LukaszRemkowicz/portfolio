@@ -10,6 +10,10 @@
 // Set before any project imports so constants.ts doesn't emit 'not set' warnings
 process.env['API_URL'] = 'http://smoke-test-placeholder';
 
+import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+
 let passed = 0;
 let failed = 0;
 
@@ -77,6 +81,35 @@ await check('i18n.server: falls back to en for unknown language', async () => {
 await check('api/services: imports cleanly in Node', async () => {
   await import('../src/api/services');
 });
+
+// 6. entry-server — verify the compiled SSR bundle renders in Node
+await check(
+  'entry-server bundle: render("/") returns HTML in Node',
+  async () => {
+    execFileSync('npm', ['run', 'build:server'], {
+      stdio: 'pipe',
+      cwd: resolve(import.meta.dirname, '..'),
+    });
+
+    const bundleUrl = pathToFileURL(
+      resolve(import.meta.dirname, '../dist/server/entry-server.js')
+    ).href;
+    const { render } = await import(bundleUrl);
+    const result = await render('/');
+    if (!result.html || typeof result.html !== 'string') {
+      throw new Error('render() did not return HTML');
+    }
+    if (
+      !result.html.includes('Loading') &&
+      !result.html.includes('root') &&
+      result.html.length < 50
+    ) {
+      throw new Error(
+        `Unexpectedly small render output: ${result.html.length}`
+      );
+    }
+  }
+);
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

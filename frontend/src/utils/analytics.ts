@@ -71,6 +71,11 @@ export const trackPageView = (path: string) => {
 };
 
 export const hasAnalyticsConsent = (): boolean => {
-  if (typeof localStorage === 'undefined') return false;
+  if (
+    typeof localStorage === 'undefined' ||
+    typeof localStorage.getItem !== 'function'
+  ) {
+    return false;
+  }
   return localStorage.getItem('cookieConsent') === 'true';
 };

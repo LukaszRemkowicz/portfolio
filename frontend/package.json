@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "vite",
     "start": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run type-check && npm run build:client",
+    "build:client": "vite build",
+    "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",
     "preview": "vite preview",
     "test": "jest",
     "test:coverage": "jest --coverage",
