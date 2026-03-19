@@ -18,6 +18,8 @@ import LoadingScreen from './components/common/LoadingScreen';
 import ScrollToHash from './components/common/ScrollToHash';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import CookieConsent from './components/common/CookieConsent';
+import ClientOnly from './components/common/ClientOnly';
+import ClientDocumentGuards from './components/common/ClientDocumentGuards';
 import { APP_ROUTES } from './api/constants';
 import './styles/components/App.module.css';
 
@@ -34,33 +36,13 @@ const App: React.FC = () => {
     hasAnalyticsConsent()
   );
 
-  // Client-only: guard image context menu and drag (runs in useEffect = safe on server)
-  React.useEffect(() => {
-    const handleContextMenu = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).tagName === 'IMG') {
-        e.preventDefault();
-      }
-    };
-
-    const handleDragStart = (e: DragEvent) => {
-      if ((e.target as HTMLElement).tagName === 'IMG') {
-        e.preventDefault();
-      }
-    };
-
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('dragstart', handleDragStart);
-
-    return () => {
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('dragstart', handleDragStart);
-    };
-  }, []);
-
   return (
     <>
-      <AnalyticsTracker hasConsented={hasConsented} />
-      <ScrollToHash />
+      <ClientOnly>
+        <AnalyticsTracker hasConsented={hasConsented} />
+        <ScrollToHash />
+        <ClientDocumentGuards />
+      </ClientOnly>
       <Suspense fallback={<LoadingScreen />}>
         <ErrorBoundary>
           <Routes>
@@ -105,7 +87,9 @@ const App: React.FC = () => {
           </Routes>
         </ErrorBoundary>
       </Suspense>
-      <CookieConsent onAccept={() => setHasConsented(true)} />
+      <ClientOnly>
+        <CookieConsent onAccept={() => setHasConsented(true)} />
+      </ClientOnly>
     </>
   );
 };

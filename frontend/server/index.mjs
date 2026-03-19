@@ -143,6 +143,16 @@ function serializeStateForHtml(state) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+function logRequest(info) {
+  console.log(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      service: 'frontend-ssr',
+      ...info,
+    })
+  );
+}
+
 async function renderDocument(url, acceptLanguage, requestOrigin) {
   const [{ render }, template] = await Promise.all([
     import(pathToFileURL(serverEntryPath).href),
@@ -178,6 +188,7 @@ async function renderDocument(url, acceptLanguage, requestOrigin) {
 }
 
 const server = http.createServer(async (req, res) => {
+  const start = Date.now();
   try {
     const host = req.headers.host || 'localhost';
     const requestUrl = new URL(req.url || '/', `http://${host}`);
@@ -185,10 +196,24 @@ const server = http.createServer(async (req, res) => {
     if (requestUrl.pathname === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ status: 'ok' }));
+      logRequest({
+        kind: 'health',
+        method: req.method,
+        path: requestUrl.pathname,
+        status: 200,
+        duration_ms: Date.now() - start,
+      });
       return;
     }
 
     if (await serveStatic(req, res)) {
+      logRequest({
+        kind: 'static',
+        method: req.method,
+        path: requestUrl.pathname,
+        status: 200,
+        duration_ms: Date.now() - start,
+      });
       return;
     }
 
@@ -202,10 +227,28 @@ const server = http.createServer(async (req, res) => {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
     });
     res.end(html);
+    logRequest({
+      kind: 'document',
+      method: req.method,
+      path: requestUrl.pathname,
+      query: requestUrl.search || '',
+      host,
+      language: String(req.headers['accept-language'] || 'en'),
+      status: 200,
+      duration_ms: Date.now() - start,
+    });
   } catch (error) {
     console.error('[frontend-ssr] request failed', error);
     res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Internal Server Error');
+    logRequest({
+      kind: 'document',
+      method: req.method,
+      path: req.url || '/',
+      status: 500,
+      duration_ms: Date.now() - start,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
