@@ -160,7 +160,6 @@ if [[ "${DRY_RUN}" != true ]]; then
     "landingpage-${ENV_SUFFIX_NAME}"
     "portfolio-${ENV_SUFFIX_NAME}"
     "landingpage"
-    "portfolio"
   )
 
   for legacy_project in "${LEGACY_PROJECTS[@]}"; do
@@ -299,8 +298,15 @@ else
   if [[ "${ENVIRONMENT}" == "production" ]]; then
     HEALTH_PORT="443"
     export NGINX_HTTPS_PORT="" # Empty for production to trigger Nginx mapping suffix ""
+    # Hit the local Traefik listener directly while preserving Host/SNI for the
+    # production domain. This avoids false negatives when the server cannot
+    # loop back to its own public DNS/IP during deploy-time checks.
     HEALTH_URL="https://${HEALTH_SITE_DOMAIN}/"
-    CURL_ARGS=("-fsSk" "-o" "/dev/null")
+    CURL_ARGS=(
+      "-fsSk"
+      "-o" "/dev/null"
+      "--resolve" "${HEALTH_SITE_DOMAIN}:443:127.0.0.1"
+    )
   else
     # Staging now uses standard 443 via Traefik
     HEALTH_PORT="443"

@@ -56,6 +56,12 @@ http:
       basicAuth:
         usersFile: /tmp/dashboard.htpasswd
 
+    dashboard-slash:
+      redirectRegex:
+        regex: "^https?://([^/]+)/dashboard$"
+        replacement: "https://${1}/dashboard/"
+        permanent: true
+
 tls:
   certificates:
     - certFile: /etc/letsencrypt/live/${SITE_DOMAIN}/fullchain.pem
