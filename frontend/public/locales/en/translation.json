@@ -34,7 +34,7 @@
     "empty": "The archives appear to be empty. Check back later for new transmissions."
   },
   "footer": {
-    "rights": "__PROJECT_OWNER__ © 2026"
+    "rights": "{{ownerName}} © 2026"
   },
   "about": {
     "title": "Beyond the Atmosphere.",
@@ -51,6 +51,10 @@
     "subtitle": "Exploring the world's most remote locations in pursuit of the perfect cosmic capture.",
     "adventureDate": "ADVENTURE DATE",
     "exploringCosmic": "Exploring the cosmic wonders of"
+  },
+  "meta": {
+    "defaultTitle": "{{ownerName}} | Portfolio & Astrophotography",
+    "defaultDescription": "Personal portfolio and astrophotography gallery of {{ownerName}}."
   },
   "hero": {
     "subtitle": "Documenting the Cosmos",

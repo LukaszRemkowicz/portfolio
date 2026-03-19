@@ -4,7 +4,7 @@
 // Called by the Hono SSR server (Phase 2) for each request.
 // Uses StaticRouter (react-router-dom v6) — no browser globals.
 
-import { renderToString } from 'react-dom/server';
+import { renderToPipeableStream } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server';
 import { DehydratedState, dehydrate, QueryClient } from '@tanstack/react-query';
 import { matchPath } from 'react-router-dom';
@@ -21,11 +21,67 @@ import {
 } from './api/services';
 import { fetchTravelHighlightDetail } from './hooks/useTravelHighlightDetail';
 import { APP_ROUTES } from './api/constants';
+import { Writable } from 'node:stream';
 
 export interface RenderResult {
   html: string;
   helmetContext: { helmet?: HelmetServerState };
   dehydratedState: DehydratedState;
+  language: string;
+}
+
+async function renderAppToString(element: React.ReactElement): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let html = '';
+    let settled = false;
+
+    const writable = new Writable({
+      write(chunk, _encoding, callback) {
+        html += chunk.toString();
+        callback();
+      },
+    });
+
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        abort();
+        reject(new Error('SSR render timed out while waiting for allReady.'));
+      }
+    }, 10000);
+
+    writable.on('finish', () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timeout);
+        resolve(html);
+      }
+    });
+
+    writable.on('error', error => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timeout);
+        reject(error);
+      }
+    });
+
+    const { abort, pipe } = renderToPipeableStream(element, {
+      onAllReady() {
+        pipe(writable);
+      },
+      onShellError(error) {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timeout);
+          reject(error);
+        }
+      },
+      onError(error) {
+        console.error('[frontend-ssr] render error', error);
+      },
+    });
+  });
 }
 
 async function prefetchQuerySafely(
@@ -125,7 +181,8 @@ async function prefetchRouteQueries(
 
 export async function render(
   url: string,
-  acceptLanguage = 'en'
+  acceptLanguage = 'en',
+  requestOrigin?: string
 ): Promise<RenderResult> {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -148,12 +205,13 @@ export async function render(
   const helmetContext: { helmet?: HelmetServerState } = {};
   const dehydratedState = dehydrate(queryClient);
 
-  const html = renderToString(
+  const html = await renderAppToString(
     <AppShell
       queryClient={queryClient}
       i18nInstance={i18nInstance}
       helmetContext={helmetContext}
       dehydratedState={dehydratedState}
+      requestOrigin={requestOrigin}
     >
       <StaticRouter location={url}>
         <App />
@@ -161,5 +219,10 @@ export async function render(
     </AppShell>
   );
 
-  return { html, helmetContext, dehydratedState };
+  return {
+    html,
+    helmetContext,
+    dehydratedState,
+    language: i18nInstance.resolvedLanguage || i18nInstance.language || 'en',
+  };
 }

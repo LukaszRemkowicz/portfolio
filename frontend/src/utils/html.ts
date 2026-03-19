@@ -7,6 +7,10 @@ import DOMPurify from 'dompurify';
 export const stripHtml = (html: string): string => {
   if (!html) return '';
 
+  if (typeof DOMParser === 'undefined') {
+    return html.replace(/<[^>]*>/g, '').trim();
+  }
+
   // Use a DOM-based approach for reliability
   const doc = new DOMParser().parseFromString(html, 'text/html');
   return doc.body.textContent || '';
@@ -32,6 +36,14 @@ export const slugify = (text: string): string => {
  */
 export const sanitizeHtml = (html: string): string => {
   if (!html) return '';
+
+  if (typeof window === 'undefined') {
+    return html
+      .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+      .replace(/\son\w+=(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+      .replace(/javascript:/gi, '');
+  }
+
   return DOMPurify.sanitize(html);
 };
 

@@ -17,16 +17,18 @@ import {
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
-import { HelmetProvider } from 'react-helmet-async';
+import { Helmet, HelmetProvider } from 'react-helmet-async';
 import type { HelmetServerState } from 'react-helmet-async';
 import { I18nextProvider } from 'react-i18next';
 import type { i18n as I18nInstance } from 'i18next';
+import { RequestOriginContext } from './context/RequestOriginContext';
 
 interface AppShellProps {
   queryClient: QueryClient;
   i18nInstance: I18nInstance;
   helmetContext?: { helmet?: HelmetServerState };
   dehydratedState?: DehydratedState;
+  requestOrigin?: string;
   children: React.ReactNode;
 }
 
@@ -35,15 +37,25 @@ const AppShell: React.FC<AppShellProps> = ({
   i18nInstance,
   helmetContext = {},
   dehydratedState,
+  requestOrigin,
   children,
 }) => {
   return (
     <QueryClientProvider client={queryClient}>
       <HelmetProvider context={helmetContext}>
         <I18nextProvider i18n={i18nInstance}>
-          <HydrationBoundary state={dehydratedState}>
-            {children}
-          </HydrationBoundary>
+          <RequestOriginContext.Provider value={requestOrigin ?? null}>
+            <Helmet>
+              <html
+                lang={
+                  i18nInstance.resolvedLanguage || i18nInstance.language || 'en'
+                }
+              />
+            </Helmet>
+            <HydrationBoundary state={dehydratedState}>
+              {children}
+            </HydrationBoundary>
+          </RequestOriginContext.Provider>
         </I18nextProvider>
       </HelmetProvider>
     </QueryClientProvider>

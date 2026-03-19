@@ -34,7 +34,7 @@
     "empty": "Archiwa wydają się być puste. Wróć później po nowe transmisje."
   },
   "footer": {
-    "rights": "__PROJECT_OWNER__ © 2026"
+    "rights": "{{ownerName}} © 2026"
   },
   "about": {
     "title": "Ponad Atmosferą.",
@@ -51,6 +51,10 @@
     "subtitle": "Podróże do różnych zakątków świata, w poszukiwaniu idealnego ujęcia.",
     "adventureDate": "DATA PRZYGODY",
     "exploringCosmic": "Kosmiczna przygoda w"
+  },
+  "meta": {
+    "defaultTitle": "{{ownerName}} | Portfolio i Astrofotografia",
+    "defaultDescription": "Portfolio i galeria astrofotografii {{ownerName}}."
   },
   "hero": {
     "subtitle": "Dokumentacja Kosmosu",

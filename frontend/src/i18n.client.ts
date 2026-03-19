@@ -11,11 +11,21 @@ import HttpApi from 'i18next-http-backend';
 import en from '../public/locales/en/translation.json';
 import pl from '../public/locales/pl/translation.json';
 
+declare global {
+  interface Window {
+    __INITIAL_LANGUAGE__?: string;
+  }
+}
+
+const initialLanguage =
+  typeof window !== 'undefined' ? window.__INITIAL_LANGUAGE__ : undefined;
+
 i18n
   .use(HttpApi)
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
+    lng: initialLanguage,
     resources: {
       en: { translation: en },
       pl: { translation: pl },
@@ -26,7 +36,7 @@ i18n
       escapeValue: false,
     },
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['htmlTag', 'localStorage', 'navigator'],
       caches: ['localStorage'],
     },
     backend: {

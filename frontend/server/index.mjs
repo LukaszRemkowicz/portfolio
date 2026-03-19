@@ -77,19 +77,61 @@ async function serveStatic(req, res) {
 function renderHelmet(helmetContext) {
   const helmet = helmetContext?.helmet;
   if (!helmet) {
-    return '';
+    return {
+      bodyAttributes: '',
+      headMarkup: '',
+      htmlAttributes: '',
+    };
   }
 
-  return [
-    helmet.title?.toString?.() || '',
-    helmet.priority?.toString?.() || '',
-    helmet.meta?.toString?.() || '',
-    helmet.link?.toString?.() || '',
-    helmet.script?.toString?.() || '',
-    helmet.style?.toString?.() || '',
-    helmet.base?.toString?.() || '',
-    helmet.noscript?.toString?.() || '',
-  ].join('');
+  return {
+    bodyAttributes: helmet.bodyAttributes?.toString?.() || '',
+    headMarkup: [
+      helmet.title?.toString?.() || '',
+      helmet.priority?.toString?.() || '',
+      helmet.meta?.toString?.() || '',
+      helmet.link?.toString?.() || '',
+      helmet.script?.toString?.() || '',
+      helmet.style?.toString?.() || '',
+      helmet.base?.toString?.() || '',
+      helmet.noscript?.toString?.() || '',
+    ].join(''),
+    htmlAttributes: helmet.htmlAttributes?.toString?.() || '',
+  };
+}
+
+function injectTagAttributes(template, tagName, attributes) {
+  if (!attributes) {
+    return template;
+  }
+
+  const pattern = new RegExp(`<${tagName}([^>]*)>`, 'i');
+  return template.replace(pattern, (_, existing = '') => {
+    const normalizedExisting = String(existing).trim();
+    return `<${tagName}${normalizedExisting ? ` ${normalizedExisting}` : ''} ${attributes}>`;
+  });
+}
+
+function getForwardedValue(value) {
+  if (Array.isArray(value)) {
+    return value[0] || '';
+  }
+
+  if (typeof value === 'string') {
+    return value.split(',')[0]?.trim() || '';
+  }
+
+  return '';
+}
+
+function getRequestOrigin(req) {
+  const forwardedProto = getForwardedValue(req.headers['x-forwarded-proto']);
+  const forwardedHost = getForwardedValue(req.headers['x-forwarded-host']);
+  const host =
+    forwardedHost || getForwardedValue(req.headers.host) || 'localhost';
+  const proto = forwardedProto || 'http';
+
+  return `${proto}://${host}`;
 }
 
 function serializeStateForHtml(state) {
@@ -101,25 +143,38 @@ function serializeStateForHtml(state) {
     .replace(/\u2029/g, '\\u2029');
 }
 
-async function renderDocument(url, acceptLanguage) {
+async function renderDocument(url, acceptLanguage, requestOrigin) {
   const [{ render }, template] = await Promise.all([
     import(pathToFileURL(serverEntryPath).href),
     readFile(indexHtmlPath, 'utf8'),
   ]);
 
-  const { html, helmetContext, dehydratedState } = await render(
+  const { html, helmetContext, dehydratedState, language } = await render(
     url,
-    acceptLanguage
+    acceptLanguage,
+    requestOrigin
   );
-  const headMarkup = renderHelmet(helmetContext);
+  const { bodyAttributes, headMarkup, htmlAttributes } =
+    renderHelmet(helmetContext);
+  const initialLanguageScript = `<script>window.__INITIAL_LANGUAGE__ = ${JSON.stringify(
+    language
+  )};</script>`;
   const dehydratedStateScript = `<script>window.__REACT_QUERY_STATE__ = ${serializeStateForHtml(
     dehydratedState
   )};</script>`;
 
-  return template
-    .replace('</head>', `${headMarkup}</head>`)
-    .replace('<div id="root"></div>', `<div id="root">${html}</div>`)
-    .replace('</body>', `${dehydratedStateScript}</body>`);
+  return injectTagAttributes(
+    injectTagAttributes(
+      template
+        .replace('</head>', `${headMarkup}${initialLanguageScript}</head>`)
+        .replace('<div id="root"></div>', `<div id="root">${html}</div>`)
+        .replace('</body>', `${dehydratedStateScript}</body>`),
+      'html',
+      htmlAttributes
+    ),
+    'body',
+    bodyAttributes
+  );
 }
 
 const server = http.createServer(async (req, res) => {
@@ -139,7 +194,8 @@ const server = http.createServer(async (req, res) => {
 
     const html = await renderDocument(
       requestUrl.pathname + requestUrl.search,
-      req.headers['accept-language'] || 'en'
+      req.headers['accept-language'] || 'en',
+      getRequestOrigin(req)
     );
     res.writeHead(200, {
       'Content-Type': 'text/html; charset=utf-8',

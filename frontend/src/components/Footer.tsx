@@ -6,6 +6,13 @@ import { useProfile } from '../hooks/useProfile';
 
 import { useTranslation } from 'react-i18next';
 
+declare const __PROJECT_OWNER__: string;
+
+const projectOwner =
+  typeof __PROJECT_OWNER__ !== 'undefined'
+    ? __PROJECT_OWNER__
+    : process.env.PROJECT_OWNER || 'Portfolio Owner';
+
 const Footer: React.FC = () => {
   const { t } = useTranslation();
   const { data: profile } = useProfile();
@@ -19,7 +26,12 @@ const Footer: React.FC = () => {
       <div className={styles.container}>
         <div className={styles.branding}>
           <Sparkles size={16} className={styles.logoIcon} />
-          <span className={styles.logoText}>{t('footer.rights')}</span>
+          <span className={styles.logoText}>
+            {t('footer.rights', {
+              ownerName: projectOwner,
+              defaultValue: `${projectOwner} © 2026`,
+            })}
+          </span>
         </div>
         <div className={styles.links}>
           {igUrl && (
