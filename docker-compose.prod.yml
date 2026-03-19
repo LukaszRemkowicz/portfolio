@@ -112,7 +112,7 @@ services:
   # ---------- Celery Worker ----------
   celery-worker:
     <<: *backend-defaults
-    image: prod-worker:${TAG}
+    image: ${ENVIRONMENT}-worker:${TAG}
     restart: always
     command: celery -A settings worker -l info -Q celery,monitoring --concurrency=${CELERY_WORKERS:-4}
     environment:
@@ -132,7 +132,7 @@ services:
   # ---------- Celery Beat ----------
   celery-beat:
     <<: *backend-defaults
-    image: prod-be:${TAG}
+    image: ${ENVIRONMENT}-be:${TAG}
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
@@ -144,7 +144,7 @@ services:
 
   # ---------- Frontend ----------
   fe:
-    image: prod-fe:${TAG}
+    image: ${ENVIRONMENT}-fe:${TAG}
     restart: "always"
     volumes:
       - frontend_dist:/frontend_dist
@@ -152,7 +152,7 @@ services:
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
-    image: prod-be:${TAG}
+    image: ${ENVIRONMENT}-be:${TAG}
     restart: always
     healthcheck:
       test:
@@ -167,7 +167,7 @@ services:
   # ---------- Release Job ----------
   release:
     <<: *backend-defaults
-    image: prod-be:${TAG}
+    image: ${ENVIRONMENT}-be:${TAG}
     restart: "no"
     command: >
       sh -c "
@@ -179,7 +179,7 @@ services:
   # ---------- Nginx ----------
   # Service name must be "nginx" — deploy.sh uses: docker compose exec -T nginx nginx -s reload
   nginx:
-    image: prod-nginx:${TAG}
+    image: ${ENVIRONMENT}-nginx:${TAG}
     restart: always
     read_only: true
     security_opt:
