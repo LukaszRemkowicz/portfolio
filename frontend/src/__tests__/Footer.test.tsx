@@ -4,6 +4,8 @@ import '@testing-library/jest-dom';
 import Footer from '../components/Footer';
 import { useProfile } from '../hooks/useProfile';
 
+const PROJECT_OWNER = process.env.PROJECT_OWNER || 'Portfolio Owner';
+
 // Mock the hook
 jest.mock('../hooks/useProfile');
 
@@ -21,7 +23,7 @@ describe('Footer Component', () => {
         <Footer />
       </MemoryRouter>
     );
-    expect(screen.getByText('Łukasz Remkowicz © 2026')).toBeInTheDocument();
+    expect(screen.getByText(`${PROJECT_OWNER} © 2026`)).toBeInTheDocument();
   });
 
   it('renders social links when profile data is present', () => {
