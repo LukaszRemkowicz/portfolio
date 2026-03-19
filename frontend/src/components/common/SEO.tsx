@@ -7,7 +7,7 @@ declare const __PROJECT_OWNER__: string;
 const projectOwner =
   typeof __PROJECT_OWNER__ !== 'undefined'
     ? __PROJECT_OWNER__
-    : 'Portfolio Owner';
+    : process.env.PROJECT_OWNER || 'Portfolio Owner';
 
 interface SEOProps {
   title?: string | null;
