@@ -146,8 +146,20 @@ services:
   fe:
     image: ${ENVIRONMENT}-fe:${TAG}
     restart: "always"
-    volumes:
-      - frontend_dist:/frontend_dist
+    networks:
+      - portfolio_network
+    expose:
+      - "8080"
+    environment:
+      PORT: 8080
+      FRONTEND_PORT: 8080
+      NODE_ENV: production
+      API_URL: https://${API_DOMAIN}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # ---------- Backend ----------
   be:
@@ -224,7 +236,6 @@ services:
       - prod_media_data:/app/media:ro
       - prod_static_data:/app/staticfiles:ro
       - nginx_blocklist:/etc/nginx/blocklist:ro
-      - frontend_dist:/usr/share/nginx/html:ro
 
 volumes:
   postgres18_data:
@@ -241,7 +252,4 @@ volumes:
     external: true
   nginx_blocklist:
     name: portfolio_prod_nginx_blocklist
-    external: true
-  frontend_dist:
-    name: portfolio_prod_frontend_dist
     external: true

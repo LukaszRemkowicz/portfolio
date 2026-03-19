@@ -115,6 +115,9 @@ export default defineConfig(({ isSsrBuild }: ConfigEnv) => {
         localsConvention: 'camelCaseOnly',
       },
     },
+    ssr: {
+      noExternal: ['react-helmet-async'],
+    },
     server: {
       host: '0.0.0.0',
       port: Number(process.env.FRONTEND_PORT) || 8080,

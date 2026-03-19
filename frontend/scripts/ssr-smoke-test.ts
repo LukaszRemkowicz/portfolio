@@ -86,7 +86,7 @@ await check('api/services: imports cleanly in Node', async () => {
 await check(
   'entry-server bundle: render("/") returns HTML in Node',
   async () => {
-    execFileSync('npm', ['run', 'build:server'], {
+    execFileSync('npm', ['run', 'build:ssr'], {
       stdio: 'pipe',
       cwd: resolve(import.meta.dirname, '..'),
     });

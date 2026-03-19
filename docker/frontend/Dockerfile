@@ -35,26 +35,24 @@ ENV PROJECT_OWNER=$PROJECT_OWNER
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ .
-# The script is now inside the frontend context directly
-RUN npm run build && ./scripts/inject-metadata.sh && rm -rf ./scripts
+RUN npm run build:ssr && \
+    ./scripts/inject-metadata.sh
 
-# --- Production runtime ---
-FROM nginx:alpine AS prod
-WORKDIR /usr/share/nginx/html
+FROM node:24-alpine AS runtime
+WORKDIR /app
 
-# Install su-exec for safe non-root transitions
-RUN apk add --no-cache su-exec
+ENV NODE_ENV=production
+ENV PORT=8080
 
-# Create non-root user for nginx
-RUN touch /var/run/nginx.pid && \
-    chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
+COPY --from=build /app/package.json /app/package-lock.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server ./server
 
-# Copy built assets
-COPY --from=build /app/dist .
-
-# Copy entrypoint script
-COPY docker/frontend/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+USER node
 
 EXPOSE 8080
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- "http://127.0.0.1:${PORT}/health" >/dev/null || exit 1
+CMD ["npm", "run", "serve:ssr"]
+
+FROM runtime AS prod

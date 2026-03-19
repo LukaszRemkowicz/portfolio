@@ -12,12 +12,10 @@
 
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import helmetAsync from 'react-helmet-async';
+import { HelmetProvider } from 'react-helmet-async';
 import type { HelmetServerState } from 'react-helmet-async';
 import { I18nextProvider } from 'react-i18next';
 import type { i18n as I18nInstance } from 'i18next';
-
-const { HelmetProvider } = helmetAsync;
 
 interface AppShellProps {
   queryClient: QueryClient;

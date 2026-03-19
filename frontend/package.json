@@ -10,6 +10,8 @@
     "build": "npm run type-check && npm run build:client",
     "build:client": "vite build",
     "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",
+    "build:ssr": "npm run build:client && npm run build:server",
+    "serve:ssr": "node server/index.mjs",
     "preview": "vite preview",
     "test": "jest",
     "test:coverage": "jest --coverage",

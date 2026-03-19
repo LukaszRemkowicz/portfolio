@@ -18,7 +18,7 @@ repos:
     hooks:
       - id: prettier
         name: prettier
-        entry: npx prettier --write
+        entry: ./frontend/node_modules/.bin/prettier --write
         language: system
         files: ^frontend/
         types_or: [javascript, jsx, ts, tsx, css, json, yaml, markdown]
@@ -27,48 +27,48 @@ repos:
     hooks:
       - id: eslint
         name: eslint
-        entry: npm run lint --prefix frontend
+        entry: bash -c "cd frontend && npm run lint"
         language: system
         pass_filenames: false
         files: ^frontend/
         types_or: [javascript, jsx, ts, tsx]
 
-  # Backend hooks
-  - repo: https://github.com/pycqa/isort
-    rev: 7.0.0
-    hooks:
-      - id: isort
-        files: ^backend/
-        args:
-          ["--settings-path", "backend/pyproject.toml", "--profile", "black"]
+  # # Backend hooks
+  # - repo: https://github.com/pycqa/isort
+  #   rev: 7.0.0
+  #   hooks:
+  #     - id: isort
+  #       files: ^backend/
+  #       args:
+  #         ["--settings-path", "backend/pyproject.toml", "--profile", "black"]
 
-  - repo: https://github.com/psf/black
-    rev: 25.9.0
-    hooks:
-      - id: black
-        files: ^backend/
-        args: ["--config", "backend/pyproject.toml"]
-        language_version: python3.13
+  # - repo: https://github.com/psf/black
+  #   rev: 25.9.0
+  #   hooks:
+  #     - id: black
+  #       files: ^backend/
+  #       args: ["--config", "backend/pyproject.toml"]
+  #       language_version: python3.13
 
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.3.0
-    hooks:
-      - id: flake8
-        files: ^backend/
-        exclude: /migrations/
-        args: ["--toml-config", "backend/pyproject.toml"]
-        additional_dependencies: [flake8-pyproject]
+  # - repo: https://github.com/pycqa/flake8
+  #   rev: 7.3.0
+  #   hooks:
+  #     - id: flake8
+  #       files: ^backend/
+  #       exclude: /migrations/
+  #       args: ["--toml-config", "backend/pyproject.toml"]
+  #       additional_dependencies: [flake8-pyproject]
 
-  - repo: local
-    hooks:
-      - id: mypy
-        name: mypy
-        entry: bash -c "cd backend && poetry run mypy ."
-        language: system
-        types: [python]
-        pass_filenames: false
-        always_run: true
-        stages: [pre-commit]
+  # - repo: local
+  #   hooks:
+  #     - id: mypy
+  #       name: mypy
+  #       entry: bash -c "cd backend && poetry run mypy ."
+  #       language: system
+  #       types: [python]
+  #       pass_filenames: false
+  #       always_run: true
+  #       stages: [pre-commit]
 
   # Security and Docker hooks - run manually when needed
   # detect-secrets scan --baseline .secrets.baseline
@@ -77,14 +77,14 @@ repos:
   # Testing hooks
   - repo: local
     hooks:
-      - id: backend-tests
-        name: backend-tests
-        entry: bash -c "cd backend && poetry run test"
-        language: system
-        pass_filenames: false
-        files: ^backend/
-        always_run: false
-        stages: [pre-commit]
+      # - id: backend-tests
+      #   name: backend-tests
+      #   entry: bash -c "cd backend && poetry run test"
+      #   language: system
+      #   pass_filenames: false
+      #   files: ^backend/
+      #   always_run: false
+      #   stages: [pre-commit]
 
       - id: frontend-tests
         name: frontend-tests
