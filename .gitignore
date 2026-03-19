@@ -132,6 +132,7 @@ jspm_packages/
 
 /backend/media/
 nginx/ssl/certs/
+infra/nginx/ssl/certs/
 nginx/logs/
 .cursor/rules/
 .gemini/
@@ -141,6 +142,7 @@ frontend/playwright-report/
 frontend/test-results/
 database_data/
 *.sql
+*.sql.gz
 *.dump
 coverage.xml
 
@@ -149,3 +151,7 @@ celerybeat-schedule*
 
 # Security
 *.key
+*.crt
+*.pem
+acme.json
+backups/

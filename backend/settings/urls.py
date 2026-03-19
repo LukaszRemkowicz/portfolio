@@ -19,7 +19,7 @@ from django.views.decorators.cache import cache_page
 from django.views.static import serve
 
 from core.sitemaps import AstroImageSitemap, StaticViewSitemap, TravelHighlightsSitemap
-from core.views import root_view
+from core.views import health_check_view, root_view
 
 from .api_urls import (
     admin_secure_media_urlpatterns,
@@ -38,6 +38,7 @@ _sitemaps = {
 }
 
 urlpatterns = [
+    path("health", health_check_view, name="health"),
     *api_v1_base_urlpatterns,
     path("select2/", include("django_select2.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),

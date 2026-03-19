@@ -1,9 +1,9 @@
 #!/bin/bash
-# scripts/nginx/generate-stage-cert.sh
+# infra/scripts/nginx/generate-stage-cert.sh
 
 # Get the directory where the script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Target the single centralized nginx/ssl/certs directory
+# Target the single centralized infra/nginx/ssl/certs directory
 SSL_DIR="$(cd "$SCRIPT_DIR/../../nginx/ssl/certs" 2>/dev/null || mkdir -p "$SCRIPT_DIR/../../nginx/ssl/certs" && cd "$SCRIPT_DIR/../../nginx/ssl/certs" && pwd)"
 
 echo "Generating staging certificates in: $SSL_DIR"

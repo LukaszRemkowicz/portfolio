@@ -1,0 +1,62 @@
+http:
+  middlewares:
+    public-security:
+      headers:
+        sslRedirect: true
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          Permissions-Policy: "camera=(), microphone=(), geolocation=(), payment=()"
+          Server: ""
+
+    admin-api-security:
+      headers:
+        sslRedirect: true
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow"
+          Permissions-Policy: "camera=(), microphone=(), geolocation=(), payment=()"
+          Server: ""
+
+    staging-security:
+      headers:
+        sslRedirect: true
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow"
+          Permissions-Policy: "camera=(), microphone=(), geolocation=(), payment=()"
+          Server: ""
+
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+
+    dashboard-auth:
+      basicAuth:
+        usersFile: /tmp/dashboard.htpasswd
+
+tls:
+  certificates:
+    - certFile: /etc/letsencrypt/live/${SITE_DOMAIN}/fullchain.pem
+      keyFile: /etc/letsencrypt/live/${SITE_DOMAIN}/privkey.pem
