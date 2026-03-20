@@ -1,3 +1,17 @@
+/**
+ * Frontend SSR runtime server.
+ *
+ * This server is responsible for:
+ *
+ * - serving built frontend assets
+ * - rendering SSR HTML documents
+ * - exposing FE-owned transport endpoints for browser JSON flows
+ * - forwarding internal requests to the backend
+ * - injecting public environment values into the HTML shell
+ * - handling internal SSR cache invalidation webhooks
+ * - emitting structured request logs
+ */
+
 import { createReadStream, existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -10,7 +24,7 @@ import {
   resolvePublicEnv,
 } from './publicEnv.js';
 import { invalidateCacheTags } from './ssrCache.js';
-import { resolveBffBackendPath } from './views/bff.js';
+import { getFrontendTransportRoute } from './views/bff.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +52,9 @@ const MIME_TYPES = {
 
 const INTERNAL_CACHE_INVALIDATION_ROUTE = '/internal/cache/invalidate';
 
+/**
+ * Build cache and content-type headers for a static asset response.
+ */
 function getStaticHeaders(filePath) {
   const ext = path.extname(filePath);
   const type = MIME_TYPES[ext] || 'application/octet-stream';
@@ -60,12 +77,18 @@ function getStaticHeaders(filePath) {
   return headers;
 }
 
+/**
+ * Resolve a requested static path only when it stays inside the built client directory.
+ */
 function isSafeStaticPath(pathname) {
   const decoded = decodeURIComponent(pathname);
   const resolved = path.resolve(clientDistDir, `.${decoded}`);
   return resolved.startsWith(clientDistDir) ? resolved : null;
 }
 
+/**
+ * Serve a built static asset from the client dist directory.
+ */
 async function serveStatic(req, res) {
   const targetPath = isSafeStaticPath(req.url || '/');
   if (!targetPath || !existsSync(targetPath)) {
@@ -84,6 +107,9 @@ async function serveStatic(req, res) {
   return true;
 }
 
+/**
+ * Extract HTML head and attribute markup from the Helmet SSR context.
+ */
 function renderHelmet(helmetContext) {
   const helmet = helmetContext?.helmet;
   if (!helmet) {
@@ -110,6 +136,9 @@ function renderHelmet(helmetContext) {
   };
 }
 
+/**
+ * Inject SSR-produced attributes into the opening HTML or BODY tag.
+ */
 function injectTagAttributes(template, tagName, attributes) {
   if (!attributes) {
     return template;
@@ -122,6 +151,9 @@ function injectTagAttributes(template, tagName, attributes) {
   });
 }
 
+/**
+ * Normalize forwarded header values into a single string.
+ */
 function getForwardedValue(value) {
   if (Array.isArray(value)) {
     return value[0] || '';
@@ -134,6 +166,9 @@ function getForwardedValue(value) {
   return '';
 }
 
+/**
+ * Reconstruct the public request origin from forwarded/request headers.
+ */
 function getRequestOrigin(req) {
   const forwardedProto = getForwardedValue(req.headers['x-forwarded-proto']);
   const forwardedHost = getForwardedValue(req.headers['x-forwarded-host']);
@@ -144,10 +179,16 @@ function getRequestOrigin(req) {
   return `${proto}://${host}`;
 }
 
+/**
+ * Reuse an incoming request ID or create a new one for this request.
+ */
 function getRequestId(req) {
   return getForwardedValue(req.headers['x-request-id']) || randomUUID();
 }
 
+/**
+ * Escape serialized state for safe inline HTML embedding.
+ */
 function serializeStateForHtml(state) {
   return JSON.stringify(state)
     .replace(/</g, '\\u003c')
@@ -157,6 +198,9 @@ function serializeStateForHtml(state) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+/**
+ * Serialize the public env payload injected into the browser HTML shell.
+ */
 function serializePublicEnvForHtml(config) {
   return serializeStateForHtml({
     API_URL: config.API_URL,
@@ -166,6 +210,9 @@ function serializePublicEnvForHtml(config) {
   });
 }
 
+/**
+ * Resolve the request-scoped public env used by SSR and HTML placeholder replacement.
+ */
 function getRequestPublicEnv(req) {
   const requestOrigin = getRequestOrigin(req);
   const requestUrl = new URL(requestOrigin);
@@ -175,10 +222,16 @@ function getRequestPublicEnv(req) {
   });
 }
 
+/**
+ * Return the backend base URL used for internal server-side requests.
+ */
 function getBackendBaseUrl(requestPublicEnv) {
   return process.env.SSR_API_URL || requestPublicEnv.API_URL;
 }
 
+/**
+ * Build backend request headers that preserve public host, language, and request correlation.
+ */
 function getBackendForwardHeaders(
   requestPublicEnv,
   acceptLanguage,
@@ -211,6 +264,9 @@ function getBackendForwardHeaders(
   return headers;
 }
 
+/**
+ * Fetch and decode JSON payloads from the backend for FE-owned transport routes.
+ */
 async function fetchBackendJson(req, backendPath, requestUrl, requestId) {
   const requestPublicEnv = getRequestPublicEnv(req);
   const requestOrigin = getRequestOrigin(req);
@@ -250,6 +306,9 @@ async function fetchBackendJson(req, backendPath, requestUrl, requestId) {
   };
 }
 
+/**
+ * Read and parse a JSON request body.
+ */
 async function readJsonBody(req) {
   const chunks = [];
 
@@ -381,7 +440,10 @@ async function forwardBackendWrite(req, backendPath, requestId) {
 }
 
 async function handleBffRequest(req, res, requestUrl, start, requestId) {
-  const resolvedView = resolveBffBackendPath(requestUrl.pathname, req.method);
+  const resolvedView = getFrontendTransportRoute(
+    requestUrl.pathname,
+    req.method
+  );
 
   if (!resolvedView) {
     return false;

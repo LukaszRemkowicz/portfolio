@@ -1,3 +1,16 @@
+/**
+ * Shared Axios client setup for frontend data access.
+ *
+ * This module owns the low-level HTTP transport concerns used by both SSR and
+ * browser-side code:
+ * - API base URL selection
+ * - language query propagation
+ * - SSR request logging
+ * - backend error normalization
+ * - SSR forwarding headers such as Host and X-Request-ID
+ *
+ * Higher-level route ownership lives in `services.ts` and `bff.ts`.
+ */
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { API_BASE_URL } from './routes';
 import { publicEnv } from '../../server/publicEnv.js';
@@ -15,6 +28,7 @@ type SsrRequestMeta = {
   requestId?: string;
 };
 
+/** Emit structured SSR -> backend transport logs for request tracing. */
 function logSsrBackendRequest(info: Record<string, unknown>): void {
   console.log(
     JSON.stringify({
@@ -32,14 +46,20 @@ function logSsrBackendRequest(info: Record<string, unknown>): void {
 // back to 'en' (server-side language is handled per-request in Phase 3+).
 let _getLanguage: (() => string) | null = null;
 
+/** Register the language getter used by request interceptors. */
 export function setLanguageGetter(getter: () => string): void {
   _getLanguage = getter;
 }
 
+/** Read the current language without depending directly on i18n at import time. */
 function getCurrentLanguage(): string {
   return _getLanguage?.() ?? 'en';
 }
 
+/**
+ * Attach the request interceptor that adds the language parameter and records
+ * SSR timing metadata used by the response logger.
+ */
 function attachLanguageInterceptor(
   client: AxiosInstance,
   getLanguage: () => string
@@ -71,6 +91,10 @@ function attachLanguageInterceptor(
   });
 }
 
+/**
+ * Attach the response interceptor that logs SSR backend requests and converts
+ * Axios/network failures into project-specific error types.
+ */
 function attachErrorInterceptor(client: AxiosInstance) {
   client.interceptors.response.use(
     response => {
@@ -157,6 +181,13 @@ function attachErrorInterceptor(client: AxiosInstance) {
   );
 }
 
+/**
+ * Create a configured Axios client for either browser or SSR usage.
+ *
+ * On the server this also forwards the public site host and request ID to the
+ * backend so generated URLs and request tracing stay aligned with the incoming
+ * request.
+ */
 export function createApiClient(
   getLanguage: () => string,
   requestOrigin?: string,
@@ -195,4 +226,5 @@ export function createApiClient(
   return client;
 }
 
+/** Default shared client used by browser code and most SSR service calls. */
 export const api: AxiosInstance = createApiClient(getCurrentLanguage);

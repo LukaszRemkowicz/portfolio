@@ -1,3 +1,10 @@
+"""Helpers for notifying the frontend server about cache invalidation.
+
+The backend uses these helpers after relevant content changes to ask the
+frontend server to clear cached SSR shell data. Communication is done through
+an internal HTTP webhook configured by environment variables.
+"""
+
 from __future__ import annotations
 
 import json
@@ -11,6 +18,18 @@ logger = logging.getLogger(__name__)
 
 
 def invalidate_frontend_ssr_cache(tags: Iterable[str]) -> bool:
+    """Send a cache invalidation webhook to the frontend server.
+
+    Args:
+        tags: Cache tags describing which frontend cache groups should be
+            invalidated.
+
+    Returns:
+        ``True`` when the frontend invalidation endpoint responds with a 2xx
+        status code. Returns ``False`` when the endpoint is not configured, no
+        valid tags are provided, or the request fails.
+    """
+
     invalidation_url = getattr(settings, "SSR_CACHE_INVALIDATION_URL", "")
     invalidation_token = getattr(settings, "SSR_CACHE_INVALIDATION_TOKEN", "")
     normalized_tags = sorted({tag for tag in tags if tag})

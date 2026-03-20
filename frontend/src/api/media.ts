@@ -1,3 +1,10 @@
+/**
+ * Media URL normalization helpers.
+ *
+ * Backend serializers may return a mix of relative paths, absolute API-host
+ * URLs, and secure image helper URLs. This module converts those values into
+ * browser-safe URLs that stay aligned with `SITE_DOMAIN`.
+ */
 import { API_BASE_URL } from './routes';
 import { publicEnv } from '../../server/publicEnv.js';
 import type { AstroImage, MainPageLocation, UserProfile } from '../types';
@@ -7,6 +14,11 @@ const PUBLIC_SITE_BASE_URL =
     ? window.location.origin
     : `https://${publicEnv.SITE_DOMAIN}`;
 
+/**
+ * Normalize a backend media path into the public URL that the browser should
+ * request. Public `/media/*` and signed image serve URLs are rewritten onto the
+ * current site host.
+ */
 export const getMediaUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
 
@@ -32,14 +44,17 @@ export const getMediaUrl = (path: string | null | undefined): string | null => {
   return `${API_BASE_URL}/${cleanPath}`;
 };
 
+/** Normalize thumbnail fields for an astro image payload. */
 export const normalizeAstroImage = <T extends AstroImage>(image: T): T => ({
   ...image,
   thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
 });
 
+/** Normalize media fields across a list of astro image payloads. */
 export const normalizeAstroImages = <T extends AstroImage>(images: T[]): T[] =>
   images.map(normalizeAstroImage);
 
+/** Normalize profile image fields returned by the backend. */
 export const normalizeProfileMedia = (profile: UserProfile): UserProfile => ({
   ...profile,
   avatar: profile.avatar ? getMediaUrl(profile.avatar) : null,
@@ -51,6 +66,7 @@ export const normalizeProfileMedia = (profile: UserProfile): UserProfile => ({
     : null,
 });
 
+/** Normalize homepage/travel highlight image references. */
 export const normalizeTravelLocation = (
   location: MainPageLocation
 ): MainPageLocation => ({

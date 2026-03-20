@@ -1,3 +1,11 @@
+/**
+ * In-memory SSR cache for shared frontend shell data.
+ *
+ * The cache is intentionally process-local and keyed by resource, language, and
+ * public site host. It is used only for low-churn shell queries that are
+ * shared across many SSR requests.
+ */
+
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 
 const state = globalThis.__portfolioSsrCacheState || {
@@ -7,6 +15,9 @@ const state = globalThis.__portfolioSsrCacheState || {
 
 globalThis.__portfolioSsrCacheState = state;
 
+/**
+ * Derive a stable host-specific cache key segment from a request origin.
+ */
 function getHostKey(requestOrigin) {
   if (!requestOrigin) {
     return 'default';
@@ -19,10 +30,16 @@ function getHostKey(requestOrigin) {
   }
 }
 
+/**
+ * Build the cache key for a shell resource.
+ */
 function makeKey(resource, language, requestOrigin) {
   return `${resource}:${language}:${getHostKey(requestOrigin)}`;
 }
 
+/**
+ * Register a cache key under one or more invalidation tags.
+ */
 function indexTags(key, tags) {
   for (const tag of tags) {
     const taggedKeys = state.tagIndex.get(tag) || new Set();
@@ -31,6 +48,9 @@ function indexTags(key, tags) {
   }
 }
 
+/**
+ * Remove a cached entry and unlink it from all tracked tags.
+ */
 function removeKey(key, tags = []) {
   state.entries.delete(key);
 
@@ -47,6 +67,13 @@ function removeKey(key, tags = []) {
   }
 }
 
+/**
+ * Load shared shell data through the frontend SSR cache.
+ *
+ * When a fresh entry exists it is returned immediately. Otherwise the provided
+ * loader is executed and its result is stored together with the supplied cache
+ * tags.
+ */
 export async function getCachedShellData({
   resource,
   language = 'en',
@@ -78,6 +105,9 @@ export async function getCachedShellData({
   return value;
 }
 
+/**
+ * Invalidate cached shell entries by tag.
+ */
 export function invalidateCacheTags(tags = []) {
   const normalizedTags = [...new Set(tags.filter(Boolean))];
   const keysToDelete = new Set();

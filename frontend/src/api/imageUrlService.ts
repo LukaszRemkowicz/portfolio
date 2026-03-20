@@ -1,8 +1,15 @@
-// frontend/src/api/imageUrlService.ts
+/**
+ * Helper service for secure image URL lookup.
+ *
+ * Browser callers use frontend-owned `/app/images/*` routes so they stay
+ * same-origin on `SITE_DOMAIN`. SSR and internal callers can still fetch the
+ * backend helper endpoints directly.
+ */
 import { API_BASE_URL, BFF_ROUTES } from './routes';
 import { API_V1 } from './constants';
 import { fetchBffJson } from './bff';
 
+/** Fetch signed URLs for a set of image identifiers. */
 export async function fetchImageUrls(
   ids?: string[]
 ): Promise<Record<string, string>> {
@@ -20,6 +27,7 @@ export async function fetchImageUrls(
   return response.json();
 }
 
+/** Fetch the signed URL for a single image slug. */
 export async function fetchSingleImageUrl(slug: string): Promise<string> {
   const useFrontendBff = typeof window !== 'undefined';
   if (useFrontendBff) {

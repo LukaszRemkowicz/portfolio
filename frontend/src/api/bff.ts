@@ -1,3 +1,10 @@
+/**
+ * Browser-side helpers for frontend-owned transport endpoints.
+ *
+ * These helpers are used when the browser should talk to the frontend server
+ * instead of calling backend `/v1/*` routes directly. SSR code should continue
+ * to use the backend client directly and avoid looping through the BFF layer.
+ */
 import type { AxiosInstance } from 'axios';
 import { api } from './api';
 import { AppError, NotFoundError, ValidationError } from './errors';
@@ -8,9 +15,11 @@ type BffErrorPayload = {
   message?: string;
 };
 
+/** Detect the default browser transport path: browser runtime + shared API client. */
 export const isBrowserDefaultClient = (client: AxiosInstance = api): boolean =>
   typeof window !== 'undefined' && client === api;
 
+/** Translate frontend BFF error payloads into the same app error types as Axios calls. */
 const throwBffError = (
   status: number,
   payload: BffErrorPayload | null | undefined
@@ -48,6 +57,7 @@ const throwBffError = (
   }
 };
 
+/** Perform a browser-side GET against a frontend-owned JSON endpoint. */
 export const fetchBffJson = async <TResponse>(
   url: string
 ): Promise<TResponse> => {
@@ -67,6 +77,7 @@ export const fetchBffJson = async <TResponse>(
   return payload;
 };
 
+/** Perform a browser-side POST against a frontend-owned JSON endpoint. */
 export const postBffJson = async <TResponse>(
   url: string,
   body: unknown

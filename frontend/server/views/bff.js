@@ -1,22 +1,62 @@
+/**
+ * Frontend-owned transport routes for browser-side JSON flows.
+ *
+ * This module is the server-side source of truth for mapping FE transport
+ * endpoints to their backend counterparts. It keeps route resolution out of the
+ * raw HTTP server so SSR/BFF behavior stays easier to reason about and test.
+ */
+
 export const BFF_ROUTES = {
   contact: '/app/contact',
   images: '/app/images/',
   travelBySlug: '/app/travel/',
 };
 
-export function getTravelBackendPath(pathname) {
+/**
+ * Resolve the contact transport route to its backend API path.
+ */
+export function getContactBackendRoute(pathname, method) {
+  if (pathname !== BFF_ROUTES.contact) {
+    return null;
+  }
+
+  return {
+    allow: 'POST',
+    backendPath: '/v1/contact/',
+    kind: 'contact',
+    methodNotAllowed: method !== 'POST',
+  };
+}
+
+/**
+ * Resolve a travel-detail transport route to its backend API path.
+ */
+export function getTravelBackendRoute(pathname, method) {
   const match = pathname.match(/^\/app\/travel\/([^/]+)\/([^/]+)\/([^/]+)\/?$/);
   if (!match) {
     return null;
   }
 
   const [, countrySlug, placeSlug, dateSlug] = match;
-  return `/v1/travel/${countrySlug}/${placeSlug}/${dateSlug}/`;
+  return {
+    allow: 'GET',
+    backendPath: `/v1/travel/${countrySlug}/${placeSlug}/${dateSlug}/`,
+    kind: 'travel',
+    methodNotAllowed: method !== 'GET',
+  };
 }
 
-export function getImagesBackendPath(pathname) {
+/**
+ * Resolve image helper transport routes to backend API paths.
+ */
+export function getImagesBackendRoute(pathname, method) {
   if (pathname === BFF_ROUTES.images || pathname === '/app/images') {
-    return '/v1/images/';
+    return {
+      allow: 'GET',
+      backendPath: '/v1/images/',
+      kind: 'images',
+      methodNotAllowed: method !== 'GET',
+    };
   }
 
   const match = pathname.match(/^\/app\/images\/([^/]+)\/?$/);
@@ -25,38 +65,23 @@ export function getImagesBackendPath(pathname) {
   }
 
   const [, slug] = match;
-  return `/v1/images/${slug}/`;
+  return {
+    allow: 'GET',
+    backendPath: `/v1/images/${slug}/`,
+    kind: 'images',
+    methodNotAllowed: method !== 'GET',
+  };
 }
 
-export function resolveBffBackendPath(pathname, method) {
-  if (pathname === BFF_ROUTES.contact) {
-    return {
-      allow: 'POST',
-      backendPath: '/v1/contact/',
-      kind: 'contact',
-      methodNotAllowed: method !== 'POST',
-    };
-  }
-
-  const travelBackendPath = getTravelBackendPath(pathname);
-  if (travelBackendPath) {
-    return {
-      allow: 'GET',
-      backendPath: travelBackendPath,
-      kind: 'travel',
-      methodNotAllowed: method !== 'GET',
-    };
-  }
-
-  const imagesBackendPath = getImagesBackendPath(pathname);
-  if (imagesBackendPath) {
-    return {
-      allow: 'GET',
-      backendPath: imagesBackendPath,
-      kind: 'images',
-      methodNotAllowed: method !== 'GET',
-    };
-  }
-
-  return null;
+/**
+ * Return route metadata for a frontend-owned transport endpoint.
+ *
+ * Returns `null` when the pathname is not a known FE-owned transport endpoint.
+ */
+export function getFrontendTransportRoute(pathname, method) {
+  return (
+    getContactBackendRoute(pathname, method) ||
+    getTravelBackendRoute(pathname, method) ||
+    getImagesBackendRoute(pathname, method)
+  );
 }

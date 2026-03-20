@@ -4,11 +4,36 @@ export const BFF_ROUTES: {
   travelBySlug: string;
 };
 
-export function getTravelBackendPath(pathname: string): string | null;
-export function getImagesBackendPath(pathname: string): string | null;
-export function resolveBffBackendPath(
+export function getContactBackendRoute(
   pathname: string,
-  method?: string
+  method: string
+): {
+  allow: string;
+  backendPath: string;
+  kind: string;
+  methodNotAllowed: boolean;
+} | null;
+export function getTravelBackendRoute(
+  pathname: string,
+  method: string
+): {
+  allow: string;
+  backendPath: string;
+  kind: string;
+  methodNotAllowed: boolean;
+} | null;
+export function getImagesBackendRoute(
+  pathname: string,
+  method: string
+): {
+  allow: string;
+  backendPath: string;
+  kind: string;
+  methodNotAllowed: boolean;
+} | null;
+export function getFrontendTransportRoute(
+  pathname: string,
+  method: string
 ): {
   allow: string;
   backendPath: string;

@@ -12,14 +12,42 @@ Personal portfolio web app for astrophotography, travel stories, and programming
 
 - Site: [lukaszremkowicz.com](https://lukaszremkowicz.com)
 
-## Current Architecture
+## 📸 Screenshots
+
+<details>
+<summary><b>Click to expand screenshots</b></summary>
+
+### Home Page
+![Home Page](screenshots/homepage.jpg)
+
+### Astrophotography Gallery
+![Gallery](screenshots/gallery.jpg)
+
+### Contact Form
+![Contact](screenshots/contact.jpg)
+
+</details>
+
+
+## 🏗️ Architecture
+
+The project follows a modern, highly decoupled architecture for performance and security. It supports **Environment Isolation** (Production & Staging) on the server, with an identical stack for **Development** (Local):
+
+![Architecture Illustration](infra/docs/architecture.png)
+
+### Key Components:
+- **Traefik (Edge Proxy)**: The central entry point for all subdomains. Handles SSL, HSTS, and routing.
+- **Environment Isolation**: Parallel stacks (`PROD` and `STAGE`) ensure zero-collision deployments.
+- **Development Stack**: Local development uses the same core `Nginx + Frontend SSR + Django + PostgreSQL` architecture via `portfolio-dev`. Traefik is also available locally through an optional Compose profile when you want to mirror the full edge setup.
+- **Doppler**: Centralized, secure secret management across **all** environments (Local & Server).
+
 
 Current request flow:
 
 1. browser requests `SITE_DOMAIN`
-2. frontend SSR server renders the page
-3. frontend server fetches backend data internally
-4. nginx serves public static/media files directly
+2. nginx receives the public request
+3. nginx either serves public static/media directly or proxies the request to the frontend SSR server
+4. frontend SSR renders the page and fetches backend data internally when needed
 5. browser hydrates with server-provided React Query state
 
 Application structure:
@@ -47,6 +75,13 @@ Application structure:
   - public media served by nginx
 - `ADMIN_DOMAIN`
   - Django admin
+
+### Traefik Role
+
+- In staging and production, Traefik is the external edge proxy in front of nginx.
+- It handles host-based routing, TLS termination, and security middleware at the edge.
+- In local development, Traefik is available through an optional Compose profile when you want to mirror the full edge setup.
+- The default local stack can also run directly through nginx without Traefik.
 
 ### Frontend server responsibilities
 
@@ -125,12 +160,13 @@ Local hosts:
 
 - Site: `https://portfolio.local/`
 - Admin: `https://admin.portfolio.local/`
+- API: `https://api.portfolio.local/` (still available as a backend host, but no longer the normal browser-facing application entrypoint)
 
-Recommended `/etc/hosts` entries:
-
+> **Note:** You may need to add these domains to your `/etc/hosts` file:
 ```text
 127.0.0.1 portfolio.local
 127.0.0.1 admin.portfolio.local
+127.0.0.1 api.portfolio.local
 ```
 
 ### 4. Verify local services
@@ -221,6 +257,73 @@ The frontend server mirrors Django's `views` concept in its server-side ownershi
 - server-side FE request/data ownership lives in `frontend/server/views/*`
 - SSR and BFF routes should reuse those views instead of duplicating transport logic
 - low-level HTTP clients stay separate from request/data contract ownership
+
+
+## 💾 Database Backup & Maintenance
+
+Database maintenance scripts are located in `infra/scripts/db_backup/`.
+
+### 1. Manual Backup
+Create a compressed SQL dump of the production database:
+```bash
+./infra/scripts/db_backup/backup_db.sh
+```
+The backup should be stored outside the repository, for example in `/var/backups/portfolio/`.
+
+### 2. Testing Restores
+Always verify your backups by running a test restore:
+```bash
+./infra/scripts/db_backup/test_restore.sh
+```
+This script creates a temporary container and verifies that the SQL dump is valid and can be fully imported.
+
+See [Backup Maintenance Guide](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/db_backup/MAINTENANCE.md) for more details.
+
+## Testing
+
+### Backend (Dedicated Service)
+The backend tests now run in a dedicated, isolated environment using Docker Compose Profiles. This inherits your development configuration but remains isolated.
+
+```bash
+doppler --config dev run -- docker compose run --rm test
+```
+
+### Frontend
+```bash
+doppler --config dev run -- docker compose exec -T fe npm test -- --watchAll=false
+doppler --config dev run -- docker compose run --rm fe-test
+```
+
+## 🔄 Release Lifecycle
+
+To ensure version traceability and zero-downtime, follow this mandatory flow for all new features and fixes:
+
+### 1. Development to Dev
+- **Merge Request**: Create an MR from your feature branch to `dev`.
+- **Squash & Delete**: Perform a **Squash and Merge** and delete the feature branch to keep history clean.
+
+### 2. Versioning (Tags)
+- **Tag the Commit**: Once code is on `dev`, tag it with a version (e.g., `v1.2.0`).
+- **Push Tag**: `git push origin v1.2.0`
+- **Automatic Detection**: The `build.sh` and `deploy.sh` scripts automatically detect this tag and use it as the Docker image reference.
+
+### 3. Promotion to Main
+- **Merge Request**: Merge `dev` into `main`.
+- **Production Anchor**: This ensures `main` always stable and aligned with a specific Git tag.
+
+### 4. Direct Deployment
+On your production server, simply run:
+```bash
+# TAG is auto-detected from the Git tag on main
+./infra/scripts/release/deploy.sh
+```
+
+> [!IMPORTANT]
+> **Production Requirement**: Deployments **must** use a Git tag as the reference. This allows for instant rollbacks by just changing the `TAG` variable.
+
+---
+
+
 
 ## Component Docs
 

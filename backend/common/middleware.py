@@ -1,4 +1,11 @@
-# backend/common/middleware.py
+"""Shared Django middleware used across the portfolio backend.
+
+This module keeps lightweight cross-cutting request behavior in one place:
+
+- request correlation via ``X-Request-ID`` for tracing across services
+- locale activation from the ``lang`` query parameter
+"""
+
 import logging
 import time
 import uuid
@@ -10,6 +17,18 @@ logger = logging.getLogger("django.request")
 
 
 class RequestCorrelationMiddleware:
+    """Attach and propagate a request correlation ID for each request.
+
+    The middleware reuses an incoming ``X-Request-ID`` header when present or
+    generates a new UUID when the request enters Django without one. The value
+    is stored on ``request.request_id``, echoed back on the response, and
+    included in the request log line together with method, path, status, host,
+    and duration.
+
+    This makes it possible to correlate a single request across the frontend
+    server, backend, nginx, and monitoring pipelines.
+    """
+
     def __init__(self, get_response: Callable[[Any], Any]) -> None:
         self.get_response = get_response
 
@@ -37,9 +56,11 @@ class RequestCorrelationMiddleware:
 
 
 class QueryParameterLocaleMiddleware:
-    """
-    Middleware that activates the language based on the 'lang' query parameter.
-    This allows overriding the browser's Accept-Language header via URL.
+    """Activate a supported locale from the ``lang`` query parameter.
+
+    This middleware allows URL-level language selection to override the
+    browser's ``Accept-Language`` header when a supported language code is
+    present in the query string.
     """
 
     def __init__(self, get_response: Callable[[Any], Any]) -> None:

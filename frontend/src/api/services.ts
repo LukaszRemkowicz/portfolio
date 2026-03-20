@@ -1,3 +1,14 @@
+/**
+ * High-level frontend data services.
+ *
+ * This module defines the application-facing API contract used by hooks, SSR
+ * prefetch, and selected server-side views. It sits above the low-level Axios
+ * client and below the React Query hooks:
+ * - chooses backend routes
+ * - applies payload normalization
+ * - provides fallback behavior for selected content
+ * - decides when browser code should use frontend-owned transport endpoints
+ */
 import { AxiosInstance, AxiosResponse } from 'axios';
 import { API_ROUTES, BFF_ROUTES } from './routes';
 import { api } from './api';
@@ -21,6 +32,7 @@ import {
 } from '../types';
 import { NotFoundError } from './errors';
 
+/** Validate Axios responses and return the payload shape expected by callers. */
 const handleResponse = <T>(response: AxiosResponse<T>): T => {
   if (response && response.data !== undefined) {
     // The API returns an array for lists and an object for single items.
@@ -32,6 +44,7 @@ const handleResponse = <T>(response: AxiosResponse<T>): T => {
   throw new Error('Invalid response from server.');
 };
 
+/** Fetch and normalize the public user profile used across the site shell. */
 export const fetchProfile = async (
   client: AxiosInstance = api
 ): Promise<UserProfile> => {
@@ -61,6 +74,7 @@ export const fetchProfile = async (
   }
 };
 
+/** Fetch the homepage background image URL, if configured. */
 export const fetchBackground = async (
   client: AxiosInstance = api
 ): Promise<string | null> => {
@@ -81,6 +95,7 @@ export const fetchBackground = async (
   }
 };
 
+/** Fetch the astrophotography gallery list with optional filtering parameters. */
 export const fetchAstroImages = async (
   params: FilterParams = {},
   client: AxiosInstance = api
@@ -96,6 +111,7 @@ export const fetchAstroImages = async (
   return data;
 };
 
+/** Fetch the latest homepage astro images used in the shared shell. */
 export const fetchLatestAstroImages = async (
   client: AxiosInstance = api
 ): Promise<AstroImage[]> => {
@@ -110,6 +126,7 @@ export const fetchLatestAstroImages = async (
   return [];
 };
 
+/** Fetch a single astro image detail payload by slug. */
 export const fetchAstroImageDetail = async (
   slug: string,
   client: AxiosInstance = api
@@ -124,6 +141,12 @@ export const fetchAstroImageDetail = async (
   return data;
 };
 
+/**
+ * Submit the contact form.
+ *
+ * Browser callers post through the frontend-owned transport endpoint, while SSR
+ * or internal callers can still use the backend client directly.
+ */
 export const fetchContact = async (
   contactData: ContactFormData,
   client: AxiosInstance = api
@@ -142,6 +165,7 @@ export const fetchContact = async (
   return handleResponse<void>(response);
 };
 
+/** Fetch public tag options, optionally filtered by category. */
 export const fetchTags = async (
   category_filter?: string,
   client: AxiosInstance = api
@@ -156,6 +180,7 @@ export const fetchTags = async (
   return handleResponse<Tag[]>(response);
 };
 
+/** Fetch enabled frontend feature flags and configuration switches. */
 export const fetchSettings = async (
   client: AxiosInstance = api
 ): Promise<EnabledFeatures> => {
@@ -171,6 +196,8 @@ export const fetchSettings = async (
     throw error;
   }
 };
+
+/** Placeholder project service kept for compatibility until project data is reintroduced. */
 export const fetchProjects = async (): Promise<Project[]> => {
   // const response: AxiosResponse<Project[]> = await api.get(API_ROUTES.projects);
   // const data = handleResponse<Project[]>(response);
@@ -188,6 +215,7 @@ export const fetchProjects = async (): Promise<Project[]> => {
   return [];
 };
 
+/** Fetch and normalize the travel highlights shown on the homepage. */
 export const fetchTravelHighlights = async (
   client: AxiosInstance = api
 ): Promise<MainPageLocation[]> => {
@@ -201,6 +229,7 @@ export const fetchTravelHighlights = async (
   return [];
 };
 
+/** Fetch the public astrophotography category list. */
 export const fetchCategories = async (
   client: AxiosInstance = api
 ): Promise<string[]> => {
