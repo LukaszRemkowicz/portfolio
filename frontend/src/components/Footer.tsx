@@ -3,19 +3,14 @@ import { Link } from 'react-router-dom';
 import styles from '../styles/components/Footer.module.css';
 import { Sparkles } from 'lucide-react';
 import { useProfile } from '../hooks/useProfile';
+import { publicEnv } from '../../server/publicEnv.js';
 
 import { useTranslation } from 'react-i18next';
-
-declare const __PROJECT_OWNER__: string;
-
-const projectOwner =
-  typeof __PROJECT_OWNER__ !== 'undefined'
-    ? __PROJECT_OWNER__
-    : process.env.PROJECT_OWNER || 'Portfolio Owner';
 
 const Footer: React.FC = () => {
   const { t } = useTranslation();
   const { data: profile } = useProfile();
+  const projectOwner = publicEnv.PROJECT_OWNER;
 
   // Extract links from the ASTRO profile (or fallback to any found)
   const astroProfile = profile?.profiles?.find(p => p.type === 'ASTRO');

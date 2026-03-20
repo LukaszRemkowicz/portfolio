@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { API_BASE_URL } from './routes';
+import { publicEnv } from '../../server/publicEnv.js';
 import {
   NetworkError,
   NotFoundError,
@@ -8,6 +9,21 @@ import {
   ValidationError,
   AppError,
 } from './errors';
+
+type SsrRequestMeta = {
+  startedAt: number;
+};
+
+function logSsrBackendRequest(info: Record<string, unknown>): void {
+  console.log(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      service: 'frontend-ssr',
+      kind: 'ssr-backend',
+      ...info,
+    })
+  );
+}
 
 // Language getter — safe to call in both the browser and the Node SSR runtime.
 // On the client: lazily reads the language from the i18n singleton after it has
@@ -28,6 +44,16 @@ function attachLanguageInterceptor(
   getLanguage: () => string
 ) {
   client.interceptors.request.use(config => {
+    if (typeof window === 'undefined') {
+      (
+        config as typeof config & {
+          metadata?: SsrRequestMeta;
+        }
+      ).metadata = {
+        startedAt: Date.now(),
+      };
+    }
+
     const lang = getLanguage();
     const shortLang = lang.split('-')[0];
 
@@ -42,8 +68,45 @@ function attachLanguageInterceptor(
 
 function attachErrorInterceptor(client: AxiosInstance) {
   client.interceptors.response.use(
-    response => response,
+    response => {
+      if (typeof window === 'undefined') {
+        const config = response.config as typeof response.config & {
+          metadata?: SsrRequestMeta;
+        };
+        const durationMs = config.metadata
+          ? Date.now() - config.metadata.startedAt
+          : undefined;
+
+        logSsrBackendRequest({
+          method: (response.config.method || 'GET').toUpperCase(),
+          url: response.config.url || '',
+          base_url: response.config.baseURL || '',
+          status: response.status,
+          duration_ms: durationMs,
+        });
+      }
+
+      return response;
+    },
     (error: AxiosError) => {
+      if (typeof window === 'undefined') {
+        const config = error.config as typeof error.config & {
+          metadata?: SsrRequestMeta;
+        };
+        const durationMs = config?.metadata
+          ? Date.now() - config.metadata.startedAt
+          : undefined;
+
+        logSsrBackendRequest({
+          method: (config?.method || 'GET').toUpperCase(),
+          url: config?.url || '',
+          base_url: config?.baseURL || '',
+          status: error.response?.status || 0,
+          duration_ms: durationMs,
+          error: error.code || error.message || 'unknown',
+        });
+      }
+
       if (!error.response) {
         // Network error (no response received)
         throw new NetworkError(undefined, error);
@@ -88,8 +151,25 @@ function attachErrorInterceptor(client: AxiosInstance) {
 }
 
 export function createApiClient(getLanguage: () => string): AxiosInstance {
+  const defaultHeaders: Record<string, string> = {};
+
+  if (typeof window === 'undefined') {
+    try {
+      const publicApiUrl = new URL(publicEnv.API_URL);
+      defaultHeaders.Host = publicApiUrl.host;
+      defaultHeaders['X-Forwarded-Host'] = publicApiUrl.host;
+      defaultHeaders['X-Forwarded-Proto'] = publicApiUrl.protocol.replace(
+        ':',
+        ''
+      );
+    } catch {
+      // Ignore malformed public API URLs and fall back to transport defaults.
+    }
+  }
+
   const client = axios.create({
     baseURL: API_BASE_URL,
+    headers: defaultHeaders,
   });
 
   attachLanguageInterceptor(client, getLanguage);

@@ -17,11 +17,15 @@ const Gallery: React.FC = () => {
   const { data: settings } = useSettings();
   const features = settings;
   const {
-    data: images = [],
+    data: imagesData = [],
     isLoading: loading,
     error: queryError,
   } = useLatestAstroImages();
   const error = queryError ? 'Failed to load latest images.' : null;
+  const images = useMemo(
+    () => (Array.isArray(imagesData) ? imagesData : []),
+    [imagesData]
+  );
 
   const filteredImages = useMemo(() => {
     if (filter === 'all') return images.slice(0, 9);

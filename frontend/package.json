@@ -11,6 +11,7 @@
     "build:client": "vite build",
     "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",
     "build:ssr": "npm run build:client && npm run build:server",
+    "dev:ssr": "node --watch --watch-path=src --watch-path=server --watch-path=public --watch-path=index.html scripts/dev-ssr.mjs",
     "serve:ssr": "node server/index.mjs",
     "preview": "vite preview",
     "test": "jest",

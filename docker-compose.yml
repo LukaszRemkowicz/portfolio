@@ -65,13 +65,16 @@ x-frontend-common: &frontend-common
     - portfolio_network
   volumes:
     - ./frontend:/app
-    - fe_node_modules:/app/node_modules
+    - portfolio_dev_fe_node_modules:/app/node_modules
 
 x-local-nginx-common: &local-nginx-common
   image: nginx:latest
   depends_on:
-    - fe
-    - be
+    fe:
+      condition: service_healthy
+    be:
+      condition: service_healthy
+  restart: unless-stopped
   environment:
     SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}
     NGINX_SSL_CERT: ${SSL_CERT_NAME:-portfolio.local.crt}
@@ -90,26 +93,24 @@ x-local-nginx-common: &local-nginx-common
 
 services:
   fe:
-    build:
-      context: .
-      dockerfile: docker/frontend/Dockerfile
-      target: prod
-      args:
-        SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}
-        API_URL: https://${API_DOMAIN:-api.portfolio.local}
-        GA_TRACKING_ID: ${GA_TRACKING_ID:-G-2WGK87YBL6}
-        SENTRY_DSN_FE: ${SENTRY_DSN_FE:-}
-        ENVIRONMENT: ${ENVIRONMENT:-development}
-        PROJECT_OWNER: ${PROJECT_OWNER:-Lukasz Remkowicz}
+    <<: *frontend-common
     environment:
       API_URL: https://${API_DOMAIN:-api.portfolio.local}
+      SSR_API_URL: http://be:8000
+      VITE_API_URL: https://${API_DOMAIN:-api.portfolio.local}
       GA_TRACKING_ID: ${GA_TRACKING_ID:-G-2WGK87YBL6}
+      VITE_GA_TRACKING_ID: ${GA_TRACKING_ID:-G-2WGK87YBL6}
       ENABLE_GA: ${ENABLE_GA:-false}
+      VITE_ENABLE_GA: ${ENABLE_GA:-false}
       SENTRY_DSN_FE: ${SENTRY_DSN_FE:-}
+      VITE_SENTRY_DSN_FE: ${SENTRY_DSN_FE:-}
       ENVIRONMENT: ${ENVIRONMENT:-development}
+      VITE_ENVIRONMENT: ${ENVIRONMENT:-development}
+      PROJECT_OWNER: ${PROJECT_OWNER:-Lukasz Remkowicz}
       FRONTEND_PORT: ${FRONTEND_PORT:-8080}
       PORT: ${FRONTEND_PORT:-8080}
       NODE_ENV: production
+    command: npm run dev:ssr
     expose:
       - "8080"
     restart: unless-stopped
@@ -118,22 +119,6 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-
-  fe-vite:
-    <<: *frontend-common
-    profiles: ["vite"]
-    environment:
-      VITE_API_URL: https://${API_DOMAIN:-api.portfolio.local}
-      VITE_GA_TRACKING_ID: ${GA_TRACKING_ID:-G-2WGK87YBL6}
-      VITE_ENABLE_GA: ${ENABLE_GA:-false}
-      FRONTEND_PORT: ${FRONTEND_PORT:-8080}
-    ports:
-      - "127.0.0.1:3000:8080"
-    restart: unless-stopped
-    volumes:
-      - ./frontend:/app
-      - portfolio_dev_fe_node_modules:/app/node_modules
-      - ./infra/nginx/ssl/certs:/etc/nginx/ssl:ro
 
   be:
     <<: *backend-common

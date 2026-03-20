@@ -10,6 +10,7 @@ import { HomeProps } from '../types';
 import ShootingStars from './ShootingStars';
 import { APP_ROUTES } from '../api/constants';
 import ImageWithFallback from './common/ImageWithFallback';
+import ClientOnly from './common/ClientOnly';
 
 const Home: FC<HomeProps> = ({
   portraitUrl,
@@ -18,14 +19,43 @@ const Home: FC<HomeProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false);
+  const [shouldLoadBackground, setShouldLoadBackground] = useState(false);
 
   useEffect(() => {
-    if (backgroundUrl) {
+    if (!backgroundUrl) return;
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let idleId: number | undefined;
+
+    const scheduleLoad = () => setShouldLoadBackground(true);
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleId = window.requestIdleCallback(scheduleLoad, { timeout: 1500 });
+    } else {
+      timeoutId = globalThis.setTimeout(scheduleLoad, 1200);
+    }
+
+    return () => {
+      if (
+        typeof window !== 'undefined' &&
+        idleId !== undefined &&
+        'cancelIdleCallback' in window
+      ) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== undefined) {
+        globalThis.clearTimeout(timeoutId);
+      }
+    };
+  }, [backgroundUrl]);
+
+  useEffect(() => {
+    if (backgroundUrl && shouldLoadBackground) {
       const img = new Image();
       img.src = backgroundUrl;
       img.onload = () => setIsLoaded(true);
     }
-  }, [backgroundUrl]);
+  }, [backgroundUrl, shouldLoadBackground]);
 
   const displayDescription = shortDescription || t('hero.defaultDescription');
 
@@ -42,7 +72,9 @@ const Home: FC<HomeProps> = ({
           transition: 'opacity 1.5s ease-in-out',
         }}
       />
-      <ShootingStars />
+      <ClientOnly>
+        <ShootingStars />
+      </ClientOnly>
       <div className={styles.heroContent}>
         <span className={styles.heroSubtitle}>{t('hero.subtitle')}</span>
         <h1 className={styles.heroTitle}>

@@ -2,6 +2,13 @@ import '@testing-library/jest-dom';
 
 const mockProjectOwner = process.env.PROJECT_OWNER || 'Portfolio Owner';
 
+window.__PUBLIC_ENV__ = {
+  API_URL: process.env.API_URL || 'https://api.portfolio.local',
+  GA_TRACKING_ID: process.env.VITE_GA_TRACKING_ID || 'G-TEST',
+  PROJECT_OWNER: mockProjectOwner,
+  SITE_DOMAIN: process.env.SITE_DOMAIN || 'portfolio.local',
+};
+
 // Ensure API_URL is defined for tests that directly use process.env (legacy paths)
 // Main env access is now via import.meta.env (shimmed in jest.config.js globals)
 

@@ -119,6 +119,13 @@ class TestMainPageBackgroundImageModel:
         bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Test BG")
         assert str(bg) == "Test BG"
 
+    def test_get_path_spec_uses_background_specific_settings(self) -> None:
+        """Backgrounds should use their own quality/dimension, not generic image buckets."""
+        bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Test BG")
+        spec = bg.get_path_spec()
+        assert spec.dimension == bg.max_dimension
+        assert spec.quality == bg.webp_quality
+
     def test_model_creation_and_translation(self) -> None:
         """Verify that MainPageBackgroundImage can be created with translations."""
         img: Image.Image = Image.new("RGB", (1, 1), color="red")

@@ -36,7 +36,7 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ .
 RUN npm run build:ssr && \
-    ./scripts/inject-metadata.sh
+    node ./scripts/inject-static-metadata.mjs
 
 FROM node:24-alpine AS runtime
 WORKDIR /app

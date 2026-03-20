@@ -3,6 +3,11 @@ import { readFile } from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  publicEnv,
+  replacePublicEnvPlaceholders,
+  resolvePublicEnv,
+} from './publicEnv.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -143,6 +148,15 @@ function serializeStateForHtml(state) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+function serializePublicEnvForHtml(config) {
+  return serializeStateForHtml({
+    API_URL: config.API_URL,
+    GA_TRACKING_ID: config.GA_TRACKING_ID,
+    PROJECT_OWNER: config.PROJECT_OWNER,
+    SITE_DOMAIN: config.SITE_DOMAIN,
+  });
+}
+
 function logRequest(info) {
   console.log(
     JSON.stringify({
@@ -158,14 +172,20 @@ async function renderDocument(url, acceptLanguage, requestOrigin) {
     import(pathToFileURL(serverEntryPath).href),
     readFile(indexHtmlPath, 'utf8'),
   ]);
+  const requestUrl = new URL(requestOrigin);
+  const requestPublicEnv = resolvePublicEnv({
+    ...publicEnv,
+    SITE_DOMAIN: requestUrl.host,
+  });
 
   const { stream, helmetContext, dehydratedState, language, abort } =
     await renderStream(url, acceptLanguage, requestOrigin);
   const { bodyAttributes, headMarkup, htmlAttributes } =
     renderHelmet(helmetContext);
-  const initialLanguageScript = `<script>window.__INITIAL_LANGUAGE__ = ${JSON.stringify(
-    language
+  const publicEnvScript = `<script>window.__PUBLIC_ENV__ = ${serializePublicEnvForHtml(
+    requestPublicEnv
   )};</script>`;
+  const initialLanguageScript = `<script>window.__INITIAL_LANGUAGE__ = ${JSON.stringify(language)};</script>`;
   const dehydratedStateScript = `<script>window.__REACT_QUERY_STATE__ = ${serializeStateForHtml(
     dehydratedState
   )};</script>`;
@@ -173,9 +193,9 @@ async function renderDocument(url, acceptLanguage, requestOrigin) {
   const rootMarker = '<div id="root"></div>';
   const processedTemplate = injectTagAttributes(
     injectTagAttributes(
-      template.replace(
+      replacePublicEnvPlaceholders(template, requestPublicEnv).replace(
         '</head>',
-        `${headMarkup}${initialLanguageScript}</head>`
+        `${headMarkup}${publicEnvScript}${initialLanguageScript}</head>`
       ),
       'html',
       htmlAttributes

@@ -3,13 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { useRequestOrigin } from '../../context/RequestOriginContext';
-
-declare const __PROJECT_OWNER__: string;
-
-const projectOwner =
-  typeof __PROJECT_OWNER__ !== 'undefined'
-    ? __PROJECT_OWNER__
-    : process.env.PROJECT_OWNER || 'Portfolio Owner';
+import { publicEnv } from '../../../server/publicEnv.js';
 
 interface SEOProps {
   title?: string | null;
@@ -22,7 +16,7 @@ const SEO: FC<SEOProps> = ({ title, description, ogImage, url }) => {
   const { t } = useTranslation();
   const location = useLocation();
   const requestOrigin = useRequestOrigin();
-  const ownerName = projectOwner;
+  const ownerName = publicEnv.PROJECT_OWNER;
 
   const defaultTitle = t('meta.defaultTitle', {
     ownerName,

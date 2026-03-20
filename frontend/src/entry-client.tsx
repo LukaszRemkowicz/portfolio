@@ -4,6 +4,7 @@
 // Hydrates (or mounts) the React tree after SSR HTML is delivered.
 // This is the ONLY file allowed to import browser-only code at the top level.
 
+import { startTransition } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { DehydratedState, QueryClient } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -36,7 +37,9 @@ setLanguageGetter(() => i18n.language || 'en');
 
 // Invalidate all queries on language change so server-translated data is re-fetched
 i18n.on('languageChanged', () => {
-  queryClient.invalidateQueries();
+  startTransition(() => {
+    void queryClient.invalidateQueries();
+  });
 });
 
 // Initialise browser-only services (Sentry lazy-load + SW unregister)

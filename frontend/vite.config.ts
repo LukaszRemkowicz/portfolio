@@ -10,6 +10,11 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ isSsrBuild }: ConfigEnv) => {
+  const appEnvironment =
+    process.env.ENVIRONMENT || process.env.VITE_ENVIRONMENT || 'development';
+  const enablePwa =
+    !isSsrBuild && !['development', 'dev', 'local'].includes(appEnvironment);
+
   const criticalPathPlugin: PluginOption = !isSsrBuild
     ? {
         name: 'critical-path-optimization',
@@ -73,7 +78,7 @@ export default defineConfig(({ isSsrBuild }: ConfigEnv) => {
     plugins: [
       react(),
       criticalPathPlugin,
-      !isSsrBuild &&
+      enablePwa &&
         VitePWA({
           registerType: 'autoUpdate',
           injectRegister: 'script-defer',

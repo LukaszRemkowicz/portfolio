@@ -1,5 +1,6 @@
 import { API_BASE_URL as CONST_API_BASE_URL } from '../api/constants';
 import { API_BASE_URL } from '../api/routes';
+import { publicEnv } from '../test-utils/publicEnv.mock';
 
 /**
  * Test suite for API Configuration
@@ -33,15 +34,13 @@ describe('API Configuration', () => {
     });
   });
 
-  it('should not throw when VITE_API_URL is missing — warns instead', () => {
+  it('should fall back to public env when VITE_API_URL is missing', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.isolateModules(() => {
       delete process.env.VITE_API_URL;
       const { API_BASE_URL: resolvedUrl } = require('../api/constants');
-      expect(resolvedUrl).toBe('');
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('VITE_API_URL is not set')
-      );
+      expect(resolvedUrl).toBe(publicEnv.API_URL);
+      expect(warnSpy).not.toHaveBeenCalled();
     });
     warnSpy.mockRestore();
   });

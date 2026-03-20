@@ -44,7 +44,12 @@ class Command(BaseCommand):
                     self.stdout.write(f"  [GEN ] {obj}")
 
                     # Core models have make_thumbnail which standardizes on WebP
-                    thumb_content: ContentFile = obj.make_thumbnail(obj.path)
+                    thumb_source = (
+                        obj.get_thumbnail_source()
+                        if hasattr(obj, "get_thumbnail_source")
+                        else obj.path
+                    )
+                    thumb_content: ContentFile = obj.make_thumbnail(thumb_source)
 
                     # Save the new thumbnail
                     if obj.thumbnail:

@@ -30,12 +30,12 @@ class BaseImage(TranslatableModel):
         verbose_name=_("Image File"),
         help_text=_("The actual image file to be displayed."),
     )
-    legacy_path = models.ImageField(
+    original_image = models.ImageField(
         upload_to="images/",
         blank=True,
         null=True,
         editable=False,
-        verbose_name=_("Legacy Image Path"),
+        verbose_name=_("Original Image"),
         help_text=_(
             "Original file path before WebP conversion. "
             "Used for rollback via the Admin serve_webp_images toggle. "
@@ -50,28 +50,44 @@ class BaseImage(TranslatableModel):
         upload_to="thumbnails/", blank=True, null=True, editable=False, verbose_name=_("Thumbnail")
     )
 
-    # Track path AND legacy_path so save() can detect whether _convert_to_webp() preserved
+    # Track path AND original_image so save() can detect whether _convert_to_webp() preserved
     # the old file as a rollback target (and must not delete it).
-    path_tracker = FieldTracker(fields=["path", "legacy_path"])
+    path_tracker = FieldTracker(fields=["path", "original_image"])
 
     # Subclasses override this to control WebP compression level.
     # AstroImage/ProjectImage keep 90 (photography portfolio); backgrounds/user images
     # use lower values set on those concrete classes.
     webp_quality: int = 90
     max_dimension: int | None = None
+    dimension_percentage: int | None = None
 
     def get_path_spec(self) -> ImageSpec:
         """Default specification provider for the 'path' field."""
         key = "LANDSCAPE" if self.webp_quality >= 90 else "PORTRAIT"
-        return settings.IMAGE_OPTIMIZATION_SPECS[key]
+        spec = settings.IMAGE_OPTIMIZATION_SPECS[key]
+        return ImageSpec(
+            dimension=spec.dimension,
+            quality=spec.quality,
+            dimension_percentage=self.dimension_percentage,
+        )
 
     def get_image_spec(self, field_name: str) -> ImageSpec:
         """Return the ImageSpec for a given field by dispatching to specialized methods."""
         method_name = f"get_{field_name}_spec"
         if hasattr(self, method_name):
-            return cast(ImageSpec, getattr(self, method_name)())
-        return settings.IMAGE_OPTIMIZATION_SPECS.get(
+            spec = cast(ImageSpec, getattr(self, method_name)())
+            return ImageSpec(
+                dimension=spec.dimension,
+                quality=spec.quality,
+                dimension_percentage=self.dimension_percentage,
+            )
+        spec = settings.IMAGE_OPTIMIZATION_SPECS.get(
             "DEFAULT", ImageSpec(dimension=1200, quality=75)
+        )
+        return ImageSpec(
+            dimension=spec.dimension,
+            quality=spec.quality,
+            dimension_percentage=self.dimension_percentage,
         )
 
     class Meta:
@@ -98,28 +114,32 @@ class BaseImage(TranslatableModel):
             if old_path:
                 storage: Any = self.path.storage
                 old_path_str: str = str(old_path)
-                # If legacy_path was freshly set by _convert_to_webp(), the old file is now
+                # If original_image was freshly set by _convert_to_webp(), the old file is now
                 # preserved as the rollback target — do not delete it.
-                legacy_was_set: bool = self.path_tracker.has_changed("legacy_path") and bool(
-                    self.legacy_path
+                original_was_set: bool = self.path_tracker.has_changed("original_image") and bool(
+                    self.original_image
                 )
-                if old_path_str and not legacy_was_set and storage.exists(old_path_str):
+                if old_path_str and not original_was_set and storage.exists(old_path_str):
                     storage.delete(old_path_str)
 
     def _convert_to_webp(self) -> bool:
-        """Convert the current path image to WebP using self.get_image_spec().
+        """Convert from the original source image to WebP using self.get_image_spec().
 
-        Stores the original file path in legacy_path for rollback purposes.
+        Stores the original file path in original_image for rollback purposes.
         No-op if the image is already in WebP format or conversion fails.
         """
         spec = self.get_image_spec("path")
+        source = self.get_original_source()
         result: tuple[str, Any] | None = convert_to_webp(
-            self.path, quality=spec.quality, max_dimension=spec.dimension
+            source,
+            quality=spec.quality,
+            max_dimension=spec.dimension,
+            dimension_percentage=spec.dimension_percentage,
         )
         if result is None:
             return False
         original_name, webp_content = result
-        self.legacy_path = original_name
+        self.original_image = original_name
         self.path.save(webp_content.name, webp_content, save=False)
         return True
 
@@ -127,13 +147,13 @@ class BaseImage(TranslatableModel):
         """Return the image field to serve based on the serve_webp_images Admin toggle.
 
         When serve_webp_images=True → serve WebP (self.path).
-        When serve_webp_images=False → serve legacy original if available, else WebP.
+        When serve_webp_images=False → serve original image if available, else WebP.
         TODO: will be removed in future versions.
         """
         settings_obj: LandingPageSettings | None = LandingPageSettings.get_current()
         if settings_obj and settings_obj.serve_webp_images:
             return self.path
-        return self.legacy_path or self.path
+        return self.original_image or self.path
 
     def get_serving_url(self) -> str:
         """Return the URL string of the image to serve."""
@@ -145,12 +165,29 @@ class BaseImage(TranslatableModel):
                 pass
         return ""
 
+    def get_thumbnail_source(self) -> Any:
+        """Prefer the original source image for thumbnail generation when available."""
+        return self.get_original_source()
+
+    def get_original_source(self) -> Any:
+        """Prefer the active uploaded source file over an older converted original.
+
+        When a new upload is assigned to ``path`` before conversion runs, ``original_image``
+        may still point at the previous source asset. In that case we must use the new
+        uploaded file from ``path``; otherwise reconversion and thumbnail generation will
+        incorrectly reuse stale bytes.
+        """
+        path_name = str(getattr(self.path, "name", "") or "").lower()
+        if self.path and not path_name.endswith(".webp"):
+            return self.path
+        return self.original_image or self.path
+
     def __str__(self) -> str:
         name = self.safe_translation_getter("name", any_language=True)
         return name if name else str(self.id)
 
-    def make_thumbnail(self, image: Any, size: tuple[int, int] = (300, 300)) -> ContentFile:
-        """Generates a high-compression WebP thumbnail for the image."""
+    def make_thumbnail(self, image: Any, size: tuple[int, int] | None = None) -> ContentFile:
+        """Generate a WebP thumbnail using the configured thumbnail spec."""
         img: Any = Image.open(image)
         # Handle transparency: create a white background if image has alpha channel
         if img.mode in ("RGBA", "P"):
@@ -160,10 +197,12 @@ class BaseImage(TranslatableModel):
             img = bg
         else:
             img = img.convert("RGB")
-        img.thumbnail(size)
-        thumb_io = BytesIO()
         spec = settings.IMAGE_OPTIMIZATION_SPECS["THUMBNAIL"]
-        img.save(thumb_io, "WEBP", quality=spec.quality)
+        target_size = size or (spec.dimension, spec.dimension)
+        img.thumbnail(target_size, Image.Resampling.LANCZOS)
+        thumb_io = BytesIO()
+        # Use lossless WebP for thumbnail sharpness during visual-quality tuning.
+        img.save(thumb_io, "WEBP", lossless=True, method=6)
         original_name = getattr(image, "name", "unknown").split("/")[-1]
         thumbnail_name = "thumb_" + os.path.splitext(original_name)[0] + ".webp"
         return ContentFile(thumb_io.getvalue(), name=thumbnail_name)

@@ -12,7 +12,7 @@ class TestBaseImageAsyncTrigger:
     def test_save_triggers_background_task_and_skips_sync_conversion(self):
         """
         Verify that saving a BaseImage (via MainPageBackgroundImage)
-        triggers the Celery task and does NOT populate legacy_path synchronously.
+        triggers the Celery task and does NOT populate original_image synchronously.
         """
         with patch.object(process_image_task, "delay") as mock_delay:
             # build() does not call save()
@@ -28,6 +28,6 @@ class TestBaseImageAsyncTrigger:
             assert args[0] == "astrophotography"
             assert args[1] == "mainpagebackgroundimage"
 
-            # Assert legacy_path is STILL EMPTY (conversion hasn't happened yet)
+            # Assert original_image is STILL EMPTY (conversion hasn't happened yet)
             img.refresh_from_db()
-            assert not img.legacy_path
+            assert not img.original_image

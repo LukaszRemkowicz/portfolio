@@ -117,7 +117,9 @@ export const fetchLatestAstroImages = async (
       thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
     }));
   }
-  return data;
+
+  console.warn('[API] latest astro images response was not an array', data);
+  return [];
 };
 
 export const fetchAstroImageDetail = async (

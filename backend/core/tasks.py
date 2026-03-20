@@ -29,11 +29,16 @@ def process_image_task(app_label: str, model_name: str, instance_id: str) -> Non
         # The internal _convert_to_webp currently calls self.path.save(..., save=False)
         result = instance._convert_to_webp()
         if result:
-            updated_fields.extend(["path", "legacy_path"])
+            updated_fields.extend(["path", "original_image"])
 
     # 2. Generate Thumbnail
     if hasattr(instance, "path") and instance.path and hasattr(instance, "make_thumbnail"):
-        instance.thumbnail = instance.make_thumbnail(instance.path)
+        thumbnail_source = (
+            instance.get_thumbnail_source()
+            if hasattr(instance, "get_thumbnail_source")
+            else instance.path
+        )
+        instance.thumbnail = instance.make_thumbnail(thumbnail_source)
         updated_fields.append("thumbnail")
 
     if updated_fields:

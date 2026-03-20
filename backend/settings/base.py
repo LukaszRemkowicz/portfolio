@@ -346,7 +346,7 @@ IMAGE_OPTIMIZATION_SPECS = {
     "AVATAR": ImageSpec(dimension=280, quality=10),
     "PORTRAIT": ImageSpec(dimension=800, quality=35),
     "LANDSCAPE": ImageSpec(dimension=1920, quality=90),
-    "THUMBNAIL": ImageSpec(dimension=400, quality=60),
+    "THUMBNAIL": ImageSpec(dimension=560, quality=100),
     "DEFAULT": ImageSpec(dimension=1200, quality=75),
 }
 
@@ -663,7 +663,7 @@ JAZZMIN_SETTINGS = {
     "welcome_sign": "Welcome to the Portfolio Admin Interface",
     "copyright": PROJECT_OWNER,
     # User Menu
-    "user_avatar": "profiles.avatar",
+    "user_avatar": "get_avatar_url",
     # Top Menu
     "topmenu_links": [
         {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
