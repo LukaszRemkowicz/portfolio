@@ -1,4 +1,4 @@
-# Portfolio Backend
+# 🐍 Portfolio Backend
 
 Django + DRF backend for portfolio content, admin, secure media, translations, and monitoring.
 
@@ -48,7 +48,7 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
 - **Poetry** *(optional, only if you want to run Poetry/manual host commands)*
 
 
-## Backend Role In The Current Architecture
+## 🧭 Backend Role In The Current Architecture
 
 Today it mainly serves as:
 
@@ -60,13 +60,13 @@ Today it mainly serves as:
 
 Normal public website traffic reaches the frontend server first. Django is the content/admin/internal API layer.
 
-## Glossary
+## 📖 Glossary
 
 - `SITE_DOMAIN`: public website host.
 - `ADMIN_DOMAIN`: public Django admin host.
 - `X-Request-ID`: request correlation header used for tracing requests across services.
 
-## Backend Responsibilities
+## 🧱 Backend Responsibilities
 
 - portfolio content models:
   - astrophotography
@@ -79,7 +79,7 @@ Normal public website traffic reaches the frontend server first. Django is the c
 - monitoring and daily log analysis
 - cache invalidation signals for frontend cache
 
-## Service Integration
+## 🔌 Service Integration
 
 Key points:
 
@@ -90,7 +90,7 @@ Key points:
 
 Invalidation is triggered from model save/delete signals after transaction commit.
 
-## Security / Delivery Model
+## 🛡️ Security / Delivery Model
 
 Public media delivery and protected media delivery are split between Django and nginx.
 
@@ -104,7 +104,7 @@ So:
 - Django owns access control and URL decisions
 - nginx owns efficient file delivery
 
-## Observability
+## 📈 Observability
 
 What exists:
 
@@ -123,7 +123,7 @@ Middleware path:
 
 - [backend/common/middleware.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/middleware.py)
 
-## Monitoring
+## 🤖 Monitoring
 
 Monitoring includes frontend, backend, and nginx logs.
 
@@ -141,7 +141,7 @@ Collected log groups:
 - `nginx.log`
 - `traefik.log`
 
-## Development
+## 🛠️ Development
 
 Local backend development is handled through Docker Compose, not a standalone `python manage.py runserver` workflow.
 
@@ -170,7 +170,7 @@ doppler --config dev run -- docker compose exec -T be poetry run mypy .
 doppler --config dev run -- docker compose exec -T be pre-commit run --all-files
 ```
 
-### Manual Commands
+### 🧰 Manual Commands
 
 If you need more control or want to run tools individually on your host, these are optional host-side commands and require local Poetry/Python setup:
 
@@ -182,9 +182,9 @@ poetry run pytest -v
 pre-commit run --all-files
 ```
 
-## Docker Integration (Recommended)
+## 🐳 Docker Integration (Recommended)
 
-### Deployment
+### 🚀 Deployment
 
 ```bash
 # run from the project root with centralized secrets.
@@ -193,7 +193,7 @@ pre-commit run --all-files
 doppler --config dev run -- docker compose up --build
 ```
 
-## Important Backend Areas
+## 🗂️ Important Backend Areas
 
 - settings and singleton config:
   - [backend/core/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/models.py)
@@ -204,7 +204,7 @@ doppler --config dev run -- docker compose up --build
 - monitoring:
   - [backend/monitoring/services.py](/Users/lukaszremkowicz/Projects/landingpage/backend/monitoring/services.py)
 
-## Notes
+## 📝 Notes
 
 - Django still owns sitemap generation and should remain the source of truth for dynamic public URLs.
 - The backend public API host should be treated as internal/administrative architecture, not the main browser contract.

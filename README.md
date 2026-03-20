@@ -1,4 +1,4 @@
-# Portfolio Landing Page
+# 🌌 Portfolio Landing Page
 
 Personal portfolio web app for astrophotography, travel stories, and programming work. The stack is:
 
@@ -8,9 +8,23 @@ Personal portfolio web app for astrophotography, travel stories, and programming
 - local/server routing: Traefik
 - secrets: Doppler
 
-## Live
+## 🌍 Live
 
 - Site: [lukaszremkowicz.com](https://lukaszremkowicz.com)
+
+## 🗂️ Repository Layout
+
+- `frontend/` - React + TypeScript app, SSR runtime, browser app, tests, and public assets
+- `backend/` - Django + DRF application, admin, Celery jobs, monitoring, and media logic
+- `docker/` - Dockerfiles and entrypoints for frontend, backend, redis, nginx, and traefik
+- `infra/` - nginx templates, traefik config, release scripts, monitoring scripts, and ops docs
+- `screenshots/` - README screenshots
+
+Component docs:
+
+- Frontend: [frontend/README.md](/Users/lukaszremkowicz/Projects/landingpage/frontend/README.md)
+- Backend: [backend/README.md](/Users/lukaszremkowicz/Projects/landingpage/backend/README.md)
+- Infra scripts: [infra/scripts/README.md](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/README.md)
 
 ## 📸 Screenshots
 
@@ -56,7 +70,7 @@ Application structure:
 - the browser uses `SITE_DOMAIN` as its public application host
 - Django remains the content owner and still handles sitemap generation
 
-## Glossary
+## 📖 Glossary
 
 - `SSR`: Server-Side Rendering. The frontend server renders HTML before it reaches the browser.
 - `BFF`: Backend For Frontend. A frontend-owned server layer that the browser talks to instead of calling backend APIs directly.
@@ -64,7 +78,7 @@ Application structure:
 - `ADMIN_DOMAIN`: Public Django admin host, for example `admin.portfolio.local`.
 - `API`: Internal backend API contract used by the frontend server and Django admin integrations.
 
-## Architecture Overview
+## 🧭 Architecture Overview
 
 ### Public entrypoints
 
@@ -132,9 +146,16 @@ The stack uses request correlation across FE and BE:
 - FE forwards `X-Request-ID` to BE
 - BE echoes and logs the same request ID
 
-## Quick Start
+## ⚡ Quick Start
 
 Local development is Docker Compose only. This project is not maintained as a standalone `manage.py runserver` / `npm start` workflow.
+
+### ✅ Prerequisites
+
+- Docker with the Compose plugin
+- Doppler CLI with access to the project secrets
+- `openssl` for generating local self-signed certificates
+- `/etc/hosts` access for local domain mapping
 
 ### 1. Clone
 
@@ -150,7 +171,34 @@ doppler login
 doppler setup
 ```
 
-### 3. Start local stack
+### 3. Bootstrap local Docker resources
+
+The local Compose stack expects these external Docker resources to already exist:
+
+```bash
+docker network create traefik_proxy || true
+docker volume create portfolio_dev_db_data || true
+docker volume create portfolio_dev_fe_node_modules || true
+docker volume create portfolio_dev_static_data || true
+```
+
+Generate local TLS certificates used by nginx:
+
+```bash
+./infra/scripts/nginx/generate-cert.sh
+```
+
+### 4. Configure local hosts
+
+Add these entries to `/etc/hosts`:
+
+```text
+127.0.0.1 portfolio.local
+127.0.0.1 admin.portfolio.local
+127.0.0.1 api.portfolio.local
+```
+
+### 5. Start local stack
 
 ```bash
 doppler --config dev run -- docker compose up --build
@@ -161,22 +209,18 @@ Local hosts:
 - Site: `https://portfolio.local/`
 - Admin: `https://admin.portfolio.local/`
 - API: `https://api.portfolio.local/` (still available as a backend host, but no longer the normal browser-facing application entrypoint)
+- Django health endpoint: `http://127.0.0.1:8000/health`
+- Flower: `http://127.0.0.1:5555/`
 
-> **Note:** You may need to add these domains to your `/etc/hosts` file:
-```text
-127.0.0.1 portfolio.local
-127.0.0.1 admin.portfolio.local
-127.0.0.1 api.portfolio.local
-```
-
-### 4. Verify local services
+### 6. Verify local services
 
 ```bash
 curl -k https://portfolio.local/
 curl -k https://admin.portfolio.local/
+curl -fsS http://127.0.0.1:8000/health
 ```
 
-## Local Development
+## 🛠️ Local Development
 
 Use Docker Compose for all normal local work:
 
@@ -203,9 +247,42 @@ doppler --config dev run -- docker compose exec -T be python manage.py migrate
 doppler --config dev run -- docker compose exec -T fe npm run type-check
 ```
 
+Optional local profile:
+
+- `docker compose --profile traefik up --build` starts `nginx-traefik` so local routing can run through Traefik instead of binding nginx directly to ports `80/443`.
+
 Standalone local development commands such as `python manage.py runserver` or `npm run dev` are not the supported workflow described by this repository.
 
-## Deployment
+## 🧪 Testing And Checks
+
+Typical project checks:
+
+```bash
+# frontend type checks and linting
+doppler --config dev run -- docker compose exec -T fe npm run type-check
+doppler --config dev run -- docker compose exec -T fe npm run lint
+
+# frontend unit tests
+doppler --config dev run -- docker compose exec -T fe npm test -- --runInBand
+
+# frontend e2e tests
+doppler --config dev run -- docker compose exec -T fe npm run test:e2e
+
+# backend test suite
+doppler --config dev run -- docker compose exec -T be poetry run pytest
+
+# backend static analysis
+doppler --config dev run -- docker compose exec -T be poetry run mypy .
+```
+
+Compose also exposes dedicated test services:
+
+```bash
+doppler --config dev run -- docker compose --profile test run --rm fe-test
+doppler --config dev run -- docker compose --profile test run --rm test
+```
+
+## 🚀 Deployment
 
 Typical release flow:
 
@@ -223,9 +300,9 @@ Production/stage deploys rebuild:
 - `nginx` when routing or public media rules change
 - `be` when invalidation, serializers, or backend routes change
 
-## Operations
+## 🔧 Operations
 
-### Monitoring
+### 📈 Monitoring
 
 Monitoring analyses:
 
@@ -237,6 +314,12 @@ Monitoring analyses:
 Collector docs:
 
 - [infra/scripts/monitoring/README.md](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/monitoring/README.md)
+
+## 📝 Notes
+
+- Active Node scripts live in [frontend/package.json](/Users/lukaszremkowicz/Projects/landingpage/frontend/package.json).
+- Python dependency and tool configuration live in [backend/pyproject.toml](/Users/lukaszremkowicz/Projects/landingpage/backend/pyproject.toml).
+- Local startup runs Django migrations, `seed_settings`, message compilation, and `collectstatic` automatically as part of the `be` service command.
 
 ### Cache Invalidation
 

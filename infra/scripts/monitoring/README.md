@@ -1,62 +1,90 @@
-# infra/scripts/monitoring/README.md
+# 📈 Monitoring Scripts
 
-## Monitoring Scripts
+Scripts for the `AgentLog` daily Docker log collection and analysis pipeline.
 
-Scripts for the **AgentLog** — the daily Docker log collection and analysis pipeline.
+## 🧭 Overview
 
----
+This folder covers the host-side part of monitoring:
 
-### `collect-logs.sh`
+- `collect-logs.sh` collects recent container logs into a shared directory
+- `portfolio-collect-logs.cron` schedules the collection job on the server
+- the backend monitoring app later reads those files and produces analysis output
 
-Collects logs from Docker containers and writes them to a shared directory on the **host** server.
-This is **Phase 1** of the AgentLog pipeline. It runs as a daily Ubuntu cron job (no Python, no Celery, no dependencies).
+## 📄 `collect-logs.sh`
 
-**What it does:**
-1. Clears any existing log files in `DOCKER_LOGS_DIR` (no stale data)
-2. Collects Docker logs for backend, frontend SSR, and reverse-proxy containers
-3. Writes `backend.log`, `frontend.log`, and `nginx.log` to `DOCKER_LOGS_DIR` when available
-4. Writes `collected_at.txt` with an ISO timestamp so the Celery worker can detect stale/missing data
+Collects logs from Docker containers and writes them to a shared directory on the host server.
+This is Phase 1 of the AgentLog pipeline. It runs as a cron job and does not depend on Django or Celery being started from the script itself.
 
-**Environment variables:**
+### ✅ What it does
+
+1. Ensures `DOCKER_LOGS_DIR` exists.
+2. Clears previous `*.log` files and `collected_at.txt` to avoid stale data.
+3. Resolves the active Compose project name.
+4. Collects logs for backend, frontend, nginx, and Traefik containers when available.
+5. Writes `collected_at.txt` with a UTC ISO timestamp so the backend can detect stale or missing data.
+
+### 🔐 Environment variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `DOCKER_LOGS_DIR` | ✅ Yes | — | Absolute path where log files are written |
-| `COMPOSE_FILE` | No | `/home/lukasz/portfolio/docker-compose.prod.yml` | Path to docker compose file |
-| `LOG_TAIL` | No | `2000` | Number of log lines to collect per container |
-| `BACKEND_SERVICE` | No | `portfolio-be` | Docker Compose service name for backend |
-| `FRONTEND_SERVICE` | No | `fe` | Docker Compose service name for frontend SSR |
-| `NGINX_SERVICE` | No | `nginx` | Docker Compose service name for Nginx |
-| `TRAEFIK_SERVICE` | No | `traefik` | Docker Compose service name for Traefik |
+| `DOCKER_LOGS_DIR` | Yes | None | Absolute path where log files are written |
+| `COMPOSE_FILE` | Yes | None | Compose file used to infer the environment and Compose project |
+| `ENVIRONMENT` | No | Inferred from `COMPOSE_FILE` | Environment name used for project resolution |
+| `LOG_TAIL` | No | `5000` | Number of log lines to collect per container |
+| `BACKEND_SERVICE` | No | `be` | Compose service name for backend |
+| `FRONTEND_SERVICE` | No | `fe` | Compose service name for frontend SSR |
+| `NGINX_SERVICE` | No | `nginx` | Compose service name for nginx |
+| `TRAEFIK_SERVICE` | No | `traefik` | Compose service name for Traefik |
 
-**Manual run:**
+### 📝 Output files
+
+The script writes these files into `DOCKER_LOGS_DIR`:
+
+- `backend.log`
+- `frontend.log`
+- `nginx.log`
+- `traefik.log`
+- `collected_at.txt`
+
+If a service is not running, the script logs a warning and writes an empty file for that service instead of failing the whole collection.
+
+### ▶️ Manual run
+
 ```bash
-DOCKER_LOGS_DIR=/var/log/portfolio/docker-logs /home/lukasz/portfolio/infra/scripts/monitoring/collect-logs.sh
+DOCKER_LOGS_DIR=/var/log/portfolio/docker-logs \
+COMPOSE_FILE=/home/lukasz/portfolio/docker-compose.prod.yml \
+/home/lukasz/portfolio/infra/scripts/monitoring/collect-logs.sh
 ```
 
----
-
-### `portfolio-collect-logs.cron`
+## ⏰ `portfolio-collect-logs.cron`
 
 System cron entry that runs `collect-logs.sh` daily at midnight UTC.
 
-**Installation:**
+### ⚙️ Installation
+
 ```bash
 sudo cp portfolio-collect-logs.cron /etc/cron.d/portfolio-collect-logs
 sudo chmod 644 /etc/cron.d/portfolio-collect-logs
 ```
 
-> **Note:** No `systemctl enable` or `crontab -e` required. Ubuntu's `cron` daemon is enabled by default and automatically picks up any file placed in `/etc/cron.d/` within ~1 minute.
-> Verify cron is running: `systemctl status cron`
+> **Note:** No `systemctl enable` or `crontab -e` is required. Ubuntu's `cron` daemon picks up files from `/etc/cron.d/` automatically.
 
-**Log output:** Appended to `/var/log/portfolio/collect-logs.log`
-
----
-
-### Server Setup (one-time)
+Useful check:
 
 ```bash
-# Create the log directory and grant access to the lukasz user
+systemctl status cron
+```
+
+### 🪵 Cron log output
+
+Job output is appended to:
+
+- `/var/log/portfolio/collect-logs.log`
+
+## 🛠️ Server Setup
+
+```bash
+# Create the log directory and grant access to the deploy user
 sudo mkdir -p /var/log/portfolio/docker-logs
 sudo chown lukasz:lukasz /var/log/portfolio
 sudo chown lukasz:lukasz /var/log/portfolio/docker-logs
@@ -68,3 +96,8 @@ chmod +x /home/lukasz/portfolio/infra/scripts/monitoring/collect-logs.sh
 sudo cp /home/lukasz/portfolio/infra/scripts/monitoring/portfolio-collect-logs.cron /etc/cron.d/portfolio-collect-logs
 sudo chmod 644 /etc/cron.d/portfolio-collect-logs
 ```
+
+## 🔗 Related docs
+
+- Infra runbook: [infra/scripts/README.md](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/README.md)
+- Root project README: [README.md](/Users/lukaszremkowicz/Projects/landingpage/README.md)

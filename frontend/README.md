@@ -1,4 +1,4 @@
-# Portfolio Frontend
+# 🎨 Portfolio Frontend
 
 React + TypeScript frontend rendered by a Node SSR server. The frontend owns:
 
@@ -7,7 +7,7 @@ React + TypeScript frontend rendered by a Node SSR server. The frontend owns:
 - public env injection for the HTML shell
 - frontend-side SSR shell caching
 
-## Features
+## ✨ Features
 
 - server-side rendered public website
 - astrophotography gallery with filtering and image detail flows
@@ -17,7 +17,7 @@ React + TypeScript frontend rendered by a Node SSR server. The frontend owns:
 - SEO metadata and sitemap-compatible public routing
 - structured request logging and request correlation
 
-## Technology Stack
+## 🧱 Technology Stack
 
 - React 19
 - TypeScript
@@ -32,7 +32,7 @@ React + TypeScript frontend rendered by a Node SSR server. The frontend owns:
 - Sentry
 - Vite PWA plugin
 
-## Environment Variables
+## 🔐 Environment Variables
 
 The frontend uses both public browser env values and server-side SSR env values.
 
@@ -58,7 +58,7 @@ Browser build aliases still use `VITE_`-prefixed values where needed:
 
 In Docker Compose, these values are wired through the frontend container configuration.
 
-## Performance Features
+## ⚡ Performance Features
 
 - TanStack Query for frontend data fetching, caching, and hydration
 - SSR shell prefetch with dehydrated React Query state
@@ -69,7 +69,7 @@ In Docker Compose, these values are wired through the frontend container configu
 - skeleton loading states for interactive content
 - nginx delivery for public static media on `SITE_DOMAIN`
 
-## PWA Support
+## 📱 PWA Support
 
 The frontend includes Progressive Web App support through the Vite PWA plugin.
 
@@ -82,7 +82,7 @@ Current PWA-related pieces:
 
 PWA support is a frontend concern and does not change the SSR/BFF request flow.
 
-## Frontend Role In The Current Architecture
+## 🧭 Frontend Role In The Current Architecture
 
 The frontend server is the main public application entrypoint on `SITE_DOMAIN`.
 
@@ -95,7 +95,7 @@ Request flow:
 5. browser hydrates
 6. if client-side JSON is still needed, browser talks to FE-owned endpoints, not directly to backend
 
-## Glossary
+## 📖 Glossary
 
 - `SSR`: Server-Side Rendering
 - `BFF`: Backend For Frontend. FE-owned server routes that proxy/shape backend data for the browser.
@@ -103,7 +103,7 @@ Request flow:
 - `ADMIN_DOMAIN`: Django admin hostname
 - `views`: FE server-side modules that own request/data contracts, similar in spirit to Django views
 
-## Frontend Architecture
+## 🏗️ Frontend Architecture
 
 ### Page rendering
 
@@ -131,7 +131,7 @@ Request flow:
 - BE invalidates FE cache through an internal webhook
 - cache keys use resource + language + site host
 
-## Current FE Structure
+## 🗂️ Current FE Structure
 
 ### Browser-side low-level transport
 
@@ -169,7 +169,7 @@ Responsibilities:
 - route-aware SSR prefetch
 - dehydrated state generation
 
-## Endpoint Configuration
+## 🔌 Endpoint Configuration
 
 Backend API route definitions are centralized in:
 
@@ -182,7 +182,7 @@ These files define:
 - browser-facing FE transport endpoints under `/app/*`
 - public route constants used by the frontend application
 
-## Current Public Contract
+## 🌐 Current Public Contract
 
 Public page URLs:
 
@@ -221,7 +221,7 @@ Backend API routes currently used by the frontend include:
 - `/v1/images/:slug/serve/`
 - `/v1/contact/`
 
-## Frontend SSR Cache
+## 🧠 Frontend SSR Cache
 
 Cache targets:
 
@@ -243,7 +243,7 @@ Internal cache files:
 
 - [frontend/server/ssrCache.js](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/ssrCache.js)
 
-## Observability
+## 📈 Observability
 
 Frontend structured logs now include:
 
@@ -263,7 +263,7 @@ Main log groups:
 - `cache-invalidate`
 - `health`
 
-## Development
+## 🛠️ Development
 
 Local frontend development is handled through Docker Compose, not a standalone `npm run dev` workflow.
 
@@ -288,7 +288,7 @@ doppler --config dev run -- docker compose exec -T fe npm run lint
 doppler --config dev run -- docker compose exec -T fe npm test -- --watchAll=false
 ```
 
-## Hot Reload
+## 🔄 Hot Reload
 
 The frontend container runs `npm run dev:ssr` in local development.
 
@@ -301,7 +301,7 @@ That command uses Node watch mode and rebuilds/restarts the SSR server when file
 
 So the supported local workflow still has live reload, but it is provided through the Compose-managed frontend container rather than a standalone host `npm run dev` process.
 
-## Testing
+## 🧪 Testing
 
 Frontend tests and checks run inside the Compose-managed frontend container.
 
