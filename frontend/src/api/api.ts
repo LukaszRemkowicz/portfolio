@@ -150,15 +150,21 @@ function attachErrorInterceptor(client: AxiosInstance) {
   );
 }
 
-export function createApiClient(getLanguage: () => string): AxiosInstance {
+export function createApiClient(
+  getLanguage: () => string,
+  requestOrigin?: string
+): AxiosInstance {
   const defaultHeaders: Record<string, string> = {};
 
   if (typeof window === 'undefined') {
     try {
-      const publicApiUrl = new URL(publicEnv.API_URL);
-      defaultHeaders.Host = publicApiUrl.host;
-      defaultHeaders['X-Forwarded-Host'] = publicApiUrl.host;
-      defaultHeaders['X-Forwarded-Proto'] = publicApiUrl.protocol.replace(
+      const publicSiteUrl = requestOrigin
+        ? new URL(requestOrigin)
+        : new URL(`https://${publicEnv.SITE_DOMAIN}`);
+
+      defaultHeaders.Host = publicSiteUrl.host;
+      defaultHeaders['X-Forwarded-Host'] = publicSiteUrl.host;
+      defaultHeaders['X-Forwarded-Proto'] = publicSiteUrl.protocol.replace(
         ':',
         ''
       );

@@ -35,6 +35,7 @@ const MIME_TYPES = {
 
 const BFF_ROUTES = {
   contact: '/app/contact',
+  images: '/app/images/',
   travelBySlug: '/app/travel/',
 };
 
@@ -175,7 +176,11 @@ function getBackendBaseUrl(requestPublicEnv) {
   return process.env.SSR_API_URL || requestPublicEnv.API_URL;
 }
 
-function getBackendForwardHeaders(requestPublicEnv, acceptLanguage) {
+function getBackendForwardHeaders(
+  requestPublicEnv,
+  acceptLanguage,
+  requestOrigin
+) {
   const headers = {
     Accept: 'application/json',
   };
@@ -185,10 +190,12 @@ function getBackendForwardHeaders(requestPublicEnv, acceptLanguage) {
   }
 
   try {
-    const publicApiUrl = new URL(requestPublicEnv.API_URL);
-    headers.Host = publicApiUrl.host;
-    headers['X-Forwarded-Host'] = publicApiUrl.host;
-    headers['X-Forwarded-Proto'] = publicApiUrl.protocol.replace(':', '');
+    const publicSiteUrl = requestOrigin
+      ? new URL(requestOrigin)
+      : new URL(`https://${requestPublicEnv.SITE_DOMAIN}`);
+    headers.Host = publicSiteUrl.host;
+    headers['X-Forwarded-Host'] = publicSiteUrl.host;
+    headers['X-Forwarded-Proto'] = publicSiteUrl.protocol.replace(':', '');
   } catch {
     // Ignore malformed public API URLs and fall back to transport defaults.
   }
@@ -198,6 +205,7 @@ function getBackendForwardHeaders(requestPublicEnv, acceptLanguage) {
 
 async function fetchBackendJson(req, backendPath, requestUrl) {
   const requestPublicEnv = getRequestPublicEnv(req);
+  const requestOrigin = getRequestOrigin(req);
   const upstreamBaseUrl = getBackendBaseUrl(requestPublicEnv);
   const upstreamUrl = new URL(backendPath, upstreamBaseUrl);
 
@@ -209,7 +217,8 @@ async function fetchBackendJson(req, backendPath, requestUrl) {
   const response = await fetch(upstreamUrl, {
     headers: getBackendForwardHeaders(
       requestPublicEnv,
-      req.headers['accept-language']
+      req.headers['accept-language'],
+      requestOrigin
     ),
   });
   const durationMs = Date.now() - startedAt;
@@ -249,6 +258,7 @@ async function readJsonBody(req) {
 
 async function forwardBackendWrite(req, backendPath) {
   const requestPublicEnv = getRequestPublicEnv(req);
+  const requestOrigin = getRequestOrigin(req);
   const upstreamBaseUrl = getBackendBaseUrl(requestPublicEnv);
   const upstreamUrl = new URL(backendPath, upstreamBaseUrl);
   const body = await readJsonBody(req);
@@ -259,7 +269,8 @@ async function forwardBackendWrite(req, backendPath) {
     headers: {
       ...getBackendForwardHeaders(
         requestPublicEnv,
-        req.headers['accept-language']
+        req.headers['accept-language'],
+        requestOrigin
       ),
       'Content-Type': 'application/json',
     },
@@ -288,6 +299,14 @@ function isTravelBffRoute(pathname) {
   return /^\/app\/travel\/[^/]+\/[^/]+\/[^/]+\/?$/.test(pathname);
 }
 
+function isImagesBffListRoute(pathname) {
+  return pathname === BFF_ROUTES.images || pathname === '/app/images';
+}
+
+function isImagesBffDetailRoute(pathname) {
+  return /^\/app\/images\/[^/]+\/?$/.test(pathname);
+}
+
 function getTravelBackendPath(pathname) {
   const match = pathname.match(/^\/app\/travel\/([^/]+)\/([^/]+)\/([^/]+)\/?$/);
   if (!match) {
@@ -296,6 +315,20 @@ function getTravelBackendPath(pathname) {
 
   const [, countrySlug, placeSlug, dateSlug] = match;
   return `/v1/travel/${countrySlug}/${placeSlug}/${dateSlug}/`;
+}
+
+function getImagesBackendPath(pathname) {
+  if (isImagesBffListRoute(pathname)) {
+    return '/v1/images/';
+  }
+
+  const match = pathname.match(/^\/app\/images\/([^/]+)\/?$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, slug] = match;
+  return `/v1/images/${slug}/`;
 }
 
 async function handleBffRequest(req, res, requestUrl, start) {
@@ -317,6 +350,11 @@ async function handleBffRequest(req, res, requestUrl, start) {
     default:
       if (isTravelBffRoute(pathname)) {
         backendPath = getTravelBackendPath(pathname);
+      } else if (
+        isImagesBffListRoute(pathname) ||
+        isImagesBffDetailRoute(pathname)
+      ) {
+        backendPath = getImagesBackendPath(pathname);
       }
       break;
   }

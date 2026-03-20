@@ -12,20 +12,47 @@ import { APP_ROUTES, DEFAULT_TRAVEL_IMAGE } from '../api/constants';
 import { useTranslation } from 'react-i18next';
 import ImageWithFallback from './common/ImageWithFallback';
 
+const getNextAvailableIndex = (
+  imagesLength: number,
+  startIndex: number,
+  failed: Set<number>
+) => {
+  if (imagesLength === 0) {
+    return 0;
+  }
+
+  for (let offset = 1; offset <= imagesLength; offset += 1) {
+    const candidate = (startIndex + offset) % imagesLength;
+    if (!failed.has(candidate)) {
+      return candidate;
+    }
+  }
+
+  return startIndex;
+};
+
 const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [failedIndices, setFailedIndices] = useState<Set<number>>(new Set());
-  const images = location.images.map(img => img.thumbnail_url || '');
+  const images = location.images
+    .map(img => img.thumbnail_url || '')
+    .filter(Boolean);
+  const activeIndex =
+    images.length > 1 && failedIndices.has(currentIndex)
+      ? getNextAvailableIndex(images.length, currentIndex, failedIndices)
+      : currentIndex;
 
   useEffect(() => {
     if (images.length <= 1) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % images.length);
+      setCurrentIndex(prev =>
+        getNextAvailableIndex(images.length, prev, failedIndices)
+      );
     }, 7000);
     return () => clearInterval(interval);
-  }, [images.length]);
+  }, [failedIndices, images.length]);
 
   const handleImageError = (index: number) => {
     setFailedIndices(prev => new Set(prev).add(index));
@@ -34,6 +61,8 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
   // Fallback logic
   const hasNoImages = images.length === 0;
   const displayImages = !hasNoImages ? images : [DEFAULT_TRAVEL_IMAGE];
+  const allImagesFailed =
+    !hasNoImages && failedIndices.size >= displayImages.length;
 
   // Construct display location: "Place, Country" or just "Country"
   const displayLocation = location.place?.name
@@ -89,14 +118,16 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
               src={img}
               alt={`Travel highlight from ${location.place?.country}`}
               className={`${styles.cardImage} ${
-                index === currentIndex ? styles.active : ''
+                index === activeIndex && !failedIndices.has(index)
+                  ? styles.active
+                  : ''
               }`}
               onError={() => handleImageError(index)}
               loading='lazy'
             />
-            {(failedIndices.has(index) || hasNoImages) && (
+            {(hasNoImages || allImagesFailed) && (
               <div
-                className={`${styles.placeholderOverlay} ${index === currentIndex ? styles.active : ''}`}
+                className={`${styles.placeholderOverlay} ${index === activeIndex ? styles.active : ''}`}
               >
                 <span className={styles.placeholderText}>[Placeholder]</span>
               </div>

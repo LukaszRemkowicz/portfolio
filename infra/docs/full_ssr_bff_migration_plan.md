@@ -403,6 +403,22 @@ Success criteria:
 
 - browser does not depend on public backend helper endpoints for image metadata/signing
 
+### Phase 4 progress
+
+Phase 4 is complete under the chosen media boundary:
+
+- browser image URL helper calls now use frontend-owned `/app/images/` routes
+- frontend server proxies those requests internally to backend `/v1/images/` routes
+- frontend-server SSR and BFF requests forward the current site host to Django, so backend-generated absolute URLs resolve on `SITE_DOMAIN` instead of the public API hostname
+- public-safe image delivery remains on nginx for performance
+- secure image serving remains on the existing backend/nginx signed-media path, but uses the site hostname in browser-visible URLs
+
+This means:
+
+- browser-facing image helper metadata/signing no longer depends on public backend JSON endpoints
+- nginx still serves public/static media directly
+- the backend secure-image serving implementation remains unchanged internally, but the browser no longer needs a separate `api.` hostname for those generated URLs
+
 ## Phase 5: Frontend Data Layer Refactor
 
 Separate concerns in the frontend:

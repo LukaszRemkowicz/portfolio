@@ -112,9 +112,10 @@ async function prefetchQuerySafely(
 async function prefetchRouteQueries(
   queryClient: QueryClient,
   url: string,
-  language: string
+  language: string,
+  requestOrigin?: string
 ) {
-  const client = createApiClient(() => language);
+  const client = createApiClient(() => language, requestOrigin);
   const requestUrl = new URL(url, 'http://frontend.local');
   const pathname = requestUrl.pathname;
   const searchParams = requestUrl.searchParams;
@@ -224,7 +225,12 @@ async function prepareRenderContext(
   const { createServerI18n } = await import('./i18n.server');
   const i18nInstance = await createServerI18n(acceptLanguage);
 
-  await prefetchRouteQueries(queryClient, url, i18nInstance.language || 'en');
+  await prefetchRouteQueries(
+    queryClient,
+    url,
+    i18nInstance.language || 'en',
+    requestOrigin
+  );
 
   const helmetContext: { helmet?: HelmetServerState } = {};
   const dehydratedState = dehydrate(queryClient);
