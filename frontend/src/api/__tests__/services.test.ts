@@ -53,11 +53,9 @@ describe('API Services', () => {
     });
 
     it('should throw error on 500 for profile', async () => {
-      (api.get as jest.Mock).mockRejectedValueOnce(
-        new Error('Internal Server Error')
-      );
+      (api.get as jest.Mock).mockRejectedValueOnce(new Error('server failed'));
 
-      await expect(fetchProfile()).rejects.toThrow('Internal Server Error');
+      await expect(fetchProfile()).rejects.toThrow('server failed');
     });
   });
 
@@ -152,9 +150,9 @@ describe('API Services', () => {
       const consoleSpy = jest
         .spyOn(console, 'error')
         .mockImplementation(() => {});
-      (api.get as jest.Mock).mockRejectedValueOnce(new Error('API error'));
+      (api.get as jest.Mock).mockRejectedValueOnce(new Error('server failed'));
 
-      await expect(fetchSettings()).rejects.toThrow('API error');
+      await expect(fetchSettings()).rejects.toThrow('server failed');
       consoleSpy.mockRestore();
     });
   });

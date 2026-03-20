@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/api';
 import type { AxiosInstance } from 'axios';
-import { API_ROUTES, getMediaUrl } from '../api/routes';
+import { API_ROUTES, BFF_ROUTES, getMediaUrl } from '../api/routes';
 import { AstroImage } from '../types';
 
 export interface ExtendedAstroImage extends AstroImage {
@@ -30,9 +30,28 @@ export const fetchTravelHighlightDetail = async ({
   dateSlug: string;
   client?: AxiosInstance;
 }): Promise<TravelHighlightDetail> => {
-  const response = await client.get(
-    `${API_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`
-  );
+  const useFrontendBff = typeof window !== 'undefined' && client === api;
+  const response = useFrontendBff
+    ? {
+        data: await fetch(
+          `${BFF_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`,
+          {
+            headers: {
+              Accept: 'application/json',
+            },
+          }
+        ).then(async res => {
+          if (!res.ok) {
+            throw new Error(
+              `BFF travel detail request failed with status ${res.status}`
+            );
+          }
+          return res.json();
+        }),
+      }
+    : await client.get(
+        `${API_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`
+      );
 
   const data = response.data;
   if (!data || typeof data !== 'object') {

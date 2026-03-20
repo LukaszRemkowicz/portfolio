@@ -29,10 +29,9 @@ export const fetchProfile = async (
   client: AxiosInstance = api
 ): Promise<UserProfile> => {
   try {
-    const response: AxiosResponse<UserProfile> = await client.get(
-      API_ROUTES.profile
+    const data = handleResponse<UserProfile>(
+      await client.get(API_ROUTES.profile)
     );
-    const data = handleResponse<UserProfile>(response);
 
     // Transform relative media paths to full URLs
     if (data) {
@@ -69,10 +68,9 @@ export const fetchBackground = async (
   client: AxiosInstance = api
 ): Promise<string | null> => {
   try {
-    const response: AxiosResponse<BackgroundImage> = await client.get(
-      API_ROUTES.background
+    const data = handleResponse<BackgroundImage>(
+      await client.get(API_ROUTES.background)
     );
-    const data = handleResponse<BackgroundImage>(response);
     if (data && data.url) {
       return data.url;
     }
@@ -107,10 +105,9 @@ export const fetchAstroImages = async (
 export const fetchLatestAstroImages = async (
   client: AxiosInstance = api
 ): Promise<AstroImage[]> => {
-  const response: AxiosResponse<AstroImage[]> = await client.get(
-    `${API_ROUTES.astroImages}latest/`
+  const data = handleResponse<AstroImage[]>(
+    await client.get(`${API_ROUTES.astroImages}latest/`)
   );
-  const data = handleResponse<AstroImage[]>(response);
   if (Array.isArray(data)) {
     return data.map(image => ({
       ...image,
@@ -170,10 +167,9 @@ export const fetchSettings = async (
   client: AxiosInstance = api
 ): Promise<EnabledFeatures> => {
   try {
-    const response: AxiosResponse<EnabledFeatures> = await client.get(
-      API_ROUTES.settings
+    return handleResponse<EnabledFeatures>(
+      await client.get(API_ROUTES.settings)
     );
-    return handleResponse<EnabledFeatures>(response);
   } catch (error: unknown) {
     console.error('Error fetching settings:', error);
     // Return empty features and empty meteors on error (or handle appropriately)
@@ -202,10 +198,9 @@ export const fetchProjects = async (): Promise<Project[]> => {
 export const fetchTravelHighlights = async (
   client: AxiosInstance = api
 ): Promise<MainPageLocation[]> => {
-  const response: AxiosResponse<MainPageLocation[]> = await client.get(
-    API_ROUTES.travelHighlights
+  const data = handleResponse<MainPageLocation[]>(
+    await client.get(API_ROUTES.travelHighlights)
   );
-  const data = handleResponse<MainPageLocation[]>(response);
 
   if (Array.isArray(data)) {
     return data.map(slider => ({

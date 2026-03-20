@@ -127,24 +127,22 @@ async function prefetchRouteQueries(
       queryKey: ['profile'],
       queryFn: () => fetchProfile(client),
     }),
+    prefetchQuerySafely(queryClient, {
+      queryKey: ['background'],
+      queryFn: () => fetchBackground(client),
+    }),
+    prefetchQuerySafely(queryClient, {
+      queryKey: ['travel-highlights'],
+      queryFn: () => fetchTravelHighlights(client),
+    }),
+    prefetchQuerySafely(queryClient, {
+      queryKey: ['latest-astro-images'],
+      queryFn: () => fetchLatestAstroImages(client),
+    }),
   ];
 
   if (pathname === APP_ROUTES.HOME) {
-    await Promise.all([
-      ...commonPrefetches,
-      prefetchQuerySafely(queryClient, {
-        queryKey: ['background'],
-        queryFn: () => fetchBackground(client),
-      }),
-      prefetchQuerySafely(queryClient, {
-        queryKey: ['travel-highlights'],
-        queryFn: () => fetchTravelHighlights(client),
-      }),
-      prefetchQuerySafely(queryClient, {
-        queryKey: ['latest-astro-images'],
-        queryFn: () => fetchLatestAstroImages(client),
-      }),
-    ]);
+    await Promise.all([...commonPrefetches]);
     return;
   }
 
@@ -156,10 +154,6 @@ async function prefetchRouteQueries(
     const { countrySlug, placeSlug, dateSlug } = travelMatch.params;
     await Promise.all([
       ...commonPrefetches,
-      prefetchQuerySafely(queryClient, {
-        queryKey: ['background'],
-        queryFn: () => fetchBackground(client),
-      }),
       prefetchQuerySafely(queryClient, {
         queryKey: ['travel-highlight', countrySlug, placeSlug, dateSlug],
         queryFn: () =>
@@ -187,10 +181,6 @@ async function prefetchRouteQueries(
 
     await Promise.all([
       ...commonPrefetches,
-      prefetchQuerySafely(queryClient, {
-        queryKey: ['background'],
-        queryFn: () => fetchBackground(client),
-      }),
       prefetchQuerySafely(queryClient, {
         queryKey: ['categories'],
         queryFn: () => fetchCategories(client),

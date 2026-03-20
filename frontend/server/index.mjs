@@ -33,6 +33,10 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2',
 };
 
+const BFF_ROUTES = {
+  travelBySlug: '/app/travel/',
+};
+
 function getStaticHeaders(filePath) {
   const ext = path.extname(filePath);
   const type = MIME_TYPES[ext] || 'application/octet-stream';
@@ -157,6 +161,130 @@ function serializePublicEnvForHtml(config) {
   });
 }
 
+function getRequestPublicEnv(req) {
+  const requestOrigin = getRequestOrigin(req);
+  const requestUrl = new URL(requestOrigin);
+  return resolvePublicEnv({
+    ...publicEnv,
+    SITE_DOMAIN: requestUrl.host,
+  });
+}
+
+function getBackendBaseUrl(requestPublicEnv) {
+  return process.env.SSR_API_URL || requestPublicEnv.API_URL;
+}
+
+function getBackendForwardHeaders(requestPublicEnv, acceptLanguage) {
+  const headers = {
+    Accept: 'application/json',
+  };
+
+  if (typeof acceptLanguage === 'string' && acceptLanguage.trim()) {
+    headers['Accept-Language'] = acceptLanguage;
+  }
+
+  try {
+    const publicApiUrl = new URL(requestPublicEnv.API_URL);
+    headers.Host = publicApiUrl.host;
+    headers['X-Forwarded-Host'] = publicApiUrl.host;
+    headers['X-Forwarded-Proto'] = publicApiUrl.protocol.replace(':', '');
+  } catch {
+    // Ignore malformed public API URLs and fall back to transport defaults.
+  }
+
+  return headers;
+}
+
+async function fetchBackendJson(req, backendPath, requestUrl) {
+  const requestPublicEnv = getRequestPublicEnv(req);
+  const upstreamBaseUrl = getBackendBaseUrl(requestPublicEnv);
+  const upstreamUrl = new URL(backendPath, upstreamBaseUrl);
+
+  if (requestUrl?.search) {
+    upstreamUrl.search = requestUrl.search;
+  }
+
+  const startedAt = Date.now();
+  const response = await fetch(upstreamUrl, {
+    headers: getBackendForwardHeaders(
+      requestPublicEnv,
+      req.headers['accept-language']
+    ),
+  });
+  const durationMs = Date.now() - startedAt;
+  const text = await response.text();
+
+  let payload;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    payload = text;
+  }
+
+  return {
+    durationMs,
+    payload,
+    requestPublicEnv,
+    response,
+    upstreamBaseUrl,
+    upstreamUrl,
+  };
+}
+
+function isTravelBffRoute(pathname) {
+  return /^\/app\/travel\/[^/]+\/[^/]+\/[^/]+\/?$/.test(pathname);
+}
+
+function getTravelBackendPath(pathname) {
+  const match = pathname.match(/^\/app\/travel\/([^/]+)\/([^/]+)\/([^/]+)\/?$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, countrySlug, placeSlug, dateSlug] = match;
+  return `/v1/travel/${countrySlug}/${placeSlug}/${dateSlug}/`;
+}
+
+async function handleBffRequest(req, res, requestUrl, start) {
+  const pathname = requestUrl.pathname;
+  let backendPath = null;
+
+  switch (pathname) {
+    default:
+      if (isTravelBffRoute(pathname)) {
+        backendPath = getTravelBackendPath(pathname);
+      }
+      break;
+  }
+
+  if (!backendPath) {
+    return false;
+  }
+
+  const { durationMs, payload, response, upstreamBaseUrl, upstreamUrl } =
+    await fetchBackendJson(req, backendPath, requestUrl);
+
+  res.writeHead(response.status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+  });
+  res.end(JSON.stringify(payload));
+
+  logRequest({
+    kind: 'bff',
+    method: req.method,
+    path: requestUrl.pathname,
+    query: requestUrl.search || '',
+    status: response.status,
+    duration_ms: Date.now() - start,
+    upstream_duration_ms: durationMs,
+    upstream_path: `${upstreamUrl.pathname}${upstreamUrl.search}`,
+    upstream_base_url: upstreamBaseUrl,
+  });
+
+  return true;
+}
+
 function logRequest(info) {
   console.log(
     JSON.stringify({
@@ -172,10 +300,9 @@ async function renderDocument(url, acceptLanguage, requestOrigin) {
     import(pathToFileURL(serverEntryPath).href),
     readFile(indexHtmlPath, 'utf8'),
   ]);
-  const requestUrl = new URL(requestOrigin);
   const requestPublicEnv = resolvePublicEnv({
     ...publicEnv,
-    SITE_DOMAIN: requestUrl.host,
+    SITE_DOMAIN: new URL(requestOrigin).host,
   });
 
   const { stream, helmetContext, dehydratedState, language, abort } =
@@ -301,6 +428,10 @@ const server = http.createServer(async (req, res) => {
         status: 200,
         duration_ms: Date.now() - start,
       });
+      return;
+    }
+
+    if (await handleBffRequest(req, res, requestUrl, start)) {
       return;
     }
 

@@ -8,5 +8,9 @@ export const useTravelHighlights = (enabled = true) =>
     queryKey: ['travel-highlights'],
     queryFn: () => fetchTravelHighlights(),
     enabled,
-    staleTime: 5 * 60 * 1000,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });

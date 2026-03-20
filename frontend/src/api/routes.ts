@@ -16,6 +16,10 @@ export const API_ROUTES: ApiRoutes = {
   categories: `${API_V1}/categories/`,
 };
 
+export const BFF_ROUTES = {
+  travelBySlug: '/app/travel/',
+};
+
 // Centralized asset fallbacks
 export const ASSETS = {
   logo: '/logo.png',

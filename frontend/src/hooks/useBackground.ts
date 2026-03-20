@@ -6,5 +6,9 @@ export const useBackground = () =>
   useQuery<string | null, Error>({
     queryKey: ['background'],
     queryFn: () => fetchBackground(),
-    staleTime: 10 * 60 * 1000,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });

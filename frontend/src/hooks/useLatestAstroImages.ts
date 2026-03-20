@@ -8,5 +8,9 @@ export const useLatestAstroImages = (enabled: boolean = true) =>
     queryKey: ['latest-astro-images'],
     queryFn: () => fetchLatestAstroImages(),
     enabled,
-    staleTime: 5 * 60 * 1000,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });

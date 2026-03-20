@@ -7,5 +7,9 @@ export const useProfile = () =>
   useQuery<UserProfile, Error>({
     queryKey: ['profile'],
     queryFn: () => fetchProfile(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
