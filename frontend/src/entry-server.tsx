@@ -113,9 +113,10 @@ async function prefetchRouteQueries(
   queryClient: QueryClient,
   url: string,
   language: string,
-  requestOrigin?: string
+  requestOrigin?: string,
+  requestId?: string
 ) {
-  const client = createApiClient(() => language, requestOrigin);
+  const client = createApiClient(() => language, requestOrigin, requestId);
   const requestUrl = new URL(url, 'http://frontend.local');
   const pathname = requestUrl.pathname;
   const searchParams = requestUrl.searchParams;
@@ -211,7 +212,8 @@ interface PreparedRenderContext {
 async function prepareRenderContext(
   url: string,
   acceptLanguage = 'en',
-  requestOrigin?: string
+  requestOrigin?: string,
+  requestId?: string
 ): Promise<PreparedRenderContext> {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -229,7 +231,8 @@ async function prepareRenderContext(
     queryClient,
     url,
     i18nInstance.language || 'en',
-    requestOrigin
+    requestOrigin,
+    requestId
   );
 
   const helmetContext: { helmet?: HelmetServerState } = {};
@@ -258,12 +261,14 @@ async function prepareRenderContext(
 export async function renderStream(
   url: string,
   acceptLanguage = 'en',
-  requestOrigin?: string
+  requestOrigin?: string,
+  requestId?: string
 ): Promise<StreamRenderResult> {
   const prepared = await prepareRenderContext(
     url,
     acceptLanguage,
-    requestOrigin
+    requestOrigin,
+    requestId
   );
 
   return new Promise((resolve, reject) => {
@@ -318,12 +323,14 @@ export async function renderStream(
 export async function render(
   url: string,
   acceptLanguage = 'en',
-  requestOrigin?: string
+  requestOrigin?: string,
+  requestId?: string
 ): Promise<RenderResult> {
   const prepared = await prepareRenderContext(
     url,
     acceptLanguage,
-    requestOrigin
+    requestOrigin,
+    requestId
   );
   const html = await renderAppToString(prepared.element);
 

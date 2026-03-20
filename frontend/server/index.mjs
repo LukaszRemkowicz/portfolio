@@ -1,4 +1,5 @@
 import { createReadStream, existsSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
@@ -145,6 +146,10 @@ function getRequestOrigin(req) {
   return `${proto}://${host}`;
 }
 
+function getRequestId(req) {
+  return getForwardedValue(req.headers['x-request-id']) || randomUUID();
+}
+
 function serializeStateForHtml(state) {
   return JSON.stringify(state)
     .replace(/</g, '\\u003c')
@@ -179,7 +184,8 @@ function getBackendBaseUrl(requestPublicEnv) {
 function getBackendForwardHeaders(
   requestPublicEnv,
   acceptLanguage,
-  requestOrigin
+  requestOrigin,
+  requestId
 ) {
   const headers = {
     Accept: 'application/json',
@@ -200,10 +206,14 @@ function getBackendForwardHeaders(
     // Ignore malformed public API URLs and fall back to transport defaults.
   }
 
+  if (requestId) {
+    headers['X-Request-ID'] = requestId;
+  }
+
   return headers;
 }
 
-async function fetchBackendJson(req, backendPath, requestUrl) {
+async function fetchBackendJson(req, backendPath, requestUrl, requestId) {
   const requestPublicEnv = getRequestPublicEnv(req);
   const requestOrigin = getRequestOrigin(req);
   const upstreamBaseUrl = getBackendBaseUrl(requestPublicEnv);
@@ -218,7 +228,8 @@ async function fetchBackendJson(req, backendPath, requestUrl) {
     headers: getBackendForwardHeaders(
       requestPublicEnv,
       req.headers['accept-language'],
-      requestOrigin
+      requestOrigin,
+      requestId
     ),
   });
   const durationMs = Date.now() - startedAt;
@@ -256,7 +267,7 @@ async function readJsonBody(req) {
   return rawBody ? JSON.parse(rawBody) : null;
 }
 
-async function forwardBackendWrite(req, backendPath) {
+async function forwardBackendWrite(req, backendPath, requestId) {
   const requestPublicEnv = getRequestPublicEnv(req);
   const requestOrigin = getRequestOrigin(req);
   const upstreamBaseUrl = getBackendBaseUrl(requestPublicEnv);
@@ -270,7 +281,8 @@ async function forwardBackendWrite(req, backendPath) {
       ...getBackendForwardHeaders(
         requestPublicEnv,
         req.headers['accept-language'],
-        requestOrigin
+        requestOrigin,
+        requestId
       ),
       'Content-Type': 'application/json',
     },
@@ -331,7 +343,7 @@ function getImagesBackendPath(pathname) {
   return `/v1/images/${slug}/`;
 }
 
-async function handleBffRequest(req, res, requestUrl, start) {
+async function handleBffRequest(req, res, requestUrl, start, requestId) {
   const pathname = requestUrl.pathname;
   let backendPath = null;
 
@@ -365,8 +377,8 @@ async function handleBffRequest(req, res, requestUrl, start) {
 
   const backendFetch =
     req.method === 'POST'
-      ? await forwardBackendWrite(req, backendPath)
-      : await fetchBackendJson(req, backendPath, requestUrl);
+      ? await forwardBackendWrite(req, backendPath, requestId)
+      : await fetchBackendJson(req, backendPath, requestUrl, requestId);
   const { durationMs, payload, response, upstreamBaseUrl, upstreamUrl } =
     backendFetch;
 
@@ -376,32 +388,36 @@ async function handleBffRequest(req, res, requestUrl, start) {
   });
   res.end(JSON.stringify(payload));
 
-  logRequest({
-    kind: 'bff',
-    method: req.method,
-    path: requestUrl.pathname,
-    query: requestUrl.search || '',
-    status: response.status,
-    duration_ms: Date.now() - start,
-    upstream_duration_ms: durationMs,
-    upstream_path: `${upstreamUrl.pathname}${upstreamUrl.search}`,
-    upstream_base_url: upstreamBaseUrl,
-  });
+  logRequest(
+    {
+      kind: 'bff',
+      method: req.method,
+      path: requestUrl.pathname,
+      query: requestUrl.search || '',
+      status: response.status,
+      duration_ms: Date.now() - start,
+      upstream_duration_ms: durationMs,
+      upstream_path: `${upstreamUrl.pathname}${upstreamUrl.search}`,
+      upstream_base_url: upstreamBaseUrl,
+    },
+    requestId
+  );
 
   return true;
 }
 
-function logRequest(info) {
+function logRequest(info, requestId) {
   console.log(
     JSON.stringify({
       ts: new Date().toISOString(),
       service: 'frontend-ssr',
+      request_id: requestId,
       ...info,
     })
   );
 }
 
-async function renderDocument(url, acceptLanguage, requestOrigin) {
+async function renderDocument(url, acceptLanguage, requestOrigin, requestId) {
   const [{ renderStream }, template] = await Promise.all([
     import(pathToFileURL(serverEntryPath).href),
     readFile(indexHtmlPath, 'utf8'),
@@ -412,7 +428,7 @@ async function renderDocument(url, acceptLanguage, requestOrigin) {
   });
 
   const { stream, helmetContext, dehydratedState, language, abort } =
-    await renderStream(url, acceptLanguage, requestOrigin);
+    await renderStream(url, acceptLanguage, requestOrigin, requestId);
   const { bodyAttributes, headMarkup, htmlAttributes } =
     renderHelmet(helmetContext);
   const publicEnvScript = `<script>window.__PUBLIC_ENV__ = ${serializePublicEnvForHtml(
@@ -452,12 +468,21 @@ async function renderDocument(url, acceptLanguage, requestOrigin) {
   };
 }
 
-async function pipeDocument(req, res, requestUrl, start, url, acceptLanguage) {
+async function pipeDocument(
+  req,
+  res,
+  requestUrl,
+  start,
+  url,
+  acceptLanguage,
+  requestId
+) {
   const requestOrigin = getRequestOrigin(req);
   const { abort, language, stream, prefix, suffix } = await renderDocument(
     url,
     acceptLanguage,
-    requestOrigin
+    requestOrigin,
+    requestId
   );
 
   return new Promise((resolve, reject) => {
@@ -474,17 +499,20 @@ async function pipeDocument(req, res, requestUrl, start, url, acceptLanguage) {
       }
 
       finished = true;
-      logRequest({
-        kind: 'document',
-        method: req.method,
-        path: requestUrl.pathname,
-        query: requestUrl.search || '',
-        host: req.headers.host || 'localhost',
-        language: String(req.headers['accept-language'] || language),
-        status: 200,
-        duration_ms: Date.now() - start,
-        streaming: true,
-      });
+      logRequest(
+        {
+          kind: 'document',
+          method: req.method,
+          path: requestUrl.pathname,
+          query: requestUrl.search || '',
+          host: req.headers.host || 'localhost',
+          language: String(req.headers['accept-language'] || language),
+          status: 200,
+          duration_ms: Date.now() - start,
+          streaming: true,
+        },
+        requestId
+      );
       resolve();
     };
 
@@ -520,6 +548,8 @@ async function pipeDocument(req, res, requestUrl, start, url, acceptLanguage) {
 
 const server = http.createServer(async (req, res) => {
   const start = Date.now();
+  const requestId = getRequestId(req);
+  res.setHeader('X-Request-ID', requestId);
   try {
     const host = req.headers.host || 'localhost';
     const requestUrl = new URL(req.url || '/', `http://${host}`);
@@ -527,28 +557,34 @@ const server = http.createServer(async (req, res) => {
     if (requestUrl.pathname === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ status: 'ok' }));
-      logRequest({
-        kind: 'health',
-        method: req.method,
-        path: requestUrl.pathname,
-        status: 200,
-        duration_ms: Date.now() - start,
-      });
+      logRequest(
+        {
+          kind: 'health',
+          method: req.method,
+          path: requestUrl.pathname,
+          status: 200,
+          duration_ms: Date.now() - start,
+        },
+        requestId
+      );
       return;
     }
 
-    if (await handleBffRequest(req, res, requestUrl, start)) {
+    if (await handleBffRequest(req, res, requestUrl, start, requestId)) {
       return;
     }
 
     if (await serveStatic(req, res)) {
-      logRequest({
-        kind: 'static',
-        method: req.method,
-        path: requestUrl.pathname,
-        status: 200,
-        duration_ms: Date.now() - start,
-      });
+      logRequest(
+        {
+          kind: 'static',
+          method: req.method,
+          path: requestUrl.pathname,
+          status: 200,
+          duration_ms: Date.now() - start,
+        },
+        requestId
+      );
       return;
     }
 
@@ -558,7 +594,8 @@ const server = http.createServer(async (req, res) => {
       requestUrl,
       start,
       requestUrl.pathname + requestUrl.search,
-      req.headers['accept-language'] || 'en'
+      req.headers['accept-language'] || 'en',
+      requestId
     );
   } catch (error) {
     console.error('[frontend-ssr] request failed', error);
@@ -568,14 +605,17 @@ const server = http.createServer(async (req, res) => {
     } else {
       res.destroy(error instanceof Error ? error : undefined);
     }
-    logRequest({
-      kind: 'document',
-      method: req.method,
-      path: req.url || '/',
-      status: 500,
-      duration_ms: Date.now() - start,
-      error: error instanceof Error ? error.message : String(error),
-    });
+    logRequest(
+      {
+        kind: 'document',
+        method: req.method,
+        path: req.url || '/',
+        status: 500,
+        duration_ms: Date.now() - start,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      requestId
+    );
   }
 });
 

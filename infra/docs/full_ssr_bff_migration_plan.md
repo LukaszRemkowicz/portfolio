@@ -498,9 +498,22 @@ This means:
 
 Once the frontend server becomes the only public entrypoint, logging has to be stronger.
 
-Add:
+Implemented:
 
-- request IDs propagated from frontend server to backend
+- request IDs generated at the frontend edge and returned as `X-Request-ID`
+- request IDs propagated from frontend SSR/BFF calls to backend via `X-Request-ID`
+- structured frontend SSR logs now include `request_id` for:
+  - document requests
+  - static asset requests
+  - BFF requests
+  - SSR backend upstream requests
+- backend request-correlation middleware now:
+  - reuses forwarded `X-Request-ID` or creates one
+  - echoes `X-Request-ID` on the response
+  - logs method, path, status, duration, host, and request ID through Django logging
+
+Still recommended later:
+
 - structured frontend BFF logs:
   - browser route
   - internal backend target

@@ -170,6 +170,7 @@ MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",  # Must be near the top
     "corsheaders.middleware.CorsMiddleware",  # Must be before CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
+    "common.middleware.RequestCorrelationMiddleware",
     "inbox.middleware.ContactFormKillSwitchMiddleware",
     # Check kill switch early (after security, before sessions)
     "django.contrib.sessions.middleware.SessionMiddleware",

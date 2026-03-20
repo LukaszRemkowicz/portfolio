@@ -12,6 +12,7 @@ import {
 
 type SsrRequestMeta = {
   startedAt: number;
+  requestId?: string;
 };
 
 function logSsrBackendRequest(info: Record<string, unknown>): void {
@@ -51,6 +52,10 @@ function attachLanguageInterceptor(
         }
       ).metadata = {
         startedAt: Date.now(),
+        requestId:
+          typeof config.headers?.['X-Request-ID'] === 'string'
+            ? config.headers['X-Request-ID']
+            : undefined,
       };
     }
 
@@ -83,6 +88,7 @@ function attachErrorInterceptor(client: AxiosInstance) {
           base_url: response.config.baseURL || '',
           status: response.status,
           duration_ms: durationMs,
+          request_id: config.metadata?.requestId,
         });
       }
 
@@ -103,6 +109,7 @@ function attachErrorInterceptor(client: AxiosInstance) {
           base_url: config?.baseURL || '',
           status: error.response?.status || 0,
           duration_ms: durationMs,
+          request_id: config?.metadata?.requestId,
           error: error.code || error.message || 'unknown',
         });
       }
@@ -152,7 +159,8 @@ function attachErrorInterceptor(client: AxiosInstance) {
 
 export function createApiClient(
   getLanguage: () => string,
-  requestOrigin?: string
+  requestOrigin?: string,
+  requestId?: string
 ): AxiosInstance {
   const defaultHeaders: Record<string, string> = {};
 
@@ -168,6 +176,9 @@ export function createApiClient(
         ':',
         ''
       );
+      if (requestId) {
+        defaultHeaders['X-Request-ID'] = requestId;
+      }
     } catch {
       // Ignore malformed public API URLs and fall back to transport defaults.
     }

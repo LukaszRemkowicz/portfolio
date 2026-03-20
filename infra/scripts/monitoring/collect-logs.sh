@@ -11,6 +11,7 @@ DOCKER_LOGS_DIR="${DOCKER_LOGS_DIR:?ERROR: DOCKER_LOGS_DIR env var must be set}"
 COMPOSE_FILE="${COMPOSE_FILE:?ERROR: COMPOSE_FILE env var must be set}"
 LOG_TAIL="${LOG_TAIL:-5000}"
 BACKEND_SERVICE="${BACKEND_SERVICE:-be}"
+FRONTEND_SERVICE="${FRONTEND_SERVICE:-fe}"
 NGINX_SERVICE="${NGINX_SERVICE:-nginx}"
 TRAEFIK_SERVICE="${TRAEFIK_SERVICE:-traefik}"
 
@@ -91,6 +92,7 @@ collect_service_logs() {
 # 4. Collect logs for each service
 # ---------------------------------------------------------------------------
 collect_service_logs "${BACKEND_SERVICE}" "${DOCKER_LOGS_DIR}/backend.log"
+collect_service_logs "${FRONTEND_SERVICE}" "${DOCKER_LOGS_DIR}/frontend.log"
 collect_service_logs "${NGINX_SERVICE}" "${DOCKER_LOGS_DIR}/nginx.log"
 collect_service_logs "${TRAEFIK_SERVICE}" "${DOCKER_LOGS_DIR}/traefik.log"
 

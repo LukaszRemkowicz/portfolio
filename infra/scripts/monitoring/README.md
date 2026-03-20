@@ -13,8 +13,8 @@ This is **Phase 1** of the AgentLog pipeline. It runs as a daily Ubuntu cron job
 
 **What it does:**
 1. Clears any existing log files in `DOCKER_LOGS_DIR` (no stale data)
-2. Collects Docker logs for backend and reverse-proxy containers
-3. Writes `backend.log` and `nginx.log` to `DOCKER_LOGS_DIR` when available
+2. Collects Docker logs for backend, frontend SSR, and reverse-proxy containers
+3. Writes `backend.log`, `frontend.log`, and `nginx.log` to `DOCKER_LOGS_DIR` when available
 4. Writes `collected_at.txt` with an ISO timestamp so the Celery worker can detect stale/missing data
 
 **Environment variables:**
@@ -25,6 +25,7 @@ This is **Phase 1** of the AgentLog pipeline. It runs as a daily Ubuntu cron job
 | `COMPOSE_FILE` | No | `/home/lukasz/portfolio/docker-compose.prod.yml` | Path to docker compose file |
 | `LOG_TAIL` | No | `2000` | Number of log lines to collect per container |
 | `BACKEND_SERVICE` | No | `portfolio-be` | Docker Compose service name for backend |
+| `FRONTEND_SERVICE` | No | `fe` | Docker Compose service name for frontend SSR |
 | `NGINX_SERVICE` | No | `nginx` | Docker Compose service name for Nginx |
 | `TRAEFIK_SERVICE` | No | `traefik` | Docker Compose service name for Traefik |
 
