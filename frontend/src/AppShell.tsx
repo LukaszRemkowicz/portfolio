@@ -11,6 +11,7 @@
 // Those remain in App.tsx (client only) and are isolated in Phase 5.
 
 import React from 'react';
+import './styles/global/index.css';
 import {
   DehydratedState,
   HydrationBoundary,

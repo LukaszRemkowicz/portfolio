@@ -1,5 +1,5 @@
 import { AxiosInstance, AxiosResponse } from 'axios';
-import { API_ROUTES, getMediaUrl } from './routes';
+import { API_ROUTES, BFF_ROUTES, getMediaUrl } from './routes';
 import { api } from './api';
 import {
   UserProfile,
@@ -12,7 +12,7 @@ import {
   MainPageLocation,
   Tag,
 } from '../types';
-import { NotFoundError } from './errors';
+import { AppError, NotFoundError, ValidationError } from './errors';
 
 const handleResponse = <T>(response: AxiosResponse<T>): T => {
   if (response && response.data !== undefined) {
@@ -23,6 +23,72 @@ const handleResponse = <T>(response: AxiosResponse<T>): T => {
   // Handle cases where response or response.data is undefined
   console.error('Invalid response structure:', response);
   throw new Error('Invalid response from server.');
+};
+
+type BffErrorPayload = {
+  detail?: string;
+  errors?: Record<string, string[]>;
+  message?: string;
+};
+
+const throwBffError = (
+  status: number,
+  payload: BffErrorPayload | null | undefined
+): never => {
+  switch (status) {
+    case 400:
+      throw new ValidationError(
+        payload?.errors || {},
+        payload?.message || payload?.detail || 'Validation failed.'
+      );
+    case 401:
+    case 403:
+      throw new AppError(
+        payload?.message || payload?.detail || 'Unauthorized access.',
+        status
+      );
+    case 404:
+      throw new NotFoundError();
+    case 500:
+    case 501:
+    case 502:
+    case 503:
+    case 504:
+      throw new AppError(
+        payload?.message ||
+          payload?.detail ||
+          'Internal server error. Please try again later.',
+        status
+      );
+    default:
+      throw new AppError(
+        payload?.message || payload?.detail || 'An unexpected error occurred.',
+        status
+      );
+  }
+};
+
+const postBffJson = async <TResponse>(
+  url: string,
+  body: unknown
+): Promise<TResponse> => {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = (await response.json().catch(() => null)) as TResponse &
+    BffErrorPayload;
+
+  if (!response.ok) {
+    throwBffError(response.status, payload);
+  }
+
+  return payload;
 };
 
 export const fetchProfile = async (
@@ -141,6 +207,11 @@ export const fetchContact = async (
   client: AxiosInstance = api
 ): Promise<void> => {
   if (!contactData) throw new Error('contactData is required');
+
+  if (typeof window !== 'undefined' && client === api) {
+    await postBffJson<void>(BFF_ROUTES.contact, contactData);
+    return;
+  }
 
   const response: AxiosResponse<void> = await client.post(
     API_ROUTES.contact,

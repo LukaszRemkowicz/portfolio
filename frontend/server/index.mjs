@@ -34,6 +34,7 @@ const MIME_TYPES = {
 };
 
 const BFF_ROUTES = {
+  contact: '/app/contact',
   travelBySlug: '/app/travel/',
 };
 
@@ -231,6 +232,58 @@ async function fetchBackendJson(req, backendPath, requestUrl) {
   };
 }
 
+async function readJsonBody(req) {
+  const chunks = [];
+
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  if (chunks.length === 0) {
+    return null;
+  }
+
+  const rawBody = Buffer.concat(chunks).toString('utf8');
+  return rawBody ? JSON.parse(rawBody) : null;
+}
+
+async function forwardBackendWrite(req, backendPath) {
+  const requestPublicEnv = getRequestPublicEnv(req);
+  const upstreamBaseUrl = getBackendBaseUrl(requestPublicEnv);
+  const upstreamUrl = new URL(backendPath, upstreamBaseUrl);
+  const body = await readJsonBody(req);
+
+  const startedAt = Date.now();
+  const response = await fetch(upstreamUrl, {
+    method: req.method,
+    headers: {
+      ...getBackendForwardHeaders(
+        requestPublicEnv,
+        req.headers['accept-language']
+      ),
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : null,
+  });
+  const durationMs = Date.now() - startedAt;
+  const text = await response.text();
+
+  let payload;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    payload = text;
+  }
+
+  return {
+    durationMs,
+    payload,
+    response,
+    upstreamBaseUrl,
+    upstreamUrl,
+  };
+}
+
 function isTravelBffRoute(pathname) {
   return /^\/app\/travel\/[^/]+\/[^/]+\/[^/]+\/?$/.test(pathname);
 }
@@ -250,6 +303,17 @@ async function handleBffRequest(req, res, requestUrl, start) {
   let backendPath = null;
 
   switch (pathname) {
+    case BFF_ROUTES.contact:
+      if (req.method !== 'POST') {
+        res.writeHead(405, {
+          'Content-Type': 'application/json; charset=utf-8',
+          Allow: 'POST',
+        });
+        res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        return true;
+      }
+      backendPath = '/v1/contact/';
+      break;
     default:
       if (isTravelBffRoute(pathname)) {
         backendPath = getTravelBackendPath(pathname);
@@ -261,8 +325,12 @@ async function handleBffRequest(req, res, requestUrl, start) {
     return false;
   }
 
+  const backendFetch =
+    req.method === 'POST'
+      ? await forwardBackendWrite(req, backendPath)
+      : await fetchBackendJson(req, backendPath, requestUrl);
   const { durationMs, payload, response, upstreamBaseUrl, upstreamUrl } =
-    await fetchBackendJson(req, backendPath, requestUrl);
+    backendFetch;
 
   res.writeHead(response.status, {
     'Content-Type': 'application/json; charset=utf-8',

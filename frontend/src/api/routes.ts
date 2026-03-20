@@ -17,6 +17,7 @@ export const API_ROUTES: ApiRoutes = {
 };
 
 export const BFF_ROUTES = {
+  contact: '/app/contact',
   travelBySlug: '/app/travel/',
 };
 

@@ -359,6 +359,19 @@ Success criteria:
 
 - contact form no longer calls backend directly from browser
 
+### Phase 3 progress
+
+The isolated contact write flow now goes through the frontend server:
+
+- browser submit -> `/app/contact`
+- frontend server -> backend `/v1/contact/`
+
+Implementation note:
+
+- backend validation and error status semantics are preserved
+- the Contact UI contract stays the same
+- public page URLs remain unchanged
+
 ## Phase 4: Media and Image Strategy
 
 This is the most sensitive part because this is a photography portfolio.

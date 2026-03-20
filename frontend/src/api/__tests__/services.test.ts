@@ -6,9 +6,9 @@ import {
   fetchContact,
   fetchSettings,
 } from '../services';
-import { API_ROUTES } from '../routes';
+import { API_ROUTES, BFF_ROUTES } from '../routes';
 import { API_BASE_URL } from '../constants';
-import { NotFoundError } from '../errors';
+import { NotFoundError, ValidationError } from '../errors';
 
 // Mock the axios instance from api.ts
 jest.mock('../api', () => ({
@@ -19,8 +19,20 @@ jest.mock('../api', () => ({
 }));
 
 describe('API Services', () => {
+  let fetchMock: jest.Mock;
+
+  beforeEach(() => {
+    fetchMock = jest.fn();
+    Object.defineProperty(global, 'fetch', {
+      configurable: true,
+      value: fetchMock,
+      writable: true,
+    });
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
+    delete (global as { fetch?: typeof fetch }).fetch;
   });
 
   describe('fetchProfile', () => {
@@ -100,7 +112,10 @@ describe('API Services', () => {
 
   describe('fetchContact', () => {
     it('should send contact form successfully', async () => {
-      (api.post as jest.Mock).mockResolvedValueOnce({ data: { status: 'ok' } });
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ok' }),
+      } as Response);
 
       const contactData = {
         name: 'John',
@@ -111,13 +126,25 @@ describe('API Services', () => {
 
       await fetchContact(contactData);
 
-      expect(api.post).toHaveBeenCalledWith(API_ROUTES.contact, contactData);
+      expect(fetchMock).toHaveBeenCalledWith(BFF_ROUTES.contact, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contactData),
+      });
     });
 
     it('should throw error on validation failure', async () => {
-      (api.post as jest.Mock).mockRejectedValueOnce({
-        response: { status: 400, data: { email: ['Invalid email'] } },
-      });
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          errors: { email: ['Invalid email'] },
+          message: 'Validation failed.',
+        }),
+      } as Response);
 
       const contactData = {
         name: 'John',
@@ -126,7 +153,9 @@ describe('API Services', () => {
         message: 'Hello',
       };
 
-      await expect(fetchContact(contactData)).rejects.toBeDefined();
+      await expect(fetchContact(contactData)).rejects.toBeInstanceOf(
+        ValidationError
+      );
     });
   });
 
