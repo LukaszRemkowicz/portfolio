@@ -27,7 +27,11 @@ describe('imageUrlService', () => {
 
     const result = await fetchImageUrls(['1']);
 
-    expect(fetchMock).toHaveBeenCalledWith(`${BFF_ROUTES.images}?ids=1`);
+    expect(fetchMock).toHaveBeenCalledWith(`${BFF_ROUTES.images}?ids=1`, {
+      headers: {
+        Accept: 'application/json',
+      },
+    });
     expect(result).toEqual(payload);
   });
 
@@ -39,7 +43,11 @@ describe('imageUrlService', () => {
 
     const result = await fetchSingleImageUrl('m31');
 
-    expect(fetchMock).toHaveBeenCalledWith(`${BFF_ROUTES.images}m31/`);
+    expect(fetchMock).toHaveBeenCalledWith(`${BFF_ROUTES.images}m31/`, {
+      headers: {
+        Accept: 'application/json',
+      },
+    });
     expect(result).toBe('https://example.com/signed.webp');
   });
 });

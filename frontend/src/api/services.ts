@@ -1,6 +1,13 @@
 import { AxiosInstance, AxiosResponse } from 'axios';
-import { API_ROUTES, BFF_ROUTES, getMediaUrl } from './routes';
+import { API_ROUTES, BFF_ROUTES } from './routes';
 import { api } from './api';
+import { isBrowserDefaultClient, postBffJson } from './bff';
+import {
+  normalizeAstroImage,
+  normalizeAstroImages,
+  normalizeProfileMedia,
+  normalizeTravelLocation,
+} from './media';
 import {
   UserProfile,
   BackgroundImage,
@@ -12,7 +19,7 @@ import {
   MainPageLocation,
   Tag,
 } from '../types';
-import { AppError, NotFoundError, ValidationError } from './errors';
+import { NotFoundError } from './errors';
 
 const handleResponse = <T>(response: AxiosResponse<T>): T => {
   if (response && response.data !== undefined) {
@@ -25,72 +32,6 @@ const handleResponse = <T>(response: AxiosResponse<T>): T => {
   throw new Error('Invalid response from server.');
 };
 
-type BffErrorPayload = {
-  detail?: string;
-  errors?: Record<string, string[]>;
-  message?: string;
-};
-
-const throwBffError = (
-  status: number,
-  payload: BffErrorPayload | null | undefined
-): never => {
-  switch (status) {
-    case 400:
-      throw new ValidationError(
-        payload?.errors || {},
-        payload?.message || payload?.detail || 'Validation failed.'
-      );
-    case 401:
-    case 403:
-      throw new AppError(
-        payload?.message || payload?.detail || 'Unauthorized access.',
-        status
-      );
-    case 404:
-      throw new NotFoundError();
-    case 500:
-    case 501:
-    case 502:
-    case 503:
-    case 504:
-      throw new AppError(
-        payload?.message ||
-          payload?.detail ||
-          'Internal server error. Please try again later.',
-        status
-      );
-    default:
-      throw new AppError(
-        payload?.message || payload?.detail || 'An unexpected error occurred.',
-        status
-      );
-  }
-};
-
-const postBffJson = async <TResponse>(
-  url: string,
-  body: unknown
-): Promise<TResponse> => {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-
-  const payload = (await response.json().catch(() => null)) as TResponse &
-    BffErrorPayload;
-
-  if (!response.ok) {
-    throwBffError(response.status, payload);
-  }
-
-  return payload;
-};
-
 export const fetchProfile = async (
   client: AxiosInstance = api
 ): Promise<UserProfile> => {
@@ -99,18 +40,8 @@ export const fetchProfile = async (
       await client.get(API_ROUTES.profile)
     );
 
-    // Transform relative media paths to full URLs
     if (data) {
-      return {
-        ...data,
-        avatar: data.avatar ? getMediaUrl(data.avatar) : null,
-        about_me_image: data.about_me_image
-          ? getMediaUrl(data.about_me_image)
-          : null,
-        about_me_image2: data.about_me_image2
-          ? getMediaUrl(data.about_me_image2)
-          : null,
-      };
+      return normalizeProfileMedia(data);
     }
     return data;
   } catch (error) {
@@ -160,10 +91,7 @@ export const fetchAstroImages = async (
   );
   const data = handleResponse<AstroImage[]>(response);
   if (Array.isArray(data)) {
-    return data.map(image => ({
-      ...image,
-      thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-    }));
+    return normalizeAstroImages(data);
   }
   return data;
 };
@@ -175,10 +103,7 @@ export const fetchLatestAstroImages = async (
     await client.get(`${API_ROUTES.astroImages}latest/`)
   );
   if (Array.isArray(data)) {
-    return data.map(image => ({
-      ...image,
-      thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-    }));
+    return normalizeAstroImages(data);
   }
 
   console.warn('[API] latest astro images response was not an array', data);
@@ -194,10 +119,7 @@ export const fetchAstroImageDetail = async (
   );
   const data = handleResponse<AstroImage>(response);
   if (data) {
-    return {
-      ...data,
-      thumbnail_url: getMediaUrl(data.thumbnail_url) || undefined,
-    };
+    return normalizeAstroImage(data);
   }
   return data;
 };
@@ -208,7 +130,7 @@ export const fetchContact = async (
 ): Promise<void> => {
   if (!contactData) throw new Error('contactData is required');
 
-  if (typeof window !== 'undefined' && client === api) {
+  if (isBrowserDefaultClient(client)) {
     await postBffJson<void>(BFF_ROUTES.contact, contactData);
     return;
   }
@@ -274,13 +196,7 @@ export const fetchTravelHighlights = async (
   );
 
   if (Array.isArray(data)) {
-    return data.map(slider => ({
-      ...slider,
-      images: slider.images.map(image => ({
-        ...image,
-        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-      })),
-    }));
+    return data.map(normalizeTravelLocation);
   }
   return [];
 };

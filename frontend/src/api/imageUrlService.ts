@@ -1,18 +1,19 @@
 // frontend/src/api/imageUrlService.ts
 import { API_BASE_URL, BFF_ROUTES } from './routes';
 import { API_V1 } from './constants';
+import { fetchBffJson } from './bff';
 
 export async function fetchImageUrls(
   ids?: string[]
 ): Promise<Record<string, string>> {
   const useFrontendBff = typeof window !== 'undefined';
-  let url = useFrontendBff
-    ? BFF_ROUTES.images
-    : `${API_BASE_URL}${API_V1}/images/`;
-  if (ids && ids.length > 0) {
-    url += `?ids=${ids.join(',')}`;
+  const query = ids && ids.length > 0 ? `?ids=${ids.join(',')}` : '';
+
+  if (useFrontendBff) {
+    return fetchBffJson<Record<string, string>>(`${BFF_ROUTES.images}${query}`);
   }
-  const response = await fetch(url);
+
+  const response = await fetch(`${API_BASE_URL}${API_V1}/images/${query}`);
   if (!response.ok) {
     throw new Error('Failed to fetch image URLs');
   }
@@ -21,10 +22,14 @@ export async function fetchImageUrls(
 
 export async function fetchSingleImageUrl(slug: string): Promise<string> {
   const useFrontendBff = typeof window !== 'undefined';
-  const url = useFrontendBff
-    ? `${BFF_ROUTES.images}${slug}/`
-    : `${API_BASE_URL}${API_V1}/images/${slug}/`;
-  const response = await fetch(url);
+  if (useFrontendBff) {
+    const data = await fetchBffJson<{ url: string }>(
+      `${BFF_ROUTES.images}${slug}/`
+    );
+    return data.url;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${API_V1}/images/${slug}/`);
   if (!response.ok) {
     throw new Error(`Failed to fetch URL for ${slug}`);
   }

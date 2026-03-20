@@ -433,6 +433,20 @@ Rules:
 - client code should only know frontend-owned endpoints
 - browser must not depend on `api.` domain env
 
+### Phase 5 progress
+
+The frontend data layer is now more explicitly separated:
+
+- shared browser BFF transport helpers live in `frontend/src/api/bff.ts`
+- shared media normalization lives in `frontend/src/api/media.ts`
+- services, image helper flows, and travel detail fetching now reuse the shared transport/media utilities instead of repeating browser-vs-SSR branching and URL normalization logic
+
+This means:
+
+- browser-side data transport decisions are centralized instead of scattered across hooks and services
+- media URL normalization is centralized instead of being coupled to route constants
+- UI hooks remain thin and focused on React Query behavior rather than transport concerns
+
 Success criteria:
 
 - `API_URL` is no longer required for browser behavior

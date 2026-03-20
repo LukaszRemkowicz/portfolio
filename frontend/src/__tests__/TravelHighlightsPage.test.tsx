@@ -28,7 +28,10 @@ jest.mock('../api/routes', () => ({
   ASSETS: {
     galleryFallback: '/test-fallback.jpg',
   },
-  getMediaUrl: (path: string) => path, // Return path as-is for tests
+}));
+
+jest.mock('../api/media', () => ({
+  getMediaUrl: (path: string) => path,
 }));
 
 describe('TravelHighlightsPage', () => {
