@@ -14,6 +14,10 @@ import AppShell from './AppShell';
 import App from './App';
 import { createApiClient } from './api/api';
 import {
+  getCachedShellLoader,
+  SHELL_RESOURCES,
+} from '../server/views/shell.js';
+import {
   fetchAstroImages,
   fetchBackground,
   fetchCategories,
@@ -117,29 +121,41 @@ async function prefetchRouteQueries(
   requestId?: string
 ) {
   const client = createApiClient(() => language, requestOrigin, requestId);
+  const cachedShellQuery = getCachedShellLoader(language, requestOrigin);
   const requestUrl = new URL(url, 'http://frontend.local');
   const pathname = requestUrl.pathname;
   const searchParams = requestUrl.searchParams;
   const commonPrefetches = [
     prefetchQuerySafely(queryClient, {
       queryKey: ['settings'],
-      queryFn: () => fetchSettings(client),
+      queryFn: () =>
+        cachedShellQuery(SHELL_RESOURCES.settings, () => fetchSettings(client)),
     }),
     prefetchQuerySafely(queryClient, {
       queryKey: ['profile'],
-      queryFn: () => fetchProfile(client),
+      queryFn: () =>
+        cachedShellQuery(SHELL_RESOURCES.profile, () => fetchProfile(client)),
     }),
     prefetchQuerySafely(queryClient, {
       queryKey: ['background'],
-      queryFn: () => fetchBackground(client),
+      queryFn: () =>
+        cachedShellQuery(SHELL_RESOURCES.background, () =>
+          fetchBackground(client)
+        ),
     }),
     prefetchQuerySafely(queryClient, {
       queryKey: ['travel-highlights'],
-      queryFn: () => fetchTravelHighlights(client),
+      queryFn: () =>
+        cachedShellQuery(SHELL_RESOURCES.travelHighlights, () =>
+          fetchTravelHighlights(client)
+        ),
     }),
     prefetchQuerySafely(queryClient, {
       queryKey: ['latest-astro-images'],
-      queryFn: () => fetchLatestAstroImages(client),
+      queryFn: () =>
+        cachedShellQuery(SHELL_RESOURCES.latestAstroImages, () =>
+          fetchLatestAstroImages(client)
+        ),
     }),
   ];
 

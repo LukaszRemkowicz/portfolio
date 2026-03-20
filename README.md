@@ -1,212 +1,228 @@
 # Portfolio Landing Page
 
-A modern, API-driven personal portfolio web app with subpages for Astrophotography, Programming, and Contact. Built with React (frontend) and Django + Django Rest Framework (backend), fully dockerized and orchestrated with nginx for local HTTPS development.
+Personal portfolio web app for astrophotography, travel stories, and programming work. The stack is:
 
-## 🌐 LIVE
+- frontend SSR server: React + TypeScript
+- backend: Django + DRF
+- edge/static layer: nginx
+- local/server routing: Traefik
+- secrets: Doppler
 
-Check out the live version: **[lukaszremkowicz.com](https://lukaszremkowicz.com)**
+## Live
 
-## 📸 Screenshots
+- Site: [lukaszremkowicz.com](https://lukaszremkowicz.com)
 
-<details>
-<summary><b>Click to expand screenshots</b></summary>
+## Current Architecture
 
-### Home Page
-![Home Page](screenshots/homepage.jpg)
+Current request flow:
 
-### Astrophotography Gallery
-![Gallery](screenshots/gallery.jpg)
+1. browser requests `SITE_DOMAIN`
+2. frontend SSR server renders the page
+3. frontend server fetches backend data internally
+4. nginx serves public static/media files directly
+5. browser hydrates with server-provided React Query state
 
-### Contact Form
-![Contact](screenshots/contact.jpg)
+Application structure:
 
-</details>
+- public page URLs are the normal website addresses used by users, search engines, and the sitemap
+- the browser uses `SITE_DOMAIN` as its public application host
+- Django remains the content owner and still handles sitemap generation
+
+## Glossary
+
+- `SSR`: Server-Side Rendering. The frontend server renders HTML before it reaches the browser.
+- `BFF`: Backend For Frontend. A frontend-owned server layer that the browser talks to instead of calling backend APIs directly.
+- `SITE_DOMAIN`: Public website host, for example `portfolio.local`.
+- `ADMIN_DOMAIN`: Public Django admin host, for example `admin.portfolio.local`.
+- `API`: Internal backend API contract used by the frontend server and Django admin integrations.
+
+## Architecture Overview
+
+### Public entrypoints
+
+- `SITE_DOMAIN`
+  - public website
+  - SSR HTML
+  - FE-owned transport endpoints for the remaining interactive browser flows
+  - public media served by nginx
+- `ADMIN_DOMAIN`
+  - Django admin
+
+### Frontend server responsibilities
+
+- SSR page rendering
+- request/data composition for page-shell content
+- BFF transport for the remaining browser JSON flows
+- public environment injection into HTML
+- structured logging and request correlation
+- in-memory SSR shell cache
+
+### Backend responsibilities
+
+- content ownership and business logic
+- admin application
+- internal API used by FE
+- sitemap generation
+- secure media authorization/signing
+- monitoring and analysis
+- cache invalidation webhooks to FE
+
+### Media Delivery
+
+Public-safe media is served directly by nginx on `SITE_DOMAIN`.
+
+Protected media uses a split flow:
+
+- Django signs or authorizes access
+- nginx serves file bytes through `X-Accel-Redirect`
+
+### Caching
+
+The frontend SSR server keeps a `24h` in-memory cache for shared shell data:
+
+- `settings`
+- `profile`
+- `background`
+- `travel-highlights`
+- `latest-astro-images`
+
+The backend invalidates those FE cache tags through an internal webhook after content changes.
+
+### Observability
+
+The stack uses request correlation across FE and BE:
+
+- FE generates or forwards `X-Request-ID`
+- FE logs include `request_id`
+- FE forwards `X-Request-ID` to BE
+- BE echoes and logs the same request ID
 
 ## Quick Start
 
-### 1. Clone the repository
-```sh
+Local development is Docker Compose only. This project is not maintained as a standalone `manage.py runserver` / `npm start` workflow.
+
+### 1. Clone
+
+```bash
 git clone <your-repo-url>
 cd landingpage
 ```
 
-### 2. Configure Environment (Doppler)
-
-We use **Doppler** for secure secret management. Before starting, ensure you have the Doppler CLI installed and are logged in.
+### 2. Configure secrets with Doppler
 
 ```bash
-# Login to Doppler
 doppler login
-
-# Setup the project for the current directory
 doppler setup
 ```
 
-### 3. Start all services with Docker Compose
-
-Always use `doppler run` to inject secrets into your Docker containers. Use the `--config` flag to specify the environment.
+### 3. Start local stack
 
 ```bash
-# For local development (default dev config)
 doppler --config dev run -- docker compose up --build
-
-# For staging
-doppler --config staging run -- docker compose up --build
 ```
 
-- Frontend: https://portfolio.local/
-- API: https://api.portfolio.local/
-- Backend Admin: https://admin.portfolio.local/
+Local hosts:
 
-> **Note:** You may need to add these domains to your `/etc/hosts` file:
-> ```
-> 127.0.0.1 portfolio.local api.portfolio.local admin.portfolio.local
-> ```
+- Site: `https://portfolio.local/`
+- Admin: `https://admin.portfolio.local/`
 
-### 3. Access Django Admin
-- Go to https://admin.portfolio.local/admin/
-- Log in with your superuser credentials (create one if needed)
-- Update your profile, bio, and avatar in the Users section
+Recommended `/etc/hosts` entries:
 
-## Development
-
-### Frontend Development
-```bash
-cd frontend
-npm install
-npm start          # Development server
-npm test           # Run test suite
-npm run build      # Production build
+```text
+127.0.0.1 portfolio.local
+127.0.0.1 admin.portfolio.local
 ```
 
-### Backend Development
+### 4. Verify local services
+
 ```bash
-cd backend
-poetry install
-poetry shell
-python manage.py runserver
+curl -k https://portfolio.local/
+curl -k https://admin.portfolio.local/
 ```
 
-### Docker Development
-```bash
-# For newer Docker versions (Docker Compose V2)
-docker compose up --build    # Start all services
+## Local Development
 
-# For older Docker versions (Docker Compose V1)
-docker-compose up --build    # Start all services
-docker-compose exec portfolio-fe npm test    # Run frontend tests
+Use Docker Compose for all normal local work:
+
+```bash
+doppler --config dev run -- docker compose up --build
 ```
 
-
-## 🏗️ Architecture
-
-The project follows a modern, highly decoupled architecture for performance and security:
-
-## 🏗️ Architecture
-
-The project follows a modern, highly decoupled architecture for performance and security. It supports **Environment Isolation** (Production & Staging) on the server, with an identical stack for **Development** (Local):
-
-![Architecture Illustration](infra/docs/architecture.png)
-
-### Key Components:
-- **Traefik (Edge Proxy)**: The central entry point for all subdomains. Handles SSL, HSTS, and routing.
-- **Environment Isolation**: Parallel stacks (`PROD` and `STAGE`) ensure zero-collision deployments.
-- **Development Stack**: Local development uses the exact same `Traefik + Nginx + Django + PostgreSQL` architecture via `portfolio-dev`.
-- **Doppler**: Centralized, secure secret management across **all** environments (Local & Server).
-
----
-
-## 🚀 Deployment & Environments
-
-The project uses isolated naming conventions to ensure zero-collision between environments:
-
-### 1. Project Naming (Standardized)
-- **Production**: `portfolio-prod`
-- **Staging**: `portfolio-stage`
-- **Development**: `portfolio-dev` (Local machine)
-
-### 2. Deployment Commands
-Always use the explicit Doppler configuration to avoid accidents:
+Common commands:
 
 ```bash
-# BUILD:
+# stop the stack
+doppler --config dev run -- docker compose down
+
+# restart one service
+doppler --config dev run -- docker compose restart fe
+
+# show logs
+doppler --config dev run -- docker compose logs -f fe be nginx
+
+# run backend management commands
+doppler --config dev run -- docker compose exec -T be python manage.py migrate
+
+# run frontend checks
+doppler --config dev run -- docker compose exec -T fe npm run type-check
+```
+
+Standalone local development commands such as `python manage.py runserver` or `npm run dev` are not the supported workflow described by this repository.
+
+## Deployment
+
+Typical release flow:
+
+```bash
+# Build images
 doppler run -p portfolio -c portfolio-prod -- ./infra/scripts/release/build.sh
 
-# DEPLOY:
-cd ~/portfolio
+# Deploy on server
 doppler run -p portfolio -c portfolio-prod -- ./infra/scripts/release/deploy.sh
 ```
 
-**What the deployment script handles:**
-- **Auto-Switch**: Detects and stops any legacy container naming before starting the new stack.
-- **HSTS/CSP**: Applied automatically via Traefik middlewares.
+Production/stage deploys rebuild:
 
----
+- `fe` when SSR/public env changes
+- `nginx` when routing or public media rules change
+- `be` when invalidation, serializers, or backend routes change
 
-## 💾 Database Backup & Maintenance
+## Operations
 
-Database maintenance scripts are located in `infra/scripts/db_backup/`.
+### Monitoring
 
-### 1. Manual Backup
-Create a compressed SQL dump of the production database:
-```bash
-./infra/scripts/db_backup/backup_db.sh
-```
-The backup should be stored outside the repository, for example in `/var/backups/portfolio/`.
+Monitoring analyses:
 
-### 2. Testing Restores
-Always verify your backups by running a test restore:
-```bash
-./infra/scripts/db_backup/test_restore.sh
-```
-This script creates a temporary container and verifies that the SQL dump is valid and can be fully imported.
+- backend logs
+- frontend SSR/BFF logs
+- nginx logs
+- traefik logs collected on host
 
-See [Backup Maintenance Guide](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/db_backup/MAINTENANCE.md) for more details.
+Collector docs:
 
-## Testing
+- [infra/scripts/monitoring/README.md](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/monitoring/README.md)
 
-### Backend (Dedicated Service)
-The backend tests now run in a dedicated, isolated environment using Docker Compose Profiles. This inherits your development configuration but remains isolated.
+### Cache Invalidation
 
-```bash
-docker compose run --rm portfolio-test
-```
+Frontend SSR cache covers shared shell data:
 
-### Frontend
-```bash
-docker compose exec portfolio-fe npm test    # Local development (fastest)
-docker compose run --rm portfolio-fe npm test -- --watchAll=false  # Isolated
-```
+- `settings`
+- `profile`
+- `background`
+- `travel-highlights`
+- `latest-astro-images`
 
-## 🔄 Release Lifecycle
+Backend invalidates this cache through an internal FE webhook after content changes.
 
-To ensure version traceability and zero-downtime, follow this mandatory flow for all new features and fixes:
+### Frontend Views
 
-### 1. Development to Dev
-- **Merge Request**: Create an MR from your feature branch to `dev`.
-- **Squash & Delete**: Perform a **Squash and Merge** and delete the feature branch to keep history clean.
+The frontend server mirrors Django's `views` concept in its server-side ownership model:
 
-### 2. Versioning (Tags)
-- **Tag the Commit**: Once code is on `dev`, tag it with a version (e.g., `v1.2.0`).
-- **Push Tag**: `git push origin v1.2.0`
-- **Automatic Detection**: The `build.sh` and `deploy.sh` scripts automatically detect this tag and use it as the Docker image reference.
+- server-side FE request/data ownership lives in `frontend/server/views/*`
+- SSR and BFF routes should reuse those views instead of duplicating transport logic
+- low-level HTTP clients stay separate from request/data contract ownership
 
-### 3. Promotion to Main
-- **Merge Request**: Merge `dev` into `main`.
-- **Production Anchor**: This ensures `main` always stable and aligned with a specific Git tag.
+## Component Docs
 
-### 4. Direct Deployment
-On your production server, simply run:
-```bash
-# TAG is auto-detected from the Git tag on main
-./infra/scripts/release/deploy.sh
-```
-
-> [!IMPORTANT]
-> **Production Requirement**: Deployments **must** use a Git tag as the reference. This allows for instant rollbacks by just changing the `TAG` variable.
-
----
-
-## 📋 Component-Specific TODOs
-- **Frontend TODOs**: See [Frontend README](frontend/README.md#-todo--future-improvements)
-- **Backend TODOs**: See [Backend README](backend/README.md)
+- Frontend: [frontend/README.md](/Users/lukaszremkowicz/Projects/landingpage/frontend/README.md)
+- Backend: [backend/README.md](/Users/lukaszremkowicz/Projects/landingpage/backend/README.md)

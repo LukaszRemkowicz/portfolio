@@ -1,164 +1,140 @@
 # Portfolio Backend
 
-Django REST API backend for a personal portfolio showcasing astrophotography and programming projects. Built with Django 6.0+ and Django REST Framework, featuring custom user models, image management, and comprehensive API endpoints.
+Django + DRF backend for portfolio content, admin, secure media, translations, and monitoring.
 
-## 🚀 Features
+## Backend Role In The Current Architecture
 
-### Core Functionality
-- **Custom User Model** - Singleton admin user with bio, avatar, social links, and specific about me images.
-- **Image Management** - `BaseImage` abstract model with automatic **thumbnail generation** and consistent scaling.
-- **Persona Profiles** - Support for niche-specific content (Programming vs. Astrophotography) for the same user.
-- **Astrophotography Gallery** - Complete image gallery with metadata, tags, and category filtering.
-- **Contact System** - Secure contact form with bot protection (honeypot), duplicate detection, and email notifications.
-- **Background Management** - Dynamic main page background images.
+Today it mainly serves as:
 
-## 🛡️ Security Architecture
+- content owner for portfolio data
+- admin application on `ADMIN_DOMAIN`
+- internal API consumed by the frontend server
+- secure media signer / backend partner for nginx protected media
+- source of truth for sitemap and SEO-backed dynamic URLs
 
-We implement a **Defense in Depth** strategy using several specialized tools and libraries:
+Normal public website traffic reaches the frontend server first. Django is the content/admin/internal API layer.
 
-### 1. Brute Force Protection (**Django Axes**)
-We use [Django Axes](https://github.com/jazzband/django-axes) to protect the admin portal and API from brute-force attacks.
-- Locked-out users are tracked by IP and username.
-- Configurable cool-off periods and failure limits.
+## Glossary
 
-### 2. API Abuse Prevention (**DRF Throttling**)
-Granular rate limiting is enforced across all endpoints:
-- **Anonymous Throttling**: Limits unauthenticated users.
-- **Contact Form Throttling**: Specialized 5-per-hour limit to prevent spam.
-- **Method Restriction**: Critical ViewSets (like Contact/Users) explicitly restrict HTTP verbs to the bare minimum (e.g., POST-only or GET-only).
+- `SITE_DOMAIN`: public website host.
+- `ADMIN_DOMAIN`: public Django admin host.
+- `X-Request-ID`: request correlation header used for tracing requests across services.
 
-### 3. Dependency Scanning (**Safety**)
-We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for known vulnerabilities.
-- Integrated into the CI/CD pipeline and available via `poetry run security`.
+## Backend Responsibilities
 
-### 4. Infrastructure Security
-- **Non-Root Execution**: Docker containers run under a restricted `appuser`.
-- **Environment Isolation**: Secure configuration via `django-environ`.
-- **Docker-Locked Environment**: Verified multi-stage builds and restricted `.dockerignore`.
+- portfolio content models:
+  - astrophotography
+  - travel highlights
+  - background images
+  - user profile
+- translation workflows
+- secure media signing and `X-Accel-Redirect` cooperation with nginx
+- contact form processing
+- monitoring and daily log analysis
+- cache invalidation signals for frontend cache
 
-### Technical & Security Features
-- **Modern Stack** - Python 3.13, Django 6.0, and Poetry for dependency management.
-- **Caching** - **Redis-backed** caching for Django Select2 and internal performance.
-- **Security Hardening** - HSTS, secure cookies, and non-root execution in Docker with runtime volume mapping.
-- **Defense in Depth** - Advanced API rate limiting (**Django Axes** + DRF Throttling), payload size limits, and restricted HTTP verbs.
-- **Error Tracking** - **Sentry** integration for production monitoring and telemetry.
-- **Internationalization (i18n)** - Multi-language support (EN/PL) with automatic message compilation.
-- **Docker Integration** - Optimized multi-stage builds with automated static collection.
+## Service Integration
 
-## 🛠️ Development Setup
+Key points:
 
-### Prerequisites
-- **Python 3.13**
-- **Poetry**
-- **Docker & Docker Compose**
+- backend serves content and API responses over internal service networking
+- backend-generated media URLs are normalized onto `SITE_DOMAIN` at the frontend layer
+- backend emits cache invalidation webhooks after relevant content changes
 
-### Local Quick Start
+Invalidation is triggered from model save/delete signals after transaction commit.
 
-1. **Install Dependencies**
-   ```bash
-   poetry install
-   ```
+## Security / Delivery Model
 
-2. **Environment Configuration (Doppler)**
-   We use **Doppler** for secure secret management.
-   ```bash
-   doppler login
-   doppler setup
-   ```
-   *Note: For legacy setups, you can still copy `DEFAULT.env` to `.env`.* but remember to add this in docker-compose.yml file.
-   *Not: Have in mind, that DEFAULT.env having required env variables, so please copy them to doppler config.
+Public media delivery and protected media delivery are split between Django and nginx.
 
-3. **Database & Translations**
-   ```bash
-   # Using Doppler to inject secrets
-   doppler --config dev run -- poetry run python manage.py migrate
-   doppler --config dev run -- poetry run python manage.py compilemessages
-   ```
+Protected media flow:
 
-4. **Run Server**
-   ```bash
-   doppler --config dev run -- poetry run python manage.py runserver
-   ```
+- Django signs or authorizes access
+- nginx serves bytes through `X-Accel-Redirect`
 
-## 🧪 Testing & Quality
+So:
 
-We provide several **Poetry scripts** to streamline testing and security audits.
+- Django owns access control and URL decisions
+- nginx owns efficient file delivery
 
-### Automated Scripts
-These wrappers handle the complex Docker commands for you:
+## Observability
+
+What exists:
+
+- FE generates or forwards `X-Request-ID`
+- backend middleware reuses or creates request IDs
+- backend responses echo `X-Request-ID`
+- backend logs include:
+  - request ID
+  - method
+  - path
+  - status
+  - duration
+  - host
+
+Middleware path:
+
+- [backend/common/middleware.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/middleware.py)
+
+## Monitoring
+
+Monitoring includes frontend, backend, and nginx logs.
+
+Daily monitoring pipeline:
+
+1. host cron collects Docker logs
+2. backend monitoring app reads pre-collected log files
+3. LLM summarizes findings
+4. analysis is stored in Django admin and emailed
+
+Collected log groups:
+
+- `backend.log`
+- `frontend.log`
+- `nginx.log`
+- `traefik.log`
+
+## Development
+
+Local backend development is handled through Docker Compose, not a standalone `python manage.py runserver` workflow.
+
+Start or rebuild the stack from the repository root:
 
 ```bash
-# Run all tests (automatically starts/stops portfolio-test container)
-poetry run test
-
-# Run tests with coverage report
-poetry run test-cov
-
-# Run security scan on local dependencies
-poetry run security
-```
-
-### Manual Commands
-If you need more control or want to run tools individually on your host:
-
-```bash
-# Run pytest with specific arguments
-poetry run pytest -v
-
-# Run linters and formatters (pre-commit)
-pre-commit run --all-files
-```
-
-## 🐳 Docker Integration (Recommended)
-
-### Deployment
-```bash
-# Run from the project root with centralized secrets. Based on environmet remember to use --config flag like --config dev, --config prod, --config staging
-doppler run -- docker compose up --build
-```
-
-### Standard Deployment
-```bash
-# Local development with Doppler
 doppler --config dev run -- docker compose up --build
 ```
 
-#### Host File Configuration (Required for Docker)
-To access the project via custom domains, add the following to your `/etc/hosts` (Mac/Linux) or `C:\Windows\System32\drivers\etc\hosts` (Windows):
-```text
-127.0.0.1 portfolio.local
-127.0.0.1 admin.portfolio.local
-```
+Useful backend commands:
 
-- **Backend API**: `https://api.portfolio.local/v1/`
-- **Django Admin**: `https://admin.portfolio.local/admin/`
-- **Media Files**: `https://portfolio.local/media/`
-
-### Run Tests in Docker
 ```bash
-# Isolated test execution
-docker compose run --rm portfolio-test
+# backend logs
+doppler --config dev run -- docker compose logs -f be
 
-# Fast check if already running
-docker compose exec portfolio-be pytest
+# restart only the backend container
+doppler --config dev run -- docker compose restart be
+
+# backend management commands
+doppler --config dev run -- docker compose exec -T be python manage.py migrate
+doppler --config dev run -- docker compose exec -T be python manage.py compilemessages
+
+# backend checks
+doppler --config dev run -- docker compose exec -T be poetry run pytest
+doppler --config dev run -- docker compose exec -T be poetry run mypy .
+doppler --config dev run -- docker compose exec -T be pre-commit run --all-files
 ```
 
-## 🗄️ Database Maintenance
+## Important Backend Areas
 
-We provide specialized "God-Tier" scripts for automated database backups and restore verification.
+- settings and singleton config:
+  - [backend/core/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/models.py)
+- astrophotography domain:
+  - [backend/astrophotography/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/astrophotography/models.py)
+- user/profile domain:
+  - [backend/users/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/users/models.py)
+- monitoring:
+  - [backend/monitoring/services.py](/Users/lukaszremkowicz/Projects/landingpage/backend/monitoring/services.py)
 
-- **Atomic Backups**: `infra/scripts/db_backup/backup_db.sh` creates validated, timestamped dumps with overlap protection.
-- **Restore Verification**: `infra/scripts/db_backup/test_restore.sh` automatically verifies that backups are healthy by performing a full restore in a temporary container.
+## Notes
 
-> [!TIP]
-> For detailed instructions on configuration (Doppler/Env), retention policies, and restore procedures, see the [Database Maintenance Guide](../infra/scripts/db_backup/MAINTENANCE.md).
-
-##  TODO - Backend Improvements
-
-### 📸 Features & Processing
-- [ ] Implement image optimization pipeline (WebP conversion)
-- [ ] Prettify email messages (add HTML template)
-
-### 🚀 API & Reliability
-- [ ] **Dynamic Sitemap** - Implement automatic sitemap generation using `django.contrib.sitemaps` (moved from frontend)
-- [ ] **Structured Logging** - Implement JSON structured logs for production
+- Django still owns sitemap generation and should remain the source of truth for dynamic public URLs.
+- The backend public API host should be treated as internal/administrative architecture, not the main browser contract.

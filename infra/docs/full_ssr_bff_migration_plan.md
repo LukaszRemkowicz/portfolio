@@ -558,6 +558,25 @@ Rules:
 - prefer correctness and debuggability over aggressive cache hit rate
 - keep public page URLs and sitemap output unchanged
 
+Current implementation:
+
+- frontend SSR in-memory TTL cache added for:
+  - `settings`
+  - `profile`
+  - `background`
+  - `travel-highlights`
+  - `latest-astro-images`
+- cache entries are keyed by resource, language, and site host
+- default TTL is 24h
+- backend invalidates frontend cache through an internal webhook-style endpoint:
+  - `POST /internal/cache/invalidate`
+- invalidation is tag-based, currently covering:
+  - `settings`
+  - `profile`
+  - `background`
+  - `travel-highlights`
+  - `latest-astro-images`
+
 Success criteria:
 
 - shared shell data is not re-fetched from backend on every SSR request

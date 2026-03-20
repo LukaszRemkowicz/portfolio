@@ -9,6 +9,8 @@ import {
   replacePublicEnvPlaceholders,
   resolvePublicEnv,
 } from './publicEnv.js';
+import { invalidateCacheTags } from './ssrCache.js';
+import { resolveBffBackendPath } from './views/bff.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,11 +36,7 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2',
 };
 
-const BFF_ROUTES = {
-  contact: '/app/contact',
-  images: '/app/images/',
-  travelBySlug: '/app/travel/',
-};
+const INTERNAL_CACHE_INVALIDATION_ROUTE = '/internal/cache/invalidate';
 
 function getStaticHeaders(filePath) {
   const ext = path.extname(filePath);
@@ -267,6 +265,81 @@ async function readJsonBody(req) {
   return rawBody ? JSON.parse(rawBody) : null;
 }
 
+function isAuthorizedInternalCacheRequest(req) {
+  const expectedToken = process.env.SSR_CACHE_INVALIDATION_TOKEN || '';
+  if (!expectedToken) {
+    return true;
+  }
+
+  const authHeader = req.headers.authorization || '';
+  return authHeader === `Bearer ${expectedToken}`;
+}
+
+async function handleInternalRequest(req, res, requestUrl, start, requestId) {
+  if (requestUrl.pathname !== INTERNAL_CACHE_INVALIDATION_ROUTE) {
+    return false;
+  }
+
+  if (req.method !== 'POST') {
+    res.writeHead(405, {
+      'Content-Type': 'application/json; charset=utf-8',
+      Allow: 'POST',
+    });
+    res.end(JSON.stringify({ message: 'Method not allowed.' }));
+    logRequest(
+      {
+        kind: 'cache-invalidate',
+        method: req.method,
+        path: requestUrl.pathname,
+        status: 405,
+        duration_ms: Date.now() - start,
+      },
+      requestId
+    );
+    return true;
+  }
+
+  if (!isAuthorizedInternalCacheRequest(req)) {
+    res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ message: 'Unauthorized.' }));
+    logRequest(
+      {
+        kind: 'cache-invalidate',
+        method: req.method,
+        path: requestUrl.pathname,
+        status: 401,
+        duration_ms: Date.now() - start,
+      },
+      requestId
+    );
+    return true;
+  }
+
+  const body = (await readJsonBody(req)) || {};
+  const result = invalidateCacheTags(Array.isArray(body.tags) ? body.tags : []);
+
+  res.writeHead(200, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+  });
+  res.end(JSON.stringify(result));
+
+  logRequest(
+    {
+      kind: 'cache-invalidate',
+      method: req.method,
+      path: requestUrl.pathname,
+      status: 200,
+      duration_ms: Date.now() - start,
+      tags: result.tags,
+      invalidated_keys: result.invalidatedKeys,
+    },
+    requestId
+  );
+
+  return true;
+}
+
 async function forwardBackendWrite(req, backendPath, requestId) {
   const requestPublicEnv = getRequestPublicEnv(req);
   const requestOrigin = getRequestOrigin(req);
@@ -307,78 +380,31 @@ async function forwardBackendWrite(req, backendPath, requestId) {
   };
 }
 
-function isTravelBffRoute(pathname) {
-  return /^\/app\/travel\/[^/]+\/[^/]+\/[^/]+\/?$/.test(pathname);
-}
-
-function isImagesBffListRoute(pathname) {
-  return pathname === BFF_ROUTES.images || pathname === '/app/images';
-}
-
-function isImagesBffDetailRoute(pathname) {
-  return /^\/app\/images\/[^/]+\/?$/.test(pathname);
-}
-
-function getTravelBackendPath(pathname) {
-  const match = pathname.match(/^\/app\/travel\/([^/]+)\/([^/]+)\/([^/]+)\/?$/);
-  if (!match) {
-    return null;
-  }
-
-  const [, countrySlug, placeSlug, dateSlug] = match;
-  return `/v1/travel/${countrySlug}/${placeSlug}/${dateSlug}/`;
-}
-
-function getImagesBackendPath(pathname) {
-  if (isImagesBffListRoute(pathname)) {
-    return '/v1/images/';
-  }
-
-  const match = pathname.match(/^\/app\/images\/([^/]+)\/?$/);
-  if (!match) {
-    return null;
-  }
-
-  const [, slug] = match;
-  return `/v1/images/${slug}/`;
-}
-
 async function handleBffRequest(req, res, requestUrl, start, requestId) {
-  const pathname = requestUrl.pathname;
-  let backendPath = null;
+  const resolvedView = resolveBffBackendPath(requestUrl.pathname, req.method);
 
-  switch (pathname) {
-    case BFF_ROUTES.contact:
-      if (req.method !== 'POST') {
-        res.writeHead(405, {
-          'Content-Type': 'application/json; charset=utf-8',
-          Allow: 'POST',
-        });
-        res.end(JSON.stringify({ message: 'Method not allowed.' }));
-        return true;
-      }
-      backendPath = '/v1/contact/';
-      break;
-    default:
-      if (isTravelBffRoute(pathname)) {
-        backendPath = getTravelBackendPath(pathname);
-      } else if (
-        isImagesBffListRoute(pathname) ||
-        isImagesBffDetailRoute(pathname)
-      ) {
-        backendPath = getImagesBackendPath(pathname);
-      }
-      break;
+  if (!resolvedView) {
+    return false;
   }
 
-  if (!backendPath) {
-    return false;
+  if (resolvedView.methodNotAllowed) {
+    res.writeHead(405, {
+      'Content-Type': 'application/json; charset=utf-8',
+      Allow: resolvedView.allow,
+    });
+    res.end(JSON.stringify({ message: 'Method not allowed.' }));
+    return true;
   }
 
   const backendFetch =
     req.method === 'POST'
-      ? await forwardBackendWrite(req, backendPath, requestId)
-      : await fetchBackendJson(req, backendPath, requestUrl, requestId);
+      ? await forwardBackendWrite(req, resolvedView.backendPath, requestId)
+      : await fetchBackendJson(
+          req,
+          resolvedView.backendPath,
+          requestUrl,
+          requestId
+        );
   const { durationMs, payload, response, upstreamBaseUrl, upstreamUrl } =
     backendFetch;
 
@@ -567,6 +593,10 @@ const server = http.createServer(async (req, res) => {
         },
         requestId
       );
+      return;
+    }
+
+    if (await handleInternalRequest(req, res, requestUrl, start, requestId)) {
       return;
     }
 
