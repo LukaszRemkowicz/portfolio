@@ -151,6 +151,7 @@ services:
     expose:
       - "8080"
     environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
       PORT: 8080
       FRONTEND_PORT: 8080
       NODE_ENV: production
@@ -218,16 +219,16 @@ services:
       - "traefik.http.routers.portfolio-prod.tls.certresolver=letsencrypt"
       - "traefik.http.routers.portfolio-prod.service=portfolio-prod"
 
-      # API & Admin Router (Routes to Nginx for X-Accel-Redirect)
-      - "traefik.http.routers.portfolio-prod-api.rule=Host(`api.${SITE_DOMAIN}`) || Host(`admin.${SITE_DOMAIN}`)"
-      - "traefik.http.routers.portfolio-prod-api.entrypoints=websecure"
-      - "traefik.http.routers.portfolio-prod-api.tls=true"
-      - "traefik.http.routers.portfolio-prod-api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.portfolio-prod-api.service=portfolio-prod"
+      # Admin Router
+      - "traefik.http.routers.portfolio-prod-admin.rule=Host(`admin.${SITE_DOMAIN}`)"
+      - "traefik.http.routers.portfolio-prod-admin.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-prod-admin.tls=true"
+      - "traefik.http.routers.portfolio-prod-admin.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portfolio-prod-admin.service=portfolio-prod"
 
       # Middlewares (Security Headers, HSTS, and Rate Limiting)
       - "traefik.http.routers.portfolio-prod.middlewares=public-security@file"
-      - "traefik.http.routers.portfolio-prod-api.middlewares=admin-api-security@file,rate-limit@file"
+      - "traefik.http.routers.portfolio-prod-admin.middlewares=admin-api-security@file,rate-limit@file"
 
       # Explicit service port (Nginx listens on 80)
       - "traefik.http.services.portfolio-prod.loadbalancer.server.port=80"

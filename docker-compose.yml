@@ -95,6 +95,7 @@ services:
   fe:
     <<: *frontend-common
     environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}
       API_URL: https://${API_DOMAIN:-api.portfolio.local}
       SSR_API_URL: http://be:8000
       VITE_API_URL: https://${API_DOMAIN:-api.portfolio.local}
@@ -239,10 +240,10 @@ services:
       - "traefik.http.routers.portfolio-dev.entrypoints=websecure"
       - "traefik.http.routers.portfolio-dev.tls=true"
       - "traefik.http.routers.portfolio-dev.middlewares=public-security@file"
-      - "traefik.http.routers.portfolio-dev-api.rule=Host(`api.${SITE_DOMAIN:-portfolio.local}`) || Host(`admin.${SITE_DOMAIN:-portfolio.local}`)"
-      - "traefik.http.routers.portfolio-dev-api.entrypoints=websecure"
-      - "traefik.http.routers.portfolio-dev-api.tls=true"
-      - "traefik.http.routers.portfolio-dev-api.middlewares=admin-api-security@file,rate-limit@file"
+      - "traefik.http.routers.portfolio-dev-admin.rule=Host(`admin.${SITE_DOMAIN:-portfolio.local}`)"
+      - "traefik.http.routers.portfolio-dev-admin.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-dev-admin.tls=true"
+      - "traefik.http.routers.portfolio-dev-admin.middlewares=admin-api-security@file,rate-limit@file"
       - "traefik.http.services.portfolio-dev.loadbalancer.server.port=80"
 
 volumes:

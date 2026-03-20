@@ -474,6 +474,26 @@ Recommended safety:
 - keep backend API directly reachable in local and possibly staging until rollout is complete
 - hide it in production only after verification
 
+### Phase 6 progress
+
+The browser/backend boundary is now tighter:
+
+- browser API traffic uses same-origin `/v1/*` on `SITE_DOMAIN` instead of the public `api.` hostname
+- nginx on `SITE_DOMAIN` only proxies the backend routes still needed by the browser:
+  - `/v1/astroimages/...`
+  - `/v1/categories/`
+  - `/v1/tags/`
+  - `/v1/images/:slug/serve/`
+- public `api.` Traefik routers were removed from local, stage, and prod compose routing
+- public `/media/*` exposure was removed from the `api.` nginx host
+- admin remains separately reachable on the admin hostname
+
+This means:
+
+- the frontend site is the only public entrypoint for normal browser app traffic
+- backend API exposure is reduced to the minimum still needed for the remaining interactive gallery flows
+- `api.` is no longer part of the public browser architecture
+
 ## Phase 7: Observability
 
 Once the frontend server becomes the only public entrypoint, logging has to be stronger.

@@ -1,10 +1,30 @@
 import { API_BASE_URL } from './routes';
+import { publicEnv } from '../../server/publicEnv.js';
 import type { AstroImage, MainPageLocation, UserProfile } from '../types';
+
+const PUBLIC_SITE_BASE_URL =
+  typeof window !== 'undefined'
+    ? window.location.origin
+    : `https://${publicEnv.SITE_DOMAIN}`;
 
 export const getMediaUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
 
   if (path.startsWith('http://') || path.startsWith('https://')) {
+    try {
+      const url = new URL(path);
+      const isPublicMedia = url.pathname.startsWith('/media/');
+      const isSecureImageServe = /^\/v1\/images\/[^/]+\/serve\/?$/.test(
+        url.pathname
+      );
+
+      if (isPublicMedia || isSecureImageServe) {
+        return `${PUBLIC_SITE_BASE_URL}${url.pathname}${url.search}`;
+      }
+    } catch {
+      return path;
+    }
+
     return path;
   }
 

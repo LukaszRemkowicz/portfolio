@@ -66,7 +66,8 @@ registerRoute(
 
 // Cache API responses with StaleWhileRevalidate
 registerRoute(
-  ({ url }) => url.pathname.includes('/api/v1/'),
+  ({ url }) =>
+    url.pathname.startsWith('/v1/') || url.pathname.startsWith('/app/'),
   new StaleWhileRevalidate({
     cacheName: 'api-cache',
     plugins: [

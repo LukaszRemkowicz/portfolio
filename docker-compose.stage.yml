@@ -128,6 +128,7 @@ services:
     expose:
       - "8080"
     environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
       PORT: 8080
       FRONTEND_PORT: 8080
       NODE_ENV: production
@@ -205,14 +206,14 @@ services:
       - "traefik.http.routers.staging-site.middlewares=staging-whitelist@docker,staging-security@file"
       - "traefik.http.routers.staging-site.service=staging-site"
 
-      # Admin/API routing (Everything goes to Nginx now)
-      - "traefik.http.routers.staging-api.rule=Host(`api.${SITE_DOMAIN}`) || Host(`admin.${SITE_DOMAIN}`)"
-      - "traefik.http.routers.staging-api.entrypoints=websecure"
-      - "traefik.http.routers.staging-api.tls=true"
-      - "traefik.http.routers.staging-api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.staging-api.middlewares=staging-whitelist@docker,staging-security@file,rate-limit@file"
-      - "traefik.http.routers.staging-api.priority=2"
-      - "traefik.http.routers.staging-api.service=staging-site"
+      # Admin routing
+      - "traefik.http.routers.staging-admin.rule=Host(`admin.${SITE_DOMAIN}`)"
+      - "traefik.http.routers.staging-admin.entrypoints=websecure"
+      - "traefik.http.routers.staging-admin.tls=true"
+      - "traefik.http.routers.staging-admin.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.staging-admin.middlewares=staging-whitelist@docker,staging-security@file,rate-limit@file"
+      - "traefik.http.routers.staging-admin.priority=2"
+      - "traefik.http.routers.staging-admin.service=staging-site"
 
       - "traefik.http.services.staging-site.loadbalancer.server.port=80"
 
