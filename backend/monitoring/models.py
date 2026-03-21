@@ -89,6 +89,9 @@ class LogAnalysis(models.Model):
     nginx_logs = models.FileField(
         upload_to="logs/%Y/%m/%d/", help_text="Raw nginx logs", null=True, blank=True
     )
+    traefik_logs = models.FileField(
+        upload_to="logs/%Y/%m/%d/", help_text="Raw traefik logs", null=True, blank=True
+    )
     log_size_bytes = models.IntegerField(default=0)
 
     # GPT Analysis
@@ -130,7 +133,8 @@ class LogAnalysis(models.Model):
     # Domain logic methods
     def get_email_subject(self) -> str:
         """Generate email subject for this analysis."""
-        return f"[{self.severity}] Daily Log Analysis - {self.analysis_date}"
+        environment = settings.ENVIRONMENT.upper()
+        return f"[{environment}][{self.severity}] Daily Log Analysis - {self.analysis_date}"
 
     def get_email_context(self) -> dict:
         """Generate template context for email rendering."""

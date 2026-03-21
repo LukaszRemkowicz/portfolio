@@ -3,6 +3,7 @@ from datetime import date
 
 import pytest
 
+from django.conf import settings
 from django.template.loader import render_to_string
 
 from monitoring.services import LogAnalysisEmailService
@@ -53,7 +54,9 @@ class TestEmailNotifications:
         context = log_analysis.get_email_context()
 
         # Verify subject
-        assert subject == f"[INFO] Daily Log Analysis - {date.today()}"
+        assert (
+            subject == f"[{settings.ENVIRONMENT.upper()}][INFO] Daily Log Analysis - {date.today()}"
+        )
 
         # Verify context
         assert context["log_analysis"] == log_analysis
@@ -83,5 +86,5 @@ class TestEmailNotifications:
         subject = call_args[0][0]
         html_content = call_args[0][1]
 
-        assert "[INFO] Daily Log Analysis" in subject
+        assert f"[{settings.ENVIRONMENT.upper()}][INFO] Daily Log Analysis" in subject
         assert "System is healthy." in html_content

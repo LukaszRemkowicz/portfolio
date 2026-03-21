@@ -26,13 +26,15 @@ class TestDockerLogCollector:
         (tmp_path / "backend.log").write_text("backend log content")
         (tmp_path / "frontend.log").write_text("frontend log content")
         (tmp_path / "nginx.log").write_text("nginx log content")
+        (tmp_path / "traefik.log").write_text("traefik log content")
         (tmp_path / "collected_at.txt").write_text("2026-03-01T00:00:00Z")
 
-        backend_path, frontend_path, nginx_path = DockerLogCollector.collect_logs()
+        log_paths = DockerLogCollector.collect_logs()
 
-        assert backend_path == str(tmp_path / "backend.log")
-        assert frontend_path == str(tmp_path / "frontend.log")
-        assert nginx_path == str(tmp_path / "nginx.log")
+        assert log_paths["backend"] == str(tmp_path / "backend.log")
+        assert log_paths["frontend"] == str(tmp_path / "frontend.log")
+        assert log_paths["nginx"] == str(tmp_path / "nginx.log")
+        assert log_paths["traefik"] == str(tmp_path / "traefik.log")
 
     def test_collect_logs_missing_backend_raises(self, tmp_path, settings):
         """FileNotFoundError when backend.log is missing."""
@@ -51,12 +53,16 @@ class TestDockerLogCollector:
         # nginx.log intentionally NOT created
 
         with caplog.at_level(logging.WARNING, logger="monitoring.services"):
-            backend_path, frontend_path, nginx_path = DockerLogCollector.collect_logs()
+            log_paths = DockerLogCollector.collect_logs()
 
-        assert frontend_path is None
-        assert nginx_path is None
+        assert log_paths["backend"] == str(tmp_path / "backend.log")
+        assert log_paths["frontend"] is None
+        assert log_paths["nginx"] is None
+        assert log_paths["traefik"] is None
         assert any(
-            "nginx" in record.message.lower() or "frontend" in record.message.lower()
+            "nginx" in record.message.lower()
+            or "frontend" in record.message.lower()
+            or "traefik" in record.message.lower()
             for record in caplog.records
         )
 
@@ -133,7 +139,12 @@ class TestLogAnalysisOrchestrator:
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
             mock_agent = mocker.MagicMock()
 
-            mock_collector.return_value = ("/tmp/backend.log", "/tmp/frontend.log", None)
+            mock_collector.return_value = {
+                "backend": "/tmp/backend.log",
+                "frontend": "/tmp/frontend.log",
+                "nginx": None,
+                "traefik": "/tmp/traefik.log",
+            }
             mock_agent.analyze_logs_from_files.return_value = mock_llm_response
 
             # Mock file operations to prevent reading/writing real files in /tmp
@@ -167,7 +178,12 @@ class TestLogAnalysisOrchestrator:
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
             mock_agent = mocker.MagicMock()
 
-            mock_collector.return_value = ("/tmp/backend.log", "/tmp/frontend.log", None)
+            mock_collector.return_value = {
+                "backend": "/tmp/backend.log",
+                "frontend": "/tmp/frontend.log",
+                "nginx": None,
+                "traefik": "/tmp/traefik.log",
+            }
             mock_agent.analyze_logs_from_files.return_value = mock_llm_response
 
             mocker.patch("builtins.open", mock_open(read_data="Mock logs"))

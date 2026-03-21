@@ -80,11 +80,12 @@ class TestMonitoringTasks:
         # 2. Mock the log collection I/O
         mock_collector = mocker.patch("monitoring.services.DockerLogCollector")
         collector_instance = mock_collector.return_value
-        collector_instance.collect_logs.return_value = (
-            "/tmp/be.log",
-            "/tmp/fe.log",
-            "/tmp/nx.log",
-        )
+        collector_instance.collect_logs.return_value = {
+            "backend": "/tmp/be.log",
+            "frontend": "/tmp/fe.log",
+            "nginx": "/tmp/nx.log",
+            "traefik": "/tmp/traefik.log",
+        }
         collector_instance.get_collected_at.return_value = "2026-03-05T12:00:00Z"
 
         # Mock reading of log files specifically in the agent, not globally

@@ -20,7 +20,7 @@ This is Phase 1 of the AgentLog pipeline. It runs as a cron job and does not dep
 1. Ensures `DOCKER_LOGS_DIR` exists.
 2. Clears previous `*.log` files and `collected_at.txt` to avoid stale data.
 3. Resolves the active Compose project name.
-4. Collects logs for backend, frontend, nginx, and Traefik containers when available.
+4. Collects timestamped logs for backend, frontend, nginx, and Traefik containers when available.
 5. Writes `collected_at.txt` with a UTC ISO timestamp so the backend can detect stale or missing data.
 
 ### 🔐 Environment variables
@@ -31,10 +31,14 @@ This is Phase 1 of the AgentLog pipeline. It runs as a cron job and does not dep
 | `COMPOSE_FILE` | Yes | None | Compose file used to infer the environment and Compose project |
 | `ENVIRONMENT` | No | Inferred from `COMPOSE_FILE` | Environment name used for project resolution |
 | `LOG_TAIL` | No | `5000` | Number of log lines to collect per container |
+| `LOG_SINCE` | No | `24h` | Time window passed to `docker logs --since` |
+| `DOCKER_TOOL_LOG` | No | `${DOCKER_LOGS_DIR}/docker-tool-errors.log` | File where raw Docker stderr output is written |
 | `BACKEND_SERVICE` | No | `be` | Compose service name for backend |
 | `FRONTEND_SERVICE` | No | `fe` | Compose service name for frontend SSR |
 | `NGINX_SERVICE` | No | `nginx` | Compose service name for nginx |
 | `TRAEFIK_SERVICE` | No | `traefik` | Compose service name for Traefik |
+| `TRAEFIK_PROJECT_NAME` | No | `portfolio-traefik` | Compose project name for the standalone Traefik stack |
+| `TRAEFIK_CONTAINER_NAME` | No | `traefik` | Exact container name fallback for Traefik |
 
 ### 📝 Output files
 
@@ -46,7 +50,7 @@ The script writes these files into `DOCKER_LOGS_DIR`:
 - `traefik.log`
 - `collected_at.txt`
 
-If a service is not running, the script logs a warning and writes an empty file for that service instead of failing the whole collection.
+If a service is not running, the script logs a warning and writes an empty file for that service instead of failing the whole collection. Traefik is resolved from its standalone `portfolio-traefik` stack by default. Raw Docker stderr is written to `docker-tool-errors.log` so the cron log stays limited to collector messages.
 
 ### ▶️ Manual run
 

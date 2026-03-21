@@ -2,12 +2,17 @@ import json
 import logging
 import os
 import re
+from collections.abc import Mapping
 from typing import Optional, cast
 
 from common.llm.protocols import LLMProvider
 from monitoring.agent.skills import build_monitoring_system_prompt_with_owasp as build_prompt
+from monitoring.log_sources import LOG_SOURCES, REQUIRED_LOG_SOURCE
 
 logger = logging.getLogger(__name__)
+
+
+LEGACY_LOG_KEYS = ("backend", "frontend", "nginx")
 
 
 class LogAnalysisAgent:
@@ -21,9 +26,7 @@ class LogAnalysisAgent:
 
     def analyze_logs_from_files(
         self,
-        backend_log_path: str,
-        frontend_log_path: Optional[str] = None,
-        nginx_log_path: Optional[str] = None,
+        log_paths: Mapping[str, Optional[str]],
         collected_at: str = "",
         historical_context: str = "",
     ) -> Optional[dict]:
@@ -45,21 +48,12 @@ class LogAnalysisAgent:
         # 25,000 chars is roughly 6-8k tokens, leaving plenty of room for the system prompt.
         MAX_CHARS_PER_LOG = 25000
 
-        backend_content = self._read_file_tail(backend_log_path, MAX_CHARS_PER_LOG)
-        frontend_content = (
-            self._read_file_tail(frontend_log_path, MAX_CHARS_PER_LOG) if frontend_log_path else ""
-        )
-        nginx_content = (
-            self._read_file_tail(nginx_log_path, MAX_CHARS_PER_LOG) if nginx_log_path else ""
-        )
+        rendered_logs = {
+            key: self._read_file_tail(path, MAX_CHARS_PER_LOG) if path else ""
+            for key, path in log_paths.items()
+        }
 
-        return self.analyze_logs(
-            backend_content,
-            nginx_content,
-            collected_at,
-            historical_context,
-            frontend_logs=frontend_content,
-        )
+        return self.analyze_logs(rendered_logs, collected_at, historical_context)
 
     def _read_file_tail(self, file_path: str, max_chars: int) -> str:
         """Reads the last max_chars from a file efficiently."""
@@ -75,11 +69,10 @@ class LogAnalysisAgent:
 
     def analyze_logs(
         self,
-        backend_logs: str,
-        nginx_logs: str = "",
+        logs_by_key: Mapping[str, str] | str,
         collected_at: str = "",
         historical_context: str = "",
-        frontend_logs: str = "",
+        *legacy_logs: str,
     ) -> Optional[dict]:
         """
         Analyzes logs and returns structured insights.
@@ -93,15 +86,17 @@ class LogAnalysisAgent:
                 "trend_summary": str,
             }
         """
+        normalized_logs = self._normalize_log_input(
+            logs_by_key,
+            collected_at=collected_at,
+            historical_context=historical_context,
+            legacy_logs=legacy_logs,
+        )
+
         logger.info("Preparing prompt for LLM")
 
         prompt = build_prompt(historical_context=historical_context)
-        combined_logs = self._prepare_logs(
-            backend_logs,
-            frontend=frontend_logs,
-            nginx=nginx_logs,
-            collected_at=collected_at,
-        )
+        combined_logs = self._prepare_logs(normalized_logs, collected_at=collected_at)
 
         logger.info("Sending request to LLM provider (prompt size: %d chars)", len(combined_logs))
         result, usage = self.provider.ask_question_with_usage(
@@ -131,42 +126,49 @@ class LogAnalysisAgent:
         logger.error("LLM log analysis failed: Empty result")
         return None
 
+    def _normalize_log_input(
+        self,
+        logs_by_key: Mapping[str, str] | str,
+        *,
+        collected_at: str,
+        historical_context: str,
+        legacy_logs: tuple[str, ...],
+    ) -> Mapping[str, str]:
+        """Accept both registry-based mappings and the legacy positional API."""
+        if isinstance(logs_by_key, Mapping):
+            return logs_by_key
+
+        legacy_values = (logs_by_key, collected_at, historical_context, *legacy_logs)
+        normalized: dict[str, str] = {}
+        for key, value in zip(LEGACY_LOG_KEYS, legacy_values):
+            if value:
+                normalized[key] = value
+        return normalized
+
     def _prepare_logs(
         self,
-        backend: str,
-        frontend: str = "",
-        nginx: str = "",
+        logs_by_key: Mapping[str, str],
         collected_at: str = "",
     ) -> str:
         """Truncates and formats logs for LLM (avoid token limits)."""
         MAX_CHARS = 50000  # ~12k tokens
+        active_sources = [source for source in LOG_SOURCES if logs_by_key.get(source.key)]
+        if not active_sources:
+            return f"Log collection timestamp: {collected_at}\n"
 
-        # Smart truncation: keep recent logs
-        section_limit = MAX_CHARS // 3
-        backend_truncated = backend[-section_limit:] if len(backend) > section_limit else backend
-        frontend_truncated = (
-            frontend[-section_limit:] if len(frontend) > section_limit else frontend
-        )
-        nginx_truncated = nginx[-section_limit:] if len(nginx) > section_limit else nginx
-
-        frontend_section = (
-            f"\n        === FRONTEND LOGS ===\n        {frontend_truncated}\n"
-            if frontend_truncated
-            else ""
-        )
-
-        nginx_section = (
-            f"\n        === NGINX LOGS ===\n        {nginx_truncated}\n" if nginx_truncated else ""
-        )
+        section_limit = MAX_CHARS // len(active_sources)
+        sections = []
+        for source in active_sources:
+            content = logs_by_key.get(source.key, "")
+            truncated = content[-section_limit:] if len(content) > section_limit else content
+            sections.append(f"\n        === {source.prompt_section} ===\n        {truncated}\n")
 
         metadata = f"Log collection timestamp: {collected_at}\n" if collected_at else ""
-
-        return (
-            f"{metadata}"
-            f"\n        === BACKEND LOGS ===\n        {backend_truncated}"
-            f"{frontend_section}"
-            f"{nginx_section}"
-        )
+        if REQUIRED_LOG_SOURCE.key not in logs_by_key:
+            logger.warning(
+                "Required log source '%s' missing from analysis input", REQUIRED_LOG_SOURCE.key
+            )
+        return f"{metadata}{''.join(sections)}"
 
     def _parse_response(self, response: str) -> dict:
         """

@@ -28,7 +28,7 @@ class TestLogAnalysisAgent:
         mock_usage = {"total_tokens": 100, "cost_usd": 0.005}
         mock_llm_provider.ask_question_with_usage.return_value = (mock_response, mock_usage)
 
-        result = agent.analyze_logs("backend logs")
+        result = agent.analyze_logs({"backend": "backend logs"})
 
         assert result is not None
         assert result["summary"] == "Test summary"
@@ -45,7 +45,7 @@ class TestLogAnalysisAgent:
         """Test handling of empty response from LLM."""
         mock_llm_provider.ask_question_with_usage.return_value = (None, {})
 
-        result = agent.analyze_logs("logs", "logs")
+        result = agent.analyze_logs({"backend": "logs", "nginx": "logs"})
 
         assert result is None
 
@@ -58,7 +58,7 @@ class TestLogAnalysisAgent:
         mock_usage = {"total_tokens": 50, "cost_usd": 0.002}
         mock_llm_provider.ask_question_with_usage.return_value = (mock_response, mock_usage)
 
-        result = agent.analyze_logs("logs", "logs")
+        result = agent.analyze_logs({"backend": "logs", "nginx": "logs"})
 
         assert result is not None
         assert result["summary"] == "Markdown summary"
@@ -70,7 +70,7 @@ class TestLogAnalysisAgent:
         mock_llm_provider.ask_question_with_usage.return_value = (mock_response, mock_usage)
 
         # Should return fallback structure
-        result = agent.analyze_logs("logs", "logs")
+        result = agent.analyze_logs({"backend": "logs", "nginx": "logs"})
 
         assert result is not None
         assert result["severity"] == "WARNING"
@@ -84,7 +84,7 @@ class TestLogAnalysisAgent:
         provider.configure(mock_json_path="monitoring/tests/llm_responses/attack.json")
 
         agent = LogAnalysisAgent(provider=provider)
-        result = agent.analyze_logs("dummy logs", "dummy logs")
+        result = agent.analyze_logs({"backend": "dummy logs", "nginx": "dummy logs"})
 
         assert result is not None
         assert result["severity"] == "CRITICAL"
@@ -100,7 +100,10 @@ class TestLogAnalysisAgent:
         mock_llm_provider.ask_question_with_usage.return_value = (mock_response, {})
 
         historical = "## 2026-03-08 — Severity: CRITICAL\nSummary: Bot attack"
-        agent.analyze_logs("backend", "frontend", historical_context=historical)
+        agent.analyze_logs(
+            {"backend": "backend", "frontend": "frontend"},
+            historical_context=historical,
+        )
 
         call_kwargs = mock_llm_provider.ask_question_with_usage.call_args.kwargs
         assert historical in call_kwargs["system_prompt"]
