@@ -9,7 +9,7 @@ from parler.models import TranslatableModel, TranslatedFields
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.db import IntegrityError, models, transaction
+from django.db import IntegrityError, models
 from django.utils.translation import gettext_lazy as _
 
 from common.utils.image import ImageSpec, convert_to_webp
@@ -136,9 +136,7 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
             super().save(*args, **kwargs)
 
             if changed_image_fields and not kwargs.get("update_fields"):
-                transaction.on_commit(
-                    lambda: process_user_images_task.delay(self.pk, changed_image_fields)
-                )
+                process_user_images_task.delay_on_commit(self.pk, changed_image_fields)
 
             self.trigger_translations()
         except IntegrityError as exc:

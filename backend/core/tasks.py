@@ -4,10 +4,15 @@ from celery import shared_task
 
 from django.apps import apps
 
+from common.celery import CommitAwareTask
+
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name="core.process_image")  # type: ignore[untyped-decorator]
+@shared_task(  # type: ignore[untyped-decorator]
+    name="core.process_image",
+    base=CommitAwareTask,
+)
 def process_image_task(app_label: str, model_name: str, instance_id: str) -> None:
     """
     Universal background task to process images (WebP conversion + thumbnails).

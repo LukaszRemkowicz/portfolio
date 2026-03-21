@@ -405,7 +405,11 @@ const ImageModalContent: FC<ImageModalProps> = ({ image, onClose }) => {
       data-testid='image-modal'
     >
       <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-        <button className={styles.modalClose} onClick={onClose}>
+        <button
+          className={styles.modalClose}
+          onClick={onClose}
+          aria-label='Close modal'
+        >
           <X size={24} />
         </button>
 

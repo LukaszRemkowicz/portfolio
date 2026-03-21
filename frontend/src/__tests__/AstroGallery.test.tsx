@@ -6,7 +6,7 @@ import {
   within,
   fireEvent,
 } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import AstroGallery from '../components/AstroGallery';
 import { AstroImage, Tag } from '../types';
@@ -27,6 +27,16 @@ jest.mock('../hooks/useBackground');
 jest.mock('../hooks/useSettings');
 jest.mock('../hooks/useImageUrls');
 jest.mock('../hooks/useAstroImageDetail');
+
+const LocationDisplay = () => {
+  const location = useLocation();
+  return (
+    <div data-testid='location-display'>
+      {location.pathname}
+      {location.search}
+    </div>
+  );
+};
 
 /**
  * Test suite for the AstroGallery component
@@ -317,6 +327,64 @@ describe('AstroGallery Component', () => {
       },
       { timeout: 4000 }
     );
+  });
+
+  it('returns to the homepage when closing a modal opened from the homepage gallery', async () => {
+    const mockImages: AstroImage[] = [
+      {
+        pk: '1',
+        slug: 'test-image-1',
+        thumbnail_url: '/test1-thumb.jpg',
+        name: 'Test Image 1',
+        description: 'Test description 1',
+      },
+    ];
+
+    (useAstroImages as jest.Mock).mockReturnValue({
+      data: mockImages,
+      isLoading: false,
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter
+          initialEntries={[
+            {
+              pathname: '/astrophotography/test-image-1',
+              state: {
+                backgroundLocation: {
+                  pathname: '/',
+                  search: '',
+                  hash: '',
+                },
+              },
+            },
+          ]}
+        >
+          <LocationDisplay />
+          <Routes>
+            <Route path='/' element={<div>Home</div>} />
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-screen')).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('location-display')).toHaveTextContent(
+      '/astrophotography/test-image-1'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close modal' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent('/');
+    });
   });
 
   it('renders tags in Sidebar and filters by them', async () => {

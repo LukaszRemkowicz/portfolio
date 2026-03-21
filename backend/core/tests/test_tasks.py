@@ -15,7 +15,7 @@ class TestProcessImageTask:
         THEN the path should be converted to WebP and original_image populated.
         """
         # Prevent automatic task execution during factory creation for this test
-        with patch("core.models.transaction.on_commit", side_effect=lambda f: None):
+        with patch("core.models.process_image_task.delay_on_commit"):
             img = MainPageBackgroundImageFactory()
 
         # Now manually call the task

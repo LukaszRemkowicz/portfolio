@@ -220,7 +220,7 @@ class TestTravelHighlightsBySlugView:
             adventure_date=DateRange(date(2024, 1, 1), date(2024, 1, 31)),
         )
         # Prevent automatic task execution during factory creation for this test
-        with patch("core.models.transaction.on_commit", side_effect=lambda f: None):
+        with patch("core.models.process_image_task.delay_on_commit"):
             img = AstroImageFactory(place=place)
 
         # Now manually call the task
