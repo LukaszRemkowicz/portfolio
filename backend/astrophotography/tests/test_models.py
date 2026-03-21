@@ -97,6 +97,18 @@ class TestAstroImageModel:
         assert url
         assert "/media/thumbnails/" in url or "/media/images/" in url
 
+    def test_get_thumbnail_url_returns_none_when_thumbnail_file_missing(self) -> None:
+        """Missing thumbnail files should not leak dead media URLs to the API."""
+        image: AstroImage = AstroImageFactory()
+        image.refresh_from_db()
+
+        assert image.thumbnail is not None
+
+        missing_name = str(image.thumbnail.name)
+        image.thumbnail.storage.delete(missing_name)
+
+        assert image.get_thumbnail_url() is None
+
     def test_get_path_spec(self):
         """Test that get_path_spec returns correct spec based on webp_quality."""
         # Quality >= 90 -> LANDSCAPE

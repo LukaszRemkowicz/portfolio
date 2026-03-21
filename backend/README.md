@@ -125,7 +125,7 @@ Middleware path:
 
 ## 🤖 Monitoring
 
-Monitoring includes frontend, backend, and nginx logs.
+Monitoring includes frontend, backend, nginx, and traefik logs.
 
 Daily monitoring pipeline:
 

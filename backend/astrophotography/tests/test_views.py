@@ -486,6 +486,7 @@ class TestAstroImageSecureView:
     def test_astro_image_secure_view_success(
         self, api_client: APIClient, astro_image: AstroImage
     ) -> None:
+        astro_image.refresh_from_db()
         url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
         params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
 
@@ -493,6 +494,28 @@ class TestAstroImageSecureView:
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
         assert f"/protected_media/{astro_image.path.name}" == response["X-Accel-Redirect"]
+
+    def test_astro_image_secure_view_always_serves_full_resolution_path(
+        self, api_client: APIClient, astro_image: AstroImage
+    ) -> None:
+        """The modal/lightbox endpoint must serve the current full-resolution asset."""
+        from core.tests.factories import LandingPageSettingsFactory
+
+        LandingPageSettingsFactory(serve_webp_images=False)
+        astro_image.refresh_from_db()
+
+        assert astro_image.path
+        assert astro_image.original_image
+        assert astro_image.path.name != astro_image.original_image.name
+
+        url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
+        params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
+
+        response: Response = api_client.get(url, params)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.has_header("X-Accel-Redirect")
+        assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.path.name}"
 
     def test_secure_media_view_missing_signature(
         self, api_client: APIClient, astro_image: AstroImage

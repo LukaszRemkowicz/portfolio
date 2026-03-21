@@ -239,6 +239,24 @@ Properties:
 - invalidated by backend through:
   - `POST /internal/cache/invalidate`
 
+Manual invalidation from the FE container:
+
+```bash
+npm run cache:clear:ssr
+```
+
+Custom tags:
+
+```bash
+npm run cache:clear:ssr -- profile travel-highlights
+```
+
+Invalidate all provided tags from the caller:
+
+```bash
+npm run cache:clear:ssr -- --all-tags
+```
+
 Internal cache files:
 
 - [frontend/server/ssrCache.js](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/ssrCache.js)

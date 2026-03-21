@@ -9,6 +9,7 @@
 export const BFF_ROUTES = {
   contact: '/app/contact',
   images: '/app/images/',
+  imageFiles: '/app/image-files/',
   travelBySlug: '/app/travel/',
 };
 
@@ -53,7 +54,7 @@ export function getImagesBackendRoute(pathname, method) {
   if (pathname === BFF_ROUTES.images || pathname === '/app/images') {
     return {
       allow: 'GET',
-      backendPath: '/v1/images/',
+      backendPath: '/image-urls/',
       kind: 'images',
       methodNotAllowed: method !== 'GET',
     };
@@ -67,8 +68,23 @@ export function getImagesBackendRoute(pathname, method) {
   const [, slug] = match;
   return {
     allow: 'GET',
-    backendPath: `/v1/images/${slug}/`,
+    backendPath: `/image-urls/${slug}/`,
     kind: 'images',
+    methodNotAllowed: method !== 'GET',
+  };
+}
+
+export function getImageFilesBackendRoute(pathname, method) {
+  const match = pathname.match(/^\/app\/image-files\/([^/]+)\/serve\/?$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, slug] = match;
+  return {
+    allow: 'GET',
+    backendPath: `/image-files/${slug}/serve/`,
+    kind: 'image-file',
     methodNotAllowed: method !== 'GET',
   };
 }
@@ -80,6 +96,7 @@ export function getImagesBackendRoute(pathname, method) {
  */
 export function getFrontendTransportRoute(pathname, method) {
   return (
+    getImageFilesBackendRoute(pathname, method) ||
     getContactBackendRoute(pathname, method) ||
     getTravelBackendRoute(pathname, method) ||
     getImagesBackendRoute(pathname, method)

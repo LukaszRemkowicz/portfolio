@@ -190,6 +190,13 @@ class AstroImageSecureView(SecureMediaView):
 
     def get_file_path(self, obj: Model) -> str:
         assert isinstance(obj, AstroImage)
+        # The public secure image endpoint is used by the gallery/modal to fetch
+        # the highest-quality asset. It should not be downgraded by the legacy
+        # "serve_webp_images" admin toggle, which exists for older public asset
+        # flows. Prefer the current full-resolution path and fall back only when
+        # no converted asset exists.
+        if obj.path:
+            return str(obj.path)
         return str(obj.get_serving_path())
 
     def get_signature_id(self) -> str:
@@ -239,7 +246,7 @@ class ImageURLViewSet(ViewSet):
         url_mapping: dict[str, str] = {}
 
         for image in queryset:
-            url_path: str = reverse("astroimages:secure-image-serve", kwargs={"slug": image.slug})
+            url_path: str = reverse("secure-image-file", kwargs={"slug": image.slug})
             params: dict[str, Any] = generate_signed_url_params(
                 image.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
             )
@@ -257,7 +264,7 @@ class ImageURLViewSet(ViewSet):
         """
         slug: Optional[str] = pk
         image: AstroImage = get_object_or_404(AstroImage, slug=slug)
-        url_path: str = reverse("astroimages:secure-image-serve", kwargs={"slug": image.slug})
+        url_path: str = reverse("secure-image-file", kwargs={"slug": image.slug})
         params: dict[str, Any] = generate_signed_url_params(
             image.slug, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
         )

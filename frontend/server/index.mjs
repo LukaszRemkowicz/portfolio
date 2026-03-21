@@ -229,6 +229,84 @@ function getBackendBaseUrl(requestPublicEnv) {
   return process.env.SSR_API_URL || requestPublicEnv.API_URL;
 }
 
+function normalizePublicMediaUrl(value, requestOrigin) {
+  if (typeof value !== 'string' || !value) {
+    return value;
+  }
+
+  const toFrontendImageFilePath = pathname =>
+    pathname.startsWith('/image-files/') ? `/app${pathname}` : pathname;
+
+  const isRelativePublicMedia =
+    value.startsWith('/media/') ||
+    value.startsWith('/static/') ||
+    value.startsWith('/app/image-files/') ||
+    value.startsWith('/image-files/') ||
+    /^\/v1\/images\/[^/]+\/serve\/?(?:\?.*)?$/.test(value);
+
+  if (isRelativePublicMedia) {
+    if (/^\/v1\/images\/[^/]+\/serve\/?(?:\?.*)?$/.test(value)) {
+      return value.replace(/^\/v1\/images\//, '/app/image-files/');
+    }
+    return toFrontendImageFilePath(value);
+  }
+
+  if (!value.startsWith('http://') && !value.startsWith('https://')) {
+    return value;
+  }
+
+  try {
+    const parsed = new URL(value);
+    const isPublicMedia = parsed.pathname.startsWith('/media/');
+    const isPublicStatic = parsed.pathname.startsWith('/static/');
+    const isFrontendImageFile = parsed.pathname.startsWith('/app/image-files/');
+    const isInternalImageFile = parsed.pathname.startsWith('/image-files/');
+    const isSecureImage = /^\/v1\/images\/[^/]+\/serve\/?$/.test(
+      parsed.pathname
+    );
+
+    if (isPublicMedia || isPublicStatic || isFrontendImageFile) {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+
+    if (isInternalImageFile) {
+      return `/app${parsed.pathname}${parsed.search}`;
+    }
+
+    if (isSecureImage) {
+      return `${parsed.pathname.replace(/^\/v1\/images\//, '/app/image-files/')}${parsed.search}`;
+    }
+  } catch {
+    return value;
+  }
+
+  return value;
+}
+
+function normalizeBffPayload(payload, kind, requestOrigin) {
+  if (!payload || kind !== 'images') {
+    return payload;
+  }
+
+  if (typeof payload.url === 'string') {
+    return {
+      ...payload,
+      url: normalizePublicMediaUrl(payload.url, requestOrigin),
+    };
+  }
+
+  if (typeof payload === 'object' && !Array.isArray(payload)) {
+    return Object.fromEntries(
+      Object.entries(payload).map(([key, value]) => [
+        key,
+        normalizePublicMediaUrl(value, requestOrigin),
+      ])
+    );
+  }
+
+  return payload;
+}
+
 /**
  * Build backend request headers that preserve public host, language, and request correlation.
  */
@@ -433,6 +511,7 @@ async function forwardBackendWrite(req, backendPath, requestId) {
   return {
     durationMs,
     payload,
+    requestPublicEnv,
     response,
     upstreamBaseUrl,
     upstreamUrl,
@@ -458,6 +537,57 @@ async function handleBffRequest(req, res, requestUrl, start, requestId) {
     return true;
   }
 
+  if (resolvedView.kind === 'image-file') {
+    const requestPublicEnv = getRequestPublicEnv(req);
+    const requestOrigin = getRequestOrigin(req);
+    const upstreamBaseUrl = getBackendBaseUrl(requestPublicEnv);
+    const upstreamUrl = new URL(resolvedView.backendPath, upstreamBaseUrl);
+    upstreamUrl.search = requestUrl.search;
+
+    const startedAt = Date.now();
+    const response = await fetch(upstreamUrl, {
+      headers: getBackendForwardHeaders(
+        requestPublicEnv,
+        req.headers['accept-language'],
+        requestOrigin,
+        requestId
+      ),
+      redirect: 'manual',
+    });
+    const durationMs = Date.now() - startedAt;
+    const body = Buffer.from(await response.arrayBuffer());
+    const headers = {
+      'Cache-Control':
+        response.headers.get('cache-control') ||
+        'private, no-cache, no-store, must-revalidate',
+      'Content-Length': String(body.length),
+      'Content-Type':
+        response.headers.get('content-type') || 'application/octet-stream',
+    };
+    const contentDisposition = response.headers.get('content-disposition');
+    if (contentDisposition) {
+      headers['Content-Disposition'] = contentDisposition;
+    }
+    res.writeHead(response.status, headers);
+    res.end(body);
+
+    logRequest(
+      {
+        kind: 'bff-image',
+        method: req.method,
+        path: requestUrl.pathname,
+        query: requestUrl.search || '',
+        status: response.status,
+        duration_ms: Date.now() - start,
+        upstream_duration_ms: durationMs,
+        upstream_path: `${upstreamUrl.pathname}${upstreamUrl.search}`,
+        upstream_base_url: upstreamBaseUrl,
+      },
+      requestId
+    );
+    return true;
+  }
+
   const backendFetch =
     req.method === 'POST'
       ? await forwardBackendWrite(req, resolvedView.backendPath, requestId)
@@ -469,12 +599,17 @@ async function handleBffRequest(req, res, requestUrl, start, requestId) {
         );
   const { durationMs, payload, response, upstreamBaseUrl, upstreamUrl } =
     backendFetch;
+  const normalizedPayload = normalizeBffPayload(
+    payload,
+    resolvedView.kind,
+    getRequestOrigin(req)
+  );
 
   res.writeHead(response.status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-cache, no-store, must-revalidate',
   });
-  res.end(JSON.stringify(payload));
+  res.end(JSON.stringify(normalizedPayload));
 
   logRequest(
     {

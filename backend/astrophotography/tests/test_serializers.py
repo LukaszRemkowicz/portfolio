@@ -8,6 +8,7 @@ from astrophotography.models import Tag
 from astrophotography.serializers import (
     AstroImageSerializer,
     AstroImageSerializerList,
+    AstroImageThumbnailSerializer,
     MainPageLocationSerializer,
     MeteorsMainPageConfigSerializer,
     PlaceSerializer,
@@ -127,6 +128,21 @@ class TestAstroImageSerializers:
         assert "processing_details" in detail_data
         assert "astrobin_url" in detail_data
         assert "camera" in detail_data
+
+    def test_list_serializers_omit_dead_thumbnail_urls(self) -> None:
+        """Serializers should omit dead thumbnail paths instead of exposing them."""
+        place = PlaceFactory()
+        image = AstroImageFactory(place=place)
+        image.refresh_from_db()
+
+        assert image.thumbnail is not None
+        image.thumbnail.storage.delete(str(image.thumbnail.name))
+
+        list_data = AstroImageSerializerList(image).data
+        thumb_data = AstroImageThumbnailSerializer(image).data
+
+        assert list_data["thumbnail_url"] is None
+        assert thumb_data["thumbnail_url"] is None
 
 
 @pytest.mark.django_db

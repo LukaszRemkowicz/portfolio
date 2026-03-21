@@ -12,8 +12,15 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({ isSsrBuild }: ConfigEnv) => {
   const appEnvironment =
     process.env.ENVIRONMENT || process.env.VITE_ENVIRONMENT || 'development';
+  const disablePwaEnvironments = [
+    'development',
+    'dev',
+    'local',
+    'stage',
+    'stg',
+  ];
   const enablePwa =
-    !isSsrBuild && !['development', 'dev', 'local'].includes(appEnvironment);
+    !isSsrBuild && !disablePwaEnvironments.includes(appEnvironment);
 
   const criticalPathPlugin: PluginOption = !isSsrBuild
     ? {
@@ -148,6 +155,13 @@ export default defineConfig(({ isSsrBuild }: ConfigEnv) => {
     build: {
       target: 'es2022',
       outDir: isSsrBuild ? 'dist/server' : 'dist',
+      // The local SSR dev container rebuilds on file watch and can overlap
+      // client builds briefly. Avoid emptying dist in development to prevent
+      // ENOTEMPTY races while keeping production builds clean.
+      emptyOutDir:
+        appEnvironment === 'development' || appEnvironment === 'dev'
+          ? false
+          : undefined,
       sourcemap: true,
       rollupOptions: isSsrBuild
         ? undefined

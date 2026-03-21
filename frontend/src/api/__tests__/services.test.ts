@@ -7,7 +7,6 @@ import {
   fetchSettings,
 } from '../services';
 import { API_ROUTES, BFF_ROUTES } from '../routes';
-import { API_BASE_URL } from '../constants';
 import { NotFoundError, ValidationError } from '../errors';
 
 // Mock the axios instance from api.ts
@@ -51,9 +50,7 @@ describe('API Services', () => {
 
       expect(api.get).toHaveBeenCalledWith(API_ROUTES.profile);
       expect(result.first_name).toBe('John');
-      expect(result.avatar).toContain(
-        `${API_BASE_URL}/media/avatars/avatar.jpg`
-      );
+      expect(result.avatar).toBe('/media/avatars/avatar.jpg');
     });
 
     it('should return fallback data on 404 for profile', async () => {

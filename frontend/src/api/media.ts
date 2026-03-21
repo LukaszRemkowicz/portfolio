@@ -6,13 +6,31 @@
  * browser-safe URLs that stay aligned with `SITE_DOMAIN`.
  */
 import { API_BASE_URL } from './routes';
-import { publicEnv } from '../../server/publicEnv.js';
 import type { AstroImage, MainPageLocation, UserProfile } from '../types';
 
-const PUBLIC_SITE_BASE_URL =
-  typeof window !== 'undefined'
-    ? window.location.origin
-    : `https://${publicEnv.SITE_DOMAIN}`;
+const toSameOriginPath = (input: URL | string): string => {
+  if (typeof input === 'string') {
+    return input;
+  }
+
+  return `${input.pathname}${input.search}`;
+};
+
+const toFrontendImageFilePath = (path: string): string => {
+  if (path.startsWith('/app/image-files/')) {
+    return path;
+  }
+
+  if (path.startsWith('/image-files/')) {
+    return `/app${path}`;
+  }
+
+  if (/^\/v1\/images\/[^/]+\/serve\/?(?:\?.*)?$/.test(path)) {
+    return path.replace(/^\/v1\/images\//, '/app/image-files/');
+  }
+
+  return path;
+};
 
 /**
  * Normalize a backend media path into the public URL that the browser should
@@ -22,16 +40,39 @@ const PUBLIC_SITE_BASE_URL =
 export const getMediaUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
 
+  const isPublicRelativeMedia =
+    path.startsWith('/media/') ||
+    path.startsWith('/static/') ||
+    path.startsWith('/app/image-files/') ||
+    path.startsWith('/image-files/') ||
+    /^\/v1\/images\/[^/]+\/serve\/?(?:\?.*)?$/.test(path);
+
+  if (isPublicRelativeMedia) {
+    return toFrontendImageFilePath(path);
+  }
+
   if (path.startsWith('http://') || path.startsWith('https://')) {
     try {
       const url = new URL(path);
       const isPublicMedia = url.pathname.startsWith('/media/');
+      const isPublicStatic = url.pathname.startsWith('/static/');
+      const isInternalImageFile = url.pathname.startsWith('/image-files/');
+      const isFrontendImageFile = url.pathname.startsWith('/app/image-files/');
       const isSecureImageServe = /^\/v1\/images\/[^/]+\/serve\/?$/.test(
         url.pathname
       );
 
-      if (isPublicMedia || isSecureImageServe) {
-        return `${PUBLIC_SITE_BASE_URL}${url.pathname}${url.search}`;
+      if (
+        isPublicMedia ||
+        isPublicStatic ||
+        isInternalImageFile ||
+        isFrontendImageFile
+      ) {
+        return toFrontendImageFilePath(toSameOriginPath(url));
+      }
+
+      if (isSecureImageServe) {
+        return toFrontendImageFilePath(toSameOriginPath(url));
       }
     } catch {
       return path;

@@ -309,7 +309,7 @@ Monitoring analyses:
 - backend logs
 - frontend SSR/BFF logs
 - nginx logs
-- traefik logs collected on host
+- traefik logs collected on host and analyzed with the daily report
 
 Collector docs:
 

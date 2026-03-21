@@ -28,6 +28,7 @@ export const API_ROUTES: ApiRoutes = {
 export const BFF_ROUTES = {
   contact: '/app/contact',
   images: '/app/images/',
+  imageFiles: '/app/image-files/',
   travelBySlug: '/app/travel/',
 };
 

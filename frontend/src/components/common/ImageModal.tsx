@@ -17,7 +17,7 @@ interface ImageModalProps {
   onClose: () => void;
 }
 
-const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
+const ImageModalContent: FC<ImageModalProps> = ({ image, onClose }) => {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
 
@@ -27,8 +27,16 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
     image ? [image.pk.toString()] : undefined,
     !!image
   );
+  const preferredImageSrc =
+    (image ? imageUrls[image.pk] : undefined) ||
+    image?.url ||
+    image?.thumbnail_url ||
+    '';
 
   const [isFullRes, setIsFullRes] = useState(false);
+  const [resolvedImageSrc, setResolvedImageSrc] = useState(
+    image?.url || image?.thumbnail_url || ''
+  );
   const [scale, setScale] = useState(1);
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 }); // Pixels
   const [isDragging, setIsDragging] = useState(false);
@@ -53,6 +61,33 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
     setLastTouchDistance(null);
     setImageDimensions(null);
   };
+
+  useEffect(() => {
+    if (!preferredImageSrc || preferredImageSrc === resolvedImageSrc) {
+      return;
+    }
+
+    let cancelled = false;
+    const probe = new Image();
+
+    probe.onload = () => {
+      if (!cancelled) {
+        setResolvedImageSrc(preferredImageSrc);
+      }
+    };
+
+    probe.onerror = () => {
+      // Keep the current working image instead of swapping to a broken URL.
+    };
+
+    probe.src = preferredImageSrc;
+
+    return () => {
+      cancelled = true;
+      probe.onload = null;
+      probe.onerror = null;
+    };
+  }, [preferredImageSrc, resolvedImageSrc]);
 
   // Clamp pan position to prevent panning beyond image boundaries
   const clampPanPosition = useCallback(
@@ -376,7 +411,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
 
         <div className={styles.imageWrapper}>
           <ImageWithFallback
-            src={imageUrls[image.pk] || image.url || image.thumbnail_url || ''}
+            src={resolvedImageSrc}
             alt={image.name}
             className={styles.modalImage}
             onClick={() => {
@@ -437,9 +472,7 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
                 <X size={32} />
               </button>
               <ImageWithFallback
-                src={
-                  imageUrls[image.pk] || image.url || image.thumbnail_url || ''
-                }
+                src={resolvedImageSrc}
                 alt={image.name}
                 className={`${styles.fullResImage} ${
                   scale > 1.01 ? styles.isZoomed : ''
@@ -531,6 +564,16 @@ const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
       </div>
     </div>,
     document.body
+  );
+};
+
+const ImageModal: FC<ImageModalProps> = ({ image, onClose }) => {
+  return (
+    <ImageModalContent
+      key={image?.pk ? image.pk.toString() : 'image-modal-empty'}
+      image={image}
+      onClose={onClose}
+    />
   );
 };
 

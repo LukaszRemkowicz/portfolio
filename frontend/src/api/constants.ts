@@ -47,4 +47,4 @@ export const APP_ROUTES = {
 };
 
 /** Fallback image used when travel content has no primary image available. */
-export const DEFAULT_TRAVEL_IMAGE = '/default-travel.jpg';
+export const DEFAULT_TRAVEL_IMAGE = '/landscape.webp';

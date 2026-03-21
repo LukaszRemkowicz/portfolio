@@ -207,11 +207,16 @@ class BaseImage(TranslatableModel):
         thumbnail_name = "thumb_" + os.path.splitext(original_name)[0] + ".webp"
         return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
 
-    def get_thumbnail_url(self) -> str:
-        """Get thumbnail URL or placeholder."""
+    def get_thumbnail_url(self) -> str | None:
+        """Get thumbnail URL only when the thumbnail file exists."""
         if self.thumbnail:
-            return self.thumbnail.url  # type: ignore[no-any-return]
-        return "/static/images/placeholder.jpg"
+            try:
+                thumbnail_name = str(self.thumbnail.name or "")
+                if thumbnail_name and self.thumbnail.storage.exists(thumbnail_name):
+                    return self.thumbnail.url  # type: ignore[no-any-return]
+            except (OSError, ValueError):
+                return None
+        return None
 
 
 class SingletonModel(models.Model):

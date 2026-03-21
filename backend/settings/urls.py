@@ -18,6 +18,7 @@ from django.urls import include, path
 from django.views.decorators.cache import cache_page
 from django.views.static import serve
 
+from astrophotography.views import AstroImageSecureView, ImageURLViewSet
 from core.sitemaps import AstroImageSitemap, StaticViewSitemap, TravelHighlightsSitemap
 from core.views import health_check_view, root_view
 
@@ -39,6 +40,21 @@ _sitemaps = {
 
 urlpatterns = [
     path("health", health_check_view, name="health"),
+    path(
+        "image-files/<slug:slug>/serve/",
+        AstroImageSecureView.as_view(),
+        name="secure-image-file",
+    ),
+    path(
+        "image-urls/",
+        ImageURLViewSet.as_view({"get": "list"}),
+        name="image-urls-list",
+    ),
+    path(
+        "image-urls/<slug:pk>/",
+        ImageURLViewSet.as_view({"get": "retrieve"}),
+        name="image-urls-detail",
+    ),
     *api_v1_base_urlpatterns,
     path("select2/", include("django_select2.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),

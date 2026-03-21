@@ -8,6 +8,17 @@
 import { API_BASE_URL, BFF_ROUTES } from './routes';
 import { API_V1 } from './constants';
 import { fetchBffJson } from './bff';
+import { getMediaUrl } from './media';
+
+const normalizeImageUrlMap = (
+  payload: Record<string, string>
+): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(payload).map(([key, value]) => [
+      key,
+      getMediaUrl(value) || value,
+    ])
+  );
 
 /** Fetch signed URLs for a set of image identifiers. */
 export async function fetchImageUrls(
@@ -17,14 +28,17 @@ export async function fetchImageUrls(
   const query = ids && ids.length > 0 ? `?ids=${ids.join(',')}` : '';
 
   if (useFrontendBff) {
-    return fetchBffJson<Record<string, string>>(`${BFF_ROUTES.images}${query}`);
+    const payload = await fetchBffJson<Record<string, string>>(
+      `${BFF_ROUTES.images}${query}`
+    );
+    return normalizeImageUrlMap(payload);
   }
 
   const response = await fetch(`${API_BASE_URL}${API_V1}/images/${query}`);
   if (!response.ok) {
     throw new Error('Failed to fetch image URLs');
   }
-  return response.json();
+  return normalizeImageUrlMap(await response.json());
 }
 
 /** Fetch the signed URL for a single image slug. */
@@ -34,7 +48,7 @@ export async function fetchSingleImageUrl(slug: string): Promise<string> {
     const data = await fetchBffJson<{ url: string }>(
       `${BFF_ROUTES.images}${slug}/`
     );
-    return data.url;
+    return getMediaUrl(data.url) || data.url;
   }
 
   const response = await fetch(`${API_BASE_URL}${API_V1}/images/${slug}/`);
@@ -42,5 +56,5 @@ export async function fetchSingleImageUrl(slug: string): Promise<string> {
     throw new Error(`Failed to fetch URL for ${slug}`);
   }
   const data = await response.json();
-  return data.url;
+  return getMediaUrl(data.url) || data.url;
 }

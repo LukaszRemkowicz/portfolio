@@ -31,7 +31,12 @@ const getNextAvailableIndex = (
   return startIndex;
 };
 
-const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
+const PRIORITY_CARD_COUNT = 6;
+
+const TravelCard: FC<{
+  location: MainPageLocation;
+  prioritizeImage?: boolean;
+}> = ({ location, prioritizeImage = false }) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [failedIndices, setFailedIndices] = useState<Set<number>>(new Set());
@@ -123,7 +128,13 @@ const TravelCard: FC<{ location: MainPageLocation }> = ({ location }) => {
                   : ''
               }`}
               onError={() => handleImageError(index)}
-              loading='lazy'
+              loading={
+                prioritizeImage && index === activeIndex ? 'eager' : 'lazy'
+              }
+              decoding='async'
+              {...(prioritizeImage && index === activeIndex
+                ? ({ fetchpriority: 'high' } as const)
+                : {})}
             />
             {(hasNoImages || allImagesFailed) && (
               <div
@@ -181,8 +192,12 @@ const TravelHighlights: FC = () => {
       </header>
 
       <div className={styles.grid}>
-        {locations.map((location: MainPageLocation) => (
-          <TravelCard key={location.pk} location={location} />
+        {locations.map((location: MainPageLocation, index: number) => (
+          <TravelCard
+            key={location.pk}
+            location={location}
+            prioritizeImage={index < PRIORITY_CARD_COUNT}
+          />
         ))}
       </div>
     </section>
