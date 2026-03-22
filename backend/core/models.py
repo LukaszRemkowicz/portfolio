@@ -241,7 +241,6 @@ class BaseImage(TranslatableModel):
 
         When serve_webp_images=True → serve WebP (self.path).
         When serve_webp_images=False → serve original image if available, else WebP.
-        TODO: will be removed in future versions.
         """
         settings_obj: LandingPageSettings | None = LandingPageSettings.get_current()
         if settings_obj and settings_obj.serve_webp_images:

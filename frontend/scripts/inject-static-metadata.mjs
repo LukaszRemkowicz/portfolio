@@ -3,7 +3,7 @@ import {
   mkdir,
   readFile,
   readdir,
-  stat,
+  rename,
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
@@ -47,21 +47,26 @@ async function copyDirectory(sourceDir, targetDir) {
 
 async function replaceMetadataFile(relativePath) {
   const targetPath = path.join(distDir, relativePath);
-
+  let current;
   try {
-    const targetStat = await stat(targetPath);
-    if (!targetStat.isFile()) {
+    current = await readFile(targetPath, 'utf8');
+  } catch (error) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error.code === 'ENOENT' || error.code === 'EISDIR')
+    ) {
       return;
     }
-  } catch {
-    return;
+    throw error;
   }
-
-  const current = await readFile(targetPath, 'utf8');
   const next = replacePublicEnvPlaceholders(current, publicEnv);
 
   if (next !== current) {
-    await writeFile(targetPath, next);
+    const tempPath = `${targetPath}.tmp`;
+    await writeFile(tempPath, next);
+    await rename(tempPath, targetPath);
   }
 }
 

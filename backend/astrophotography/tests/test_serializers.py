@@ -260,5 +260,10 @@ class TestTagTranslationSerializers:
         tag = Tag.objects.create(name="No Translation")
         image.tags.add(tag)
 
+        # Ensure no translation exists for 'pl'
+        # By default, Tag.objects.create only creates the default language translation.
+
         serializer = AstroImageSerializer(image, context={"request": request})
+        # The serializer calls TranslationService.get_translation(tag, "name", "pl")
+        # which should fall back to the default English translation.
         assert serializer.data["tags"] == ["No Translation"]

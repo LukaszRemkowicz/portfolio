@@ -38,10 +38,20 @@ export const sanitizeHtml = (html: string): string => {
   if (!html) return '';
 
   if (typeof window === 'undefined') {
-    return html
-      .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
-      .replace(/\son\w+=(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-      .replace(/javascript:/gi, '');
+    let sanitized = html;
+    let previous: string;
+
+    // Re-apply the same filters until the string stabilizes so patterns that
+    // become visible after an earlier replacement are removed as well.
+    do {
+      previous = sanitized;
+      sanitized = sanitized
+        .replace(/<script[\s\S]*?>[\s\S]*?<\/script[^>]*>/gi, '')
+        .replace(/\son\w+=(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+        .replace(/\b(?:javascript|data|vbscript)\s*:/gi, '');
+    } while (sanitized !== previous);
+
+    return sanitized;
   }
 
   return DOMPurify.sanitize(html);
