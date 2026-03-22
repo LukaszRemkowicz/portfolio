@@ -14,13 +14,19 @@ jest.mock('../hooks/useSettings');
 
 describe('Contact Component', () => {
   const mockFetchContact = fetchContact as jest.Mock;
+  let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     (useSettings as jest.Mock).mockReturnValue({
       data: null,
       isLoading: false,
     });
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
   });
 
   it('renders the form when contactForm is enabled', async () => {

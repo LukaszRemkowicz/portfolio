@@ -1,0 +1,42 @@
+[
+  {
+    "key": "backend",
+    "filename": "backend.log",
+    "required": true,
+    "service_env": "BACKEND_SERVICE",
+    "service_default": "be",
+    "model_field": "backend_logs",
+    "prompt_section": "BACKEND LOGS"
+  },
+  {
+    "key": "frontend",
+    "filename": "frontend.log",
+    "required": false,
+    "service_env": "FRONTEND_SERVICE",
+    "service_default": "fe",
+    "model_field": "frontend_logs",
+    "prompt_section": "FRONTEND LOGS"
+  },
+  {
+    "key": "nginx",
+    "filename": "nginx.log",
+    "required": false,
+    "service_env": "NGINX_SERVICE",
+    "service_default": "nginx",
+    "model_field": "nginx_logs",
+    "prompt_section": "NGINX LOGS"
+  },
+  {
+    "key": "traefik",
+    "filename": "traefik.log",
+    "required": false,
+    "service_env": "TRAEFIK_SERVICE",
+    "service_default": "traefik",
+    "compose_project_env": "TRAEFIK_PROJECT_NAME",
+    "compose_project_default": "portfolio-traefik",
+    "container_name_env": "TRAEFIK_CONTAINER_NAME",
+    "container_name_default": "traefik",
+    "model_field": "traefik_logs",
+    "prompt_section": "TRAEFIK LOGS"
+  }
+]

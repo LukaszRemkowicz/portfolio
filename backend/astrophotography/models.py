@@ -22,6 +22,7 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from common.constants import FALLBACK_URL_SLUG
+from common.utils.image import ImageSpec
 from core.models import BaseImage, SingletonModel
 from translation.mixins import AutomatedTranslationModelMixin
 from translation.services import TranslationService
@@ -218,7 +219,7 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
     """Model for astrophotography images"""
 
     # Track changes to the 'path' field (inherited from BaseImage)
-    path_tracker = FieldTracker(fields=["path", "legacy_path"])
+    path_tracker = FieldTracker(fields=["path", "original_image"])
 
     # Translation trigger fields
     translation_service_method = "translate_astro_image"
@@ -363,12 +364,11 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
 class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
     """Images used as full-page backgrounds on the main portal."""
 
-    # Background images sit behind text/overlay — 40% quality is visually
-    # indistinguishable at typical viewing sizes and saves ~1 MiB per image.
-    webp_quality = 30
-    max_dimension = 1920
+    # Homepage backgrounds should stay visibly sharper than generic gallery assets.
+    webp_quality = 95
+    max_dimension = 2560
 
-    path_tracker = FieldTracker(fields=["path", "legacy_path"])
+    path_tracker = FieldTracker(fields=["path", "original_image"])
 
     # Translation trigger fields
     translation_service_method = "translate_main_page_background_image"
@@ -399,6 +399,10 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
         verbose_name = _("Main Page Background Image")
         verbose_name_plural = _("Main Page Background Images")
         ordering = ["-created_at"]
+
+    def get_path_spec(self) -> ImageSpec:
+        """Use the background-specific quality and dimension settings."""
+        return ImageSpec(dimension=self.max_dimension, quality=self.webp_quality)
 
     def clean(self):
         """Enforce that the name is required for the default language."""

@@ -15,17 +15,25 @@ class NamedBytesIO(BytesIO):
         self.name = name
 
 
-def _jpeg_field(name: str = "avatar.jpg", color: tuple = (10, 20, 30)) -> SimpleUploadedFile:
+def _jpeg_field(
+    name: str = "avatar.jpg",
+    color: tuple = (10, 20, 30),
+    size: tuple[int, int] = (10, 10),
+) -> SimpleUploadedFile:
     """Return a SimpleUploadedFile backed by a real JPEG — PIL-compatible."""
     buf = BytesIO()
-    Image.new("RGB", (10, 10), color=color).save(buf, "JPEG")
+    Image.new("RGB", size, color=color).save(buf, "JPEG")
     return SimpleUploadedFile(name, buf.getvalue(), content_type="image/jpeg")
 
 
-def _png_field(name: str = "photo.png", mode: str = "RGB") -> SimpleUploadedFile:
+def _png_field(
+    name: str = "photo.png",
+    mode: str = "RGB",
+    size: tuple[int, int] = (10, 10),
+) -> SimpleUploadedFile:
     """Return a SimpleUploadedFile backed by a real PNG — PIL-compatible."""
     buf = BytesIO()
-    Image.new(mode, (10, 10)).save(buf, "PNG")
+    Image.new(mode, size).save(buf, "PNG")
     return SimpleUploadedFile(name, buf.getvalue(), content_type="image/png")
 
 

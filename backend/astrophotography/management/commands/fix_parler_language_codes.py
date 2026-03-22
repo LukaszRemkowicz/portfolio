@@ -1,10 +1,16 @@
+"""Normalize legacy Parler language codes in astrophotography translations.
+
+This is a one-off maintenance command used after migrating translation data
+from ``en-us`` to the canonical ``en`` language code.
+"""
+
 from django.core.management.base import BaseCommand
 
 from astrophotography.models import AstroImage, MainPageLocation, Place
 
 
 class Command(BaseCommand):
-    """TODO: Remove this command after the migration is complete."""
+    """Rewrite legacy ``en-us`` Parler translation rows to ``en``."""
 
     help = "Migrates Parler translation language codes from 'en-us' to 'en'."
 

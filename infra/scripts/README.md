@@ -1,6 +1,8 @@
-# Infrastructure Scripts Runbook
+# 🧰 Infrastructure Scripts Runbook
 
 This repository uses shell scripts to manage deployments, backups, monitoring, and related operational tasks.
+
+## 🗂️ Script Groups
 
 Primary script groups:
 
@@ -11,7 +13,7 @@ Primary script groups:
 
 ---
 
-## Release Scripts
+## 🚀 Release Scripts
 
 Release scripts manage **Staging** and **Production** deployments on a single VPS.
 
@@ -19,21 +21,21 @@ Release scripts manage **Staging** and **Production** deployments on a single VP
 - `release/release.sh` -> runs **one-shot release tasks** (migrations, collectstatic, etc.) targeting the correct environment services
 - `release/deploy.sh` -> performs the **deployment switch** and updates environment-specific rollback state
 
-## Environment Variables
+## 🔐 Environment Variables
 
 These scripts **require** several variables to be set, typically via Doppler.
 
-### Mandatory
+### ✅ Mandatory
 1. `ENVIRONMENT`: Determines tags and isolated state (e.g. `production`, `staging`)
 2. `TAG`: The git tag or version (e.g. `v1.2.3`)
 3. `PROJECT_OWNER`: Injected into frontend metadata
 4. `SITE_DOMAIN` and `API_DOMAIN`: Used for Nginx templates and frontend builds
 5. `ALLOWED_HOSTS`: Django security setting
 
-### Optional
+### ➕ Optional
 - `FRONTEND_PORT`: Defaults to `8080`
 
-### Emergency bypass
+### 🚨 Emergency bypass
 If you must build from an uncommitted state, pass `--emergency` or set `EMERGENCY=1`:
 
 ```bash
@@ -46,7 +48,7 @@ EMERGENCY=1 doppler run -- ./infra/scripts/release/build.sh
 
 ---
 
-## Staging Workflow
+## 🧪 Staging Workflow
 
 ```bash
 TAG=v1.0.0-test ENVIRONMENT=staging doppler run -- ./infra/scripts/release/build.sh
@@ -54,7 +56,7 @@ TAG=v1.0.0-test ENVIRONMENT=staging COMPOSE_FILE=docker-compose.stage.yml dopple
 TAG=v1.0.0-test ENVIRONMENT=staging COMPOSE_FILE=docker-compose.stage.yml doppler run -- ./infra/scripts/release/deploy.sh
 ```
 
-## Production Workflow
+## 🏭 Production Workflow
 
 Before the first production release, ensure the backup directories exist and are writable by the deploy user:
 
@@ -70,7 +72,7 @@ TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/release
 TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.sh
 ```
 
-## Rollback
+## ↩️ Rollback
 
 1. Check current and previous tags in `/var/lib/portfolio/<environment>/` or your fallback state directory.
 2. Re-deploy the previous tag:
@@ -81,26 +83,32 @@ TAG=v1.1.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.
 
 ---
 
-## Shared Conventions
+## 📏 Shared Conventions
 
-### Tag Discipline
+### 🏷️ Tag Discipline
 - Deploy only versioned releases such as `v1.2.3`
 - The scripts enforce that required images exist locally before proceeding
 
-### Image Naming
+### 📦 Image Naming
 - Images follow `${ENVIRONMENT}-<service>:${TAG}`
 
-### Compose File Overrides
+### 🧾 Compose File Overrides
 - `build.sh` auto-detects the environment compose file
 - `release.sh` and `deploy.sh` default to production unless `COMPOSE_FILE` is overridden
+- `release.sh` and `deploy.sh` both load `docker-compose.common.yml` in addition to the target environment compose file
 
-### Locking
+### 🔒 Locking
 - These scripts use `flock` to prevent concurrent deployments
 - If `flock` is missing, they warn and continue without a lock
 
+### 🧪 Dry runs
+
+- `release.sh --dry-run` validates inputs and dependency state without executing the release job
+- `deploy.sh --dry-run` shows the deployment flow without switching running containers
+
 ---
 
-## Troubleshooting
+## 🩺 Troubleshooting
 
 ### “FATAL: database portfolio_stage does not exist”
 If you changed project names or moved volumes, the staging database may need a fresh initialization:
@@ -131,7 +139,7 @@ sudo chmod -R u+rwX /var/backups/portfolio
 ### “Missing image production-be:<tag>” or similar
 Release expects images to be built before migrations or deploy. Run `build.sh` first for the same `ENVIRONMENT` and `TAG`, then rerun `release.sh`.
 
-### Backup scripts
+### 💾 Backup scripts
 
 Validate a dump in a temporary Postgres container:
 

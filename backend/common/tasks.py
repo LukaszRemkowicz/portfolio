@@ -1,10 +1,14 @@
 import logging
+from typing import Iterable
 
 import sentry_sdk
 from celery import shared_task
 
 from django.conf import settings
 from django.core.mail import EmailMessage
+
+from common.celery import CommitAwareTask
+from common.ssr_cache import invalidate_frontend_ssr_cache
 
 logger = logging.getLogger(__name__)
 
@@ -38,3 +42,11 @@ def send_email_task(self, html_content: str, subject: str) -> None:
         logger.exception("Failed to send email: %s", subject)
         sentry_sdk.capture_exception(exc)
         raise self.retry(exc=exc)
+
+
+@shared_task(  # type: ignore[untyped-decorator]
+    name="common.invalidate_frontend_ssr_cache",
+    base=CommitAwareTask,
+)
+def invalidate_frontend_ssr_cache_task(tags: Iterable[str]) -> bool:
+    return invalidate_frontend_ssr_cache(tags)

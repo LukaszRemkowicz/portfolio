@@ -110,6 +110,7 @@ services:
   celery-beat:
     <<: *backend-defaults
     image: ${ENVIRONMENT}-be:${TAG}
+    profiles: ["manual-beat"]
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:
@@ -125,14 +126,31 @@ services:
     restart: always
     networks:
       - stage_network
-    volumes:
-      - portfolio_staging_frontend_dist:/frontend_dist
+    expose:
+      - "8080"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+      SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
+      PORT: 8080
+      FRONTEND_PORT: 8080
+      NODE_ENV: production
+      API_URL: https://${API_DOMAIN}
+      SSR_API_URL: http://be:8000
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
     image: ${ENVIRONMENT}-be:${TAG}
     restart: always
+    environment:
+      <<: *backend-defaults-env
+      SSR_CACHE_INVALIDATION_URL: ${SSR_CACHE_INVALIDATION_URL:-http://fe:8080/internal/cache/invalidate}
+      SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
     healthcheck:
       test:
         [
@@ -153,6 +171,10 @@ services:
     <<: *backend-defaults
     image: ${ENVIRONMENT}-be:${TAG}
     restart: "no"
+    environment:
+      <<: *backend-defaults-env
+      SSR_CACHE_INVALIDATION_URL: ${SSR_CACHE_INVALIDATION_URL:-http://fe:8080/internal/cache/invalidate}
+      SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
     command: >
       sh -c "
         python manage.py migrate --noinput &&
@@ -184,7 +206,6 @@ services:
       - portfolio_staging_media_data:/app/media:ro
       - portfolio_staging_static_data:/app/staticfiles:ro
       - portfolio_staging_nginx_blocklist:/etc/nginx/blocklist:ro
-      - portfolio_staging_frontend_dist:/usr/share/nginx/html:ro
     labels:
       - "traefik.enable=true"
       # Main site routing
@@ -193,14 +214,16 @@ services:
       - "traefik.http.routers.staging-site.tls=true"
       - "traefik.http.routers.staging-site.tls.certresolver=letsencrypt"
       - "traefik.http.routers.staging-site.middlewares=staging-whitelist@docker,staging-security@file"
+      - "traefik.http.routers.staging-site.service=staging-site"
 
-      # Admin/API routing (Everything goes to Nginx now)
-      - "traefik.http.routers.staging-api.rule=Host(`api.${SITE_DOMAIN}`) || Host(`admin.${SITE_DOMAIN}`)"
-      - "traefik.http.routers.staging-api.entrypoints=websecure"
-      - "traefik.http.routers.staging-api.tls=true"
-      - "traefik.http.routers.staging-api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.staging-api.middlewares=staging-whitelist@docker,staging-security@file,rate-limit@file"
-      - "traefik.http.routers.staging-api.priority=2"
+      # Admin routing
+      - "traefik.http.routers.staging-admin.rule=Host(`admin.${SITE_DOMAIN}`)"
+      - "traefik.http.routers.staging-admin.entrypoints=websecure"
+      - "traefik.http.routers.staging-admin.tls=true"
+      - "traefik.http.routers.staging-admin.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.staging-admin.middlewares=staging-whitelist@docker,staging-security@file,rate-limit@file"
+      - "traefik.http.routers.staging-admin.priority=2"
+      - "traefik.http.routers.staging-admin.service=staging-site"
 
       - "traefik.http.services.staging-site.loadbalancer.server.port=80"
 
@@ -214,6 +237,4 @@ volumes:
   portfolio_staging_celerybeat_data:
     external: true
   portfolio_staging_nginx_blocklist:
-    external: true
-  portfolio_staging_frontend_dist:
     external: true

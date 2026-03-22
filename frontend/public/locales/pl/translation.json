@@ -34,7 +34,7 @@
     "empty": "Archiwa wydają się być puste. Wróć później po nowe transmisje."
   },
   "footer": {
-    "rights": "__PROJECT_OWNER__ © 2026"
+    "rights": "{{ownerName}} © 2026"
   },
   "about": {
     "title": "Ponad Atmosferą.",
@@ -51,6 +51,10 @@
     "subtitle": "Podróże do różnych zakątków świata, w poszukiwaniu idealnego ujęcia.",
     "adventureDate": "DATA PRZYGODY",
     "exploringCosmic": "Kosmiczna przygoda w"
+  },
+  "meta": {
+    "defaultTitle": "{{ownerName}} | Portfolio i Astrofotografia",
+    "defaultDescription": "Portfolio i galeria astrofotografii {{ownerName}}."
   },
   "hero": {
     "subtitle": "Dokumentacja Kosmosu",
@@ -99,5 +103,104 @@
       "message": "Wiadomość musi mieć co najmniej 10 znaków.",
       "honeypot": "Popraw błędy powyżej i spróbuj ponownie."
     }
+  },
+  "privacy": {
+    "title": "Polityka Prywatności i Plików Cookie",
+    "lastUpdated": "Ostatnia aktualizacja: 29 stycznia 2026",
+    "introduction": {
+      "title": "Wprowadzenie",
+      "body": "Ta strona jest osobistym portfolio prezentującym moją astrofotografię, fotografię podróżniczą i projekty programistyczne. Szanuję Twoją prywatność i zależy mi na przejrzystym wyjaśnieniu, w jaki sposób ta witryna zbiera i wykorzystuje dane."
+    },
+    "dataCollected": {
+      "title": "Jakie Dane Zbieramy",
+      "intro": "Ta strona korzysta z Google Analytics, aby zrozumieć, w jaki sposób odwiedzający korzystają z witryny. Zbierane są następujące dane:",
+      "items": {
+        "anonymous": {
+          "label": "Anonimowe dane o użytkowaniu:",
+          "value": "Odwiedzone strony, czas spędzony na stronach, typ przeglądarki, typ urządzenia"
+        },
+        "geo": {
+          "label": "Lokalizacja geograficzna:",
+          "value": "Kraj i miasto (w przybliżeniu, na podstawie adresu IP)"
+        },
+        "referral": {
+          "label": "Źródło wejścia:",
+          "value": "W jaki sposób trafiłeś na tę stronę"
+        }
+      },
+      "note": {
+        "label": "Ważne:",
+        "value": "Żadne dane osobowe umożliwiające identyfikację (PII) nie są zbierane. Nie jestem w stanie zidentyfikować poszczególnych odwiedzających."
+      }
+    },
+    "cookiesUsed": {
+      "title": "Wykorzystywane Cookies",
+      "intro": "Google Analytics ustawia w Twojej przeglądarce następujące pliki cookie:",
+      "purpose": "Cel:",
+      "expiration": "Wygasa po:",
+      "cookies": {
+        "ga": {
+          "purpose": "Rozróżnia unikalnych użytkowników",
+          "expiration": "2 lata"
+        },
+        "gid": {
+          "purpose": "Rozróżnia unikalnych użytkowników",
+          "expiration": "24 godziny"
+        },
+        "gat": {
+          "purpose": "Ogranicza częstotliwość żądań",
+          "expiration": "1 minuta"
+        }
+      }
+    },
+    "whyCookies": {
+      "title": "Dlaczego Używamy Cookies",
+      "intro": "Analityczne pliki cookie pomagają mi zrozumieć:",
+      "items": {
+        "popularContent": "Które treści są najpopularniejsze (astrophotography vs. travel vs. programming)",
+        "navigation": "Jak odwiedzający poruszają się po stronie",
+        "devices": "Jakie urządzenia i przeglądarki są używane",
+        "performance": "Czy strona działa poprawnie"
+      },
+      "outro": "Te informacje pomagają mi ulepszać stronę i tworzyć lepsze treści dla odwiedzających."
+    },
+    "rights": {
+      "title": "Twoje Prawa i Wybory",
+      "optOutTitle": "Opcje rezygnacji:",
+      "items": {
+        "cookieSettings": {
+          "label": "Ustawienia Cookies:",
+          "value": "Kliknij „Ustawienia Cookies” w stopce, aby w dowolnym momencie zmienić swoją zgodę"
+        },
+        "browserSettings": {
+          "label": "Ustawienia przeglądarki:",
+          "value": "Skonfiguruj przeglądarkę tak, aby blokowała pliki cookie (uwaga: może to wpłynąć na działanie strony)"
+        },
+        "googleOptOut": {
+          "label": "Rezygnacja z Google Analytics:",
+          "prefix": "Zainstaluj",
+          "link": "dodatek blokujący Google Analytics"
+        }
+      }
+    },
+    "retention": {
+      "title": "Przechowywanie Danych",
+      "body": "Dane Google Analytics są domyślnie przechowywane przez 26 miesięcy. Po tym okresie zagregowane dane są automatycznie usuwane."
+    },
+    "thirdParty": {
+      "title": "Usługi Zewnętrzne",
+      "intro": "Aby uzyskać bardziej szczegółowe informacje, zapoznaj się z politykami prywatności tych usług, zwracając uwagę na sekcje takie jak „Jak wykorzystujemy Twoje informacje” lub „Usługi zewnętrzne”.",
+      "uses": "Ta witryna korzysta z:",
+      "googleAnalytics": {
+        "label": "Google Analytics:",
+        "value": "Usługa analityki internetowej firmy Google LLC.",
+        "link": "Polityka prywatności Google"
+      }
+    },
+    "contact": {
+      "title": "Kontakt",
+      "body": "Jeśli masz pytania dotyczące tej polityki prywatności lub sposobu przetwarzania danych, skontaktuj się ze mną za pomocą formularza kontaktowego na tej stronie."
+    },
+    "footer": "Niniejsza polityka prywatności obowiązuje od daty podanej powyżej i pozostanie w mocy z wyjątkiem ewentualnych zmian jej postanowień w przyszłości."
   }
 }

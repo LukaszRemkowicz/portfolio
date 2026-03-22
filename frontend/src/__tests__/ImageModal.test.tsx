@@ -41,6 +41,12 @@ const renderModal = (
 };
 
 describe('ImageModal Lightbox', () => {
+  const originalImage = global.Image;
+
+  afterEach(() => {
+    global.Image = originalImage;
+  });
+
   it('renders the modal when image is provided', () => {
     renderModal();
     expect(screen.getByText('Test Image')).toBeInTheDocument();
@@ -121,5 +127,138 @@ describe('ImageModal Lightbox', () => {
     // Tooltip should be undefined/null
     expect(modalImage).not.toHaveAttribute('title');
     expect(modalImage).toHaveStyle('cursor: default');
+  });
+
+  it('switches the modal image from thumbnail to async signed URL when it arrives', () => {
+    (useAstroImageDetail as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
+
+    class SuccessfulImage {
+      onload: null | (() => void) = null;
+      onerror: null | (() => void) = null;
+
+      set src(_value: string) {
+        queueMicrotask(() => {
+          this.onload?.();
+        });
+      }
+    }
+
+    global.Image = SuccessfulImage as unknown as typeof Image;
+
+    (useImageUrls as jest.Mock)
+      .mockReturnValueOnce({ data: {} })
+      .mockReturnValueOnce({ data: { '1': '/signed-image.webp' } });
+
+    const { rerender } = render(
+      <BrowserRouter>
+        <ImageModal image={mockImage} onClose={jest.fn()} />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByAltText('Test Image')).toHaveAttribute(
+      'src',
+      'test.jpg'
+    );
+
+    rerender(
+      <BrowserRouter>
+        <ImageModal image={mockImage} onClose={jest.fn()} />
+      </BrowserRouter>
+    );
+
+    return screen.findByAltText('Test Image').then(img => {
+      expect(img).toHaveAttribute('src', '/signed-image.webp');
+    });
+  });
+
+  it('uses the resolved signed URL for the full resolution overlay after zoom is opened', () => {
+    class SuccessfulImage {
+      onload: null | (() => void) = null;
+      onerror: null | (() => void) = null;
+
+      set src(_value: string) {
+        queueMicrotask(() => {
+          this.onload?.();
+        });
+      }
+    }
+
+    global.Image = SuccessfulImage as unknown as typeof Image;
+
+    (useAstroImageDetail as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
+
+    (useImageUrls as jest.Mock).mockReturnValue({
+      data: { '1': '/signed-image.webp' },
+    });
+
+    render(
+      <BrowserRouter>
+        <ImageModal image={mockImage} onClose={jest.fn()} />
+      </BrowserRouter>
+    );
+
+    return screen.findByAltText('Test Image').then(img => {
+      expect(img).toHaveAttribute('src', '/signed-image.webp');
+
+      fireEvent.click(img);
+
+      const images = screen.getAllByAltText('Test Image');
+      expect(images[0]).toHaveAttribute('src', '/signed-image.webp');
+      expect(images[1]).toHaveAttribute('src', '/signed-image.webp');
+    });
+  });
+
+  it('keeps the working thumbnail when the async signed URL fails to load', () => {
+    class FailingImage {
+      onload: null | (() => void) = null;
+      onerror: null | (() => void) = null;
+
+      set src(_value: string) {
+        queueMicrotask(() => {
+          this.onerror?.();
+        });
+      }
+    }
+
+    global.Image = FailingImage as unknown as typeof Image;
+
+    (useAstroImageDetail as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
+
+    (useImageUrls as jest.Mock)
+      .mockReturnValueOnce({ data: {} })
+      .mockReturnValueOnce({ data: { '1': '/broken-signed-image.webp' } });
+
+    const { rerender } = render(
+      <BrowserRouter>
+        <ImageModal image={mockImage} onClose={jest.fn()} />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByAltText('Test Image')).toHaveAttribute(
+      'src',
+      'test.jpg'
+    );
+
+    rerender(
+      <BrowserRouter>
+        <ImageModal image={mockImage} onClose={jest.fn()} />
+      </BrowserRouter>
+    );
+
+    return screen.findByAltText('Test Image').then(img => {
+      expect(img).toHaveAttribute('src', 'test.jpg');
+    });
   });
 });

@@ -5,8 +5,9 @@ import '@testing-library/jest-dom';
 import Navbar from '../components/Navbar';
 import { useSettings } from '../hooks/useSettings';
 import { APP_ROUTES } from '../api/constants';
+import { publicEnv } from '../test-utils/publicEnv.mock';
 
-const PROJECT_OWNER = process.env.PROJECT_OWNER || 'Portfolio Owner';
+const PROJECT_OWNER = publicEnv.PROJECT_OWNER;
 
 // Mock the services
 jest.mock('../api/services', () => ({

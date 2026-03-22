@@ -24,5 +24,5 @@ class TestProcessUserImagesTask:
         assert user.avatar.name.endswith(".webp")
         # Django adds a random suffix (e.g. test_avatar_PRCHIn5.jpg),
         # so we check if the base name is in the field name
-        assert "test_avatar" in user.avatar_legacy.name
-        assert user.avatar_legacy.name.endswith(".jpg")
+        assert "test_avatar" in user.avatar_original_image.name
+        assert user.avatar_original_image.name.endswith(".jpg")

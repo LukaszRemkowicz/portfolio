@@ -1,13 +1,9 @@
 import { FC } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
-
-declare const __PROJECT_OWNER__: string;
-
-const projectOwner =
-  typeof __PROJECT_OWNER__ !== 'undefined'
-    ? __PROJECT_OWNER__
-    : process.env.PROJECT_OWNER || 'Portfolio Owner';
+import { useLocation } from 'react-router-dom';
+import { useRequestOrigin } from '../../context/RequestOriginContext';
+import { publicEnv } from '../../../server/publicEnv.js';
 
 interface SEOProps {
   title?: string | null;
@@ -18,22 +14,28 @@ interface SEOProps {
 
 const SEO: FC<SEOProps> = ({ title, description, ogImage, url }) => {
   const { t } = useTranslation();
-  const ownerName = projectOwner;
+  const location = useLocation();
+  const requestOrigin = useRequestOrigin();
+  const ownerName = publicEnv.PROJECT_OWNER;
 
-  const defaultTitle = t(
-    'meta.defaultTitle',
-    `${ownerName} | Portfolio & Astrophotography`
-  );
-  const defaultDescription = t(
-    'meta.defaultDescription',
-    `Personal portfolio and astrophotography gallery of ${ownerName}.`
-  );
+  const defaultTitle = t('meta.defaultTitle', {
+    ownerName,
+    defaultValue: `${ownerName} | Portfolio & Astrophotography`,
+  });
+  const defaultDescription = t('meta.defaultDescription', {
+    ownerName,
+    defaultValue: `Personal portfolio and astrophotography gallery of ${ownerName}.`,
+  });
 
   const finalTitle = title ? `${title} | ${defaultTitle}` : defaultTitle;
   const finalDescription = description || defaultDescription;
-  const finalUrl = url
-    ? `https://lukaszremkowicz.com${url}`
-    : 'https://lukaszremkowicz.com';
+  const origin =
+    requestOrigin ||
+    (typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://lukaszremkowicz.com');
+  const routePath = url || `${location.pathname}${location.search}`;
+  const finalUrl = new URL(routePath || '/', origin).toString();
 
   return (
     <Helmet>
@@ -47,6 +49,7 @@ const SEO: FC<SEOProps> = ({ title, description, ogImage, url }) => {
       <meta property='og:title' content={finalTitle} />
       <meta property='og:description' content={finalDescription} />
       {ogImage && <meta property='og:image' content={ogImage} />}
+      <link rel='canonical' href={finalUrl} />
 
       {/* Twitter */}
       <meta property='twitter:card' content='summary_large_image' />

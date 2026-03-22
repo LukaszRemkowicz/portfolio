@@ -123,4 +123,46 @@ describe('TravelHighlights Component', () => {
 
     jest.useRealTimers();
   });
+
+  it('marks first-row travel card images as eager for initial paint', async () => {
+    const mockLocations = Array.from({ length: 7 }, (_, index) => ({
+      pk: index + 1,
+      place: {
+        name: `Place ${index + 1}`,
+        country: `Country ${index + 1}`,
+      },
+      country_slug: `country-${index + 1}`,
+      images: [
+        {
+          url: `img-${index + 1}.jpg`,
+          thumbnail_url: `thumb-${index + 1}.jpg`,
+          description: `Description ${index + 1}`,
+        },
+      ],
+    }));
+
+    (useTravelHighlights as jest.Mock).mockReturnValue({
+      data: mockLocations,
+      isLoading: false,
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <TravelHighlights />
+        </MemoryRouter>
+      );
+    });
+
+    const images = screen.getAllByRole('img');
+    expect(images).toHaveLength(7);
+
+    images.slice(0, 6).forEach(image => {
+      expect(image).toHaveAttribute('loading', 'eager');
+      expect(image).toHaveAttribute('fetchpriority', 'high');
+    });
+
+    expect(images[6]).toHaveAttribute('loading', 'lazy');
+    expect(images[6]).not.toHaveAttribute('fetchpriority');
+  });
 });

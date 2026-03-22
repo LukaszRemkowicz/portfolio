@@ -27,7 +27,7 @@ if (IS_DEV) {
  * Uses a standard stub to capture events before the library loads.
  */
 export const loadGoogleAnalytics = () => {
-  if (!ENABLE_GA) {
+  if (!ENABLE_GA || typeof window === 'undefined') {
     return;
   }
 
@@ -61,6 +61,7 @@ export const loadGoogleAnalytics = () => {
  * Manually tracks a page view (Simplified for verification).
  */
 export const trackPageView = (path: string) => {
+  if (typeof window === 'undefined') return;
   // Pass-through if gtag exists, otherwise it hits the stub
   if (typeof window.gtag === 'function') {
     window.gtag('event', 'page_view', {
@@ -70,5 +71,11 @@ export const trackPageView = (path: string) => {
 };
 
 export const hasAnalyticsConsent = (): boolean => {
+  if (
+    typeof localStorage === 'undefined' ||
+    typeof localStorage.getItem !== 'function'
+  ) {
+    return false;
+  }
   return localStorage.getItem('cookieConsent') === 'true';
 };

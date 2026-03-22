@@ -1,6 +1,9 @@
-# astrophotography/management/commands/seed_regions.py
-# Known regions: each entry defines a region-level Place and its sub-places.
-# Sub-place entries are (name, country_code).
+"""Seed predefined travel and astrophotography regions into ``Place`` records.
+
+The command creates region-level ``Place`` objects and links their known
+sub-places. It is designed to be idempotent and safe to re-run.
+"""
+
 from typing import Any, Dict, List
 
 from django.conf import settings
@@ -93,6 +96,8 @@ def _get_or_create_place(place_name, country_code, lang):
 
 
 class Command(BaseCommand):
+    """Populate region and sub-place data used by travel/highlight content."""
+
     help = (
         "Seeds known geographic regions and their sub-places into the database. "
         "Idempotent: safe to run multiple times. Uses the Parler base language."

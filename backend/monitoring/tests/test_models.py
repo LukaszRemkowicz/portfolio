@@ -134,7 +134,9 @@ class TestLogAnalysisMethods:
             severity=LogAnalysis.Severity.WARNING, analysis_date=date(2024, 1, 15)
         )
         subject = log.get_email_subject()
-        assert subject == "[WARNING] Daily Log Analysis - 2024-01-15"
+        assert (
+            subject == f"[{settings.ENVIRONMENT.upper()}][WARNING] Daily Log Analysis - 2024-01-15"
+        )
 
     def test_get_email_subject_with_critical_severity(self):
         """Verify get_email_subject() works with CRITICAL severity."""
@@ -142,7 +144,9 @@ class TestLogAnalysisMethods:
             severity=LogAnalysis.Severity.CRITICAL, analysis_date=date(2024, 2, 20)
         )
         subject = log.get_email_subject()
-        assert subject == "[CRITICAL] Daily Log Analysis - 2024-02-20"
+        assert (
+            subject == f"[{settings.ENVIRONMENT.upper()}][CRITICAL] Daily Log Analysis - 2024-02-20"
+        )
 
     def test_get_email_context_contains_required_keys(self):
         """Verify get_email_context() returns all required keys."""

@@ -200,7 +200,7 @@ def test_profile_avatar_serves_webp_url_when_toggle_enabled(api_client: APIClien
     # Simulate converted state: .webp in avatar, original .jpg in legacy
     User.objects.filter(pk=user.pk).update(
         avatar="avatars/photo.webp",
-        avatar_legacy="avatars/photo_legacy.jpg",
+        avatar_original_image="avatars/photo_legacy.jpg",
     )
     LandingPageSettingsFactory(serve_webp_images=True)
 
@@ -226,7 +226,7 @@ def test_profile_avatar_serves_legacy_url_when_toggle_disabled(api_client: APICl
     user = UserFactory()
     User.objects.filter(pk=user.pk).update(
         avatar="avatars/photo.webp",
-        avatar_legacy="avatars/photo_legacy.jpg",
+        avatar_original_image="avatars/photo_legacy.jpg",
     )
     LandingPageSettingsFactory(serve_webp_images=False)
 

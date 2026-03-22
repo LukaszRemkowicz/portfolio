@@ -25,23 +25,17 @@ describe('API Configuration', () => {
     // We need to re-import because the constant is evaluated at load time
     jest.isolateModules(() => {
       const { API_BASE_URL: resolvedUrl } = require('../api/routes');
-      // In Jest, process.env.API_URL might be undefined or set to a mock
-      // Our default is DEFAULT_API_URL
-      if (!process.env.API_URL) {
-        expect(resolvedUrl).toBe(CONST_API_BASE_URL);
-      }
+      expect(resolvedUrl).toBe(CONST_API_BASE_URL);
     });
   });
 
-  it('should not throw when VITE_API_URL is missing — warns instead', () => {
+  it('should prefer browser same-origin over public API env', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.isolateModules(() => {
       delete process.env.VITE_API_URL;
       const { API_BASE_URL: resolvedUrl } = require('../api/constants');
-      expect(resolvedUrl).toBe('');
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('VITE_API_URL is not set')
-      );
+      expect(resolvedUrl).toBe(window.location.origin);
+      expect(warnSpy).not.toHaveBeenCalled();
     });
     warnSpy.mockRestore();
   });
