@@ -10,6 +10,9 @@ const LanguageSwitcher: React.FC = () => {
   const toggleLanguage = () => {
     const lang = i18n.language || 'en';
     const nextLang = lang.startsWith('en') ? 'pl' : 'en';
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('i18nextLng', nextLang);
+    }
     i18n.changeLanguage(nextLang);
   };
 

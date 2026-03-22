@@ -17,6 +17,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
+import { PassThrough } from 'node:stream';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   publicEnv,
@@ -33,6 +34,15 @@ const clientDistDir = path.join(appRoot, 'dist');
 const serverEntryPath = path.join(appRoot, 'dist', 'server', 'entry-server.js');
 const indexHtmlPath = path.join(clientDistDir, 'index.html');
 const port = Number(process.env.PORT || process.env.FRONTEND_PORT || 8080);
+const environment = (
+  process.env.ENVIRONMENT ||
+  process.env.VITE_ENVIRONMENT ||
+  process.env.NODE_ENV ||
+  'development'
+).toLowerCase();
+const useClientRenderOnly = ['development', 'dev', 'local'].includes(
+  environment
+);
 
 const MIME_TYPES = {
   '.css': 'text/css; charset=utf-8',
@@ -69,7 +79,7 @@ function getStaticHeaders(filePath) {
   ) {
     headers['Cache-Control'] = 'public, max-age=31536000, immutable';
   } else if (ext === '.html') {
-    headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+    headers['Cache-Control'] = 'private, no-cache, must-revalidate';
   } else {
     headers['Cache-Control'] = 'public, max-age=3600';
   }
@@ -641,14 +651,41 @@ function logRequest(info, requestId) {
 }
 
 async function renderDocument(url, acceptLanguage, requestOrigin, requestId) {
-  const [{ renderStream }, template] = await Promise.all([
-    import(pathToFileURL(serverEntryPath).href),
-    readFile(indexHtmlPath, 'utf8'),
-  ]);
+  const template = await readFile(indexHtmlPath, 'utf8');
   const requestPublicEnv = resolvePublicEnv({
     ...publicEnv,
     SITE_DOMAIN: new URL(requestOrigin).host,
   });
+
+  if (useClientRenderOnly) {
+    const publicEnvScript = `<script>window.__PUBLIC_ENV__ = ${serializePublicEnvForHtml(
+      requestPublicEnv
+    )};</script>`;
+    const initialLanguageScript = `<script>window.__INITIAL_LANGUAGE__ = "en";</script>`;
+    const rootMarker = '<div id="root"></div>';
+    const processedTemplate = replacePublicEnvPlaceholders(
+      template,
+      requestPublicEnv
+    ).replace('</head>', `${publicEnvScript}${initialLanguageScript}</head>`);
+    const parts = processedTemplate.split(rootMarker);
+
+    if (parts.length !== 2) {
+      throw new Error('SSR template root marker not found exactly once.');
+    }
+
+    const stream = new PassThrough();
+    stream.end('');
+
+    return {
+      abort: () => {},
+      language: 'en',
+      stream,
+      suffix: parts[1],
+      prefix: `${parts[0]}<div id="root">`,
+    };
+  }
+
+  const { renderStream } = await import(pathToFileURL(serverEntryPath).href);
 
   const { stream, helmetContext, dehydratedState, language, abort } =
     await renderStream(url, acceptLanguage, requestOrigin, requestId);
@@ -752,7 +789,7 @@ async function pipeDocument(
 
     res.writeHead(200, {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Cache-Control': 'private, no-cache, must-revalidate',
       'X-Accel-Buffering': 'no',
     });
     req.on('close', onClientClose);

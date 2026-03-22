@@ -25,7 +25,7 @@ const ImageWithFallback = ({
       onLoad?.({
         currentTarget: img,
         target: img,
-      } as React.SyntheticEvent<HTMLImageElement, Event>);
+      } as unknown as React.SyntheticEvent<HTMLImageElement, Event>);
       return;
     }
 

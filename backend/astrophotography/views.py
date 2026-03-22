@@ -77,14 +77,13 @@ class MainPageBackgroundImageView(ViewSet):
 
     def list(self, request: Request) -> Response:
         """Returns the URL of the most recent background image."""
-        instance: Optional[MainPageBackgroundImage] = MainPageBackgroundImage.objects.order_by(
-            "-created_at"
-        ).first()
-        if instance:
-            serializer: MainPageBackgroundImageSerializer = self.serializer_class(
-                instance, context={"request": request}
-            )
-            return Response(serializer.data)
+        queryset = MainPageBackgroundImage.objects.order_by("-created_at")
+        for instance in queryset:
+            if instance.get_serving_url():
+                serializer: MainPageBackgroundImageSerializer = self.serializer_class(
+                    instance, context={"request": request}
+                )
+                return Response(serializer.data)
         return Response({"url": None})
 
 

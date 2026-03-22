@@ -29,6 +29,13 @@ export const BFF_ROUTES = {
   contact: '/app/contact',
   images: '/app/images/',
   imageFiles: '/app/image-files/',
+  profile: '/app/profile/',
+  background: '/app/background/',
+  astroImages: '/app/astroimages/',
+  settings: '/app/settings/',
+  travelHighlights: '/app/travel-highlights/',
+  tags: '/app/tags/',
+  categories: '/app/categories/',
   travelBySlug: '/app/travel/',
 };
 

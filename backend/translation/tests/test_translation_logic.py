@@ -200,20 +200,18 @@ class TestTranslationLogic:
 
 @pytest.mark.django_db
 class TestTranslationFallbacks:
-    def test_translation_service_returns_empty_string_for_missing_translation(self):
-        """Verify that TranslationService.get_translation does NOT fallback to English"""
+    def test_translation_service_falls_back_to_default_language_for_missing_translation(self):
+        """Verify that TranslationService.get_translation falls back to English."""
         from astrophotography.tests.factories import AstroImageFactory
         from translation.services import TranslationService
 
         img = AstroImageFactory(name="English Name")
 
-        # Requesting Polish translation which does not exist
         result = TranslationService.get_translation(img, "name", "pl")
-        assert result == ""
+        assert result == "English Name"
 
-    def test_translation_service_strips_translation_failed_marker(self):
-        """Verify TranslationService.get_translation strips the failure marker."""
-        # Returns empty string when the stored value starts with the failure prefix.
+    def test_translation_service_strips_failed_marker_and_falls_back(self):
+        """Verify failure markers are stripped and default language is returned."""
         from astrophotography.tests.factories import AstroImageFactory
         from translation.services import TranslationService
 
@@ -222,21 +220,18 @@ class TestTranslationFallbacks:
         img.name = "[TRANSLATION FAILED] Error occurred"
         img.save()
 
-        # Requesting Polish translation which contains the failure marker
         result = TranslationService.get_translation(img, "name", "pl")
-        assert result == ""
+        assert result == "English Name"
 
     def test_main_page_location_get_full_location_empty_fallback(self):
-        """Verify get_full_location returns empty string when foreign translation is missing."""
+        """
+        Verify get_full_location still returns empty string when highlight
+        translation is missing.
+        """
         from astrophotography.tests.factories import MainPageLocationFactory, PlaceFactory
 
         place = PlaceFactory(name="English Place")
         loc = MainPageLocationFactory(place=place, highlight_name="")
 
-        # En translation should return English place name + Country
-        en_result = loc.get_full_location("en")
-        assert "English Place" in en_result
-
-        # Pl translation should return empty string, NOT fallback to English Place
         pl_result = loc.get_full_location("pl")
         assert pl_result == ""

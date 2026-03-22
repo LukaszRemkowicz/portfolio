@@ -103,17 +103,24 @@ class TestAstroImageViewSet:
 @pytest.mark.django_db
 class TestBackgroundMainPageView:
     def test_list_background_image(self, api_client: APIClient) -> None:
-        """Test retrieving the latest background image"""
-        # Create two images, should retrieve the latest one
+        """Test retrieving the latest valid background image."""
         MainPageBackgroundImageFactory()
-        latest: MainPageBackgroundImage = MainPageBackgroundImageFactory()
+        MainPageBackgroundImageFactory()
 
         url: str = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
-        response: Response = api_client.get(url)
+        with patch.object(
+            MainPageBackgroundImage,
+            "get_serving_url",
+            side_effect=[
+                "",
+                "/media/backgrounds/older-valid.png",
+                "/media/backgrounds/older-valid.png",
+            ],
+        ):
+            response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        # Serializer uses 'url' field mapped from 'image'
-        assert latest.path.name in response.data["url"]
+        assert response.data["url"] == "/media/backgrounds/older-valid.png"
 
     def test_list_background_image_empty(self, api_client: APIClient) -> None:
         """Test retrieving background when none exist"""
@@ -543,6 +550,24 @@ class TestAstroImageSecureView:
         )
         response: Response = api_client.get(url, params)
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+class TestMainPageBackgroundImageSecureView:
+    def test_background_list_returns_public_serving_url(self, api_client: APIClient) -> None:
+        MainPageBackgroundImageFactory()
+        url = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
+
+        with patch.object(
+            MainPageBackgroundImage,
+            "get_serving_url",
+            return_value="/media/backgrounds/example.png",
+        ):
+            response: Response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["url"] == "/media/backgrounds/example.png"
+        assert "/background-files/" not in response.data["url"]
 
 
 @pytest.mark.django_db

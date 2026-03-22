@@ -138,4 +138,18 @@ describe('PrivacyPolicy Component', () => {
       expect(screen.getByText(/being transparent/i)).toBeInTheDocument();
     });
   });
+
+  it('renders Polish copy when the active language is Polish', () => {
+    (globalThis as { __TEST_I18N_LANGUAGE__?: string }).__TEST_I18N_LANGUAGE__ =
+      'pl';
+
+    render(<PrivacyPolicy />);
+
+    expect(
+      screen.getByText('Polityka Prywatności i Plików Cookie')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Wprowadzenie')).toBeInTheDocument();
+    delete (globalThis as { __TEST_I18N_LANGUAGE__?: string })
+      .__TEST_I18N_LANGUAGE__;
+  });
 });

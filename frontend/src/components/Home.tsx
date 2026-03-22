@@ -1,5 +1,5 @@
 // frontend/src/components/Home.tsx
-import { type FC, useState, useEffect } from 'react';
+import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import styles from '../styles/components/App.module.css';
@@ -19,59 +19,28 @@ const Home: FC<HomeProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false);
-  const [shouldLoadBackground, setShouldLoadBackground] = useState(false);
-
-  useEffect(() => {
-    if (!backgroundUrl) return;
-
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    let idleId: number | undefined;
-
-    const scheduleLoad = () => setShouldLoadBackground(true);
-
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleId = window.requestIdleCallback(scheduleLoad, { timeout: 1500 });
-    } else {
-      timeoutId = globalThis.setTimeout(scheduleLoad, 1200);
-    }
-
-    return () => {
-      if (
-        typeof window !== 'undefined' &&
-        idleId !== undefined &&
-        'cancelIdleCallback' in window
-      ) {
-        window.cancelIdleCallback(idleId);
-      }
-      if (timeoutId !== undefined) {
-        globalThis.clearTimeout(timeoutId);
-      }
-    };
-  }, [backgroundUrl]);
-
-  useEffect(() => {
-    if (backgroundUrl && shouldLoadBackground) {
-      const img = new Image();
-      img.src = backgroundUrl;
-      img.onload = () => setIsLoaded(true);
-    }
-  }, [backgroundUrl, shouldLoadBackground]);
 
   const displayDescription = shortDescription || t('hero.defaultDescription');
 
   return (
     <section id='home' className={styles.heroSection}>
-      {/* Background Layer for smooth fade-in */}
-      <div
-        className={styles.heroBackground}
-        style={{
-          opacity: isLoaded ? 1 : 0,
-          backgroundImage: backgroundUrl
-            ? `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${backgroundUrl})`
-            : 'none',
-          transition: 'opacity 1.5s ease-in-out',
-        }}
-      />
+      {backgroundUrl && (
+        <>
+          <img
+            src={backgroundUrl}
+            alt=''
+            aria-hidden='true'
+            data-testid='hero-background-image'
+            className={styles.heroBackgroundImage}
+            onLoad={() => setIsLoaded(true)}
+            loading='eager'
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            {...({ fetchpriority: 'high' } as any)}
+            style={{ opacity: isLoaded ? 1 : 0 }}
+          />
+          <div className={styles.heroBackgroundOverlay} />
+        </>
+      )}
       <ClientOnly>
         <ShootingStars />
       </ClientOnly>

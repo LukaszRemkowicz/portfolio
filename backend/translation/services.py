@@ -175,35 +175,37 @@ class TranslationService:
         falls back to the default application language (English) so the API always
         has content to display.
         """
-        if not language_code:
-            language_code = settings.DEFAULT_APP_LANGUAGE
+        default_language = settings.DEFAULT_APP_LANGUAGE
+        requested_language = language_code or default_language
 
         if not isinstance(instance, TranslatableModel):
             return str(getattr(instance, field_name, ""))
 
-        # Check if a translation record exists for this specific language in the DB.
-        # This ensures we only return translations that have been explicitly created.
-        if not instance.translations.filter(language_code=language_code).exists():
-            return ""
+        def read_translation(lang: str) -> str:
+            if not instance.translations.filter(language_code=lang).exists():
+                return ""
 
-        # Strictly get the translation for the specified language without fallback.
-        # This is critical to avoid returning the thread-active language during switching.
-        value = str(
-            instance.safe_translation_getter(
-                field_name, language_code=language_code, any_language=False
+            value = str(
+                instance.safe_translation_getter(field_name, language_code=lang, any_language=False)
+                or ""
             )
-            or ""
-        )
 
-        # Strip the failure marker so it never leaks to the API / frontend.
-        if value.startswith(TranslationService.TRANSLATION_FAILED_PREFIX):
-            return ""
+            if value.startswith(TranslationService.TRANSLATION_FAILED_PREFIX):
+                return ""
 
-        # RichTextFields default to this when empty; treat it as an empty string.
-        if value.strip() == "<p>&nbsp;</p>":
-            return ""
+            if value.strip() == "<p>&nbsp;</p>":
+                return ""
 
-        return value
+            return value
+
+        value = read_translation(requested_language)
+        if value:
+            return value
+
+        if requested_language != default_language:
+            return read_translation(default_language)
+
+        return ""
 
     @classmethod
     def _has_translation(

@@ -253,8 +253,10 @@ class BaseImage(TranslatableModel):
         serving_field: Any = self.get_serving_path()
         if serving_field:
             try:
-                return str(serving_field.url)
-            except ValueError:
+                serving_name = str(getattr(serving_field, "name", "") or "")
+                if serving_name and serving_field.storage.exists(serving_name):
+                    return str(serving_field.url)
+            except (OSError, ValueError):
                 pass
         return ""
 

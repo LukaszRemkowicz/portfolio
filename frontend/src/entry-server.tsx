@@ -132,26 +132,26 @@ async function prefetchRouteQueries(
         cachedShellQuery(SHELL_RESOURCES.settings, () => fetchSettings(client)),
     }),
     prefetchQuerySafely(queryClient, {
-      queryKey: ['profile'],
+      queryKey: ['profile', language],
       queryFn: () =>
         cachedShellQuery(SHELL_RESOURCES.profile, () => fetchProfile(client)),
     }),
     prefetchQuerySafely(queryClient, {
-      queryKey: ['background'],
+      queryKey: ['background', language],
       queryFn: () =>
         cachedShellQuery(SHELL_RESOURCES.background, () =>
           fetchBackground(client)
         ),
     }),
     prefetchQuerySafely(queryClient, {
-      queryKey: ['travel-highlights'],
+      queryKey: ['travel-highlights', language],
       queryFn: () =>
         cachedShellQuery(SHELL_RESOURCES.travelHighlights, () =>
           fetchTravelHighlights(client)
         ),
     }),
     prefetchQuerySafely(queryClient, {
-      queryKey: ['latest-astro-images'],
+      queryKey: ['latest-astro-images', language],
       queryFn: () =>
         cachedShellQuery(SHELL_RESOURCES.latestAstroImages, () =>
           fetchLatestAstroImages(client)

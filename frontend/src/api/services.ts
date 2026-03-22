@@ -12,10 +12,11 @@
 import { AxiosInstance, AxiosResponse } from 'axios';
 import { API_ROUTES, BFF_ROUTES } from './routes';
 import { api } from './api';
-import { isBrowserDefaultClient, postBffJson } from './bff';
+import { fetchBffJson, isBrowserDefaultClient, postBffJson } from './bff';
 import {
   normalizeAstroImage,
   normalizeAstroImages,
+  getMediaUrl,
   normalizeProfileMedia,
   normalizeTravelLocation,
 } from './media';
@@ -49,6 +50,11 @@ export const fetchProfile = async (
   client: AxiosInstance = api
 ): Promise<UserProfile> => {
   try {
+    if (isBrowserDefaultClient(client)) {
+      const data = await fetchBffJson<UserProfile>(BFF_ROUTES.profile);
+      return normalizeProfileMedia(data);
+    }
+
     const data = handleResponse<UserProfile>(
       await client.get(API_ROUTES.profile)
     );
@@ -79,6 +85,11 @@ export const fetchBackground = async (
   client: AxiosInstance = api
 ): Promise<string | null> => {
   try {
+    if (isBrowserDefaultClient(client)) {
+      const data = await fetchBffJson<BackgroundImage>(BFF_ROUTES.background);
+      return data?.url ? getMediaUrl(data.url) : null;
+    }
+
     const data = handleResponse<BackgroundImage>(
       await client.get(API_ROUTES.background)
     );
@@ -100,6 +111,17 @@ export const fetchAstroImages = async (
   params: FilterParams = {},
   client: AxiosInstance = api
 ): Promise<AstroImage[]> => {
+  if (isBrowserDefaultClient(client)) {
+    const search = new URLSearchParams();
+    if (params.filter) search.set('filter', params.filter);
+    if (params.tag) search.set('tag', params.tag);
+    const url = search.size
+      ? `${BFF_ROUTES.astroImages}?${search.toString()}`
+      : BFF_ROUTES.astroImages;
+    const data = await fetchBffJson<AstroImage[]>(url);
+    return Array.isArray(data) ? normalizeAstroImages(data) : data;
+  }
+
   const response: AxiosResponse<AstroImage[]> = await client.get(
     API_ROUTES.astroImages,
     { params }
@@ -115,6 +137,13 @@ export const fetchAstroImages = async (
 export const fetchLatestAstroImages = async (
   client: AxiosInstance = api
 ): Promise<AstroImage[]> => {
+  if (isBrowserDefaultClient(client)) {
+    const data = await fetchBffJson<AstroImage[]>(
+      `${BFF_ROUTES.astroImages}latest/`
+    );
+    return Array.isArray(data) ? normalizeAstroImages(data) : [];
+  }
+
   const data = handleResponse<AstroImage[]>(
     await client.get(`${API_ROUTES.astroImages}latest/`)
   );
@@ -131,6 +160,13 @@ export const fetchAstroImageDetail = async (
   slug: string,
   client: AxiosInstance = api
 ): Promise<AstroImage> => {
+  if (isBrowserDefaultClient(client)) {
+    const data = await fetchBffJson<AstroImage>(
+      `${BFF_ROUTES.astroImages}${slug}/`
+    );
+    return data ? normalizeAstroImage(data) : data;
+  }
+
   const response: AxiosResponse<AstroImage> = await client.get(
     `${API_ROUTES.astroImages}${slug}/`
   );
@@ -174,6 +210,18 @@ export const fetchTags = async (
   if (category_filter) {
     params.filter = category_filter;
   }
+
+  if (isBrowserDefaultClient(client)) {
+    const search = new URLSearchParams();
+    if (category_filter) {
+      search.set('filter', category_filter);
+    }
+    const url = search.size
+      ? `${BFF_ROUTES.tags}?${search.toString()}`
+      : BFF_ROUTES.tags;
+    return fetchBffJson<Tag[]>(url);
+  }
+
   const response: AxiosResponse<Tag[]> = await client.get(API_ROUTES.tags, {
     params,
   });
@@ -185,6 +233,10 @@ export const fetchSettings = async (
   client: AxiosInstance = api
 ): Promise<EnabledFeatures> => {
   try {
+    if (isBrowserDefaultClient(client)) {
+      return fetchBffJson<EnabledFeatures>(BFF_ROUTES.settings);
+    }
+
     return handleResponse<EnabledFeatures>(
       await client.get(API_ROUTES.settings)
     );
@@ -219,6 +271,13 @@ export const fetchProjects = async (): Promise<Project[]> => {
 export const fetchTravelHighlights = async (
   client: AxiosInstance = api
 ): Promise<MainPageLocation[]> => {
+  if (isBrowserDefaultClient(client)) {
+    const data = await fetchBffJson<MainPageLocation[]>(
+      BFF_ROUTES.travelHighlights
+    );
+    return Array.isArray(data) ? data.map(normalizeTravelLocation) : [];
+  }
+
   const data = handleResponse<MainPageLocation[]>(
     await client.get(API_ROUTES.travelHighlights)
   );
@@ -233,6 +292,10 @@ export const fetchTravelHighlights = async (
 export const fetchCategories = async (
   client: AxiosInstance = api
 ): Promise<string[]> => {
+  if (isBrowserDefaultClient(client)) {
+    return fetchBffJson<string[]>(BFF_ROUTES.categories);
+  }
+
   const response: AxiosResponse<string[]> = await client.get(
     API_ROUTES.categories
   );

@@ -247,6 +247,125 @@ doppler --config dev run -- docker compose exec -T be python manage.py migrate
 doppler --config dev run -- docker compose exec -T fe npm run type-check
 ```
 
+## 🧰 Useful Commands
+
+Run everything from the repository root unless noted otherwise.
+
+### Frontend
+
+Clear the FE SSR cache without restarting the service:
+
+```bash
+doppler --config dev run -- docker compose exec -T fe sh -lc 'cd /app && npm run cache:clear:ssr'
+```
+
+Clear only selected SSR cache tags:
+
+```bash
+doppler --config dev run -- docker compose exec -T fe sh -lc 'cd /app && npm run cache:clear:ssr -- profile travel-highlights'
+```
+
+Clear all known SSR cache tags:
+
+```bash
+doppler --config dev run -- docker compose exec -T fe sh -lc 'cd /app && npm run cache:clear:ssr -- --all-tags'
+```
+
+### Backend
+
+General pattern for Django management commands:
+
+```bash
+doppler --config dev run -- docker compose exec -T be python manage.py <command> [args]
+```
+
+Clear the full Django cache:
+
+```bash
+doppler --config dev run -- docker compose exec -T be python manage.py clear_cache
+```
+
+Convert stored images to WebP:
+
+```bash
+# convert everything
+doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp
+
+# preview only
+doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --dry-run
+
+# reconvert already-converted images from originals
+doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --force
+
+# convert one object
+doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --object-id <uuid>
+
+# convert multiple objects
+doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --object-ids <uuid1> <uuid2>
+
+# override output size for a run
+doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --dimension-percentage 50
+```
+
+Regenerate thumbnails:
+
+```bash
+doppler --config dev run -- docker compose exec -T be python manage.py regenerate_thumbnails
+doppler --config dev run -- docker compose exec -T be python manage.py regenerate_thumbnails --force
+```
+
+### Custom management commands in this repository
+
+- `clear_cache`
+  - clears the active Django cache backend
+  - run:
+    ```bash
+    doppler --config dev run -- docker compose exec -T be python manage.py clear_cache
+    ```
+- `convert_images_to_webp`
+  - batch-converts stored images to WebP and preserves rollback originals
+  - run:
+    ```bash
+    doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp
+    ```
+- `regenerate_thumbnails`
+  - rebuilds thumbnails using current thumbnail settings
+  - run:
+    ```bash
+    doppler --config dev run -- docker compose exec -T be python manage.py regenerate_thumbnails
+    ```
+- `seed_settings`
+  - creates or repairs singleton landing page settings and meteors config
+  - run:
+    ```bash
+    doppler --config dev run -- docker compose exec -T be python manage.py seed_settings
+    ```
+- `seed_regions`
+  - seeds region and sub-place data used by travel highlights
+  - run:
+    ```bash
+    doppler --config dev run -- docker compose exec -T be python manage.py seed_regions
+    doppler --config dev run -- docker compose exec -T be python manage.py seed_regions --dry-run
+    doppler --config dev run -- docker compose exec -T be python manage.py seed_regions --retranslate
+    ```
+- `fix_parler_language_codes`
+  - rewrites legacy `en-us` Parler translations to `en`
+  - run:
+    ```bash
+    doppler --config dev run -- docker compose exec -T be python manage.py fix_parler_language_codes
+    ```
+
+### Common built-in Django commands
+
+```bash
+doppler --config dev run -- docker compose exec -T be python manage.py migrate
+doppler --config dev run -- docker compose exec -T be python manage.py makemigrations
+doppler --config dev run -- docker compose exec -T be python manage.py createsuperuser
+doppler --config dev run -- docker compose exec -T be python manage.py shell
+doppler --config dev run -- docker compose exec -T be python manage.py collectstatic --noinput
+doppler --config dev run -- docker compose exec -T be python manage.py compilemessages
+```
+
 Optional local profile:
 
 - `docker compose --profile traefik up --build` starts `nginx-traefik` so local routing can run through Traefik instead of binding nginx directly to ports `80/443`.
