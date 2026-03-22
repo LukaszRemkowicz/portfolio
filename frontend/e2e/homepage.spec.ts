@@ -1,5 +1,7 @@
 import { test, expect } from './fixtures';
 
+const PROJECT_OWNER = process.env.PROJECT_OWNER || 'Portfolio Owner';
+
 test.describe('Landing Page', () => {
   test.beforeEach(async ({ page }) => {
     // Override specific routes needed for Homepage tests
@@ -97,7 +99,7 @@ test.describe('Landing Page', () => {
     await expect(page).toHaveURL(/\/astrophotography/);
     await expect(page.locator('h1').first()).toContainText('Gallery');
 
-    await page.click('nav a:has-text("Łukasz Remkowicz")');
+    await page.click(`nav a:has-text("${PROJECT_OWNER}")`);
     await expect(page).toHaveURL('http://localhost:3000/');
   });
 

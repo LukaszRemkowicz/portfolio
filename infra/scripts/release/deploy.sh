@@ -308,12 +308,18 @@ else
       "--resolve" "${HEALTH_SITE_DOMAIN}:443:127.0.0.1"
     )
   else
-    # Staging now uses standard 443 via Traefik
-    HEALTH_PORT="443"
-    export NGINX_HTTPS_PORT="${HEALTH_PORT}"
-    # If a custom port is used, we hit 127.0.0.1 with Host header for local verification
-    HEALTH_URL="https://127.0.0.1:${HEALTH_PORT}/"
-    CURL_ARGS=("-fsSk" "-o" "/dev/null" "-H" "Host: ${HEALTH_SITE_DOMAIN}")
+    # Staging is protected by Traefik IP allowlisting, so a local HTTP probe
+    # with the correct Host header is more reliable than a full HTTPS loopback
+    # check during deploy. A 301/302 redirect to HTTPS is considered healthy.
+    HEALTH_PORT="80"
+    export NGINX_HTTPS_PORT="443"
+    HEALTH_URL="http://127.0.0.1:${HEALTH_PORT}/"
+    CURL_ARGS=(
+      "-sS"
+      "-o" "/dev/null"
+      "-w" "%{http_code}"
+      "-H" "Host: ${HEALTH_SITE_DOMAIN}"
+    )
   fi
 
   echo "🩺 TARGET: ${HEALTH_URL} (Host: ${HEALTH_SITE_DOMAIN})"
@@ -323,9 +329,17 @@ else
   MAX_RETRIES_FE=20 # Extended to 60s (20 * 3s) for certificates and warmup.
   for ((i=1; i<=MAX_RETRIES_FE; i++)); do
     # Use array expansion to correctly handle spaces/quotes
-    if curl "${CURL_ARGS[@]}" "${HEALTH_URL}" 2>/dev/null; then
-      echo "✅ Frontend is reachable at ${HEALTH_URL}"
-      break
+    if [[ "${ENVIRONMENT}" == "production" ]]; then
+      if curl "${CURL_ARGS[@]}" "${HEALTH_URL}" 2>/dev/null; then
+        echo "✅ Frontend is reachable at ${HEALTH_URL}"
+        break
+      fi
+    else
+      HTTP_CODE="$(curl "${CURL_ARGS[@]}" "${HEALTH_URL}" 2>/dev/null || true)"
+      if [[ "${HTTP_CODE}" == "200" || "${HTTP_CODE}" == "301" || "${HTTP_CODE}" == "302" ]]; then
+        echo "✅ Frontend is reachable at ${HEALTH_URL} (HTTP ${HTTP_CODE})"
+        break
+      fi
     fi
     echo "⏳ Waiting for frontend to become reachable… ($i/$MAX_RETRIES_FE)"
     sleep 3

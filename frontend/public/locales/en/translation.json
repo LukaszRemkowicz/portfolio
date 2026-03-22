@@ -34,7 +34,7 @@
     "empty": "The archives appear to be empty. Check back later for new transmissions."
   },
   "footer": {
-    "rights": "Łukasz Remkowicz © 2026"
+    "rights": "__PROJECT_OWNER__ © 2026"
   },
   "about": {
     "title": "Beyond the Atmosphere.",
