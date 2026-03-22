@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import DOMPurify from 'isomorphic-dompurify';
 
 /**
  * Utility function to strip HTML tags from a string.
@@ -8,7 +8,9 @@ export const stripHtml = (html: string): string => {
   if (!html) return '';
 
   if (typeof DOMParser === 'undefined') {
-    return html.replace(/<[^>]*>/g, '').trim();
+    // Fallback: remove angle brackets so any residual tag fragments
+    // cannot be interpreted as HTML, then normalize whitespace.
+    return html.replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   // Use a DOM-based approach for reliability
@@ -36,23 +38,6 @@ export const slugify = (text: string): string => {
  */
 export const sanitizeHtml = (html: string): string => {
   if (!html) return '';
-
-  if (typeof window === 'undefined') {
-    let sanitized = html;
-    let previous: string;
-
-    // Re-apply the same filters until the string stabilizes so patterns that
-    // become visible after an earlier replacement are removed as well.
-    do {
-      previous = sanitized;
-      sanitized = sanitized
-        .replace(/<script[\s\S]*?>[\s\S]*?<\/script[^>]*>/gi, '')
-        .replace(/\son\w+=(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-        .replace(/\b(?:javascript|data|vbscript)\s*:/gi, '');
-    } while (sanitized !== previous);
-
-    return sanitized;
-  }
 
   return DOMPurify.sanitize(html);
 };
