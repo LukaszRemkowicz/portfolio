@@ -153,11 +153,7 @@ services:
       SSR_CACHE_INVALIDATION_URL: ${SSR_CACHE_INVALIDATION_URL:-http://fe:8080/internal/cache/invalidate}
       SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "python3 -c \"import sys, urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5); sys.exit(0)\" >/dev/null 2>&1 || exit 1",
-        ]
+      test: ["CMD-SHELL", "curl -f -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
