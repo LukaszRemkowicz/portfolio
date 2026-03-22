@@ -42,7 +42,6 @@ class BaseImage(TranslatableModel):
         help_text=_(
             "Original file path before WebP conversion. "
             "Used for rollback via the Admin serve_webp_images toggle. "
-            "TODO:Will be removed in future versions."
         ),
     )
 
@@ -50,7 +49,11 @@ class BaseImage(TranslatableModel):
     # See AstroImage and ProjectImage.
 
     thumbnail = models.ImageField(
-        upload_to="thumbnails/", blank=True, null=True, editable=False, verbose_name=_("Thumbnail")
+        upload_to="thumbnails/",
+        blank=True,
+        null=True,
+        editable=False,
+        verbose_name=_("Thumbnail"),
     )
 
     # Track path AND original_image so save() can detect whether _convert_to_webp() preserved
