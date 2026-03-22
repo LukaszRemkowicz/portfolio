@@ -12,8 +12,15 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({ isSsrBuild }: ConfigEnv) => {
   const appEnvironment =
     process.env.ENVIRONMENT || process.env.VITE_ENVIRONMENT || 'development';
+  const disablePwaEnvironments = [
+    'development',
+    'dev',
+    'local',
+    'stage',
+    'stg',
+  ];
   const enablePwa =
-    !isSsrBuild && !['development', 'dev', 'local'].includes(appEnvironment);
+    !isSsrBuild && !disablePwaEnvironments.includes(appEnvironment);
 
   const criticalPathPlugin: PluginOption = !isSsrBuild
     ? {
@@ -25,10 +32,37 @@ export default defineConfig(({ isSsrBuild }: ConfigEnv) => {
             html: string,
             ctx?: IndexHtmlTransformContext
           ): string | HtmlTagDescriptor[] {
+            const bootstrapScript = `<script>(function(){try{var lang=window.__INITIAL_LANGUAGE__||localStorage.getItem('i18nextLng')||'en';document.documentElement.lang=lang.split('-')[0];window.__INITIAL_LANGUAGE__=lang;}catch(_e){document.documentElement.lang='en';window.__INITIAL_LANGUAGE__='en';}})();</script>`;
+
             html = html.replace(
               /<link rel="modulepreload"[^>]*href="[^"]*sentry-[^"]*\.js"[^>]*>\s*/gi,
               ''
             );
+
+            if (ctx?.bundle) {
+              const entryChunk = Object.values(ctx.bundle).find(file => {
+                const chunk = file as {
+                  type?: string;
+                  isEntry?: boolean;
+                  fileName?: string;
+                };
+                return (
+                  chunk.type === 'chunk' &&
+                  chunk.isEntry === true &&
+                  typeof chunk.fileName === 'string' &&
+                  chunk.fileName.endsWith('.js')
+                );
+              }) as { fileName?: string } | undefined;
+
+              if (entryChunk?.fileName) {
+                html = html.replace(
+                  '</head>',
+                  `<link rel="modulepreload" href="/${entryChunk.fileName}" crossorigin>\n</head>`
+                );
+              }
+            }
+
+            html = html.replace('</head>', `${bootstrapScript}\n</head>`);
 
             if (ctx?.bundle) {
               let cssContent = '';
@@ -148,6 +182,13 @@ export default defineConfig(({ isSsrBuild }: ConfigEnv) => {
     build: {
       target: 'es2022',
       outDir: isSsrBuild ? 'dist/server' : 'dist',
+      // The local SSR dev container rebuilds on file watch and can overlap
+      // client builds briefly. Avoid emptying dist in development to prevent
+      // ENOTEMPTY races while keeping production builds clean.
+      emptyOutDir:
+        appEnvironment === 'development' || appEnvironment === 'dev'
+          ? false
+          : undefined,
       sourcemap: true,
       rollupOptions: isSsrBuild
         ? undefined

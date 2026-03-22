@@ -13,6 +13,7 @@ import './i18n.client';
 import i18n from './i18n.client';
 import { setLanguageGetter } from './api/api';
 import { initClientServices } from './utils/initClientServices';
+import { getEnv } from './utils/env';
 import AppShell from './AppShell';
 import App from './App';
 
@@ -48,6 +49,9 @@ initClientServices();
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');
 
+const environment = getEnv('ENVIRONMENT', getEnv('NODE_ENV', 'development'));
+const useClientRenderOnly = ['development', 'dev'].includes(environment);
+
 const tree = (
   <AppShell
     queryClient={queryClient}
@@ -63,8 +67,8 @@ const tree = (
   </AppShell>
 );
 
-// Use hydrateRoot when SSR HTML is present (Phase 2+), createRoot otherwise
-if (rootElement.childElementCount > 0) {
+// Local dev favors deterministic client render over noisy hydration recoveries.
+if (rootElement.childElementCount > 0 && !useClientRenderOnly) {
   hydrateRoot(rootElement, tree);
 } else {
   createRoot(rootElement).render(tree);

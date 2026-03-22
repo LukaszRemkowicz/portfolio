@@ -1,6 +1,25 @@
+/**
+ * High-level frontend data services.
+ *
+ * This module defines the application-facing API contract used by hooks, SSR
+ * prefetch, and selected server-side views. It sits above the low-level Axios
+ * client and below the React Query hooks:
+ * - chooses backend routes
+ * - applies payload normalization
+ * - provides fallback behavior for selected content
+ * - decides when browser code should use frontend-owned transport endpoints
+ */
 import { AxiosInstance, AxiosResponse } from 'axios';
-import { API_ROUTES, getMediaUrl } from './routes';
+import { API_ROUTES, BFF_ROUTES } from './routes';
 import { api } from './api';
+import { fetchBffJson, isBrowserDefaultClient, postBffJson } from './bff';
+import {
+  normalizeAstroImage,
+  normalizeAstroImages,
+  getMediaUrl,
+  normalizeProfileMedia,
+  normalizeTravelLocation,
+} from './media';
 import {
   UserProfile,
   BackgroundImage,
@@ -14,6 +33,7 @@ import {
 } from '../types';
 import { NotFoundError } from './errors';
 
+/** Validate Axios responses and return the payload shape expected by callers. */
 const handleResponse = <T>(response: AxiosResponse<T>): T => {
   if (response && response.data !== undefined) {
     // The API returns an array for lists and an object for single items.
@@ -25,27 +45,22 @@ const handleResponse = <T>(response: AxiosResponse<T>): T => {
   throw new Error('Invalid response from server.');
 };
 
+/** Fetch and normalize the public user profile used across the site shell. */
 export const fetchProfile = async (
   client: AxiosInstance = api
 ): Promise<UserProfile> => {
   try {
-    const response: AxiosResponse<UserProfile> = await client.get(
-      API_ROUTES.profile
-    );
-    const data = handleResponse<UserProfile>(response);
+    if (isBrowserDefaultClient(client)) {
+      const data = await fetchBffJson<UserProfile>(BFF_ROUTES.profile);
+      return normalizeProfileMedia(data);
+    }
 
-    // Transform relative media paths to full URLs
+    const data = handleResponse<UserProfile>(
+      await client.get(API_ROUTES.profile)
+    );
+
     if (data) {
-      return {
-        ...data,
-        avatar: data.avatar ? getMediaUrl(data.avatar) : null,
-        about_me_image: data.about_me_image
-          ? getMediaUrl(data.about_me_image)
-          : null,
-        about_me_image2: data.about_me_image2
-          ? getMediaUrl(data.about_me_image2)
-          : null,
-      };
+      return normalizeProfileMedia(data);
     }
     return data;
   } catch (error) {
@@ -65,14 +80,19 @@ export const fetchProfile = async (
   }
 };
 
+/** Fetch the homepage background image URL, if configured. */
 export const fetchBackground = async (
   client: AxiosInstance = api
 ): Promise<string | null> => {
   try {
-    const response: AxiosResponse<BackgroundImage> = await client.get(
-      API_ROUTES.background
+    if (isBrowserDefaultClient(client)) {
+      const data = await fetchBffJson<BackgroundImage>(BFF_ROUTES.background);
+      return data?.url ? getMediaUrl(data.url) : null;
+    }
+
+    const data = handleResponse<BackgroundImage>(
+      await client.get(API_ROUTES.background)
     );
-    const data = handleResponse<BackgroundImage>(response);
     if (data && data.url) {
       return data.url;
     }
@@ -86,64 +106,93 @@ export const fetchBackground = async (
   }
 };
 
+/** Fetch the astrophotography gallery list with optional filtering parameters. */
 export const fetchAstroImages = async (
   params: FilterParams = {},
   client: AxiosInstance = api
 ): Promise<AstroImage[]> => {
+  if (isBrowserDefaultClient(client)) {
+    const search = new URLSearchParams();
+    if (params.filter) search.set('filter', params.filter);
+    if (params.tag) search.set('tag', params.tag);
+    const url = search.size
+      ? `${BFF_ROUTES.astroImages}?${search.toString()}`
+      : BFF_ROUTES.astroImages;
+    const data = await fetchBffJson<AstroImage[]>(url);
+    return Array.isArray(data) ? normalizeAstroImages(data) : data;
+  }
+
   const response: AxiosResponse<AstroImage[]> = await client.get(
     API_ROUTES.astroImages,
     { params }
   );
   const data = handleResponse<AstroImage[]>(response);
   if (Array.isArray(data)) {
-    return data.map(image => ({
-      ...image,
-      thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-    }));
+    return normalizeAstroImages(data);
   }
   return data;
 };
 
+/** Fetch the latest homepage astro images used in the shared shell. */
 export const fetchLatestAstroImages = async (
   client: AxiosInstance = api
 ): Promise<AstroImage[]> => {
-  const response: AxiosResponse<AstroImage[]> = await client.get(
-    `${API_ROUTES.astroImages}latest/`
+  if (isBrowserDefaultClient(client)) {
+    const data = await fetchBffJson<AstroImage[]>(
+      `${BFF_ROUTES.astroImages}latest/`
+    );
+    return Array.isArray(data) ? normalizeAstroImages(data) : [];
+  }
+
+  const data = handleResponse<AstroImage[]>(
+    await client.get(`${API_ROUTES.astroImages}latest/`)
   );
-  const data = handleResponse<AstroImage[]>(response);
   if (Array.isArray(data)) {
-    return data.map(image => ({
-      ...image,
-      thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-    }));
+    return normalizeAstroImages(data);
   }
 
   console.warn('[API] latest astro images response was not an array', data);
   return [];
 };
 
+/** Fetch a single astro image detail payload by slug. */
 export const fetchAstroImageDetail = async (
   slug: string,
   client: AxiosInstance = api
 ): Promise<AstroImage> => {
+  if (isBrowserDefaultClient(client)) {
+    const data = await fetchBffJson<AstroImage>(
+      `${BFF_ROUTES.astroImages}${slug}/`
+    );
+    return data ? normalizeAstroImage(data) : data;
+  }
+
   const response: AxiosResponse<AstroImage> = await client.get(
     `${API_ROUTES.astroImages}${slug}/`
   );
   const data = handleResponse<AstroImage>(response);
   if (data) {
-    return {
-      ...data,
-      thumbnail_url: getMediaUrl(data.thumbnail_url) || undefined,
-    };
+    return normalizeAstroImage(data);
   }
   return data;
 };
 
+/**
+ * Submit the contact form.
+ *
+ * Browser callers post through the frontend-owned transport endpoint, while SSR
+ * or internal callers can still use the backend client directly.
+ */
 export const fetchContact = async (
   contactData: ContactFormData,
   client: AxiosInstance = api
 ): Promise<void> => {
   if (!contactData) throw new Error('contactData is required');
+
+  if (isBrowserDefaultClient(client)) {
+    await postBffJson<void>(BFF_ROUTES.contact, contactData);
+    return;
+  }
 
   const response: AxiosResponse<void> = await client.post(
     API_ROUTES.contact,
@@ -152,6 +201,7 @@ export const fetchContact = async (
   return handleResponse<void>(response);
 };
 
+/** Fetch public tag options, optionally filtered by category. */
 export const fetchTags = async (
   category_filter?: string,
   client: AxiosInstance = api
@@ -160,20 +210,36 @@ export const fetchTags = async (
   if (category_filter) {
     params.filter = category_filter;
   }
+
+  if (isBrowserDefaultClient(client)) {
+    const search = new URLSearchParams();
+    if (category_filter) {
+      search.set('filter', category_filter);
+    }
+    const url = search.size
+      ? `${BFF_ROUTES.tags}?${search.toString()}`
+      : BFF_ROUTES.tags;
+    return fetchBffJson<Tag[]>(url);
+  }
+
   const response: AxiosResponse<Tag[]> = await client.get(API_ROUTES.tags, {
     params,
   });
   return handleResponse<Tag[]>(response);
 };
 
+/** Fetch enabled frontend feature flags and configuration switches. */
 export const fetchSettings = async (
   client: AxiosInstance = api
 ): Promise<EnabledFeatures> => {
   try {
-    const response: AxiosResponse<EnabledFeatures> = await client.get(
-      API_ROUTES.settings
+    if (isBrowserDefaultClient(client)) {
+      return fetchBffJson<EnabledFeatures>(BFF_ROUTES.settings);
+    }
+
+    return handleResponse<EnabledFeatures>(
+      await client.get(API_ROUTES.settings)
     );
-    return handleResponse<EnabledFeatures>(response);
   } catch (error: unknown) {
     console.error('Error fetching settings:', error);
     // Return empty features and empty meteors on error (or handle appropriately)
@@ -182,6 +248,8 @@ export const fetchSettings = async (
     throw error;
   }
 };
+
+/** Placeholder project service kept for compatibility until project data is reintroduced. */
 export const fetchProjects = async (): Promise<Project[]> => {
   // const response: AxiosResponse<Project[]> = await api.get(API_ROUTES.projects);
   // const data = handleResponse<Project[]>(response);
@@ -199,29 +267,35 @@ export const fetchProjects = async (): Promise<Project[]> => {
   return [];
 };
 
+/** Fetch and normalize the travel highlights shown on the homepage. */
 export const fetchTravelHighlights = async (
   client: AxiosInstance = api
 ): Promise<MainPageLocation[]> => {
-  const response: AxiosResponse<MainPageLocation[]> = await client.get(
-    API_ROUTES.travelHighlights
+  if (isBrowserDefaultClient(client)) {
+    const data = await fetchBffJson<MainPageLocation[]>(
+      BFF_ROUTES.travelHighlights
+    );
+    return Array.isArray(data) ? data.map(normalizeTravelLocation) : [];
+  }
+
+  const data = handleResponse<MainPageLocation[]>(
+    await client.get(API_ROUTES.travelHighlights)
   );
-  const data = handleResponse<MainPageLocation[]>(response);
 
   if (Array.isArray(data)) {
-    return data.map(slider => ({
-      ...slider,
-      images: slider.images.map(image => ({
-        ...image,
-        thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-      })),
-    }));
+    return data.map(normalizeTravelLocation);
   }
   return [];
 };
 
+/** Fetch the public astrophotography category list. */
 export const fetchCategories = async (
   client: AxiosInstance = api
 ): Promise<string[]> => {
+  if (isBrowserDefaultClient(client)) {
+    return fetchBffJson<string[]>(BFF_ROUTES.categories);
+  }
+
   const response: AxiosResponse<string[]> = await client.get(
     API_ROUTES.categories
   );

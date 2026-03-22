@@ -7,6 +7,7 @@ from parler.forms import TranslatableModelForm
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
+from django.db import models
 from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
@@ -310,6 +311,40 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
             },
         ),
     )
+
+    def save_model(
+        self, request: HttpRequest, obj: models.Model, form: forms.ModelForm, change: bool
+    ) -> None:
+        astro_obj = obj if isinstance(obj, AstroImage) else None
+        uploaded_file = request.FILES.get("path")
+        cleaned_path = form.cleaned_data.get("path") if hasattr(form, "cleaned_data") else None
+
+        logger.info(
+            "AstroImage admin save start",
+            extra={
+                "object_id": str(obj.pk) if obj.pk else None,
+                "change": change,
+                "request_files_keys": list(request.FILES.keys()),
+                "uploaded_path_name": getattr(uploaded_file, "name", None),
+                "cleaned_path_name": getattr(cleaned_path, "name", None),
+                "current_path_name": getattr(getattr(astro_obj, "path", None), "name", None),
+            },
+        )
+
+        super().save_model(request, obj, form, change)
+
+        saved_path = str(getattr(getattr(astro_obj, "path", None), "name", "") or "")
+        saved_exists = bool(astro_obj and saved_path and astro_obj.path.storage.exists(saved_path))
+
+        logger.info(
+            "AstroImage admin save complete",
+            extra={
+                "object_id": str(obj.pk),
+                "change": change,
+                "saved_path_name": saved_path,
+                "saved_path_exists": saved_exists,
+            },
+        )
 
     def get_fieldsets(
         self, request: HttpRequest, obj: Optional[AstroImage] = None

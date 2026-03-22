@@ -19,6 +19,8 @@ from users.models import User
 
 
 class Command(BaseCommand):
+    """Batch-convert stored images to WebP using each model's image settings."""
+
     help = "Convert existing images to WebP and populate original_image for rollback."
 
     def add_arguments(self, parser) -> None:

@@ -4,10 +4,11 @@
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: var(--z-tooltip);
+  z-index: 10002;
   padding: var(--space-8);
   background: var(--celestial-glass);
   backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-top: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 }

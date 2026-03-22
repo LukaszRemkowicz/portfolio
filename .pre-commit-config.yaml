@@ -18,7 +18,7 @@ repos:
     hooks:
       - id: prettier
         name: prettier
-        entry: ./frontend/node_modules/.bin/prettier --write
+        entry: npx --prefix frontend prettier --write
         language: system
         files: ^frontend/
         types_or: [javascript, jsx, ts, tsx, css, json, yaml, markdown]
@@ -27,7 +27,7 @@ repos:
     hooks:
       - id: eslint
         name: eslint
-        entry: bash -c "cd frontend && npm run lint"
+        entry: npm run lint --prefix frontend
         language: system
         pass_filenames: false
         files: ^frontend/

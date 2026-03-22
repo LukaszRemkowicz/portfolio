@@ -97,6 +97,18 @@ class TestAstroImageModel:
         assert url
         assert "/media/thumbnails/" in url or "/media/images/" in url
 
+    def test_get_thumbnail_url_returns_none_when_thumbnail_file_missing(self) -> None:
+        """Missing thumbnail files should not leak dead media URLs to the API."""
+        image: AstroImage = AstroImageFactory()
+        image.refresh_from_db()
+
+        assert image.thumbnail is not None
+
+        missing_name = str(image.thumbnail.name)
+        image.thumbnail.storage.delete(missing_name)
+
+        assert image.get_thumbnail_url() is None
+
     def test_get_path_spec(self):
         """Test that get_path_spec returns correct spec based on webp_quality."""
         # Quality >= 90 -> LANDSCAPE
@@ -403,3 +415,74 @@ class TestImageUpdateLogic:
         assert image.path.name != old_path
         assert image.thumbnail.name != old_thumb_name
         assert image.name == "Updated Name"
+
+    def test_replacing_existing_image_keeps_new_file_and_removes_old_file(self) -> None:
+        """
+        Replacing an existing image must not delete the freshly uploaded file.
+        Only the previous file should be removed.
+        """
+        image: AstroImage = AstroImageFactory(name="Replacement Persistence Test")
+        image.refresh_from_db()
+
+        old_path = str(image.path.name)
+        assert image.path.storage.exists(old_path)
+
+        img_data = BytesIO()
+        Image.new("RGB", (100, 100), color="purple").save(img_data, "PNG")
+        new_file = SimpleUploadedFile(
+            "replacement_persistence.png", img_data.getvalue(), content_type="image/png"
+        )
+
+        image.path = new_file
+        image.save()
+        image.refresh_from_db()
+
+        new_path = str(image.path.name)
+        assert new_path != old_path
+        assert image.path.storage.exists(new_path)
+        assert not image.path.storage.exists(old_path)
+
+    def test_form_is_invalid_when_existing_image_file_is_missing(self) -> None:
+        """
+        Admin/model forms must reject editing a row whose path points to a missing file.
+        """
+        image: AstroImage = AstroImageFactory(name="Broken Existing Image")
+        image.refresh_from_db()
+        image.path.storage.delete(image.path.name)
+
+        data = {
+            "name": "Broken Existing Image Updated",
+            "capture_date": image.capture_date.isoformat(),
+            "celestial_object": image.celestial_object,
+        }
+
+        form = AstroImageForm(data=data, instance=image)
+
+        assert not form.is_valid()
+        assert "path" in form.errors
+
+    def test_form_allows_replacing_missing_existing_image_with_new_upload(self) -> None:
+        """
+        Broken existing rows should be repairable through the admin form when
+        a new file is uploaded.
+        """
+        image: AstroImage = AstroImageFactory(name="Broken But Replaceable")
+        image.refresh_from_db()
+        image.path.storage.delete(image.path.name)
+
+        img_data = BytesIO()
+        Image.new("RGB", (100, 100), color="purple").save(img_data, "PNG")
+        replacement = SimpleUploadedFile(
+            "replacement.png", img_data.getvalue(), content_type="image/png"
+        )
+
+        data = {
+            "name": "Broken But Replaceable",
+            "capture_date": image.capture_date.isoformat(),
+            "celestial_object": image.celestial_object,
+        }
+        files = {"path": replacement}
+
+        form = AstroImageForm(data=data, files=files, instance=image)
+
+        assert form.is_valid(), form.errors

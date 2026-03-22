@@ -5,12 +5,16 @@ from celery import shared_task
 
 from django.apps import apps
 
+from common.celery import CommitAwareTask
 from common.utils.image import convert_to_webp
 
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name="users.process_user_images")  # type: ignore[untyped-decorator]
+@shared_task(  # type: ignore[untyped-decorator]
+    name="users.process_user_images",
+    base=CommitAwareTask,
+)
 def process_user_images_task(user_id: int, changed_field_names: List[str]) -> None:
     """
     Background task to convert User images to WebP and handle legacy backups.

@@ -8,11 +8,7 @@
   <!-- Critical Resource Priority -->
   <link rel="preload" href="/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4C_k3HqU.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#02040a" />
-
-  <!-- Preconnect to API (Actually Used) -->
-  <link rel="preconnect" href="__API_ORIGIN__" crossorigin />
 
   <!-- Full Critical CSS Inlining (Variables & Theme) -->
   <style>
@@ -74,12 +70,32 @@
 
   <!-- Inlining Fonts configuration to avoid extra request -->
   <style>
-    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 300 700; font-display: block; src: url(/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2) format('woff2'); }
-    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: block; src: url(/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4C_k3HqU.woff2) format('woff2'); }
+    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 300 700; font-display: swap; src: url(/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2) format('woff2'); }
+    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: swap; src: url(/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4C_k3HqU.woff2) format('woff2'); }
   </style>
 
   <link rel="icon" href="/favicon.ico" />
   <link rel="apple-touch-icon" href="/logo192.png" />
+
+  <title>__PROJECT_OWNER__ | Astrophotography & Software Development</title>
+  <meta name="description"
+    content="Portfolio of __PROJECT_OWNER__, showcasing professional astrophotography and software development projects. Capturing the cosmos through the lens and code." />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://__SITE_DOMAIN__/" />
+  <meta property="og:title" content="__PROJECT_OWNER__ | Astrophotography & Writing Code" />
+  <meta property="og:description"
+    content="Explore the intersection of astronomy and technology through the portfolio of __PROJECT_OWNER__." />
+  <meta property="og:image" content="https://__SITE_DOMAIN__/og-image.jpg" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://__SITE_DOMAIN__/" />
+  <meta property="twitter:title" content="__PROJECT_OWNER__ | Astrophotography & Writing Code" />
+  <meta property="twitter:description"
+    content="Explore the intersection of astronomy and technology through the portfolio of __PROJECT_OWNER__." />
+  <meta property="twitter:image" content="https://__SITE_DOMAIN__/og-image.jpg" />
 
   <!-- Structured Data -->
   <script type="application/ld+json">

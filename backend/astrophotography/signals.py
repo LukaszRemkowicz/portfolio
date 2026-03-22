@@ -1,8 +1,7 @@
-# astrophotography/signals.py
-
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from common.tasks import invalidate_frontend_ssr_cache_task
 from core.cache_service import CacheService
 
 from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Tag
@@ -12,6 +11,7 @@ from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Tag
 @receiver([post_save, post_delete], sender="astrophotography.AstroImageTranslation")
 def invalidate_astroimage_cache(sender, instance, **kwargs):
     CacheService.invalidate_astrophotography_cache()
+    invalidate_frontend_ssr_cache_task.delay_on_commit(["latest-astro-images", "travel-highlights"])
 
 
 @receiver([post_save, post_delete], sender=Tag)
@@ -24,9 +24,11 @@ def invalidate_tag_cache(sender, instance, **kwargs):
 @receiver([post_save, post_delete], sender="astrophotography.MainPageLocationTranslation")
 def invalidate_travel_cache(sender, instance, **kwargs):
     CacheService.invalidate_travel_cache()
+    invalidate_frontend_ssr_cache_task.delay_on_commit(["travel-highlights"])
 
 
 @receiver([post_save, post_delete], sender=MainPageBackgroundImage)
 @receiver([post_save, post_delete], sender="astrophotography.MainPageBackgroundImageTranslation")
 def invalidate_background_cache(sender, instance, **kwargs):
     CacheService.invalidate_astrophotography_cache()
+    invalidate_frontend_ssr_cache_task.delay_on_commit(["background"])

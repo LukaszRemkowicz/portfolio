@@ -1,3 +1,16 @@
+/**
+ * Shared Axios client setup for frontend data access.
+ *
+ * This module owns the low-level HTTP transport concerns used by both SSR and
+ * browser-side code:
+ * - API base URL selection
+ * - language query propagation
+ * - SSR request logging
+ * - backend error normalization
+ * - SSR forwarding headers such as Host and X-Request-ID
+ *
+ * Higher-level route ownership lives in `services.ts` and `bff.ts`.
+ */
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { API_BASE_URL } from './routes';
 import { publicEnv } from '../../server/publicEnv.js';
@@ -12,8 +25,10 @@ import {
 
 type SsrRequestMeta = {
   startedAt: number;
+  requestId?: string;
 };
 
+/** Emit structured SSR -> backend transport logs for request tracing. */
 function logSsrBackendRequest(info: Record<string, unknown>): void {
   console.log(
     JSON.stringify({
@@ -31,14 +46,20 @@ function logSsrBackendRequest(info: Record<string, unknown>): void {
 // back to 'en' (server-side language is handled per-request in Phase 3+).
 let _getLanguage: (() => string) | null = null;
 
+/** Register the language getter used by request interceptors. */
 export function setLanguageGetter(getter: () => string): void {
   _getLanguage = getter;
 }
 
+/** Read the current language without depending directly on i18n at import time. */
 function getCurrentLanguage(): string {
   return _getLanguage?.() ?? 'en';
 }
 
+/**
+ * Attach the request interceptor that adds the language parameter and records
+ * SSR timing metadata used by the response logger.
+ */
 function attachLanguageInterceptor(
   client: AxiosInstance,
   getLanguage: () => string
@@ -51,6 +72,10 @@ function attachLanguageInterceptor(
         }
       ).metadata = {
         startedAt: Date.now(),
+        requestId:
+          typeof config.headers?.['X-Request-ID'] === 'string'
+            ? config.headers['X-Request-ID']
+            : undefined,
       };
     }
 
@@ -66,6 +91,10 @@ function attachLanguageInterceptor(
   });
 }
 
+/**
+ * Attach the response interceptor that logs SSR backend requests and converts
+ * Axios/network failures into project-specific error types.
+ */
 function attachErrorInterceptor(client: AxiosInstance) {
   client.interceptors.response.use(
     response => {
@@ -83,6 +112,7 @@ function attachErrorInterceptor(client: AxiosInstance) {
           base_url: response.config.baseURL || '',
           status: response.status,
           duration_ms: durationMs,
+          request_id: config.metadata?.requestId,
         });
       }
 
@@ -103,6 +133,7 @@ function attachErrorInterceptor(client: AxiosInstance) {
           base_url: config?.baseURL || '',
           status: error.response?.status || 0,
           duration_ms: durationMs,
+          request_id: config?.metadata?.requestId,
           error: error.code || error.message || 'unknown',
         });
       }
@@ -150,18 +181,35 @@ function attachErrorInterceptor(client: AxiosInstance) {
   );
 }
 
-export function createApiClient(getLanguage: () => string): AxiosInstance {
+/**
+ * Create a configured Axios client for either browser or SSR usage.
+ *
+ * On the server this also forwards the public site host and request ID to the
+ * backend so generated URLs and request tracing stay aligned with the incoming
+ * request.
+ */
+export function createApiClient(
+  getLanguage: () => string,
+  requestOrigin?: string,
+  requestId?: string
+): AxiosInstance {
   const defaultHeaders: Record<string, string> = {};
 
   if (typeof window === 'undefined') {
     try {
-      const publicApiUrl = new URL(publicEnv.API_URL);
-      defaultHeaders.Host = publicApiUrl.host;
-      defaultHeaders['X-Forwarded-Host'] = publicApiUrl.host;
-      defaultHeaders['X-Forwarded-Proto'] = publicApiUrl.protocol.replace(
+      const publicSiteUrl = requestOrigin
+        ? new URL(requestOrigin)
+        : new URL(`https://${publicEnv.SITE_DOMAIN}`);
+
+      defaultHeaders.Host = publicSiteUrl.host;
+      defaultHeaders['X-Forwarded-Host'] = publicSiteUrl.host;
+      defaultHeaders['X-Forwarded-Proto'] = publicSiteUrl.protocol.replace(
         ':',
         ''
       );
+      if (requestId) {
+        defaultHeaders['X-Request-ID'] = requestId;
+      }
     } catch {
       // Ignore malformed public API URLs and fall back to transport defaults.
     }
@@ -178,4 +226,5 @@ export function createApiClient(getLanguage: () => string): AxiosInstance {
   return client;
 }
 
+/** Default shared client used by browser code and most SSR service calls. */
 export const api: AxiosInstance = createApiClient(getCurrentLanguage);

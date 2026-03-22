@@ -11,5 +11,9 @@ export const useSettings = () =>
   useQuery<SettingsResult, Error>({
     queryKey: ['settings'],
     queryFn: () => fetchSettings(),
-    staleTime: 10 * 60 * 1000,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });

@@ -1,4 +1,4 @@
-import { useState, ImgHTMLAttributes } from 'react';
+import { useEffect, useRef, useState, ImgHTMLAttributes } from 'react';
 
 interface ImageWithFallbackProps extends ImgHTMLAttributes<HTMLImageElement> {
   fallbackSrc?: string;
@@ -13,11 +13,34 @@ const ImageWithFallback = ({
   onError,
   ...props
 }: ImageWithFallbackProps) => {
-  const [hasError, setHasError] = useState(!src);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const resolvedSrc = !src || failedSrc === src ? fallbackSrc : src;
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img || !img.complete) return;
+
+    if (img.naturalWidth > 0) {
+      onLoad?.({
+        currentTarget: img,
+        target: img,
+      } as unknown as React.SyntheticEvent<HTMLImageElement, Event>);
+      return;
+    }
+
+    if (src && failedSrc !== src) {
+      queueMicrotask(() => {
+        setFailedSrc(currentFailedSrc =>
+          currentFailedSrc === src ? currentFailedSrc : src
+        );
+      });
+    }
+  }, [resolvedSrc, failedSrc, onLoad, src]);
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    if (!hasError) {
-      setHasError(true);
+    if (src && failedSrc !== src) {
+      setFailedSrc(src);
     }
     if (onError) {
       onError(e);
@@ -26,8 +49,9 @@ const ImageWithFallback = ({
 
   return (
     <img
+      ref={imgRef}
       {...props}
-      src={hasError || !src ? fallbackSrc : src}
+      src={resolvedSrc}
       alt={alt}
       className={className}
       onLoad={onLoad}

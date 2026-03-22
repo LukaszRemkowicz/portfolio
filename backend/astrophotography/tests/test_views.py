@@ -103,17 +103,24 @@ class TestAstroImageViewSet:
 @pytest.mark.django_db
 class TestBackgroundMainPageView:
     def test_list_background_image(self, api_client: APIClient) -> None:
-        """Test retrieving the latest background image"""
-        # Create two images, should retrieve the latest one
+        """Test retrieving the latest valid background image."""
         MainPageBackgroundImageFactory()
-        latest: MainPageBackgroundImage = MainPageBackgroundImageFactory()
+        MainPageBackgroundImageFactory()
 
         url: str = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
-        response: Response = api_client.get(url)
+        with patch.object(
+            MainPageBackgroundImage,
+            "get_serving_url",
+            side_effect=[
+                "",
+                "/media/backgrounds/older-valid.png",
+                "/media/backgrounds/older-valid.png",
+            ],
+        ):
+            response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        # Serializer uses 'url' field mapped from 'image'
-        assert latest.path.name in response.data["url"]
+        assert response.data["url"] == "/media/backgrounds/older-valid.png"
 
     def test_list_background_image_empty(self, api_client: APIClient) -> None:
         """Test retrieving background when none exist"""
@@ -220,7 +227,7 @@ class TestTravelHighlightsBySlugView:
             adventure_date=DateRange(date(2024, 1, 1), date(2024, 1, 31)),
         )
         # Prevent automatic task execution during factory creation for this test
-        with patch("core.models.transaction.on_commit", side_effect=lambda f: None):
+        with patch("core.models.process_image_task.delay_on_commit"):
             img = AstroImageFactory(place=place)
 
         # Now manually call the task
@@ -486,6 +493,7 @@ class TestAstroImageSecureView:
     def test_astro_image_secure_view_success(
         self, api_client: APIClient, astro_image: AstroImage
     ) -> None:
+        astro_image.refresh_from_db()
         url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
         params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
 
@@ -493,6 +501,28 @@ class TestAstroImageSecureView:
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
         assert f"/protected_media/{astro_image.path.name}" == response["X-Accel-Redirect"]
+
+    def test_astro_image_secure_view_always_serves_full_resolution_path(
+        self, api_client: APIClient, astro_image: AstroImage
+    ) -> None:
+        """The modal/lightbox endpoint must serve the current full-resolution asset."""
+        from core.tests.factories import LandingPageSettingsFactory
+
+        LandingPageSettingsFactory(serve_webp_images=False)
+        astro_image.refresh_from_db()
+
+        assert astro_image.path
+        assert astro_image.original_image
+        assert astro_image.path.name != astro_image.original_image.name
+
+        url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
+        params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
+
+        response: Response = api_client.get(url, params)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.has_header("X-Accel-Redirect")
+        assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.path.name}"
 
     def test_secure_media_view_missing_signature(
         self, api_client: APIClient, astro_image: AstroImage
@@ -520,6 +550,24 @@ class TestAstroImageSecureView:
         )
         response: Response = api_client.get(url, params)
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+class TestMainPageBackgroundImageSecureView:
+    def test_background_list_returns_public_serving_url(self, api_client: APIClient) -> None:
+        MainPageBackgroundImageFactory()
+        url = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
+
+        with patch.object(
+            MainPageBackgroundImage,
+            "get_serving_url",
+            return_value="/media/backgrounds/example.png",
+        ):
+            response: Response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["url"] == "/media/backgrounds/example.png"
+        assert "/background-files/" not in response.data["url"]
 
 
 @pytest.mark.django_db

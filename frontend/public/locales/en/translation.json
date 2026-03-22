@@ -103,5 +103,104 @@
       "message": "Message must be at least 10 characters long.",
       "honeypot": "Please correct the errors above and try again."
     }
+  },
+  "privacy": {
+    "title": "Privacy Policy & Cookie Notice",
+    "lastUpdated": "Last updated: January 29, 2026",
+    "introduction": {
+      "title": "Introduction",
+      "body": "This website is a personal portfolio showcasing my astrophotography, travel photography, and software development work. I respect your privacy and am committed to being transparent about how this site collects and uses data."
+    },
+    "dataCollected": {
+      "title": "What Data We Collect",
+      "intro": "This website uses Google Analytics to understand how visitors interact with the site. The following data is collected:",
+      "items": {
+        "anonymous": {
+          "label": "Anonymous usage data:",
+          "value": "Pages viewed, time spent on pages, browser type, device type"
+        },
+        "geo": {
+          "label": "Geographic location:",
+          "value": "Country and city (approximate, based on IP address)"
+        },
+        "referral": {
+          "label": "Referral source:",
+          "value": "How you arrived at this website"
+        }
+      },
+      "note": {
+        "label": "Important:",
+        "value": "No personally identifiable information (PII) is collected. I cannot identify individual visitors."
+      }
+    },
+    "cookiesUsed": {
+      "title": "Cookies Used",
+      "intro": "Google Analytics sets the following cookies on your browser:",
+      "purpose": "Purpose:",
+      "expiration": "Expiration:",
+      "cookies": {
+        "ga": {
+          "purpose": "Distinguishes unique visitors",
+          "expiration": "2 years"
+        },
+        "gid": {
+          "purpose": "Distinguishes unique visitors",
+          "expiration": "24 hours"
+        },
+        "gat": {
+          "purpose": "Throttles request rate",
+          "expiration": "1 minute"
+        }
+      }
+    },
+    "whyCookies": {
+      "title": "Why We Use Cookies",
+      "intro": "Analytics cookies help me understand:",
+      "items": {
+        "popularContent": "Which content is most popular (astrophotography vs. travel vs. programming)",
+        "navigation": "How visitors navigate the site",
+        "devices": "What devices and browsers are being used",
+        "performance": "Whether the site is performing well"
+      },
+      "outro": "This information helps me improve the website and create better content for visitors."
+    },
+    "rights": {
+      "title": "Your Choices & Rights",
+      "optOutTitle": "Opt-Out Options:",
+      "items": {
+        "cookieSettings": {
+          "label": "Cookie Settings:",
+          "value": "Click \"Cookie Settings\" in the footer to change your consent at any time"
+        },
+        "browserSettings": {
+          "label": "Browser Settings:",
+          "value": "Configure your browser to block cookies (note: this may affect site functionality)"
+        },
+        "googleOptOut": {
+          "label": "Google Analytics Opt-Out:",
+          "prefix": "Install the",
+          "link": "Google Analytics Opt-out Browser Add-on"
+        }
+      }
+    },
+    "retention": {
+      "title": "Data Retention",
+      "body": "Google Analytics data is retained for 26 months by default. After this period, aggregated data is automatically deleted."
+    },
+    "thirdParty": {
+      "title": "Third-Party Services",
+      "intro": "For more detailed information, please refer to the privacy policies of these services, paying attention to specific sections, such as \"How we use your information\" or \"Third-party services\".",
+      "uses": "This website uses:",
+      "googleAnalytics": {
+        "label": "Google Analytics:",
+        "value": "Web analytics service by Google LLC.",
+        "link": "Google Privacy Policy"
+      }
+    },
+    "contact": {
+      "title": "Contact",
+      "body": "If you have questions about this privacy policy or how your data is handled, please contact me via the contact form on this website."
+    },
+    "footer": "This privacy policy is effective as of the date stated above and will remain in effect except with respect to any changes in its provisions in the future."
   }
 }

@@ -170,6 +170,7 @@ MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",  # Must be near the top
     "corsheaders.middleware.CorsMiddleware",  # Must be before CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
+    "common.middleware.RequestCorrelationMiddleware",
     "inbox.middleware.ContactFormKillSwitchMiddleware",
     # Check kill switch early (after security, before sessions)
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -214,6 +215,12 @@ OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
 MONITORING_LLM_PROVIDER = env.str("MONITORING_LLM_PROVIDER", default="gpt")
 DOCKER_LOGS_DIR = env.str("DOCKER_LOGS_DIR", default="/app/docker-logs")
+SSR_CACHE_INVALIDATION_URL = env.str(
+    "SSR_CACHE_INVALIDATION_URL", default="http://fe:8080/internal/cache/invalidate"
+)
+SSR_CACHE_INVALIDATION_TOKEN = env.str(
+    "SSR_CACHE_INVALIDATION_TOKEN", default="dev-ssr-cache-token"
+)
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

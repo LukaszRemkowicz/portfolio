@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../api/constants';
 import styles from '../styles/components/Gallery.module.css';
 import { AstroImage } from '../types';
@@ -13,6 +13,7 @@ const Gallery: React.FC = () => {
   const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { data: settings } = useSettings();
   const features = settings;
@@ -50,10 +51,12 @@ const Gallery: React.FC = () => {
 
   const handleImageClick = useCallback(
     (image: AstroImage): void => {
-      // Navigate to the full gallery page with the modal pre-opened
-      navigate(`${APP_ROUTES.ASTROPHOTOGRAPHY}/${image.slug}`);
+      // Preserve the current page so closing the modal can return here.
+      navigate(`${APP_ROUTES.ASTROPHOTOGRAPHY}/${image.slug}`, {
+        state: { backgroundLocation: location },
+      });
     },
-    [navigate]
+    [location, navigate]
   );
 
   // Hide the entire section if disabled via admin toggle or if no images

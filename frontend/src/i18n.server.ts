@@ -10,14 +10,10 @@ import { initReactI18next } from 'react-i18next';
 import en from '../public/locales/en/translation.json';
 import pl from '../public/locales/pl/translation.json';
 
-const SUPPORTED_LANGUAGES = ['en', 'pl'] as const;
-type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+type SupportedLanguage = 'en' | 'pl';
 
-function detectLanguage(acceptLanguage: string): SupportedLanguage {
-  const preferred = acceptLanguage.split(',')[0]?.trim().split('-')[0] ?? 'en';
-  return SUPPORTED_LANGUAGES.includes(preferred as SupportedLanguage)
-    ? (preferred as SupportedLanguage)
-    : 'en';
+function detectLanguage(_acceptLanguage: string): SupportedLanguage {
+  return 'en';
 }
 
 export async function createServerI18n(acceptLanguage = 'en') {

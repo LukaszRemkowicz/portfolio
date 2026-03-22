@@ -70,7 +70,7 @@ class TestConvertImagesToWebpCommand:
             ContentFile(b"fake webp content", name="test.webp"),
         )
         # Prevent automatic task execution during factory creation for this test
-        with mocker.patch("core.models.transaction.on_commit", side_effect=lambda f: None):
+        with mocker.patch("core.models.process_image_task.delay_on_commit"):
             astro_img = AstroImageFactory()
         path_before = astro_img.path.name
 
@@ -94,7 +94,7 @@ class TestConvertImagesToWebpCommand:
             ContentFile(b"fake webp content", name="test.webp"),
         )
         # Prevent automatic task execution during factory creation for this test
-        with mocker.patch("core.models.transaction.on_commit", side_effect=lambda f: None):
+        with mocker.patch("core.models.process_image_task.delay_on_commit"):
             astro_img = AstroImageFactory()
         call_command("convert_images_to_webp")
 
@@ -131,7 +131,7 @@ class TestConvertImagesToWebpCommand:
         mock_convert_to_webp.return_value = ("test.jpg", fake_content)
         mock_make_thumb.return_value = ContentFile(b"thumb", name="thumb.webp")
 
-        with mocker.patch("core.models.transaction.on_commit", side_effect=lambda f: None):
+        with mocker.patch("core.models.process_image_task.delay_on_commit"):
             target = AstroImageFactory()
             other = AstroImageFactory()
 
@@ -166,7 +166,7 @@ class TestConvertImagesToWebpCommand:
         mock_convert_to_webp.return_value = ("test.jpg", fake_content)
         mock_make_thumb.return_value = ContentFile(b"thumb", name="thumb.webp")
 
-        with mocker.patch("core.models.transaction.on_commit", side_effect=lambda f: None):
+        with mocker.patch("core.models.process_image_task.delay_on_commit"):
             first = AstroImageFactory()
             second = AstroImageFactory()
             third = AstroImageFactory()
@@ -206,7 +206,7 @@ class TestConvertImagesToWebpCommand:
         mock_convert_to_webp.return_value = ("test.jpg", fake_content)
         mock_make_thumb.return_value = ContentFile(b"thumb", name="thumb.webp")
 
-        with mocker.patch("core.models.transaction.on_commit", side_effect=lambda f: None):
+        with mocker.patch("core.models.process_image_task.delay_on_commit"):
             target = AstroImageFactory()
 
         call_command(

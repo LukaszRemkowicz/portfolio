@@ -1,26 +1,60 @@
-// frontend/src/api/imageUrlService.ts
-import { API_BASE_URL } from './routes';
+/**
+ * Helper service for secure image URL lookup.
+ *
+ * Browser callers use frontend-owned `/app/images/*` routes so they stay
+ * same-origin on `SITE_DOMAIN`. SSR and internal callers can still fetch the
+ * backend helper endpoints directly.
+ */
+import { API_BASE_URL, BFF_ROUTES } from './routes';
 import { API_V1 } from './constants';
+import { fetchBffJson } from './bff';
+import { getMediaUrl } from './media';
 
+const normalizeImageUrlMap = (
+  payload: Record<string, string>
+): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(payload).map(([key, value]) => [
+      key,
+      getMediaUrl(value) || value,
+    ])
+  );
+
+/** Fetch signed URLs for a set of image identifiers. */
 export async function fetchImageUrls(
   ids?: string[]
 ): Promise<Record<string, string>> {
-  let url = `${API_BASE_URL}${API_V1}/images/`;
-  if (ids && ids.length > 0) {
-    url += `?ids=${ids.join(',')}`;
+  const useFrontendBff = typeof window !== 'undefined';
+  const query = ids && ids.length > 0 ? `?ids=${ids.join(',')}` : '';
+
+  if (useFrontendBff) {
+    const payload = await fetchBffJson<Record<string, string>>(
+      `${BFF_ROUTES.images}${query}`
+    );
+    return normalizeImageUrlMap(payload);
   }
-  const response = await fetch(url);
+
+  const response = await fetch(`${API_BASE_URL}${API_V1}/images/${query}`);
   if (!response.ok) {
     throw new Error('Failed to fetch image URLs');
   }
-  return response.json();
+  return normalizeImageUrlMap(await response.json());
 }
 
+/** Fetch the signed URL for a single image slug. */
 export async function fetchSingleImageUrl(slug: string): Promise<string> {
+  const useFrontendBff = typeof window !== 'undefined';
+  if (useFrontendBff) {
+    const data = await fetchBffJson<{ url: string }>(
+      `${BFF_ROUTES.images}${slug}/`
+    );
+    return getMediaUrl(data.url) || data.url;
+  }
+
   const response = await fetch(`${API_BASE_URL}${API_V1}/images/${slug}/`);
   if (!response.ok) {
     throw new Error(`Failed to fetch URL for ${slug}`);
   }
   const data = await response.json();
-  return data.url;
+  return getMediaUrl(data.url) || data.url;
 }

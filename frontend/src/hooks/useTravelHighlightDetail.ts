@@ -2,7 +2,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/api';
 import type { AxiosInstance } from 'axios';
-import { API_ROUTES, getMediaUrl } from '../api/routes';
+import { API_ROUTES, BFF_ROUTES } from '../api/routes';
+import { fetchBffJson, isBrowserDefaultClient } from '../api/bff';
+import { normalizeAstroImages } from '../api/media';
 import { AstroImage } from '../types';
 
 export interface ExtendedAstroImage extends AstroImage {
@@ -30,9 +32,16 @@ export const fetchTravelHighlightDetail = async ({
   dateSlug: string;
   client?: AxiosInstance;
 }): Promise<TravelHighlightDetail> => {
-  const response = await client.get(
-    `${API_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`
-  );
+  const useFrontendBff = isBrowserDefaultClient(client);
+  const response = useFrontendBff
+    ? {
+        data: await fetchBffJson<TravelHighlightDetail>(
+          `${BFF_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`
+        ),
+      }
+    : await client.get(
+        `${API_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`
+      );
 
   const data = response.data;
   if (!data || typeof data !== 'object') {
@@ -40,13 +49,12 @@ export const fetchTravelHighlightDetail = async ({
   }
 
   const imagesArray = Array.isArray(data.images) ? data.images : [];
-  const processedImages: ExtendedAstroImage[] = imagesArray.map(
-    (image: AstroImage) => ({
-      ...image,
-      thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
-      url: undefined,
-    })
-  );
+  const processedImages: ExtendedAstroImage[] = normalizeAstroImages(
+    imagesArray as AstroImage[]
+  ).map(image => ({
+    ...image,
+    url: undefined,
+  }));
 
   return {
     full_location: data.full_location,

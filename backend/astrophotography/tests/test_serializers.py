@@ -8,6 +8,7 @@ from astrophotography.models import Tag
 from astrophotography.serializers import (
     AstroImageSerializer,
     AstroImageSerializerList,
+    AstroImageThumbnailSerializer,
     MainPageLocationSerializer,
     MeteorsMainPageConfigSerializer,
     PlaceSerializer,
@@ -128,6 +129,21 @@ class TestAstroImageSerializers:
         assert "astrobin_url" in detail_data
         assert "camera" in detail_data
 
+    def test_list_serializers_omit_dead_thumbnail_urls(self) -> None:
+        """Serializers should omit dead thumbnail paths instead of exposing them."""
+        place = PlaceFactory()
+        image = AstroImageFactory(place=place)
+        image.refresh_from_db()
+
+        assert image.thumbnail is not None
+        image.thumbnail.storage.delete(str(image.thumbnail.name))
+
+        list_data = AstroImageSerializerList(image).data
+        thumb_data = AstroImageThumbnailSerializer(image).data
+
+        assert list_data["thumbnail_url"] is None
+        assert thumb_data["thumbnail_url"] is None
+
 
 @pytest.mark.django_db
 class TestTranslationSerializers:
@@ -232,11 +248,10 @@ class TestTagTranslationSerializers:
         assert "Translated Stars" in data_list["tags"]
         assert "Translated Galaxy" in data_list["tags"]
 
-    def test_astro_image_serializer_tags_fallback_to_empty_on_missing_translation(
+    def test_astro_image_serializer_tags_fallback_to_english_on_missing_translation(
         self, mocker: MockerFixture
     ) -> None:
-        """Test that tags return empty string if translation is missing in non-default lang"""
-        # TranslationService already updated to return "" if fallback is False and lang matches
+        """Test that tags fall back to English when requested translation is missing."""
         request = mocker.MagicMock()
         request.query_params.get.return_value = "pl"
 
@@ -245,10 +260,5 @@ class TestTagTranslationSerializers:
         tag = Tag.objects.create(name="No Translation")
         image.tags.add(tag)
 
-        # Ensure no translation exists for 'pl'
-        # By default, Tag.objects.create only creates the default language translation.
-
         serializer = AstroImageSerializer(image, context={"request": request})
-        # The serializer calls TranslationService.get_translation(tag, "name", "pl")
-        # which should return "" because no 'pl' translation exists.
-        assert serializer.data["tags"] == [""]
+        assert serializer.data["tags"] == ["No Translation"]

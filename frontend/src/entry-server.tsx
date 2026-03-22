@@ -14,6 +14,10 @@ import AppShell from './AppShell';
 import App from './App';
 import { createApiClient } from './api/api';
 import {
+  getCachedShellLoader,
+  SHELL_RESOURCES,
+} from '../server/views/shell.js';
+import {
   fetchAstroImages,
   fetchBackground,
   fetchCategories,
@@ -112,39 +116,51 @@ async function prefetchQuerySafely(
 async function prefetchRouteQueries(
   queryClient: QueryClient,
   url: string,
-  language: string
+  language: string,
+  requestOrigin?: string,
+  requestId?: string
 ) {
-  const client = createApiClient(() => language);
+  const client = createApiClient(() => language, requestOrigin, requestId);
+  const cachedShellQuery = getCachedShellLoader(language, requestOrigin);
   const requestUrl = new URL(url, 'http://frontend.local');
   const pathname = requestUrl.pathname;
   const searchParams = requestUrl.searchParams;
   const commonPrefetches = [
     prefetchQuerySafely(queryClient, {
       queryKey: ['settings'],
-      queryFn: () => fetchSettings(client),
+      queryFn: () =>
+        cachedShellQuery(SHELL_RESOURCES.settings, () => fetchSettings(client)),
     }),
     prefetchQuerySafely(queryClient, {
-      queryKey: ['profile'],
-      queryFn: () => fetchProfile(client),
+      queryKey: ['profile', language],
+      queryFn: () =>
+        cachedShellQuery(SHELL_RESOURCES.profile, () => fetchProfile(client)),
+    }),
+    prefetchQuerySafely(queryClient, {
+      queryKey: ['background', language],
+      queryFn: () =>
+        cachedShellQuery(SHELL_RESOURCES.background, () =>
+          fetchBackground(client)
+        ),
+    }),
+    prefetchQuerySafely(queryClient, {
+      queryKey: ['travel-highlights', language],
+      queryFn: () =>
+        cachedShellQuery(SHELL_RESOURCES.travelHighlights, () =>
+          fetchTravelHighlights(client)
+        ),
+    }),
+    prefetchQuerySafely(queryClient, {
+      queryKey: ['latest-astro-images', language],
+      queryFn: () =>
+        cachedShellQuery(SHELL_RESOURCES.latestAstroImages, () =>
+          fetchLatestAstroImages(client)
+        ),
     }),
   ];
 
   if (pathname === APP_ROUTES.HOME) {
-    await Promise.all([
-      ...commonPrefetches,
-      prefetchQuerySafely(queryClient, {
-        queryKey: ['background'],
-        queryFn: () => fetchBackground(client),
-      }),
-      prefetchQuerySafely(queryClient, {
-        queryKey: ['travel-highlights'],
-        queryFn: () => fetchTravelHighlights(client),
-      }),
-      prefetchQuerySafely(queryClient, {
-        queryKey: ['latest-astro-images'],
-        queryFn: () => fetchLatestAstroImages(client),
-      }),
-    ]);
+    await Promise.all([...commonPrefetches]);
     return;
   }
 
@@ -156,10 +172,6 @@ async function prefetchRouteQueries(
     const { countrySlug, placeSlug, dateSlug } = travelMatch.params;
     await Promise.all([
       ...commonPrefetches,
-      prefetchQuerySafely(queryClient, {
-        queryKey: ['background'],
-        queryFn: () => fetchBackground(client),
-      }),
       prefetchQuerySafely(queryClient, {
         queryKey: ['travel-highlight', countrySlug, placeSlug, dateSlug],
         queryFn: () =>
@@ -187,10 +199,6 @@ async function prefetchRouteQueries(
 
     await Promise.all([
       ...commonPrefetches,
-      prefetchQuerySafely(queryClient, {
-        queryKey: ['background'],
-        queryFn: () => fetchBackground(client),
-      }),
       prefetchQuerySafely(queryClient, {
         queryKey: ['categories'],
         queryFn: () => fetchCategories(client),
@@ -220,7 +228,8 @@ interface PreparedRenderContext {
 async function prepareRenderContext(
   url: string,
   acceptLanguage = 'en',
-  requestOrigin?: string
+  requestOrigin?: string,
+  requestId?: string
 ): Promise<PreparedRenderContext> {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -234,7 +243,13 @@ async function prepareRenderContext(
   const { createServerI18n } = await import('./i18n.server');
   const i18nInstance = await createServerI18n(acceptLanguage);
 
-  await prefetchRouteQueries(queryClient, url, i18nInstance.language || 'en');
+  await prefetchRouteQueries(
+    queryClient,
+    url,
+    i18nInstance.language || 'en',
+    requestOrigin,
+    requestId
+  );
 
   const helmetContext: { helmet?: HelmetServerState } = {};
   const dehydratedState = dehydrate(queryClient);
@@ -262,12 +277,14 @@ async function prepareRenderContext(
 export async function renderStream(
   url: string,
   acceptLanguage = 'en',
-  requestOrigin?: string
+  requestOrigin?: string,
+  requestId?: string
 ): Promise<StreamRenderResult> {
   const prepared = await prepareRenderContext(
     url,
     acceptLanguage,
-    requestOrigin
+    requestOrigin,
+    requestId
   );
 
   return new Promise((resolve, reject) => {
@@ -322,12 +339,14 @@ export async function renderStream(
 export async function render(
   url: string,
   acceptLanguage = 'en',
-  requestOrigin?: string
+  requestOrigin?: string,
+  requestId?: string
 ): Promise<RenderResult> {
   const prepared = await prepareRenderContext(
     url,
     acceptLanguage,
-    requestOrigin
+    requestOrigin,
+    requestId
   );
   const html = await renderAppToString(prepared.element);
 

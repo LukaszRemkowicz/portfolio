@@ -114,7 +114,10 @@ class AstroImageSerializerList(AstroImageBaseSerializer):
     Excludes heavy descriptions and technical details.
     """
 
-    thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
+    thumbnail_url = serializers.SerializerMethodField()
+
+    def get_thumbnail_url(self, obj: AstroImage) -> str:
+        return obj.get_thumbnail_url()
 
     def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
         data = super().to_representation(instance)
@@ -166,7 +169,10 @@ class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
 
 
 class AstroImageThumbnailSerializer(AstroImageBaseSerializer):
-    thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
+    thumbnail_url = serializers.SerializerMethodField()
+
+    def get_thumbnail_url(self, obj: AstroImage) -> str:
+        return obj.get_thumbnail_url()
 
     def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
         data = super().to_representation(instance)

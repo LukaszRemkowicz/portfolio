@@ -1,3 +1,9 @@
+"""Rebuild thumbnail files for portfolio image models.
+
+This command regenerates thumbnails from the current source image and the
+current thumbnail settings, which is useful after quality or sizing changes.
+"""
+
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
@@ -6,6 +12,8 @@ from programming.models import ProjectImage
 
 
 class Command(BaseCommand):
+    """Recreate model thumbnails using the current thumbnail generation logic."""
+
     help = "Regenerate thumbnails for all portfolio models using the latest quality/size settings."
 
     def add_arguments(self, parser) -> None:

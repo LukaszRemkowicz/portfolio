@@ -4,17 +4,7 @@ import { Routes, Route } from 'react-router-dom';
 import HomePage from './HomePage';
 import { hasAnalyticsConsent } from './utils/analytics';
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
-
-// Lazy load larger components
-const AstroGallery = lazy(() => import('./components/AstroGallery'));
-const Programming = lazy(() => import('./components/Programming'));
-const TravelHighlightsPage = lazy(
-  () => import('./components/TravelHighlightsPage')
-);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy') as any);
 import MainLayout from './components/MainLayout';
-import LoadingScreen from './components/common/LoadingScreen';
 import ScrollToHash from './components/common/ScrollToHash';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import CookieConsent from './components/common/CookieConsent';
@@ -22,6 +12,13 @@ import ClientOnly from './components/common/ClientOnly';
 import ClientDocumentGuards from './components/common/ClientDocumentGuards';
 import { APP_ROUTES } from './api/constants';
 import './styles/components/App.module.css';
+
+const AstroGallery = lazy(() => import('./components/AstroGallery'));
+const Programming = lazy(() => import('./components/Programming'));
+const TravelHighlightsPage = lazy(
+  () => import('./components/TravelHighlightsPage')
+);
+const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 
 // Client-only: renders null, wires GA on the client
 const AnalyticsTracker: React.FC<{ hasConsented: boolean }> = ({
@@ -49,11 +46,11 @@ const App: React.FC = () => {
           <Route
             path={APP_ROUTES.ASTROPHOTOGRAPHY}
             element={
-              <MainLayout>
-                <Suspense fallback={<LoadingScreen fullScreen={false} />}>
+              <RouteSuspense>
+                <MainLayout>
                   <AstroGallery />
-                </Suspense>
-              </MainLayout>
+                </MainLayout>
+              </RouteSuspense>
             }
           >
             {/* Child route so /astrophotography/:slug is a valid path.
@@ -63,32 +60,32 @@ const App: React.FC = () => {
           <Route
             path={APP_ROUTES.PROGRAMMING}
             element={
-              <MainLayout>
-                <Suspense fallback={<LoadingScreen fullScreen={false} />}>
+              <RouteSuspense>
+                <MainLayout>
                   <Programming />
-                </Suspense>
-              </MainLayout>
+                </MainLayout>
+              </RouteSuspense>
             }
           />
           <Route
             path={`${APP_ROUTES.TRAVEL_HIGHLIGHTS}/:countrySlug/:placeSlug/:dateSlug`}
             element={
-              <MainLayout>
-                <Suspense fallback={<LoadingScreen fullScreen={false} />}>
+              <RouteSuspense>
+                <MainLayout>
                   <TravelHighlightsPage />
-                </Suspense>
-              </MainLayout>
+                </MainLayout>
+              </RouteSuspense>
             }
           />
 
           <Route
             path={APP_ROUTES.PRIVACY}
             element={
-              <MainLayout>
-                <Suspense fallback={<LoadingScreen fullScreen={false} />}>
+              <RouteSuspense>
+                <MainLayout>
                   <PrivacyPolicy />
-                </Suspense>
-              </MainLayout>
+                </MainLayout>
+              </RouteSuspense>
             }
           />
         </Routes>
@@ -99,5 +96,9 @@ const App: React.FC = () => {
     </>
   );
 };
+
+const RouteSuspense: React.FC<React.PropsWithChildren> = ({ children }) => (
+  <Suspense fallback={null}>{children}</Suspense>
+);
 
 export default App;

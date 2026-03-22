@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 from io import BytesIO
@@ -10,11 +11,13 @@ from PIL import Image
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from django.db import models, transaction
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from common.utils.image import ImageSpec, convert_to_webp
 from core.tasks import process_image_task
+
+logger = logging.getLogger(__name__)
 
 
 class BaseImage(TranslatableModel):
@@ -94,33 +97,123 @@ class BaseImage(TranslatableModel):
         abstract = True
         ordering = ["-created_at"]
 
+    def clean(self) -> None:
+        super().clean()
+        if not self.path:
+            return
+
+        if getattr(self.path, "_committed", True) is False:
+            return
+
+        path_name = str(self.path.name or "")
+        if not path_name:
+            return
+
+        try:
+            if not self.path.storage.exists(path_name):
+                raise ValidationError(
+                    {
+                        "path": _(
+                            "The selected image file does not exist in storage. "
+                            "Please upload it again."
+                        )
+                    }
+                )
+        except (OSError, ValueError) as exc:
+            logger.error(
+                "Failed to validate image storage existence",
+                extra={
+                    "model": self._meta.label,
+                    "pk": str(self.pk),
+                    "path": path_name,
+                    "error": str(exc),
+                },
+            )
+            raise ValidationError(
+                {
+                    "path": _(
+                        "The selected image file could not be validated in "
+                        "storage. Please upload it again."
+                    )
+                }
+            ) from exc
+
     def save(self, *args: Any, **kwargs: Any) -> None:
         is_new = self._state.adding
-        path_changed: bool = self.path_tracker.has_changed("path")
+        existing_path_name = ""
+        if self.pk:
+            existing_path_name = (
+                type(self)
+                ._default_manager.filter(pk=self.pk)
+                .values_list("path", flat=True)
+                .first()
+                or ""
+            )
+
+        path_changed = bool(is_new or self.path_tracker.has_changed("path"))
 
         super().save(*args, **kwargs)
 
+        if path_changed and existing_path_name and self.path:
+            path_name = str(self.path.name or "")
+            storage = self.path.storage
+            if path_name and not storage.exists(path_name):
+                latest_path_name = ""
+                if self.pk:
+                    latest_path_name = (
+                        type(self)
+                        ._default_manager.filter(pk=self.pk)
+                        .values_list("path", flat=True)
+                        .first()
+                        or ""
+                    )
+                if (
+                    latest_path_name
+                    and latest_path_name != path_name
+                    and storage.exists(latest_path_name)
+                ):
+                    self.path.name = latest_path_name
+                else:
+                    logger.error(
+                        "Image file missing from storage immediately after save",
+                        extra={
+                            "model": self._meta.label,
+                            "pk": str(self.pk),
+                            "path": path_name,
+                            "is_new": is_new,
+                            "path_changed": path_changed,
+                        },
+                    )
+                    if is_new and self.pk:
+                        type(self).objects.filter(pk=self.pk).delete()
+                    raise ValidationError(
+                        {
+                            "path": _(
+                                "The uploaded image file was not saved to "
+                                "storage. Please try again."
+                            )
+                        }
+                    )
+
         if (is_new or path_changed) and self.path and not kwargs.get("update_fields"):
-            # Trigger background task after save() and inside on_commit to ensure
-            # the record exists in the database for the task fetcher.
-            transaction.on_commit(
-                lambda: process_image_task.delay(
-                    self._meta.app_label, self._meta.model_name, str(self.pk)
-                )
+            process_image_task.delay_on_commit(
+                self._meta.app_label, self._meta.model_name, str(self.pk)
             )
 
-        if self.pk and path_changed:
-            old_path: Any = self.path_tracker.previous("path")
-            if old_path:
-                storage: Any = self.path.storage
-                old_path_str: str = str(old_path)
-                # If original_image was freshly set by _convert_to_webp(), the old file is now
-                # preserved as the rollback target — do not delete it.
-                original_was_set: bool = self.path_tracker.has_changed("original_image") and bool(
-                    self.original_image
-                )
-                if old_path_str and not original_was_set and storage.exists(old_path_str):
-                    storage.delete(old_path_str)
+        if self.pk and path_changed and existing_path_name:
+            current_storage: Any = self.path.storage
+            current_saved_name = str(self.path.name or "")
+            # If original_image was freshly set by _convert_to_webp(), the old file is now
+            # preserved as the rollback target — do not delete it.
+            original_was_set: bool = self.path_tracker.has_changed("original_image") and bool(
+                self.original_image
+            )
+            if (
+                existing_path_name != current_saved_name
+                and not original_was_set
+                and current_storage.exists(existing_path_name)
+            ):
+                current_storage.delete(existing_path_name)
 
     def _convert_to_webp(self) -> bool:
         """Convert from the original source image to WebP using self.get_image_spec().
@@ -160,9 +253,15 @@ class BaseImage(TranslatableModel):
         serving_field: Any = self.get_serving_path()
         if serving_field:
             try:
-                return str(serving_field.url)
-            except ValueError:
-                pass
+                serving_name = str(getattr(serving_field, "name", "") or "")
+                if serving_name and serving_field.storage.exists(serving_name):
+                    return str(serving_field.url)
+            except (OSError, ValueError):
+                logger.warning(
+                    "Failed to resolve serving URL for image field %r",
+                    getattr(serving_field, "name", None),
+                    exc_info=True,
+                )
         return ""
 
     def get_thumbnail_source(self) -> Any:
@@ -207,11 +306,16 @@ class BaseImage(TranslatableModel):
         thumbnail_name = "thumb_" + os.path.splitext(original_name)[0] + ".webp"
         return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
 
-    def get_thumbnail_url(self) -> str:
-        """Get thumbnail URL or placeholder."""
+    def get_thumbnail_url(self) -> str | None:
+        """Get thumbnail URL only when the thumbnail file exists."""
         if self.thumbnail:
-            return self.thumbnail.url  # type: ignore[no-any-return]
-        return "/static/images/placeholder.jpg"
+            try:
+                thumbnail_name = str(self.thumbnail.name or "")
+                if thumbnail_name and self.thumbnail.storage.exists(thumbnail_name):
+                    return self.thumbnail.url  # type: ignore[no-any-return]
+            except (OSError, ValueError):
+                return None
+        return None
 
 
 class SingletonModel(models.Model):
