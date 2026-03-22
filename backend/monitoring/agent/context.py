@@ -18,6 +18,7 @@ This system runs the personal portfolio, blog, and associated APIs.
 - `portfolio-be` — Django 5.x backend (Python 3.13), served by Gunicorn on port 8000
 - `portfolio-fe` — React 18 + Vite frontend, served by Nginx on port 80
 - `portfolio-nginx` — Nginx reverse proxy with SSL; routes by subdomain (api.*, admin.*)
+- `traefik` — Edge reverse proxy and TLS termination for the public entrypoints
 - `db` — PostgreSQL 15
 - `redis` — Redis 7 (Celery broker + Django cache)
 - `celery-worker` — Celery 5 worker, queues: `celery` + `monitoring`
@@ -61,6 +62,7 @@ APPLICATION_MONITORING_CONTEXT = """
 ## WHAT TO LOOK FOR
 
 - 5xx errors from Gunicorn or Django
+- Traefik router failures, entrypoint errors, or ACME/certificate renewal issues
 - PostgreSQL connection errors or slow queries (>1s)
 - Redis connection failures
 - Celery task failures or retries (especially `monitoring.tasks` or `inbox.tasks`)

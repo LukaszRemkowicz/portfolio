@@ -1,27 +1,26 @@
 // frontend/src/App.tsx
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async';
-const HomePage = lazy(() => import('./HomePage'));
+import { Routes, Route } from 'react-router-dom';
+import HomePage from './HomePage';
 import { hasAnalyticsConsent } from './utils/analytics';
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
+import MainLayout from './components/MainLayout';
+import ScrollToHash from './components/common/ScrollToHash';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import CookieConsent from './components/common/CookieConsent';
+import ClientOnly from './components/common/ClientOnly';
+import ClientDocumentGuards from './components/common/ClientDocumentGuards';
+import { APP_ROUTES } from './api/constants';
+import './styles/components/App.module.css';
 
-// Lazy load larger components
 const AstroGallery = lazy(() => import('./components/AstroGallery'));
 const Programming = lazy(() => import('./components/Programming'));
 const TravelHighlightsPage = lazy(
   () => import('./components/TravelHighlightsPage')
 );
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy') as any);
-import MainLayout from './components/MainLayout';
-import LoadingScreen from './components/common/LoadingScreen';
-import ScrollToHash from './components/common/ScrollToHash';
-import ErrorBoundary from './components/common/ErrorBoundary';
-import CookieConsent from './components/common/CookieConsent';
-import { APP_ROUTES } from './api/constants';
-import './styles/components/App.module.css';
+const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 
+// Client-only: renders null, wires GA on the client
 const AnalyticsTracker: React.FC<{ hasConsented: boolean }> = ({
   hasConsented,
 }) => {
@@ -34,81 +33,72 @@ const App: React.FC = () => {
     hasAnalyticsConsent()
   );
 
-  React.useEffect(() => {
-    const handleContextMenu = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).tagName === 'IMG') {
-        e.preventDefault();
-      }
-    };
-
-    const handleDragStart = (e: DragEvent) => {
-      if ((e.target as HTMLElement).tagName === 'IMG') {
-        e.preventDefault();
-      }
-    };
-
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('dragstart', handleDragStart);
-
-    return () => {
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('dragstart', handleDragStart);
-    };
-  }, []);
-
   return (
-    <HelmetProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <>
+      <ClientOnly>
         <AnalyticsTracker hasConsented={hasConsented} />
         <ScrollToHash />
-        <Suspense fallback={<LoadingScreen />}>
-          <ErrorBoundary>
-            <Routes>
-              <Route path={APP_ROUTES.HOME} element={<HomePage />} />
-              <Route
-                path={APP_ROUTES.ASTROPHOTOGRAPHY}
-                element={
-                  <MainLayout>
-                    <AstroGallery />
-                  </MainLayout>
-                }
-              >
-                {/* Child route so /astrophotography/:slug is a valid path.
-                    AstroGallery reads the :slug param and opens the modal. */}
-                <Route path=':slug' element={null} />
-              </Route>
-              <Route
-                path={APP_ROUTES.PROGRAMMING}
-                element={
-                  <MainLayout>
-                    <Programming />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path={`${APP_ROUTES.TRAVEL_HIGHLIGHTS}/:countrySlug/:placeSlug/:dateSlug`}
-                element={
-                  <MainLayout>
-                    <TravelHighlightsPage />
-                  </MainLayout>
-                }
-              />
+        <ClientDocumentGuards />
+      </ClientOnly>
+      <ErrorBoundary>
+        <Routes>
+          <Route path={APP_ROUTES.HOME} element={<HomePage />} />
+          <Route
+            path={APP_ROUTES.ASTROPHOTOGRAPHY}
+            element={
+              <RouteSuspense>
+                <MainLayout>
+                  <AstroGallery />
+                </MainLayout>
+              </RouteSuspense>
+            }
+          >
+            {/* Child route so /astrophotography/:slug is a valid path.
+                AstroGallery reads the :slug param and opens the modal. */}
+            <Route path=':slug' element={null} />
+          </Route>
+          <Route
+            path={APP_ROUTES.PROGRAMMING}
+            element={
+              <RouteSuspense>
+                <MainLayout>
+                  <Programming />
+                </MainLayout>
+              </RouteSuspense>
+            }
+          />
+          <Route
+            path={`${APP_ROUTES.TRAVEL_HIGHLIGHTS}/:countrySlug/:placeSlug/:dateSlug`}
+            element={
+              <RouteSuspense>
+                <MainLayout>
+                  <TravelHighlightsPage />
+                </MainLayout>
+              </RouteSuspense>
+            }
+          />
 
-              <Route
-                path={APP_ROUTES.PRIVACY}
-                element={
-                  <MainLayout>
-                    <PrivacyPolicy />
-                  </MainLayout>
-                }
-              />
-            </Routes>
-          </ErrorBoundary>
-        </Suspense>
+          <Route
+            path={APP_ROUTES.PRIVACY}
+            element={
+              <RouteSuspense>
+                <MainLayout>
+                  <PrivacyPolicy />
+                </MainLayout>
+              </RouteSuspense>
+            }
+          />
+        </Routes>
+      </ErrorBoundary>
+      <ClientOnly>
         <CookieConsent onAccept={() => setHasConsented(true)} />
-      </Router>
-    </HelmetProvider>
+      </ClientOnly>
+    </>
   );
 };
+
+const RouteSuspense: React.FC<React.PropsWithChildren> = ({ children }) => (
+  <Suspense fallback={null}>{children}</Suspense>
+);
 
 export default App;

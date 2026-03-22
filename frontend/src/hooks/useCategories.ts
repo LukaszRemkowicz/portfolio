@@ -5,6 +5,6 @@ import { fetchCategories } from '../api/services';
 export const useCategories = () =>
   useQuery<string[], Error>({
     queryKey: ['categories'],
-    queryFn: fetchCategories,
+    queryFn: () => fetchCategories(),
     staleTime: 30 * 60 * 1000,
   });

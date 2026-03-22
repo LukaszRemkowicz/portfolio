@@ -9,7 +9,7 @@ from parler.models import TranslatableModel, TranslatedFields
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.db import IntegrityError, models, transaction
+from django.db import IntegrityError, models
 from django.utils.translation import gettext_lazy as _
 
 from common.utils.image import ImageSpec, convert_to_webp
@@ -63,37 +63,31 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
     image_tracker = FieldTracker(fields=["avatar", "about_me_image", "about_me_image2"])
 
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
-    avatar_legacy = models.ImageField(
+    avatar_original_image = models.ImageField(
         upload_to="avatars/",
         null=True,
         blank=True,
         editable=False,
-        verbose_name=_("Legacy Avatar"),
+        verbose_name=_("Original Avatar"),
         help_text=_("Original avatar before WebP conversion. Used for rollback."),
     )
     about_me_image = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
-    about_me_image_legacy = models.ImageField(
+    about_me_image_original_image = models.ImageField(
         upload_to="about_me_images/",
         null=True,
         blank=True,
         editable=False,
-        verbose_name=_("Legacy About Me Image"),
-        help_text=_(
-            "Original about_me_image before WebP conversion. Used for rollback. "
-            "TODO: Will be removed in future versions."
-        ),
+        verbose_name=_("Original About Me Image"),
+        help_text=_("Original about_me_image before WebP conversion. Used for rollback. "),
     )
     about_me_image2 = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
-    about_me_image2_legacy = models.ImageField(
+    about_me_image2_original_image = models.ImageField(
         upload_to="about_me_images/",
         null=True,
         blank=True,
         editable=False,
-        verbose_name=_("Legacy About Me Image 2"),
-        help_text=_(
-            "Original about_me_image2 before WebP conversion. Used for rollback. "
-            "TODO: Will be removed in future versions."
-        ),
+        verbose_name=_("Original About Me Image 2"),
+        help_text=_("Original about_me_image2 before WebP conversion. Used for rollback. "),
     )
 
     translations = TranslatedFields(
@@ -142,36 +136,42 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
             super().save(*args, **kwargs)
 
             if changed_image_fields and not kwargs.get("update_fields"):
-                transaction.on_commit(
-                    lambda: process_user_images_task.delay(self.pk, changed_image_fields)
-                )
+                process_user_images_task.delay_on_commit(self.pk, changed_image_fields)
 
             self.trigger_translations()
         except IntegrityError as exc:
             raise ValueError("Failed to save user. Only one user is allowed.") from exc
 
     def _convert_image_field_to_webp(
-        self, field_name: str, legacy_field_name: str, max_dimension: int, quality: int
+        self, field_name: str, original_field_name: str, max_dimension: int, quality: int
     ) -> None:
-        """Convert a single ImageField to WebP and store the original as legacy."""
+        """Convert a single ImageField to WebP and store the original for rollback."""
         field: Any = getattr(self, field_name)
+        original_field: Any = getattr(self, original_field_name)
+        source: Any = original_field or field
+        dimension_percentage = None
+        spec_method_name = "get_avatar_spec" if field_name == "avatar" else "get_portrait_spec"
+        spec: ImageSpec = getattr(self, spec_method_name)()
         result: tuple[str, Any] | None = convert_to_webp(
-            field, quality=quality, max_dimension=max_dimension
+            source,
+            quality=quality,
+            max_dimension=max_dimension,
+            dimension_percentage=dimension_percentage or spec.dimension_percentage,
         )
         if result is None:
-            setattr(self, legacy_field_name, None)
+            setattr(self, original_field_name, None)
             return
         original_name, webp_content = result
-        setattr(self, legacy_field_name, original_name)
+        setattr(self, original_field_name, original_name)
         field.save(webp_content.name, webp_content, save=False)
 
-    def _get_serving_image_url(self, field_name: str, legacy_field_name: str) -> str:
+    def _get_serving_image_url(self, field_name: str, original_field_name: str) -> str:
         """Return the URL of the field to serve based on the Admin serve_webp_images toggle."""
         settings_obj: LandingPageSettings | None = LandingPageSettings.get_current()
         if settings_obj and settings_obj.serve_webp_images:
             serving_field = getattr(self, field_name)
         else:
-            serving_field = getattr(self, legacy_field_name) or getattr(self, field_name)
+            serving_field = getattr(self, original_field_name) or getattr(self, field_name)
         if serving_field:
             try:
                 return str(serving_field.url)
@@ -199,7 +199,7 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
 
     def get_avatar_url(self) -> str:
         """Get avatar URL or default placeholder."""
-        url = self._get_serving_image_url("avatar", "avatar_legacy")
+        url = self._get_serving_image_url("avatar", "avatar_original_image")
         return url if url else "/static/images/default-avatar.png"
 
     def has_complete_profile(self) -> bool:

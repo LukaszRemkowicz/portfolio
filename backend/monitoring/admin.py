@@ -3,7 +3,21 @@ import os
 from django.contrib import admin
 from django.utils.html import format_html
 
+from .log_sources import LOG_SOURCES
 from .models import LogAnalysis
+
+
+def _build_raw_log_fields() -> tuple[str, ...]:
+    fields: list[str] = []
+    for source in LOG_SOURCES:
+        fields.extend(
+            [
+                f"secure_{source.key}_logs",
+                f"server_{source.key}_log_path",
+            ]
+        )
+    fields.append("log_size_bytes")
+    return tuple(fields)
 
 
 @admin.register(LogAnalysis)
@@ -24,12 +38,11 @@ class LogAnalysisAdmin(admin.ModelAdmin):
         "log_size_bytes",
         "execution_time_seconds",
         "gpt_tokens_used",
-        "secure_backend_logs",
-        "server_backend_log_path",
-        "secure_frontend_logs",
-        "server_frontend_log_path",
-        "secure_nginx_logs",
-        "server_nginx_log_path",
+        *[
+            field
+            for source in LOG_SOURCES
+            for field in (f"secure_{source.key}_logs", f"server_{source.key}_log_path")
+        ],
     ]
 
     fieldsets = (
@@ -38,15 +51,7 @@ class LogAnalysisAdmin(admin.ModelAdmin):
         (
             "Raw Logs",
             {
-                "fields": (
-                    "secure_backend_logs",
-                    "server_backend_log_path",
-                    "secure_frontend_logs",
-                    "server_frontend_log_path",
-                    "secure_nginx_logs",
-                    "server_nginx_log_path",
-                    "log_size_bytes",
-                ),
+                "fields": _build_raw_log_fields(),
                 "classes": ("collapse",),
             },
         ),
@@ -63,22 +68,22 @@ class LogAnalysisAdmin(admin.ModelAdmin):
         ),
     )
 
-    @admin.display(description="Backend Logs")
-    def secure_backend_logs(self, obj):
-        if obj.backend_logs:
+    def _secure_log_field(self, obj, field_name: str):
+        field_file = getattr(obj, field_name)
+        if field_file:
             from urllib.parse import urlencode
 
             from django.urls import reverse
 
             from common.utils.signing import generate_signed_url_params
 
-            filename = os.path.basename(obj.backend_logs.name)
+            filename = os.path.basename(field_file.name)
             url = reverse(
                 "admin-loganalysis-secure-media",
-                kwargs={"pk": str(obj.pk), "field_name": "backend_logs"},
+                kwargs={"pk": str(obj.pk), "field_name": field_name},
             )
             sig_id = (
-                f"admin_media_{obj._meta.app_label}_{obj._meta.model_name}_{obj.pk}_backend_logs"
+                f"admin_media_{obj._meta.app_label}_{obj._meta.model_name}_{obj.pk}_{field_name}"
             )
             params = generate_signed_url_params(sig_id, 3600)
             full_url = f"{url}?{urlencode(params)}"
@@ -86,74 +91,11 @@ class LogAnalysisAdmin(admin.ModelAdmin):
             return format_html('<a href="{}" target="_blank">Download {}</a>', full_url, filename)
         return "-"
 
-    @admin.display(description="Frontend Logs")
-    def secure_frontend_logs(self, obj):
-        if obj.frontend_logs:
-            from urllib.parse import urlencode
-
-            from django.urls import reverse
-
-            from common.utils.signing import generate_signed_url_params
-
-            filename = os.path.basename(obj.frontend_logs.name)
-            url = reverse(
-                "admin-loganalysis-secure-media",
-                kwargs={"pk": str(obj.pk), "field_name": "frontend_logs"},
-            )
-            sig_id = (
-                f"admin_media_{obj._meta.app_label}_{obj._meta.model_name}_{obj.pk}_frontend_logs"
-            )
-            params = generate_signed_url_params(sig_id, 3600)
-            full_url = f"{url}?{urlencode(params)}"
-
-            return format_html('<a href="{}" target="_blank">Download {}</a>', full_url, filename)
-        return "-"
-
-    @admin.display(description="Nginx Logs")
-    def secure_nginx_logs(self, obj):
-        if obj.nginx_logs:
-            from urllib.parse import urlencode
-
-            from django.urls import reverse
-
-            from common.utils.signing import generate_signed_url_params
-
-            filename = os.path.basename(obj.nginx_logs.name)
-            url = reverse(
-                "admin-loganalysis-secure-media",
-                kwargs={"pk": str(obj.pk), "field_name": "nginx_logs"},
-            )
-            sig_id = f"admin_media_{obj._meta.app_label}_{obj._meta.model_name}_{obj.pk}_nginx_logs"
-            params = generate_signed_url_params(sig_id, 3600)
-            full_url = f"{url}?{urlencode(params)}"
-
-            return format_html('<a href="{}" target="_blank">Download {}</a>', full_url, filename)
-        return "-"
-
-    @admin.display(description="Backend Server Path")
-    def server_backend_log_path(self, obj):
-        if obj.backend_logs:
+    def _server_log_path(self, obj, field_name: str):
+        field_file = getattr(obj, field_name)
+        if field_file:
             try:
-                # Translate container-internal /app/... to host-relative backend/...
-                return str(obj.backend_logs.path).replace("/app/", "backend/")
-            except NotImplementedError:
-                return "Not supported by storage backend"
-        return "-"
-
-    @admin.display(description="Frontend Server Path")
-    def server_frontend_log_path(self, obj):
-        if obj.frontend_logs:
-            try:
-                return str(obj.frontend_logs.path).replace("/app/", "backend/")
-            except NotImplementedError:
-                return "Not supported by storage backend"
-        return "-"
-
-    @admin.display(description="Nginx Server Path")
-    def server_nginx_log_path(self, obj):
-        if obj.nginx_logs:
-            try:
-                return str(obj.nginx_logs.path).replace("/app/", "backend/")
+                return str(field_file.path).replace("/app/", "backend/")
             except NotImplementedError:
                 return "Not supported by storage backend"
         return "-"
@@ -161,3 +103,32 @@ class LogAnalysisAdmin(admin.ModelAdmin):
     @admin.display(description="Log Size")
     def log_size_kb(self, obj):
         return f"{obj.log_size_bytes / 1024:.1f} KB"
+
+
+def _make_secure_log_method(source_key: str, field_name: str):
+    @admin.display(description=f"{source_key.title()} Logs")
+    def _method(self, obj):
+        return self._secure_log_field(obj, field_name)
+
+    return _method
+
+
+def _make_server_log_path_method(source_key: str, field_name: str):
+    @admin.display(description=f"{source_key.title()} Server Path")
+    def _method(self, obj):
+        return self._server_log_path(obj, field_name)
+
+    return _method
+
+
+for _source in LOG_SOURCES:
+    setattr(
+        LogAnalysisAdmin,
+        f"secure_{_source.key}_logs",
+        _make_secure_log_method(_source.key, _source.model_field),
+    )
+    setattr(
+        LogAnalysisAdmin,
+        f"server_{_source.key}_log_path",
+        _make_server_log_path_method(_source.key, _source.model_field),
+    )

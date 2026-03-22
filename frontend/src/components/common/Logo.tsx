@@ -1,15 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from '../../styles/components/Logo.module.css';
-
-declare const __PROJECT_OWNER__: string;
-
-const projectOwner =
-  typeof __PROJECT_OWNER__ !== 'undefined'
-    ? __PROJECT_OWNER__
-    : process.env.PROJECT_OWNER || 'Portfolio Owner';
+import { publicEnv } from '../../../server/publicEnv.js';
 
 const Logo: React.FC = () => {
+  const projectOwner = publicEnv.PROJECT_OWNER;
   return (
     <Link to='/' className={styles.logo}>
       <div className={styles.logoMarkWrapper}>
@@ -71,7 +66,7 @@ const Logo: React.FC = () => {
             y='10'
             width='70'
             height='70'
-            href='/telescope.png'
+            href='/logo192.png'
             preserveAspectRatio='xMidYMid meet'
             className={styles.logoImage}
           />

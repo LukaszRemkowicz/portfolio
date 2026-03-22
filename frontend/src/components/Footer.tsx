@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import styles from '../styles/components/Footer.module.css';
 import { Sparkles } from 'lucide-react';
 import { useProfile } from '../hooks/useProfile';
+import { publicEnv } from '../../server/publicEnv.js';
 
 import { useTranslation } from 'react-i18next';
 
 const Footer: React.FC = () => {
   const { t } = useTranslation();
   const { data: profile } = useProfile();
+  const projectOwner = publicEnv.PROJECT_OWNER;
 
   // Extract links from the ASTRO profile (or fallback to any found)
   const astroProfile = profile?.profiles?.find(p => p.type === 'ASTRO');
@@ -19,7 +21,12 @@ const Footer: React.FC = () => {
       <div className={styles.container}>
         <div className={styles.branding}>
           <Sparkles size={16} className={styles.logoIcon} />
-          <span className={styles.logoText}>{t('footer.rights')}</span>
+          <span className={styles.logoText}>
+            {t('footer.rights', {
+              ownerName: projectOwner,
+              defaultValue: `${projectOwner} © 2026`,
+            })}
+          </span>
         </div>
         <div className={styles.links}>
           {igUrl && (

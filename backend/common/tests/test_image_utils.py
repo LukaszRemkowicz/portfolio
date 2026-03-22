@@ -74,6 +74,33 @@ class TestConvertToWebp:
         result = convert_to_webp(_jpeg_field(), quality=50)
         assert result is not None
 
+    def test_dimension_percentage_scales_from_original_size(self):
+        """A percentage should scale width and height directly from the original image."""
+        result = convert_to_webp(
+            _jpeg_field("images/large-photo.jpg", size=(2000, 2000)),
+            dimension_percentage=50,
+        )
+
+        assert result is not None
+        _, webp_content = result
+        webp_content.seek(0)
+        img = Image.open(webp_content)
+        assert img.size == (1000, 1000)
+
+    def test_dimension_percentage_overrides_max_dimension(self):
+        """Percentage scaling should take precedence over max_dimension when both are set."""
+        result = convert_to_webp(
+            _jpeg_field("images/large-photo.jpg", size=(2000, 2000)),
+            max_dimension=1200,
+            dimension_percentage=50,
+        )
+
+        assert result is not None
+        _, webp_content = result
+        webp_content.seek(0)
+        img = Image.open(webp_content)
+        assert img.size == (1000, 1000)
+
     def test_rgba_png_is_converted(self):
         """An RGBA image (transparent PNG) should convert without error."""
         result = convert_to_webp(_png_field("icon.png", mode="RGBA"))

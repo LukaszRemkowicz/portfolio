@@ -1,3 +1,9 @@
+"""Seed singleton-style landing page settings required by the application.
+
+The command ensures that the landing page settings and meteors configuration
+exist and are linked correctly.
+"""
+
 from django.core.management.base import BaseCommand
 
 from astrophotography.models import MeteorsMainPageConfig
@@ -5,6 +11,8 @@ from core.models import LandingPageSettings
 
 
 class Command(BaseCommand):
+    """Create or repair the default landing page settings records."""
+
     help = "Seed initial landing page settings and meteors configuration if they don't exist."
 
     def handle(self, *args, **options):

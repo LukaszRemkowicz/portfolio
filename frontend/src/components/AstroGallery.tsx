@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
+import {
+  useSearchParams,
+  useParams,
+  useNavigate,
+  useLocation,
+} from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from '../styles/components/AstroGallery.module.css';
 import { ASSETS } from '../api/routes';
@@ -22,6 +27,7 @@ const AstroGallery: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { slug: imgSlug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isTagsDrawerOpen, setIsTagsDrawerOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -124,6 +130,18 @@ const AstroGallery: React.FC = () => {
   };
 
   const closeModal = (): void => {
+    const backgroundLocation = location.state?.backgroundLocation as
+      | { pathname?: string; search?: string; hash?: string }
+      | undefined;
+
+    if (backgroundLocation?.pathname) {
+      navigate(
+        `${backgroundLocation.pathname}${backgroundLocation.search || ''}${backgroundLocation.hash || ''}`,
+        { replace: true }
+      );
+      return;
+    }
+
     // Build clean params from known state — only filter and tag.
     const nextParams = new URLSearchParams();
     if (selectedFilter) nextParams.set('filter', selectedFilter);

@@ -44,13 +44,13 @@ class UserSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
         return relative_url
 
     def get_avatar(self, obj: User) -> str:
-        return self._build_url(obj, "avatar", "avatar_legacy")
+        return self._build_url(obj, "avatar", "avatar_original_image")
 
     def get_about_me_image(self, obj: User) -> str:
-        return self._build_url(obj, "about_me_image", "about_me_image_legacy")
+        return self._build_url(obj, "about_me_image", "about_me_image_original_image")
 
     def get_about_me_image2(self, obj: User) -> str:
-        return self._build_url(obj, "about_me_image2", "about_me_image2_legacy")
+        return self._build_url(obj, "about_me_image2", "about_me_image2_original_image")
 
     def to_representation(self, instance: User) -> dict:
         data = super().to_representation(instance)

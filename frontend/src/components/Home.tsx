@@ -1,5 +1,5 @@
 // frontend/src/components/Home.tsx
-import { type FC, useState, useEffect } from 'react';
+import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import styles from '../styles/components/App.module.css';
@@ -10,6 +10,7 @@ import { HomeProps } from '../types';
 import ShootingStars from './ShootingStars';
 import { APP_ROUTES } from '../api/constants';
 import ImageWithFallback from './common/ImageWithFallback';
+import ClientOnly from './common/ClientOnly';
 
 const Home: FC<HomeProps> = ({
   portraitUrl,
@@ -19,30 +20,30 @@ const Home: FC<HomeProps> = ({
   const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false);
 
-  useEffect(() => {
-    if (backgroundUrl) {
-      const img = new Image();
-      img.src = backgroundUrl;
-      img.onload = () => setIsLoaded(true);
-    }
-  }, [backgroundUrl]);
-
   const displayDescription = shortDescription || t('hero.defaultDescription');
 
   return (
     <section id='home' className={styles.heroSection}>
-      {/* Background Layer for smooth fade-in */}
-      <div
-        className={styles.heroBackground}
-        style={{
-          opacity: isLoaded ? 1 : 0,
-          backgroundImage: backgroundUrl
-            ? `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${backgroundUrl})`
-            : 'none',
-          transition: 'opacity 1.5s ease-in-out',
-        }}
-      />
-      <ShootingStars />
+      {backgroundUrl && (
+        <>
+          <img
+            src={backgroundUrl}
+            alt=''
+            aria-hidden='true'
+            data-testid='hero-background-image'
+            className={styles.heroBackgroundImage}
+            onLoad={() => setIsLoaded(true)}
+            loading='eager'
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            {...({ fetchpriority: 'high' } as any)}
+            style={{ opacity: isLoaded ? 1 : 0 }}
+          />
+          <div className={styles.heroBackgroundOverlay} />
+        </>
+      )}
+      <ClientOnly>
+        <ShootingStars />
+      </ClientOnly>
       <div className={styles.heroContent}>
         <span className={styles.heroSubtitle}>{t('hero.subtitle')}</span>
         <h1 className={styles.heroTitle}>

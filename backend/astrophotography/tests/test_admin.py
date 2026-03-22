@@ -464,12 +464,21 @@ class TestMainPageBackgroundImageAdminActions:
         url: str = reverse(self.CHANGE_URL_NAME, args=[bg.pk])
 
         with override_settings(DEFAULT_APP_LANGUAGE="en"):
+            replacement_image = BytesIO()
+            Image.new("RGB", (100, 100), color="black").save(replacement_image, "jpeg")
+            replacement_image.name = "replacement_bg.jpg"
+            replacement_image.seek(0)
             data: dict[str, str] = {
                 "name": "Test BG",  # Same name
                 "_save": "Save",
+                "path": replacement_image,
             }
-            response: HttpResponse = admin_client.post(url, data)
+            response: HttpResponse = admin_client.post(url, data, format="multipart")
 
+        if response.status_code == 200:
+            form = response.context_data.get("adminform")
+            errors = form.form.errors if form else "No form errors found"
+            pytest.fail(f"Form submission failed with errors: {errors}")
         assert response.status_code == 302
         assert mock_translate_task.delay.call_count == 0
 

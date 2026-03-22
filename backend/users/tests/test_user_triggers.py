@@ -12,7 +12,7 @@ class TestUserAsyncTrigger:
     def test_save_triggers_user_images_task_and_skips_sync_conversion(self):
         """
         Verify that saving a User triggers the specialized Celery task
-        and does NOT populate avatar_legacy synchronously.
+        and does NOT populate avatar_original_image synchronously.
         """
         user = UserFactory.create_superuser()
         # Initialize with an old image
@@ -30,6 +30,6 @@ class TestUserAsyncTrigger:
             assert args[0] == user.pk
             assert "avatar" in args[1]
 
-            # Assert avatar_legacy is STILL EMPTY (conversion hasn't happened yet)
+            # Assert avatar_original_image is STILL EMPTY (conversion hasn't happened yet)
             user.refresh_from_db()
-            assert not user.avatar_legacy
+            assert not user.avatar_original_image

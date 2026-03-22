@@ -5,12 +5,16 @@ from celery import shared_task
 
 from django.apps import apps
 
+from common.celery import CommitAwareTask
 from common.utils.image import convert_to_webp
 
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name="users.process_user_images")  # type: ignore[untyped-decorator]
+@shared_task(  # type: ignore[untyped-decorator]
+    name="users.process_user_images",
+    base=CommitAwareTask,
+)
 def process_user_images_task(user_id: int, changed_field_names: List[str]) -> None:
     """
     Background task to convert User images to WebP and handle legacy backups.
@@ -24,10 +28,19 @@ def process_user_images_task(user_id: int, changed_field_names: List[str]) -> No
         return
 
     updated_fields = []
+    original_field_map = {
+        "avatar": "avatar_original_image",
+        "about_me_image": "about_me_image_original_image",
+        "about_me_image2": "about_me_image2_original_image",
+    }
 
     for field_name in changed_field_names:
-        legacy_field_name = f"{field_name}_legacy"
-        if not hasattr(user, field_name) or not hasattr(user, legacy_field_name):
+        original_field_name = original_field_map.get(field_name)
+        if (
+            not original_field_name
+            or not hasattr(user, field_name)
+            or not hasattr(user, original_field_name)
+        ):
             continue
 
         if field_name == "avatar":
@@ -35,27 +48,29 @@ def process_user_images_task(user_id: int, changed_field_names: List[str]) -> No
         else:
             spec = user.get_portrait_spec()
         image_field = getattr(user, field_name)
+        original_field = getattr(user, original_field_name)
 
         if not image_field:
             continue
 
         # Perform conversion
         result = convert_to_webp(
-            image_field,
+            original_field or image_field,
             quality=spec.quality,
             max_dimension=spec.dimension,
+            dimension_percentage=spec.dimension_percentage,
         )
 
         if result:
             original_name, webp_content = result
-            # Update legacy field with the old filename
-            setattr(user, legacy_field_name, original_name)
+            # Update original-image field with the uploaded source filename
+            setattr(user, original_field_name, original_name)
 
             # Save the new WebP content to the main field
             # We use save=False to avoid recursive calls to user.save()
             image_field.save(webp_content.name, webp_content, save=False)
 
-            updated_fields.extend([field_name, legacy_field_name])
+            updated_fields.extend([field_name, original_field_name])
             logger.info(f"Successfully converted {field_name} to WebP for User {user_id}")
         else:
             logger.warning(f"Conversion skipped or failed for {field_name} on User {user_id}")

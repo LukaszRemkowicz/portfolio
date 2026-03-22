@@ -1,6 +1,22 @@
 import '@testing-library/jest-dom';
+import { TextEncoder, TextDecoder } from 'util';
+
+Object.defineProperty(global, 'TextEncoder', {
+  value: TextEncoder,
+});
+
+Object.defineProperty(global, 'TextDecoder', {
+  value: TextDecoder,
+});
 
 const mockProjectOwner = process.env.PROJECT_OWNER || 'Portfolio Owner';
+
+window.__PUBLIC_ENV__ = {
+  API_URL: process.env.API_URL || 'https://api.portfolio.local',
+  GA_TRACKING_ID: process.env.VITE_GA_TRACKING_ID || 'G-TEST',
+  PROJECT_OWNER: mockProjectOwner,
+  SITE_DOMAIN: process.env.SITE_DOMAIN || 'portfolio.local',
+};
 
 // Ensure API_URL is defined for tests that directly use process.env (legacy paths)
 // Main env access is now via import.meta.env (shimmed in jest.config.js globals)
@@ -59,6 +75,9 @@ jest.mock('react-helmet-async', () => {
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
+      const testLang =
+        (globalThis as { __TEST_I18N_LANGUAGE__?: string })
+          .__TEST_I18N_LANGUAGE__ || 'en';
       const translations: Record<string, string> = {
         'nav.home': 'Home',
         'nav.astrophotography': 'Astrophotography',
@@ -111,12 +130,98 @@ jest.mock('react-i18next', () => ({
         'categories.Star': 'Star',
         'common.tags': 'Tags',
         'common.allTags': 'All Tags',
+        'privacy.title': 'Privacy Policy & Cookie Notice',
+        'privacy.lastUpdated': 'Last updated: January 29, 2026',
+        'privacy.introduction.title': 'Introduction',
+        'privacy.introduction.body':
+          'This website is a personal portfolio showcasing my astrophotography, travel photography, and software development work. I respect your privacy and am committed to being transparent about how this site collects and uses data.',
+        'privacy.dataCollected.title': 'What Data We Collect',
+        'privacy.dataCollected.intro':
+          'This website uses Google Analytics to understand how visitors interact with the site. The following data is collected:',
+        'privacy.dataCollected.items.anonymous.label': 'Anonymous usage data:',
+        'privacy.dataCollected.items.anonymous.value':
+          'Pages viewed, time spent on pages, browser type, device type',
+        'privacy.dataCollected.items.geo.label': 'Geographic location:',
+        'privacy.dataCollected.items.geo.value':
+          'Country and city (approximate, based on IP address)',
+        'privacy.dataCollected.items.referral.label': 'Referral source:',
+        'privacy.dataCollected.items.referral.value':
+          'How you arrived at this website',
+        'privacy.dataCollected.note.label': 'Important:',
+        'privacy.dataCollected.note.value':
+          'No personally identifiable information (PII) is collected. I cannot identify individual visitors.',
+        'privacy.cookiesUsed.title': 'Cookies Used',
+        'privacy.cookiesUsed.intro':
+          'Google Analytics sets the following cookies on your browser:',
+        'privacy.cookiesUsed.purpose': 'Purpose:',
+        'privacy.cookiesUsed.expiration': 'Expiration:',
+        'privacy.cookiesUsed.cookies.ga.purpose':
+          'Distinguishes unique visitors',
+        'privacy.cookiesUsed.cookies.ga.expiration': '2 years',
+        'privacy.cookiesUsed.cookies.gid.purpose':
+          'Distinguishes unique visitors',
+        'privacy.cookiesUsed.cookies.gid.expiration': '24 hours',
+        'privacy.cookiesUsed.cookies.gat.purpose': 'Throttles request rate',
+        'privacy.cookiesUsed.cookies.gat.expiration': '1 minute',
+        'privacy.whyCookies.title': 'Why We Use Cookies',
+        'privacy.whyCookies.intro': 'Analytics cookies help me understand:',
+        'privacy.whyCookies.items.popularContent':
+          'Which content is most popular (astrophotography vs. travel vs. programming)',
+        'privacy.whyCookies.items.navigation': 'How visitors navigate the site',
+        'privacy.whyCookies.items.devices':
+          'What devices and browsers are being used',
+        'privacy.whyCookies.items.performance':
+          'Whether the site is performing well',
+        'privacy.whyCookies.outro':
+          'This information helps me improve the website and create better content for visitors.',
+        'privacy.rights.title': 'Your Choices & Rights',
+        'privacy.rights.optOutTitle': 'Opt-Out Options:',
+        'privacy.rights.items.cookieSettings.label': 'Cookie Settings:',
+        'privacy.rights.items.cookieSettings.value':
+          'Click "Cookie Settings" in the footer to change your consent at any time',
+        'privacy.rights.items.browserSettings.label': 'Browser Settings:',
+        'privacy.rights.items.browserSettings.value':
+          'Configure your browser to block cookies (note: this may affect site functionality)',
+        'privacy.rights.items.googleOptOut.label': 'Google Analytics Opt-Out:',
+        'privacy.rights.items.googleOptOut.prefix': 'Install the',
+        'privacy.rights.items.googleOptOut.link':
+          'Google Analytics Opt-out Browser Add-on',
+        'privacy.retention.title': 'Data Retention',
+        'privacy.retention.body':
+          'Google Analytics data is retained for 26 months by default. After this period, aggregated data is automatically deleted.',
+        'privacy.thirdParty.title': 'Third-Party Services',
+        'privacy.thirdParty.intro':
+          'For more detailed information, please refer to the privacy policies of these services, paying attention to specific sections, such as "How we use your information" or "Third-party services".',
+        'privacy.thirdParty.uses': 'This website uses:',
+        'privacy.thirdParty.googleAnalytics.label': 'Google Analytics:',
+        'privacy.thirdParty.googleAnalytics.value':
+          'Web analytics service by Google LLC.',
+        'privacy.thirdParty.googleAnalytics.link': 'Google Privacy Policy',
+        'privacy.contact.title': 'Contact',
+        'privacy.contact.body':
+          'If you have questions about this privacy policy or how your data is handled, please contact me via the contact form on this website.',
+        'privacy.footer':
+          'This privacy policy is effective as of the date stated above and will remain in effect except with respect to any changes in its provisions in the future.',
       };
+      const polishPrivacyTranslations: Record<string, string> = {
+        'privacy.title': 'Polityka Prywatności i Plików Cookie',
+        'privacy.lastUpdated': 'Ostatnia aktualizacja: 29 stycznia 2026',
+        'privacy.introduction.title': 'Wprowadzenie',
+        'privacy.introduction.body':
+          'Ta strona jest osobistym portfolio prezentującym moją astrofotografię, fotografię podróżniczą i projekty programistyczne. Szanuję Twoją prywatność i zależy mi na przejrzystym wyjaśnieniu, w jaki sposób ta witryna zbiera i wykorzystuje dane.',
+      };
+
+      if (testLang === 'pl' && polishPrivacyTranslations[key]) {
+        return polishPrivacyTranslations[key];
+      }
+
       return translations[key] || key;
     },
     i18n: {
       changeLanguage: jest.fn(),
-      language: 'en',
+      language:
+        (globalThis as { __TEST_I18N_LANGUAGE__?: string })
+          .__TEST_I18N_LANGUAGE__ || 'en',
     },
   }),
   initReactI18next: {

@@ -5,9 +5,11 @@ from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
 
 from django.conf import settings
+from django.urls import reverse
 from django.utils import translation
 
 from common.serializers import TranslatedSerializerMixin
+from common.utils.signing import generate_signed_url_params
 from translation.services import TranslationService
 
 from .models import (
@@ -112,7 +114,10 @@ class AstroImageSerializerList(AstroImageBaseSerializer):
     Excludes heavy descriptions and technical details.
     """
 
-    thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
+    thumbnail_url = serializers.SerializerMethodField()
+
+    def get_thumbnail_url(self, obj: AstroImage) -> str:
+        return obj.get_thumbnail_url()
 
     def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
         data = super().to_representation(instance)
@@ -164,7 +169,10 @@ class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
 
 
 class AstroImageThumbnailSerializer(AstroImageBaseSerializer):
-    thumbnail_url = serializers.ImageField(source="thumbnail", read_only=True)
+    thumbnail_url = serializers.SerializerMethodField()
+
+    def get_thumbnail_url(self, obj: AstroImage) -> str:
+        return obj.get_thumbnail_url()
 
     def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
         data = super().to_representation(instance)
@@ -182,9 +190,6 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
     place = PlaceSerializer(read_only=True)
     images = AstroImageThumbnailSerializer(many=True, read_only=True)
     background_image = serializers.SerializerMethodField()
-    background_image_thumbnail = serializers.ImageField(
-        source="background_image.thumbnail", read_only=True
-    )
     adventure_date = serializers.SerializerMethodField()
     adventure_date_raw = serializers.ReadOnlyField()
     full_location = serializers.SerializerMethodField()
@@ -200,7 +205,17 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
 
     def get_background_image(self, obj: MainPageLocation) -> str:
         if obj.background_image:
-            return str(obj.background_image.get_serving_url())
+            request = self.context.get("request")
+            url_path = reverse(
+                "astroimages:secure-image-serve",
+                kwargs={"slug": obj.background_image.slug},
+            )
+            params = generate_signed_url_params(obj.background_image.slug)
+
+            if request:
+                return f"{request.build_absolute_uri(url_path)}" f"?s={params['s']}&e={params['e']}"
+
+            return f"{url_path}?s={params['s']}&e={params['e']}"
         return ""
 
     def get_full_location(self, obj: MainPageLocation) -> str:
@@ -275,7 +290,6 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
             "adventure_date",
             "story",
             "background_image",
-            "background_image_thumbnail",
             "images",
             "adventure_date_raw",
             "created_at",

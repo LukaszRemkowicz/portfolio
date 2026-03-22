@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import DOMPurify from 'isomorphic-dompurify';
 
 /**
  * Utility function to strip HTML tags from a string.
@@ -6,6 +6,12 @@ import DOMPurify from 'dompurify';
  */
 export const stripHtml = (html: string): string => {
   if (!html) return '';
+
+  if (typeof DOMParser === 'undefined') {
+    // Fallback: remove angle brackets so any residual tag fragments
+    // cannot be interpreted as HTML, then normalize whitespace.
+    return html.replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
 
   // Use a DOM-based approach for reliability
   const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -32,6 +38,7 @@ export const slugify = (text: string): string => {
  */
 export const sanitizeHtml = (html: string): string => {
   if (!html) return '';
+
   return DOMPurify.sanitize(html);
 };
 

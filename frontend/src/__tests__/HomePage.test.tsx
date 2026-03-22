@@ -125,4 +125,25 @@ describe('HomePage Component', () => {
     expect(screen.getByText('hero.titlePart1')).toBeInTheDocument();
     expect(screen.getByText('This is a test bio')).toBeInTheDocument();
   });
+
+  it('renders the hero background as a high-priority eager image', async () => {
+    (useProfile as jest.Mock).mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: null,
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <HomePage />
+        </MemoryRouter>
+      );
+    });
+
+    const backgroundImage = screen.getByTestId('hero-background-image');
+    expect(backgroundImage).toHaveAttribute('src', '/test-bg.jpg');
+    expect(backgroundImage).toHaveAttribute('loading', 'eager');
+    expect(backgroundImage).toHaveAttribute('fetchpriority', 'high');
+  });
 });

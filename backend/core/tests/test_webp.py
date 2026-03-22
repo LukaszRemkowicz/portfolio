@@ -40,19 +40,19 @@ class TestLandingPageSettingsGetCurrent:
 @pytest.mark.django_db
 class TestBaseImageConvertToWebp:
     def test_converts_jpeg_to_webp(self, tmp_path):
-        """Saving a JPEG image triggers WebP conversion; legacy_path is populated."""
+        """Saving a JPEG image triggers WebP conversion; original_image is populated."""
         img = MainPageBackgroundImageFactory()
 
         # Confirm conversion happened (factory creates an ImageField)
         assert img.path  # path exists
         # If conversion succeeded, path name ends in .webp
         if img.path.name.endswith(".webp"):
-            assert img.legacy_path  # legacy must be set
+            assert img.original_image  # legacy must be set
 
     def test_no_op_if_already_webp(self):
         """_convert_to_webp() must not re-convert an image already in WebP."""
         img = MainPageBackgroundImageFactory()
-        legacy_before = str(img.legacy_path) if img.legacy_path else None
+        legacy_before = str(img.original_image) if img.original_image else None
 
         # Call directly with a mocked webp field
         img.path = MagicMock()
@@ -60,8 +60,8 @@ class TestBaseImageConvertToWebp:
         img.path.__bool__ = MagicMock(return_value=True)
         img._convert_to_webp()
 
-        # legacy_path must not have changed
-        legacy_after = str(img.legacy_path) if img.legacy_path else None
+        # original_image must not have changed
+        legacy_after = str(img.original_image) if img.original_image else None
         assert legacy_before == legacy_after
 
     def test_convert_to_webp_noop_on_empty_path(self):
@@ -89,22 +89,22 @@ class TestBaseImageServingPath:
         assert result == img.path
 
     def test_get_serving_path_returns_legacy_when_webp_disabled(self):
-        """When serve_webp_images=False and legacy exists, returns legacy_path."""
+        """When serve_webp_images=False and legacy exists, returns original_image."""
         settings = LandingPageSettingsFactory(serve_webp_images=False)
         img = MainPageBackgroundImageFactory()
         # Simulate a converted image with a legacy path
-        img.legacy_path = img.path
+        img.original_image = img.path
 
         with patch.object(LandingPageSettings, "get_current", return_value=settings):
             result = img.get_serving_path()
 
-        assert result == img.legacy_path
+        assert result == img.original_image
 
     def test_get_serving_path_falls_back_to_path_if_no_legacy(self):
         """When serve_webp_images=False and no legacy, returns self.path."""
         settings = LandingPageSettingsFactory(serve_webp_images=False)
         img = MainPageBackgroundImageFactory()
-        img.legacy_path = None
+        img.original_image = None
 
         with patch.object(LandingPageSettings, "get_current", return_value=settings):
             result = img.get_serving_path()
@@ -121,6 +121,6 @@ class TestBaseImageServingPath:
         """get_serving_url() returns '' when no image is assigned."""
         img = MainPageBackgroundImageFactory.build()
         img.path = None
-        img.legacy_path = None
+        img.original_image = None
         url = img.get_serving_url()
         assert url == ""

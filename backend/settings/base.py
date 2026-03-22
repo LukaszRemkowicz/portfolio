@@ -170,6 +170,7 @@ MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",  # Must be near the top
     "corsheaders.middleware.CorsMiddleware",  # Must be before CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
+    "common.middleware.RequestCorrelationMiddleware",
     "inbox.middleware.ContactFormKillSwitchMiddleware",
     # Check kill switch early (after security, before sessions)
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -214,6 +215,12 @@ OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
 MONITORING_LLM_PROVIDER = env.str("MONITORING_LLM_PROVIDER", default="gpt")
 DOCKER_LOGS_DIR = env.str("DOCKER_LOGS_DIR", default="/app/docker-logs")
+SSR_CACHE_INVALIDATION_URL = env.str(
+    "SSR_CACHE_INVALIDATION_URL", default="http://fe:8080/internal/cache/invalidate"
+)
+SSR_CACHE_INVALIDATION_TOKEN = env.str(
+    "SSR_CACHE_INVALIDATION_TOKEN", default="dev-ssr-cache-token"
+)
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -346,7 +353,7 @@ IMAGE_OPTIMIZATION_SPECS = {
     "AVATAR": ImageSpec(dimension=280, quality=10),
     "PORTRAIT": ImageSpec(dimension=800, quality=35),
     "LANDSCAPE": ImageSpec(dimension=1920, quality=90),
-    "THUMBNAIL": ImageSpec(dimension=400, quality=60),
+    "THUMBNAIL": ImageSpec(dimension=560, quality=100),
     "DEFAULT": ImageSpec(dimension=1200, quality=75),
 }
 
@@ -663,7 +670,7 @@ JAZZMIN_SETTINGS = {
     "welcome_sign": "Welcome to the Portfolio Admin Interface",
     "copyright": PROJECT_OWNER,
     # User Menu
-    "user_avatar": "profiles.avatar",
+    "user_avatar": "get_avatar_url",
     # Top Menu
     "topmenu_links": [
         {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},

@@ -1,4 +1,3 @@
-import { api } from '../api';
 import {
   fetchProfile,
   fetchBackground,
@@ -6,9 +5,8 @@ import {
   fetchContact,
   fetchSettings,
 } from '../services';
-import { API_ROUTES } from '../routes';
-import { API_BASE_URL } from '../constants';
-import { NotFoundError } from '../errors';
+import { API_ROUTES, BFF_ROUTES } from '../routes';
+import { ValidationError } from '../errors';
 
 // Mock the axios instance from api.ts
 jest.mock('../api', () => ({
@@ -19,12 +17,24 @@ jest.mock('../api', () => ({
 }));
 
 describe('API Services', () => {
+  let fetchMock: jest.Mock;
+
+  beforeEach(() => {
+    fetchMock = jest.fn();
+    Object.defineProperty(global, 'fetch', {
+      configurable: true,
+      value: fetchMock,
+      writable: true,
+    });
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
+    delete (global as { fetch?: typeof fetch }).fetch;
   });
 
   describe('fetchProfile', () => {
-    it('should fetch and transform profile data successfully', async () => {
+    it('should fetch and transform profile data through the BFF in the browser', async () => {
       const mockProfile = {
         first_name: 'John',
         last_name: 'Doe',
@@ -33,19 +43,28 @@ describe('API Services', () => {
         about_me_image2: null,
       };
 
-      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockProfile });
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockProfile,
+      } as Response);
 
       const result = await fetchProfile();
 
-      expect(api.get).toHaveBeenCalledWith(API_ROUTES.profile);
+      expect(fetchMock).toHaveBeenCalledWith(BFF_ROUTES.profile, {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
       expect(result.first_name).toBe('John');
-      expect(result.avatar).toContain(
-        `${API_BASE_URL}/media/avatars/avatar.jpg`
-      );
+      expect(result.avatar).toBe('/media/avatars/avatar.jpg');
     });
 
     it('should return fallback data on 404 for profile', async () => {
-      (api.get as jest.Mock).mockRejectedValueOnce(new NotFoundError());
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ detail: 'Not found' }),
+      } as Response);
 
       const result = await fetchProfile();
       expect(result.first_name).toBe('Portfolio');
@@ -53,33 +72,67 @@ describe('API Services', () => {
     });
 
     it('should throw error on 500 for profile', async () => {
-      (api.get as jest.Mock).mockRejectedValueOnce(
-        new Error('Internal Server Error')
-      );
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ detail: 'server failed' }),
+      } as Response);
 
-      await expect(fetchProfile()).rejects.toThrow('Internal Server Error');
+      await expect(fetchProfile()).rejects.toThrow('server failed');
+    });
+
+    it('should still use the backend client outside the browser-default transport', async () => {
+      const mockProfile = {
+        first_name: 'Jane',
+        last_name: 'Doe',
+        avatar: '/media/avatars/avatar.jpg',
+        about_me_image: null,
+        about_me_image2: null,
+      };
+      const customClient = {
+        get: jest.fn().mockResolvedValue({ data: mockProfile }),
+      };
+
+      const result = await fetchProfile(customClient as never);
+
+      expect(customClient.get).toHaveBeenCalledWith(API_ROUTES.profile);
+      expect(result.first_name).toBe('Jane');
     });
   });
 
   describe('fetchBackground', () => {
     it('should return null on 404 for background', async () => {
-      (api.get as jest.Mock).mockRejectedValueOnce(new NotFoundError());
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ detail: 'Not found' }),
+      } as Response);
 
       const result = await fetchBackground();
       expect(result).toBeNull();
     });
     it('should fetch background URL successfully', async () => {
-      const mockBackground = { url: 'https://example.com/bg.jpg' };
-      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockBackground });
+      const mockBackground = { url: '/media/backgrounds/example.webp' };
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockBackground,
+      } as Response);
 
       const result = await fetchBackground();
 
-      expect(api.get).toHaveBeenCalledWith(API_ROUTES.background);
-      expect(result).toBe('https://example.com/bg.jpg');
+      expect(fetchMock).toHaveBeenCalledWith(BFF_ROUTES.background, {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
+      expect(result).toBe('/media/backgrounds/example.webp');
     });
 
     it('should return null if API returns no URL', async () => {
-      (api.get as jest.Mock).mockResolvedValueOnce({ data: { url: null } });
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ url: null }),
+      } as Response);
 
       const result = await fetchBackground();
       expect(result).toBeNull();
@@ -89,12 +142,22 @@ describe('API Services', () => {
   describe('fetchAstroImages', () => {
     it('should fetch astro images with params', async () => {
       const mockImages = [{ pk: 1, name: 'Galaxy', description: 'Cool' }];
-      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockImages });
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockImages,
+      } as Response);
 
       const params = { filter: 'Landscape' };
       const result = await fetchAstroImages(params);
 
-      expect(api.get).toHaveBeenCalledWith(API_ROUTES.astroImages, { params });
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${BFF_ROUTES.astroImages}?filter=Landscape`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Galaxy');
     });
@@ -102,7 +165,10 @@ describe('API Services', () => {
 
   describe('fetchContact', () => {
     it('should send contact form successfully', async () => {
-      (api.post as jest.Mock).mockResolvedValueOnce({ data: { status: 'ok' } });
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ok' }),
+      } as Response);
 
       const contactData = {
         name: 'John',
@@ -113,13 +179,25 @@ describe('API Services', () => {
 
       await fetchContact(contactData);
 
-      expect(api.post).toHaveBeenCalledWith(API_ROUTES.contact, contactData);
+      expect(fetchMock).toHaveBeenCalledWith(BFF_ROUTES.contact, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contactData),
+      });
     });
 
     it('should throw error on validation failure', async () => {
-      (api.post as jest.Mock).mockRejectedValueOnce({
-        response: { status: 400, data: { email: ['Invalid email'] } },
-      });
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          errors: { email: ['Invalid email'] },
+          message: 'Validation failed.',
+        }),
+      } as Response);
 
       const contactData = {
         name: 'John',
@@ -128,7 +206,9 @@ describe('API Services', () => {
         message: 'Hello',
       };
 
-      await expect(fetchContact(contactData)).rejects.toBeDefined();
+      await expect(fetchContact(contactData)).rejects.toBeInstanceOf(
+        ValidationError
+      );
     });
   });
 
@@ -139,11 +219,18 @@ describe('API Services', () => {
         programming: false,
         meteors: { randomShootingStars: true },
       };
-      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockSettings });
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockSettings,
+      } as Response);
 
       const result = await fetchSettings();
 
-      expect(api.get).toHaveBeenCalledWith(API_ROUTES.settings);
+      expect(fetchMock).toHaveBeenCalledWith(BFF_ROUTES.settings, {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
       expect(result.contactForm).toBe(true);
       expect(result.meteors?.randomShootingStars).toBe(true);
     });
@@ -152,9 +239,13 @@ describe('API Services', () => {
       const consoleSpy = jest
         .spyOn(console, 'error')
         .mockImplementation(() => {});
-      (api.get as jest.Mock).mockRejectedValueOnce(new Error('API error'));
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ detail: 'server failed' }),
+      } as Response);
 
-      await expect(fetchSettings()).rejects.toThrow('API error');
+      await expect(fetchSettings()).rejects.toThrow('server failed');
       consoleSpy.mockRestore();
     });
   });
