@@ -34,7 +34,7 @@ module.exports = {
     '!src/hooks/**',
   ],
   transform: {
-    '^.+\\.(ts|tsx)$': [
+    '^.+\\.(js|jsx|ts|tsx)$': [
       'babel-jest',
       { configFile: './babel.config.jest.json' },
     ],

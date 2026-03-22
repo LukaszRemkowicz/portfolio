@@ -552,7 +552,14 @@ async function handleBffRequest(req, res, requestUrl, start, requestId) {
     const requestOrigin = getRequestOrigin(req);
     const upstreamBaseUrl = getBackendBaseUrl(requestPublicEnv);
     const upstreamUrl = new URL(resolvedView.backendPath, upstreamBaseUrl);
-    upstreamUrl.search = requestUrl.search;
+    const allowedParams = new URLSearchParams();
+    for (const key of ['s', 'e']) {
+      const value = requestUrl.searchParams.get(key);
+      if (value) {
+        allowedParams.set(key, value);
+      }
+    }
+    upstreamUrl.search = allowedParams.toString();
 
     const startedAt = Date.now();
     const response = await fetch(upstreamUrl, {

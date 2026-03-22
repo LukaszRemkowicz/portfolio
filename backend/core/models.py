@@ -257,7 +257,11 @@ class BaseImage(TranslatableModel):
                 if serving_name and serving_field.storage.exists(serving_name):
                     return str(serving_field.url)
             except (OSError, ValueError):
-                pass
+                logger.warning(
+                    "Failed to resolve serving URL for image field %r",
+                    getattr(serving_field, "name", None),
+                    exc_info=True,
+                )
         return ""
 
     def get_thumbnail_source(self) -> Any:

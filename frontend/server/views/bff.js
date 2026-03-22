@@ -21,6 +21,23 @@ export const BFF_ROUTES = {
 };
 
 /**
+ * Normalize a dynamic URL path segment before interpolating it into a backend
+ * path. Reject empty or non-whitelisted values instead of forwarding them.
+ */
+function sanitizePathSegment(segment) {
+  if (typeof segment !== 'string') {
+    return null;
+  }
+
+  const trimmed = segment.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return /^[A-Za-z0-9._-]+$/.test(trimmed) ? trimmed : null;
+}
+
+/**
  * Resolve the contact transport route to its backend API path.
  */
 export function getContactBackendRoute(pathname, method) {
@@ -45,7 +62,14 @@ export function getTravelBackendRoute(pathname, method) {
     return null;
   }
 
-  const [, countrySlug, placeSlug, dateSlug] = match;
+  const [, rawCountrySlug, rawPlaceSlug, rawDateSlug] = match;
+  const countrySlug = sanitizePathSegment(rawCountrySlug);
+  const placeSlug = sanitizePathSegment(rawPlaceSlug);
+  const dateSlug = sanitizePathSegment(rawDateSlug);
+  if (!countrySlug || !placeSlug || !dateSlug) {
+    return null;
+  }
+
   return {
     allow: 'GET',
     backendPath: `/v1/travel/${countrySlug}/${placeSlug}/${dateSlug}/`,
@@ -72,7 +96,12 @@ export function getImagesBackendRoute(pathname, method) {
     return null;
   }
 
-  const [, slug] = match;
+  const [, rawSlug] = match;
+  const slug = sanitizePathSegment(rawSlug);
+  if (!slug) {
+    return null;
+  }
+
   return {
     allow: 'GET',
     backendPath: `/image-urls/${slug}/`,
@@ -87,7 +116,12 @@ export function getImageFilesBackendRoute(pathname, method) {
     return null;
   }
 
-  const [, slug] = match;
+  const [, rawSlug] = match;
+  const slug = sanitizePathSegment(rawSlug);
+  if (!slug) {
+    return null;
+  }
+
   return {
     allow: 'GET',
     backendPath: `/image-files/${slug}/serve/`,
@@ -168,7 +202,12 @@ function getReadBackendRoute(pathname, method) {
 
   const detailMatch = pathname.match(/^\/app\/astroimages\/([^/]+)\/?$/);
   if (detailMatch) {
-    const [, slug] = detailMatch;
+    const [, rawSlug] = detailMatch;
+    const slug = sanitizePathSegment(rawSlug);
+    if (!slug) {
+      return null;
+    }
+
     return {
       allow: 'GET',
       backendPath: `/v1/astroimages/${slug}/`,
