@@ -14,9 +14,10 @@ def invalidate_settings_cache(sender, instance, **kwargs):
     """
     # 1. Clear Backend API Cache
     CacheService.invalidate_landing_page_cache()
+    CacheService.invalidate_astrophotography_cache()
 
     # 2. Clear Frontend SSR Cache (Async)
-    invalidate_frontend_ssr_cache_task.delay_on_commit(["settings"])
+    invalidate_frontend_ssr_cache_task.delay_on_commit(["settings", "latest-astro-images"])
 
 
 @receiver(m2m_changed, sender=LandingPageSettings.latest_filters.through)
