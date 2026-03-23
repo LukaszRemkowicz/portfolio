@@ -208,6 +208,28 @@ class TestTranslationFallbacks:
         result = TranslationService.get_translation(img, "name", "pl")
         assert result == "English Name"
 
+    def test_translation_service_falls_back_to_any_available_language(self):
+        """
+        Verify that get_translation falls back to any available language
+        if requested and default are missing.
+        """
+        img = AstroImageFactory()
+        # Delete English (default) translation to simulate a record
+        # created strictly in a non-default language
+        img.translations.all().delete()
+
+        # Create a PL translation
+        img.set_current_language("pl")
+        img.name = "Polish Name"
+        img.save()
+
+        # Request translation in 'en'. The 'en' version is missing,
+        # and the default 'en' is also missing.
+        # It should fall back to the available 'pl' translation.
+        result = TranslationService.get_translation(img, "name", "en")
+
+        assert result == "Polish Name"
+
     def test_main_page_location_get_full_location_empty_fallback(self):
         """
         Verify get_full_location still returns empty string when highlight

@@ -55,8 +55,12 @@ class GalleryQueryService:
         # 2. Filter by Tags
         tag_slug = params.get("tag")
         if tag_slug:
-            # Note: filtering by translations slug is fine, but prefetching helps representation
-            queryset = queryset.filter(tags__translations__slug__in=[tag_slug])
+            # Find the tag ID in ANY language first to bypass relation language context limits
+            tag_ids = Tag.objects.filter(translations__slug=tag_slug).values_list("id", flat=True)
+            if tag_ids:
+                queryset = queryset.filter(tags__in=tag_ids)
+            else:
+                queryset = queryset.none()
 
         # 3. Filter by Travel (Fuzzy country/place match)
         travel = params.get("travel")

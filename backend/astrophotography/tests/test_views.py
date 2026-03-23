@@ -88,6 +88,24 @@ class TestAstroImageViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 0
 
+    def test_filter_astro_images_by_translated_tag(self, api_client: APIClient) -> None:
+        """Test filtering images by a tag slug that exists only in a non-default language."""
+        image = AstroImageFactory(celestial_object="Deep Sky")
+
+        # Manually create the Polish translation
+        tag = Tag.objects.create()  # Untranslated base model
+        tag.create_translation("pl", name="Polski Tytuł", slug="polski-tytul")
+
+        image.tags.add(tag)
+
+        url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
+
+        # 1. Provide the Polish slug while querying the API in English (default language context)
+        response: Response = api_client.get(url, {"tag": "polski-tytul"})
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]["pk"] == str(image.pk)
+
     def test_latest_astro_images(self, api_client: APIClient) -> None:
         """Test the dedicated 'latest' endpoint returns exactly 9 images."""
         # Create 12 images
