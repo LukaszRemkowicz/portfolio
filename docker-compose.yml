@@ -68,6 +68,8 @@ x-frontend-common: &frontend-common
   volumes:
     - ./frontend:/app
     - portfolio_dev_fe_node_modules:/app/node_modules
+  environment:
+    TZ: "Europe/Warsaw"
 
 x-local-nginx-common: &local-nginx-common
   image: nginx:latest

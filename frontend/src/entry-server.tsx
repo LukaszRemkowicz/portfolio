@@ -204,11 +204,11 @@ async function prefetchRouteQueries(
         queryFn: () => fetchCategories(client),
       }),
       prefetchQuerySafely(queryClient, {
-        queryKey: ['tags', selectedFilter],
-        queryFn: () => fetchTags(selectedFilter, client),
+        queryKey: ['tags', language, selectedFilter],
+        queryFn: () => fetchTags({ filter: selectedFilter }, client),
       }),
       prefetchQuerySafely(queryClient, {
-        queryKey: ['astro-images', imageParams],
+        queryKey: ['astro-images', language, imageParams],
         queryFn: () => fetchAstroImages(imageParams, client),
       }),
     ]);

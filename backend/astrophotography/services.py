@@ -161,19 +161,27 @@ class GalleryQueryService:
 
     @staticmethod
     def get_tag_stats(
-        category_filter: Optional[str] = None, language_code: Optional[str] = None
+        category_filter: Optional[str] = None,
+        language_code: Optional[str] = None,
+        latest: bool = False,
     ) -> QuerySet[Tag]:
         """
-        Aggregate tag counts, optionally filtered by gallery category.
+        Aggregate tag counts, optionally filtered by gallery category
+        or limited to 'latest' filters.
         Returns unique tag instances that have at least one associated image.
         """
+        if latest:
+            queryset = Tag.objects.latest_tags()
+        else:
+            queryset = Tag.objects.all()
+
         annotation_filter = Q(images__isnull=False)
         if category_filter:
             annotation_filter &= Q(images__celestial_object=category_filter)
 
         return cast(
             QuerySet[Tag],
-            Tag.objects.prefetch_related("translations")
+            queryset.prefetch_related("translations")
             .filter(images__isnull=False)
             .annotate(num_times=Count("images", filter=annotation_filter, distinct=True))
             .filter(num_times__gt=0)

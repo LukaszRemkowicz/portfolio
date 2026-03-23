@@ -12,6 +12,7 @@ const LanguageSwitcher: React.FC = () => {
     const nextLang = lang.startsWith('en') ? 'pl' : 'en';
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('i18nextLng', nextLang);
+      document.cookie = `i18next=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
     }
     i18n.changeLanguage(nextLang);
   };

@@ -156,10 +156,16 @@ class TagsView(ViewSet):
     serializer_class = TagSerializer
 
     def list(self, request: Request) -> Response:
-        """Returns tag statistics, optionally filtered by category."""
+        """
+        Returns tag statistics, optionally filtered by category
+        or limited to 'latest' filters.
+        """
         category_filter: Optional[str] = request.query_params.get("filter")
         lang: Optional[str] = request.query_params.get("lang")
-        tags: QuerySet[Tag] = GalleryQueryService.get_tag_stats(category_filter, language_code=lang)
+        latest: bool = request.query_params.get("latest", "false").lower() == "true"
+        tags: QuerySet[Tag] = GalleryQueryService.get_tag_stats(
+            category_filter, language_code=lang, latest=latest
+        )
 
         serializer: TagSerializer = self.serializer_class(
             tags, many=True, context={"request": request}

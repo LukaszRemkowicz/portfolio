@@ -7,6 +7,7 @@
  */
 import type { AxiosInstance } from 'axios';
 import { api } from './api';
+import i18n from '../i18n.client';
 import { AppError, NotFoundError, ValidationError } from './errors';
 
 type BffErrorPayload = {
@@ -61,7 +62,16 @@ const throwBffError = (
 export const fetchBffJson = async <TResponse>(
   url: string
 ): Promise<TResponse> => {
-  const response = await fetch(url, {
+  const lang = (i18n.language || 'en').split('-')[0];
+  const urlWithLang = new URL(
+    url,
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : 'http://frontend.local'
+  );
+  urlWithLang.searchParams.set('lang', lang);
+
+  const response = await fetch(urlWithLang.toString(), {
     headers: {
       Accept: 'application/json',
     },
@@ -82,7 +92,16 @@ export const postBffJson = async <TResponse>(
   url: string,
   body: unknown
 ): Promise<TResponse> => {
-  const response = await fetch(url, {
+  const lang = (i18n.language || 'en').split('-')[0];
+  const urlWithLang = new URL(
+    url,
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : 'http://frontend.local'
+  );
+  urlWithLang.searchParams.set('lang', lang);
+
+  const response = await fetch(urlWithLang.toString(), {
     method: 'POST',
     headers: {
       Accept: 'application/json',

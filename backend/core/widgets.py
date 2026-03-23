@@ -1,3 +1,5 @@
+import copy
+
 from django_select2.forms import Select2MultipleWidget, Select2Widget
 
 from django import forms
@@ -128,8 +130,6 @@ class RangeWidget(forms.MultiWidget):
 
     def __init__(self, attrs=None, base_widget=None, placeholder_min="", placeholder_max=""):
         if base_widget:
-            import copy
-
             w1 = copy.deepcopy(base_widget)
             w2 = copy.deepcopy(base_widget)
 

@@ -526,8 +526,13 @@ On your production server, simply run:
 ---
 
 
-
 ## Component Docs
 
 - Frontend: [frontend/README.md](/Users/lukaszremkowicz/Projects/landingpage/frontend/README.md)
 - Backend: [backend/README.md](/Users/lukaszremkowicz/Projects/landingpage/backend/README.md)
+
+
+### TODO:
+- add script for checking sitemap
+- Admin improve
+- add ci registry

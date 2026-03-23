@@ -1,7 +1,8 @@
 # --- Base deps ---
 FROM node:24-alpine AS base
 WORKDIR /app
-RUN npm install -g npm@latest
+RUN npm install -g npm@latest && apk add --no-cache tzdata
+ENV TZ=Europe/Warsaw
 
 # --- Development ---
 FROM base AS dev

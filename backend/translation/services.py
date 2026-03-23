@@ -4,6 +4,7 @@ Services for managing translations and global state in the core application.
 
 import functools
 import logging
+import re
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
@@ -14,6 +15,7 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from common.llm.protocols import TranslationAgentProtocol
+from common.llm.registry import LLMProviderRegistry
 
 from .agents import TranslationAgent
 
@@ -80,10 +82,6 @@ class TranslationService:
         Returns:
             TranslationService: Configured translation service instance
         """
-        from django.conf import settings
-
-        from common.llm.registry import LLMProviderRegistry
-
         # Fail-fast: No defaults, settings must be explicit
         provider_name = settings.TRANSLATION_LLM_PROVIDER
         provider = LLMProviderRegistry.get(provider_name)
@@ -402,8 +400,6 @@ class TranslationService:
         if not text:
             return True
         if isinstance(text, str):
-            import re
-
             # Remove HTML tags
             clean = re.sub(r"<[^>]+>", "", text)
             # Remove common HTML entities and whitespace

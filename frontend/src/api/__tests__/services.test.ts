@@ -50,11 +50,14 @@ describe('API Services', () => {
 
       const result = await fetchProfile();
 
-      expect(fetchMock).toHaveBeenCalledWith(BFF_ROUTES.profile, {
-        headers: {
-          Accept: 'application/json',
-        },
-      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        `http://localhost${BFF_ROUTES.profile}?lang=en`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
       expect(result.first_name).toBe('John');
       expect(result.avatar).toBe('/media/avatars/avatar.jpg');
     });
@@ -120,11 +123,14 @@ describe('API Services', () => {
 
       const result = await fetchBackground();
 
-      expect(fetchMock).toHaveBeenCalledWith(BFF_ROUTES.background, {
-        headers: {
-          Accept: 'application/json',
-        },
-      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        `http://localhost${BFF_ROUTES.background}?lang=en`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
       expect(result).toBe('/media/backgrounds/example.webp');
     });
 
@@ -151,7 +157,7 @@ describe('API Services', () => {
       const result = await fetchAstroImages(params);
 
       expect(fetchMock).toHaveBeenCalledWith(
-        `${BFF_ROUTES.astroImages}?filter=Landscape`,
+        `http://localhost${BFF_ROUTES.astroImages}?filter=Landscape&lang=en`,
         {
           headers: {
             Accept: 'application/json',
@@ -179,14 +185,17 @@ describe('API Services', () => {
 
       await fetchContact(contactData);
 
-      expect(fetchMock).toHaveBeenCalledWith(BFF_ROUTES.contact, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(contactData),
-      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        `http://localhost${BFF_ROUTES.contact}?lang=en`,
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(contactData),
+        }
+      );
     });
 
     it('should throw error on validation failure', async () => {
@@ -226,11 +235,14 @@ describe('API Services', () => {
 
       const result = await fetchSettings();
 
-      expect(fetchMock).toHaveBeenCalledWith(BFF_ROUTES.settings, {
-        headers: {
-          Accept: 'application/json',
-        },
-      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        `http://localhost${BFF_ROUTES.settings}?lang=en`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
       expect(result.contactForm).toBe(true);
       expect(result.meteors?.randomShootingStars).toBe(true);
     });

@@ -4,6 +4,7 @@ import {
   useParams,
   useNavigate,
   useLocation,
+  Navigate,
 } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from '../styles/components/AstroGallery.module.css';
@@ -18,8 +19,9 @@ import CategorySidebar from './CategorySidebar';
 import { Sliders, LayoutGrid } from 'lucide-react';
 import SEO from './common/SEO';
 import { useAstroImages } from '../hooks/useAstroImages';
-import { useCategories } from '../hooks/useCategories';
 import { useTags } from '../hooks/useTags';
+import { APP_ROUTES } from '../api/constants';
+import { useCategories } from '../hooks/useCategories';
 import { useBackground } from '../hooks/useBackground';
 import { useImageUrls } from '../hooks/useImageUrls';
 
@@ -64,11 +66,9 @@ const AstroGallery: React.FC = () => {
   const modalImage = useMemo(() => {
     if (!imgSlug) return null;
     return (
-      images.find(i => i.slug === imgSlug || i.pk.toString() === imgSlug) ||
-      null
+      images.find(i => i.slug === imgSlug || String(i.pk) === imgSlug) || null
     );
   }, [imgSlug, images]);
-
   // Smooth scroll to results on filter/tag change (Mobile only)
   useEffect(() => {
     if (window.innerWidth <= 992 && resultsRef.current) {
@@ -82,6 +82,11 @@ const AstroGallery: React.FC = () => {
       });
     }
   }, [selectedFilter, selectedTag]);
+
+  // Redirect if URL refers to a non-existent image slug
+  if (!isImagesLoading && imgSlug && !modalImage && images.length > 0) {
+    return <Navigate to={APP_ROUTES.ASTROPHOTOGRAPHY} replace />;
+  }
 
   const handleFilterClick = (filter: FilterType): void => {
     // Build clean params from known state — never copy from searchParams

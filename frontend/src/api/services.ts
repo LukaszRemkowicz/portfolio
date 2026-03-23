@@ -122,15 +122,12 @@ export const fetchAstroImages = async (
     return Array.isArray(data) ? normalizeAstroImages(data) : data;
   }
 
-  const response: AxiosResponse<AstroImage[]> = await client.get(
-    API_ROUTES.astroImages,
-    { params }
+  const response = await client.get(API_ROUTES.astroImages, { params });
+  const data = handleResponse<AstroImage[] | { results: AstroImage[] }>(
+    response
   );
-  const data = handleResponse<AstroImage[]>(response);
-  if (Array.isArray(data)) {
-    return normalizeAstroImages(data);
-  }
-  return data;
+  const items = Array.isArray(data) ? data : data?.results || [];
+  return normalizeAstroImages(items);
 };
 
 /** Fetch the latest homepage astro images used in the shared shell. */
@@ -144,15 +141,11 @@ export const fetchLatestAstroImages = async (
     return Array.isArray(data) ? normalizeAstroImages(data) : [];
   }
 
-  const data = handleResponse<AstroImage[]>(
+  const data = handleResponse<AstroImage[] | { results: AstroImage[] }>(
     await client.get(`${API_ROUTES.astroImages}latest/`)
   );
-  if (Array.isArray(data)) {
-    return normalizeAstroImages(data);
-  }
-
-  console.warn('[API] latest astro images response was not an array', data);
-  return [];
+  const items = Array.isArray(data) ? data : data?.results || [];
+  return normalizeAstroImages(items);
 };
 
 /** Fetch a single astro image detail payload by slug. */
@@ -203,18 +196,19 @@ export const fetchContact = async (
 
 /** Fetch public tag options, optionally filtered by category. */
 export const fetchTags = async (
-  category_filter?: string,
+  params: { filter?: string; latest?: boolean; lang?: string } = {},
   client: AxiosInstance = api
 ): Promise<Tag[]> => {
-  const params: { filter?: string } = {};
-  if (category_filter) {
-    params.filter = category_filter;
-  }
-
   if (isBrowserDefaultClient(client)) {
     const search = new URLSearchParams();
-    if (category_filter) {
-      search.set('filter', category_filter);
+    if (params.filter) {
+      search.set('filter', params.filter);
+    }
+    if (params.latest) {
+      search.set('latest', 'true');
+    }
+    if (params.lang) {
+      search.set('lang', params.lang);
     }
     const url = search.size
       ? `${BFF_ROUTES.tags}?${search.toString()}`

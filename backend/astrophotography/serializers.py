@@ -76,14 +76,9 @@ class AstroImageBaseSerializer(TranslatedSerializerMixin, TranslatableModelSeria
     process = serializers.BooleanField(source="zoom")
     place = PlaceSerializer(read_only=True)
 
-    def get_tags(self, obj: AstroImage) -> list[str]:
-        # Reuse TagSerializer's logic via mixin or direct service call with safe lang
-        request = self.context.get("request")
-        lang = request.query_params.get("lang") if request else None
-        safe_lang = str(lang) if lang else ""
-        return [
-            TranslationService.get_translation(tag, "name", safe_lang) for tag in obj.tags.all()
-        ]
+    def get_tags(self, obj: AstroImage) -> Any:
+        # Return full Tag objects (name, slug) using TagSerializer
+        return TagSerializer(obj.tags.all(), many=True, context=self.context).data
 
     def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
         data = super().to_representation(instance)

@@ -160,12 +160,12 @@
 }
 
 /* MainLayout backgrounds */
-.app-container {
+.appContainer {
   min-height: 100vh;
   background-color: var(--portfolio-bg-dark);
 }
 
-.astro-bg {
+.astroBg {
   background-color: var(--portfolio-bg-dark);
 }
 

@@ -1,7 +1,11 @@
 import os
+from urllib.parse import urlencode
 
 from django.contrib import admin
+from django.urls import reverse
 from django.utils.html import format_html
+
+from common.utils.signing import generate_signed_url_params
 
 from .log_sources import LOG_SOURCES
 from .models import LogAnalysis
@@ -71,12 +75,6 @@ class LogAnalysisAdmin(admin.ModelAdmin):
     def _secure_log_field(self, obj, field_name: str):
         field_file = getattr(obj, field_name)
         if field_file:
-            from urllib.parse import urlencode
-
-            from django.urls import reverse
-
-            from common.utils.signing import generate_signed_url_params
-
             filename = os.path.basename(field_file.name)
             url = reverse(
                 "admin-loganalysis-secure-media",

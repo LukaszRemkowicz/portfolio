@@ -398,6 +398,9 @@ const ImageModalContent: FC<ImageModalProps> = ({ image, onClose }) => {
 
   if (!image) return null;
 
+  // Prevent SSR crash: document.body is not available during server rendering.
+  if (typeof window === 'undefined') return null;
+
   return createPortal(
     <div
       className={styles.modalOverlay}
@@ -540,11 +543,11 @@ const ImageModalContent: FC<ImageModalProps> = ({ image, onClose }) => {
           <div className={styles.tagsContainer}>
             {image.tags?.map(tag => (
               <button
-                key={tag}
+                key={tag.slug}
                 className={styles.tagBadge}
-                onClick={() => handleTagClick(tag)}
+                onClick={() => handleTagClick(tag.slug)}
               >
-                #{tag}
+                #{tag.name}
               </button>
             ))}
           </div>
