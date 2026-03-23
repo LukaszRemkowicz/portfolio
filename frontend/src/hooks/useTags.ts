@@ -9,6 +9,6 @@ export const useTags = (category?: string) => {
 
   return useQuery<Tag[], Error>({
     queryKey: ['tags', language, category],
-    queryFn: () => fetchTags(category),
+    queryFn: () => fetchTags({ filter: category }),
   });
 };

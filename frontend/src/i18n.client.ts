@@ -47,7 +47,9 @@ i18n
       lookupCookie: 'i18next',
       lookupLocalStorage: 'i18nextLng',
       cookieMinutes: 525600, // 1 year
-      cookieSameSite: 'lax',
+      cookieOptions: {
+        sameSite: 'lax',
+      },
     },
     debug: false,
     interpolation: {
