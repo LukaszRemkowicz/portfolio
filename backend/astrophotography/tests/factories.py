@@ -86,6 +86,14 @@ class AstroImageFactory(DjangoModelFactory):
             for tri in extracted:
                 self.tripod.add(tri)
 
+    @factory.post_generation
+    def tags(self, create: bool, extracted: Optional[Iterable[Tag]], **kwargs: dict) -> None:
+        if not create:
+            return
+        if extracted:
+            for tag in extracted:
+                self.tags.add(tag)
+
 
 class MainPageBackgroundImageFactory(DjangoModelFactory):
     class Meta:

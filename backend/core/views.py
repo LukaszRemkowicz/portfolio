@@ -11,11 +11,15 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from django.apps import apps
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Model
 from django.http import Http404, HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.decorators import method_decorator
 
+from common.decorators.cache import cache_response
 from common.utils.logging import sanitize_for_logging
 from common.utils.signing import validate_signed_url
 from core.errors import render_403_error, render_404_error
@@ -25,6 +29,7 @@ from core.serializers import LandingPageSettingsSerializer
 logger = logging.getLogger(__name__)
 
 
+@method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT), name="dispatch")
 class SettingsView(generics.RetrieveAPIView):
     """
     Endpoint to fetch global application settings.
@@ -64,9 +69,6 @@ def root_view(request: Request) -> Any:
     - ADMIN_DOMAIN: Redirects to /admin/
     - Others: Redirects to SITE_DOMAIN (FE main page)
     """
-    from django.conf import settings
-    from django.shortcuts import redirect
-
     host = request.get_host().split(":")[0]  # Remove port if present
     if host == settings.ADMIN_DOMAIN:
         return redirect("admin:index")
@@ -209,8 +211,6 @@ class GenericAdminSecureMediaView(SecureMediaView):
             return render_404_error(request)
 
     def get_object(self) -> Model:
-        from django.apps import apps
-
         app_label = self.kwargs.get("app_label")
         model_name = self.kwargs.get("model_name")
         pk = self.kwargs.get("pk")

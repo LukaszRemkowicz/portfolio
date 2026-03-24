@@ -4,6 +4,7 @@ Services for managing translations and global state in the core application.
 
 import functools
 import logging
+import re
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
@@ -14,6 +15,7 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from common.llm.protocols import TranslationAgentProtocol
+from common.llm.registry import LLMProviderRegistry
 
 from .agents import TranslationAgent
 
@@ -80,10 +82,6 @@ class TranslationService:
         Returns:
             TranslationService: Configured translation service instance
         """
-        from django.conf import settings
-
-        from common.llm.registry import LLMProviderRegistry
-
         # Fail-fast: No defaults, settings must be explicit
         provider_name = settings.TRANSLATION_LLM_PROVIDER
         provider = LLMProviderRegistry.get(provider_name)
@@ -166,6 +164,28 @@ class TranslationService:
 
     TRANSLATION_FAILED_PREFIX: str = "[TRANSLATION FAILED]"
 
+    @classmethod
+    def _read_translation(cls, instance: TranslatableModel, field_name: str, lang: str) -> str:
+        """Helper to read and sanitize a translation for a specific language."""
+        if not getattr(instance, "translations", None):
+            return ""
+
+        if not instance.translations.filter(language_code=lang).exists():
+            return ""
+
+        value = str(
+            instance.safe_translation_getter(field_name, language_code=lang, any_language=False)
+            or ""
+        )
+
+        if value.startswith(cls.TRANSLATION_FAILED_PREFIX):
+            return ""
+
+        if value.strip() == "<p>&nbsp;</p>":
+            return ""
+
+        return value
+
     @staticmethod
     def get_translation(instance: Any, field_name: str, language_code: str) -> str:
         """
@@ -181,29 +201,21 @@ class TranslationService:
         if not isinstance(instance, TranslatableModel):
             return str(getattr(instance, field_name, ""))
 
-        def read_translation(lang: str) -> str:
-            if not instance.translations.filter(language_code=lang).exists():
-                return ""
-
-            value = str(
-                instance.safe_translation_getter(field_name, language_code=lang, any_language=False)
-                or ""
-            )
-
-            if value.startswith(TranslationService.TRANSLATION_FAILED_PREFIX):
-                return ""
-
-            if value.strip() == "<p>&nbsp;</p>":
-                return ""
-
-            return value
-
-        value = read_translation(requested_language)
+        value = TranslationService._read_translation(instance, field_name, requested_language)
         if value:
             return value
 
         if requested_language != default_language:
-            return read_translation(default_language)
+            fallback = TranslationService._read_translation(instance, field_name, default_language)
+            if fallback:
+                return fallback
+
+        # Fallback to any available language if both requested and default are missing
+        for lang in instance.get_available_languages():
+            if lang not in (requested_language, default_language):
+                fallback = TranslationService._read_translation(instance, field_name, lang)
+                if fallback:
+                    return fallback
 
         return ""
 
@@ -402,8 +414,6 @@ class TranslationService:
         if not text:
             return True
         if isinstance(text, str):
-            import re
-
             # Remove HTML tags
             clean = re.sub(r"<[^>]+>", "", text)
             # Remove common HTML entities and whitespace

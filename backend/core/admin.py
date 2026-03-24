@@ -1,8 +1,10 @@
 from django.contrib import admin
+from django.db import models
 from django.shortcuts import redirect
 from django.urls import reverse
 
 from .models import LandingPageSettings
+from .widgets import ThemedSelect2MultipleWidget
 
 
 @admin.register(LandingPageSettings)
@@ -42,6 +44,10 @@ class LandingPageSettingsAdmin(admin.ModelAdmin):
         )
         return super().render_change_form(request, context, add, change, form_url, obj)
 
+    formfield_overrides = {
+        models.ManyToManyField: {"widget": ThemedSelect2MultipleWidget(width="100%")},
+    }
+
     fieldsets = (
         (
             None,
@@ -51,6 +57,7 @@ class LandingPageSettingsAdmin(admin.ModelAdmin):
                     "travel_highlights_enabled",
                     "programming_enabled",
                     "lastimages_enabled",
+                    "latest_filters",
                     "meteors",
                 )
             },

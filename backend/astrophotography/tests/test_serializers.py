@@ -237,16 +237,16 @@ class TestTagTranslationSerializers:
         data = serializer.data
 
         assert "tags" in data
-        assert "Translated Stars" in data["tags"]
-        assert "Translated Galaxy" in data["tags"]
+        assert any(t["name"] == "Translated Stars" for t in data["tags"])
+        assert any(t["name"] == "Translated Galaxy" for t in data["tags"])
 
         # Test AstroImageSerializerList
         serializer_list = AstroImageSerializerList(image, context={"request": request})
         data_list = serializer_list.data
 
         assert "tags" in data_list
-        assert "Translated Stars" in data_list["tags"]
-        assert "Translated Galaxy" in data_list["tags"]
+        assert any(t["name"] == "Translated Stars" for t in data_list["tags"])
+        assert any(t["name"] == "Translated Galaxy" for t in data_list["tags"])
 
     def test_astro_image_serializer_tags_fallback_to_english_on_missing_translation(
         self, mocker: MockerFixture
@@ -266,4 +266,4 @@ class TestTagTranslationSerializers:
         serializer = AstroImageSerializer(image, context={"request": request})
         # The serializer calls TranslationService.get_translation(tag, "name", "pl")
         # which should fall back to the default English translation.
-        assert serializer.data["tags"] == ["No Translation"]
+        assert serializer.data["tags"][0]["name"] == "No Translation"

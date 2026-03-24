@@ -5,11 +5,13 @@ import '@testing-library/jest-dom';
 import Gallery from '../components/Gallery';
 import { useSettings } from '../hooks/useSettings';
 import { useLatestAstroImages } from '../hooks/useLatestAstroImages';
+import { useLatestTags } from '../hooks/useLatestTags';
 import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
 
 jest.mock('../hooks/useSettings');
 jest.mock('../hooks/useLatestAstroImages');
 jest.mock('../hooks/useAstroImageDetail');
+jest.mock('../hooks/useLatestTags');
 
 describe('Gallery Component', () => {
   beforeEach(() => {
@@ -26,6 +28,10 @@ describe('Gallery Component', () => {
       isLoading: false,
       error: null,
     });
+    (useLatestTags as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
   });
 
   it('renders the gallery using store data', async () => {
@@ -38,7 +44,7 @@ describe('Gallery Component', () => {
           name: 'M31 Andromeda',
           url: 'test.jpg',
           thumbnail_url: 'thumb.jpg',
-          tags: ['deepsky', 'galaxy'],
+          tags: [{ name: 'Deep Sky', slug: 'deepsky' }],
           celestial_object: 'Galaxy',
           created_at: '2023-01-01',
           description: '',
@@ -61,6 +67,13 @@ describe('Gallery Component', () => {
   });
 
   it('filters images when category is selected', async () => {
+    (useLatestTags as jest.Mock).mockReturnValue({
+      data: [
+        { name: 'Deep Sky', slug: 'deepsky' },
+        { name: 'Astrolandscape', slug: 'astrolandscape' },
+      ],
+      isLoading: false,
+    });
     (useLatestAstroImages as jest.Mock).mockReturnValue({
       data: [
         {
@@ -68,7 +81,7 @@ describe('Gallery Component', () => {
           slug: 'deep-sky-object',
           name: 'Deep Sky Object',
           url: 'dso.jpg',
-          tags: ['deepsky'],
+          tags: [{ name: 'Deep Sky', slug: 'deepsky' }],
           celestial_object: 'Nebula',
           created_at: '2023-01-01',
           description: '',
@@ -78,7 +91,7 @@ describe('Gallery Component', () => {
           slug: 'landscape-object',
           name: 'Landscape Object',
           url: 'lands.jpg',
-          tags: ['astrolandscape'],
+          tags: [{ name: 'Astrolandscape', slug: 'astrolandscape' }],
           celestial_object: 'Landscape',
           created_at: '2023-01-02',
           description: '',

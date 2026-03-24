@@ -2,14 +2,14 @@
 
 ## Goal
 
-Move from the current hybrid SSR setup to a BFF-style architecture:
+Migration from the current hybrid SSR setup to a BFF-style architecture:
 
 - browser talks only to the frontend server
 - frontend server talks to backend internally
 - public backend API exposure is removed or heavily reduced
 - admin remains separately reachable
 
-This is a follow-up architecture plan, not part of the already completed SSR migration phases.
+Strategic architecture plan for post-initial SSR migration phases.
 
 ## Target Architecture
 
@@ -28,7 +28,7 @@ This includes routes such as:
 
 Only FE <-> BE communication paths are allowed to change.
 
-That means:
+Technical Implications:
 
 - public page routes remain stable for users, SEO, canonical tags, and Django sitemap generation
 - frontend-owned BFF routes are transport endpoints only
@@ -79,7 +79,7 @@ Current sitemap-backed public FE pages include:
 - `/astrophotography/:slug`
 - `/travel/:country/:place/:date`
 
-This means:
+Strategic Requirements:
 
 - these routes must stay public and stable on the frontend hostname
 - transport endpoints such as `/app/...` are not public website routes
@@ -94,13 +94,13 @@ The current implementation is hybrid SSR:
 - client components still reuse backend API hooks after hydration and on client navigation
 - the backend API is still publicly reachable and still part of the browser-facing architecture
 
-That means SSR is implemented, but the backend API is not hidden.
+Current status: SSR implemented; public backend API remains exposed.
 
 ## Work Phases
 
 ## Phase 0: Endpoint Inventory
 
-Create a concrete matrix of every frontend data dependency.
+Detailed matrix of frontend data dependencies:
 
 For each endpoint, record:
 
@@ -111,12 +111,12 @@ For each endpoint, record:
 - browser-called after hydration or not
 - can be internal-only immediately or not
 
-Suggested output columns:
+Output Structure:
 
 | Backend endpoint | Current caller | Used on routes | Browser calls today | Target owner |
 | --- | --- | --- | --- | --- |
 
-Target owner values:
+Target Attribution Definitions:
 
 - SSR only
 - frontend BFF endpoint
@@ -148,13 +148,13 @@ Current frontend/backend contract derived from:
 | `/v1/contact/` | `fetchContact` | contact form | No | Yes | frontend BFF endpoint |
 | `/v1/projects/` | `fetchProjects` | programming section | No | No, frontend currently returns `[]` | keep disabled / decide later |
 
-### Immediate interpretation
+### Preliminary Analysis
 
 There are currently no important backend endpoints that are already SSR-only in the browser-facing architecture.
 
-The first request for several routes is server-side today, but the same data sources are still wired into browser hooks after hydration or on client navigation. That means the backend API is still a browser dependency even for routes with SSR prefetch.
+Technical Inference: The backend API remains a browser dependency for routes with SSR pre-fetching.
 
-### Best first candidates for hiding
+### Prioritized Migration Candidates
 
 These are the lowest-risk groups to move behind the frontend BFF first:
 
@@ -170,7 +170,7 @@ These are the lowest-risk groups to move behind the frontend BFF first:
 3. Travel detail read endpoint
    - `/v1/travel/:country/:place/:date/`
 
-These are good first candidates because they are already SSR-prefetched and mostly shape page content rather than highly interactive ad hoc operations.
+Rationale: These endpoints primarily configure page content rather than supporting complex interactivity.
 
 Important note:
 
@@ -200,13 +200,13 @@ Current browser write path:
 
 - `/v1/contact/`
 
-This is a good early BFF write candidate because it is isolated and has no dependency on gallery/media behavior.
+Rationale: This endpoint is isolated from complex gallery or media behaviors.
 
 ## Phase 1: Define Frontend BFF Surface
 
 Add frontend-owned endpoints to the SSR server for all user-facing data flows that still need JSON.
 
-Suggested route examples:
+Route Specification Examples:
 
 - `/app/settings`
 - `/app/profile`
@@ -238,7 +238,7 @@ The first frontend-owned read endpoints now exist on the SSR server:
 
 These endpoints currently proxy to backend JSON routes through the frontend server. They establish the public frontend-owned API surface required for the next migration step, but browser hooks have not been switched over yet.
 
-Important note:
+Strategic Note:
 
 - this Phase 1 surface is transitional
 - for page-shell data such as settings/profile/background/homepage shell content, the preferred end state is SSR-internal fetches, not permanent public `/app/...` endpoints
@@ -278,12 +278,12 @@ The first low-risk browser reads have been switched to frontend-owned `/app/...`
 - latest astro images
 - travel detail
 
-Implementation note:
+Technical Implementation Detail:
 
 - browser calls now use frontend BFF endpoints for this group
 - SSR prefetch still talks directly to the backend via the internal server client to avoid frontend-to-frontend loopback during render
 
-This means the browser-side contract for these routes has started moving away from the public backend API, while the SSR server keeps the more direct internal fetch path.
+Outcome: Browser-side data access has transitioned to frontend-owned routes; SSR utilizes direct internal fetching.
 
 ## Phase 2b: Remove Transitional Page-Shell BFF Endpoints
 
@@ -335,7 +335,7 @@ The transitional page-shell BFF routes have been removed for:
 - travel highlights
 - latest astro images
 
-Implementation note:
+Technical Status:
 
 - these queries are now carried by SSR document prefetch on all public page routes
 - the client cache keeps them indefinitely for the lifetime of the SPA session
@@ -366,7 +366,7 @@ The isolated contact write flow now goes through the frontend server:
 - browser submit -> `/app/contact`
 - frontend server -> backend `/v1/contact/`
 
-Implementation note:
+Technical Detail:
 
 - backend validation and error status semantics are preserved
 - the Contact UI contract stays the same
@@ -413,7 +413,7 @@ Phase 4 is complete under the chosen media boundary:
 - public-safe image delivery remains on nginx for performance
 - secure image serving remains on the existing backend/nginx signed-media path, but uses the site hostname in browser-visible URLs
 
-This means:
+Architectural Outcome:
 
 - browser-facing image helper metadata/signing no longer depends on public backend JSON endpoints
 - nginx still serves public/static media directly
@@ -441,7 +441,7 @@ The frontend data layer is now more explicitly separated:
 - shared media normalization lives in `frontend/src/api/media.ts`
 - services, image helper flows, and travel detail fetching now reuse the shared transport/media utilities instead of repeating browser-vs-SSR branching and URL normalization logic
 
-This means:
+Implementation Outcome:
 
 - browser-side data transport decisions are centralized instead of scattered across hooks and services
 - media URL normalization is centralized instead of being coupled to route constants
@@ -488,7 +488,7 @@ The browser/backend boundary is now tighter:
 - public `/media/*` exposure was removed from the `api.` nginx host
 - admin remains separately reachable on the admin hostname
 
-This means:
+Infrastructure Outcome:
 
 - the frontend site is the only public entrypoint for normal browser app traffic
 - backend API exposure is reduced to the minimum still needed for the remaining interactive gallery flows
@@ -543,7 +543,7 @@ Primary targets:
 - frontend BFF responses that remain public after cleanup
 - optionally full document responses for stable public pages
 
-Recommended order:
+Sequential Implementation Strategy:
 
 1. confirm final route/data ownership after Phases 1-7
 2. add short-TTL frontend-server cache for shared shell SSR data
@@ -634,16 +634,16 @@ This migration is complete when all of the following are true:
 - SSR, client navigation, gallery interactions, travel pages, and contact form still work
 - logs clearly show frontend -> backend internal calls for debugging
 
-## Recommendation
+## Final Architectural Recommendation
 
-This direction is reasonable for this project because it is:
+The BFF/SSR transition is prioritized based on the following project characteristics:
 
 - mostly read-heavy
 - SEO-sensitive
 - portfolio-oriented rather than SPA-product-oriented
 - low on complex authenticated browser workflows
 
-The best next step is not immediate implementation. It is a Phase 0 endpoint inventory document that marks which current endpoints:
+Immediate Next Step: Phase 0 endpoint inventory documentation.
 
 - are already effectively SSR-owned
 - still leak to the browser

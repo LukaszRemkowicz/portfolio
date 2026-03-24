@@ -55,8 +55,12 @@ class GalleryQueryService:
         # 2. Filter by Tags
         tag_slug = params.get("tag")
         if tag_slug:
-            # Note: filtering by translations slug is fine, but prefetching helps representation
-            queryset = queryset.filter(tags__translations__slug__in=[tag_slug])
+            # Find the tag ID in ANY language first to bypass relation language context limits
+            tag_ids = Tag.objects.filter(translations__slug=tag_slug).values_list("id", flat=True)
+            if tag_ids:
+                queryset = queryset.filter(tags__in=tag_ids)
+            else:
+                queryset = queryset.none()
 
         # 3. Filter by Travel (Fuzzy country/place match)
         travel = params.get("travel")
@@ -161,19 +165,27 @@ class GalleryQueryService:
 
     @staticmethod
     def get_tag_stats(
-        category_filter: Optional[str] = None, language_code: Optional[str] = None
+        category_filter: Optional[str] = None,
+        language_code: Optional[str] = None,
+        latest: bool = False,
     ) -> QuerySet[Tag]:
         """
-        Aggregate tag counts, optionally filtered by gallery category.
+        Aggregate tag counts, optionally filtered by gallery category
+        or limited to 'latest' filters.
         Returns unique tag instances that have at least one associated image.
         """
+        if latest:
+            queryset = Tag.objects.latest_tags()
+        else:
+            queryset = Tag.objects.all()
+
         annotation_filter = Q(images__isnull=False)
         if category_filter:
             annotation_filter &= Q(images__celestial_object=category_filter)
 
         return cast(
             QuerySet[Tag],
-            Tag.objects.prefetch_related("translations")
+            queryset.prefetch_related("translations")
             .filter(images__isnull=False)
             .annotate(num_times=Count("images", filter=annotation_filter, distinct=True))
             .filter(num_times__gt=0)

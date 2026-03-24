@@ -85,8 +85,8 @@ jest.mock('../api/services', () => ({
   fetchLatestAstroImages: (client?: unknown) =>
     mockFetchLatestAstroImages(client),
   fetchCategories: (client?: unknown) => mockFetchCategories(client),
-  fetchTags: (filter?: unknown, client?: unknown) =>
-    mockFetchTags(filter, client),
+  fetchTags: (params?: unknown, client?: unknown) =>
+    mockFetchTags(params, client),
   fetchAstroImages: (params?: unknown, client?: unknown) =>
     mockFetchAstroImages(params, client),
 }));
@@ -192,7 +192,10 @@ describe('SSR entry server', () => {
     );
 
     expect(mockFetchCategories).toHaveBeenCalledWith('mock-client');
-    expect(mockFetchTags).toHaveBeenCalledWith('landscape', 'mock-client');
+    expect(mockFetchTags).toHaveBeenCalledWith(
+      { filter: 'landscape' },
+      'mock-client'
+    );
     expect(mockFetchAstroImages).toHaveBeenCalledWith(
       {
         filter: 'landscape',

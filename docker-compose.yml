@@ -68,6 +68,8 @@ x-frontend-common: &frontend-common
   volumes:
     - ./frontend:/app
     - portfolio_dev_fe_node_modules:/app/node_modules
+  environment:
+    TZ: "Europe/Warsaw"
 
 x-local-nginx-common: &local-nginx-common
   image: nginx:latest
@@ -177,11 +179,7 @@ services:
         python manage.py runserver 0.0.0.0:8000
       "
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "python3 -c \"import sys, urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5); sys.exit(0)\" >/dev/null 2>&1 || exit 1",
-        ]
+      test: ["CMD-SHELL", "curl -f -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3

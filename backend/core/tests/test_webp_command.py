@@ -70,8 +70,8 @@ class TestConvertImagesToWebpCommand:
             ContentFile(b"fake webp content", name="test.webp"),
         )
         # Prevent automatic task execution during factory creation for this test
-        with mocker.patch("core.models.process_image_task.delay_on_commit"):
-            astro_img = AstroImageFactory()
+        mocker.patch("core.models.process_image_task.delay_on_commit")
+        astro_img = AstroImageFactory()
         path_before = astro_img.path.name
 
         call_command("convert_images_to_webp", dry_run=True)
@@ -94,8 +94,8 @@ class TestConvertImagesToWebpCommand:
             ContentFile(b"fake webp content", name="test.webp"),
         )
         # Prevent automatic task execution during factory creation for this test
-        with mocker.patch("core.models.process_image_task.delay_on_commit"):
-            astro_img = AstroImageFactory()
+        mocker.patch("core.models.process_image_task.delay_on_commit")
+        astro_img = AstroImageFactory()
         call_command("convert_images_to_webp")
 
         astro_img.refresh_from_db()
@@ -131,9 +131,9 @@ class TestConvertImagesToWebpCommand:
         mock_convert_to_webp.return_value = ("test.jpg", fake_content)
         mock_make_thumb.return_value = ContentFile(b"thumb", name="thumb.webp")
 
-        with mocker.patch("core.models.process_image_task.delay_on_commit"):
-            target = AstroImageFactory()
-            other = AstroImageFactory()
+        mocker.patch("core.models.process_image_task.delay_on_commit")
+        target = AstroImageFactory()
+        other = AstroImageFactory()
 
         target_path_before = target.path.name
         other_path_before = other.path.name
@@ -166,10 +166,10 @@ class TestConvertImagesToWebpCommand:
         mock_convert_to_webp.return_value = ("test.jpg", fake_content)
         mock_make_thumb.return_value = ContentFile(b"thumb", name="thumb.webp")
 
-        with mocker.patch("core.models.process_image_task.delay_on_commit"):
-            first = AstroImageFactory()
-            second = AstroImageFactory()
-            third = AstroImageFactory()
+        mocker.patch("core.models.process_image_task.delay_on_commit")
+        first = AstroImageFactory()
+        second = AstroImageFactory()
+        third = AstroImageFactory()
 
         third_path_before = third.path.name
 
@@ -206,8 +206,8 @@ class TestConvertImagesToWebpCommand:
         mock_convert_to_webp.return_value = ("test.jpg", fake_content)
         mock_make_thumb.return_value = ContentFile(b"thumb", name="thumb.webp")
 
-        with mocker.patch("core.models.process_image_task.delay_on_commit"):
-            target = AstroImageFactory()
+        mocker.patch("core.models.process_image_task.delay_on_commit")
+        target = AstroImageFactory()
 
         call_command(
             "convert_images_to_webp",

@@ -2,7 +2,7 @@ import calendar
 import logging
 import uuid
 from datetime import date as dt_date
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import sentry_sdk
 from django_ckeditor_5.fields import CKEditor5Field
@@ -23,7 +23,7 @@ from django.utils.translation import gettext_lazy as _
 
 from common.constants import FALLBACK_URL_SLUG
 from common.utils.image import ImageSpec
-from core.models import BaseImage, SingletonModel
+from core.models import BaseImage, LandingPageSettings, SingletonModel
 from translation.mixins import AutomatedTranslationModelMixin
 from translation.services import TranslationService
 
@@ -112,6 +112,17 @@ class Place(AutomatedTranslationModelMixin, TranslatableModel):
         return self.safe_translation_getter("name", any_language=True) or country_name
 
 
+class TagQuerySet(TranslatableQuerySet):
+    def latest_tags(self) -> "TagQuerySet":
+        """
+        Returns tags selected in LandingPageSettings for the home page gallery.
+        """
+        settings = LandingPageSettings.get_current()
+        if settings:
+            return cast("TagQuerySet", settings.latest_filters.all())
+        return cast("TagQuerySet", self.none())
+
+
 class Tag(AutomatedTranslationModelMixin, TranslatableModel, models.Model):
     translation_service_method = "translate_parler_tag"
     translation_trigger_fields = ["name"]
@@ -124,7 +135,7 @@ class Tag(AutomatedTranslationModelMixin, TranslatableModel, models.Model):
         ),
     )
 
-    objects = TranslatableManager()
+    objects = TagQuerySet.as_manager()
 
     class Meta:
         verbose_name = _("Tag")

@@ -60,6 +60,24 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2',
 };
 
+/**
+ * Detect a supported language tag from an Accept-Language header or cookie.
+ */
+function detectLanguage(acceptLanguage) {
+  if (!acceptLanguage) return 'en';
+
+  const languages = acceptLanguage
+    .split(',')
+    .map(lang => lang.split(';')[0].trim().toLowerCase());
+
+  for (const lang of languages) {
+    if (lang.startsWith('pl')) return 'pl';
+    if (lang.startsWith('en')) return 'en';
+  }
+
+  return 'en';
+}
+
 const INTERNAL_CACHE_INVALIDATION_ROUTE = '/internal/cache/invalidate';
 
 /**
@@ -294,27 +312,41 @@ function normalizePublicMediaUrl(value, requestOrigin) {
 }
 
 function normalizeBffPayload(payload, kind, requestOrigin) {
-  if (!payload || kind !== 'images') {
-    return payload;
+  if (!payload) return payload;
+
+  // Unwrap paginated results if present
+  const data =
+    kind === 'astroimages' && payload.results ? payload.results : payload;
+
+  if (kind !== 'images' && kind !== 'astroimages') {
+    return data;
   }
 
-  if (typeof payload.url === 'string') {
+  if (Array.isArray(data)) {
+    return data.map(item =>
+      typeof item === 'object' && item.url
+        ? { ...item, url: normalizePublicMediaUrl(item.url, requestOrigin) }
+        : item
+    );
+  }
+
+  if (typeof data.url === 'string') {
     return {
-      ...payload,
-      url: normalizePublicMediaUrl(payload.url, requestOrigin),
+      ...data,
+      url: normalizePublicMediaUrl(data.url, requestOrigin),
     };
   }
 
-  if (typeof payload === 'object' && !Array.isArray(payload)) {
+  if (typeof data === 'object' && !Array.isArray(data)) {
     return Object.fromEntries(
-      Object.entries(payload).map(([key, value]) => [
+      Object.entries(data).map(([key, value]) => [
         key,
         normalizePublicMediaUrl(value, requestOrigin),
       ])
     );
   }
 
-  return payload;
+  return data;
 }
 
 /**
@@ -324,14 +356,29 @@ function getBackendForwardHeaders(
   requestPublicEnv,
   acceptLanguage,
   requestOrigin,
-  requestId
+  requestId,
+  cookieHeader = null
 ) {
   const headers = {
     Accept: 'application/json',
   };
 
-  if (typeof acceptLanguage === 'string' && acceptLanguage.trim()) {
-    headers['Accept-Language'] = acceptLanguage;
+  const getCookie = (header, name) => {
+    if (!header) return null;
+    const cookies = header.split(';').map(c => c.trim());
+    for (const cookie of cookies) {
+      if (cookie.startsWith(`${name}=`)) {
+        return cookie.substring(name.length + 1);
+      }
+    }
+    return null;
+  };
+
+  const cookieLang = getCookie(cookieHeader, 'i18next');
+  const forwardedLang = cookieLang || acceptLanguage;
+
+  if (typeof forwardedLang === 'string' && forwardedLang.trim()) {
+    headers['Accept-Language'] = forwardedLang;
   }
 
   try {
@@ -371,7 +418,8 @@ async function fetchBackendJson(req, backendPath, requestUrl, requestId) {
       requestPublicEnv,
       req.headers['accept-language'],
       requestOrigin,
-      requestId
+      requestId,
+      req.headers.cookie
     ),
   });
   const durationMs = Date.now() - startedAt;
@@ -502,7 +550,8 @@ async function forwardBackendWrite(req, backendPath, requestId) {
         requestPublicEnv,
         req.headers['accept-language'],
         requestOrigin,
-        requestId
+        requestId,
+        req.headers.cookie
       ),
       'Content-Type': 'application/json',
     },
@@ -567,7 +616,8 @@ async function handleBffRequest(req, res, requestUrl, start, requestId) {
         requestPublicEnv,
         req.headers['accept-language'],
         requestOrigin,
-        requestId
+        requestId,
+        req.headers.cookie
       ),
       redirect: 'manual',
     });
@@ -646,10 +696,26 @@ async function handleBffRequest(req, res, requestUrl, start, requestId) {
   return true;
 }
 
+function getTimestamp() {
+  // Use en-CA as it provides YYYY-MM-DD which is a good base for ISO
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    fractionalSecondDigits: 3,
+  })
+    .format(new Date())
+    .replace(', ', 'T');
+}
+
 function logRequest(info, requestId) {
   console.log(
     JSON.stringify({
-      ts: new Date().toISOString(),
+      ts: getTimestamp(),
       service: 'frontend-ssr',
       request_id: requestId,
       ...info,
@@ -668,7 +734,7 @@ async function renderDocument(url, acceptLanguage, requestOrigin, requestId) {
     const publicEnvScript = `<script>window.__PUBLIC_ENV__ = ${serializePublicEnvForHtml(
       requestPublicEnv
     )};</script>`;
-    const initialLanguageScript = `<script>window.__INITIAL_LANGUAGE__ = "en";</script>`;
+    const initialLanguageScript = `<script>window.__INITIAL_LANGUAGE__ = ${JSON.stringify(acceptLanguage)};</script>`;
     const rootMarker = '<div id="root"></div>';
     const processedTemplate = replacePublicEnvPlaceholders(
       template,
@@ -859,13 +925,28 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    function getCookie(cookieHeader, name) {
+      if (!cookieHeader) return null;
+      const cookies = cookieHeader.split(';').map(c => c.trim());
+      for (const cookie of cookies) {
+        if (cookie.startsWith(`${name}=`)) {
+          return cookie.substring(name.length + 1);
+        }
+      }
+      return null;
+    }
+
+    const cookieLang = getCookie(req.headers.cookie, 'i18next');
+    const acceptLang = req.headers['accept-language'] || 'en';
+    const finalLang = detectLanguage(cookieLang || acceptLang);
+
     await pipeDocument(
       req,
       res,
       requestUrl,
       start,
       requestUrl.pathname + requestUrl.search,
-      req.headers['accept-language'] || 'en',
+      finalLang,
       requestId
     );
   } catch (error) {
