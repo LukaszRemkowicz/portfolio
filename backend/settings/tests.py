@@ -14,14 +14,20 @@ __all__ = [  # noqa: F405
 # Set required environment variables BEFORE importing settings
 import os
 
-os.environ.setdefault("ADMIN_DOMAIN", "testadmin.local")
-os.environ.setdefault("API_DOMAIN", "testapi.local")
-os.environ.setdefault("CSRF_COOKIE_DOMAIN", ".testapi.local")
+if not os.environ.get("ADMIN_DOMAIN"):
+    os.environ["ADMIN_DOMAIN"] = "testadmin.local"
+if not os.environ.get("API_DOMAIN"):
+    os.environ["API_DOMAIN"] = "testapi.local"
+if not os.environ.get("CSRF_COOKIE_DOMAIN"):
+    os.environ["CSRF_COOKIE_DOMAIN"] = ".testapi.local"
 # Use Docker service discovery when tests run in containers, otherwise localhost.
 if os.environ.get("DOCKER_ENV") == "true":
     os.environ.setdefault("DB_HOST", "db")
 else:
     os.environ.setdefault("DB_HOST", "localhost")
+
+if not os.environ.get("SECRET_KEY"):
+    os.environ["SECRET_KEY"] = "test-secret-key-for-pytest"
 
 from .base import *  # noqa: F401,F403,E402
 

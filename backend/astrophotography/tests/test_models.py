@@ -31,6 +31,7 @@ from astrophotography.tests.factories import (
     PlaceFactory,
     TagFactory,
 )
+from core.models import LandingPageSettings
 from translation.services import TranslationService
 
 
@@ -486,3 +487,29 @@ class TestImageUpdateLogic:
         form = AstroImageForm(data=data, files=files, instance=image)
 
         assert form.is_valid(), form.errors
+
+
+@pytest.mark.django_db
+class TestTagQuerySet:
+    def test_latest_tags_returns_configured_tags(self) -> None:
+        """Verify that latest_tags() returns only tags configured in LandingPageSettings."""
+        tag1 = TagFactory(name="Tag 1")
+        tag2 = TagFactory(name="Tag 2")
+        TagFactory(name="Other Tag")
+
+        settings, _ = LandingPageSettings.objects.get_or_create()
+        settings.latest_filters.add(tag1, tag2)
+
+        latest = Tag.objects.latest_tags()
+        assert latest.count() == 2
+        assert tag1 in latest
+        assert tag2 in latest
+
+    def test_latest_tags_returns_empty_when_no_settings(self) -> None:
+        """Verify that latest_tags() returns empty queryset when no settings are configured."""
+        TagFactory(name="Tag 1")
+        # Ensure no LandingPageSettings exist
+        LandingPageSettings.objects.all().delete()
+
+        latest = Tag.objects.latest_tags()
+        assert latest.count() == 0

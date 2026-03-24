@@ -365,6 +365,12 @@ class LandingPageSettings(SingletonModel):
             "Will be removed in future."
         ),
     )
+    latest_filters = models.ManyToManyField(
+        "astrophotography.Tag",
+        blank=True,
+        verbose_name=_("Latest Image Filters"),
+        help_text=_("Tags that will appear as filters in the 'Latest images' section."),
+    )
     meteors = models.ForeignKey(
         "astrophotography.MeteorsMainPageConfig",
         on_delete=models.SET_NULL,

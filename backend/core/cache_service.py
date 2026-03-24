@@ -66,3 +66,9 @@ class CacheService:
         CacheService.clear_prefix("api_cache:/v1/travel-highlights")
         CacheService.clear_prefix("api_cache:/v1/travel/")
         logger.info("Invalidated travel cache")
+
+    @staticmethod
+    def invalidate_landing_page_cache() -> None:
+        """Invalidates landing-page related API cache."""
+        CacheService.clear_prefix("api_cache:/v1/settings")
+        logger.info("Invalidated landing page cache")

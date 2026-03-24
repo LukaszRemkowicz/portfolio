@@ -49,7 +49,7 @@ export interface AstroImage {
   slug: string;
   url?: string;
   thumbnail_url?: string;
-  tags?: string[];
+  tags?: Tag[];
   name: string;
   description: string;
   created_at?: string;

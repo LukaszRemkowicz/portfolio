@@ -9,6 +9,8 @@ import GallerySkeleton from './skeletons/GallerySkeleton';
 import { useSettings } from '../hooks/useSettings';
 import { useLatestAstroImages } from '../hooks/useLatestAstroImages';
 
+import { useLatestTags } from '../hooks/useLatestTags';
+
 const Gallery: React.FC = () => {
   const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
@@ -22,6 +24,11 @@ const Gallery: React.FC = () => {
     isLoading: loading,
     error: queryError,
   } = useLatestAstroImages();
+
+  const { data: latestTags = [] } = useLatestTags(
+    features?.lastimages !== false
+  );
+
   const error = queryError ? 'Failed to load latest images.' : null;
   const images = useMemo(
     () => (Array.isArray(imagesData) ? imagesData : []),
@@ -31,16 +38,8 @@ const Gallery: React.FC = () => {
   const filteredImages = useMemo(() => {
     if (filter === 'all') return images.slice(0, 9);
 
-    const categoryMap: Record<string, string> = {
-      deepsky: 'deepsky',
-      astrolandscape: 'astrolandscape',
-      timelapse: 'timelapses',
-    };
-
-    const targetCategory = categoryMap[filter] || filter;
-
     return images
-      .filter(img => img.tags && img.tags.includes(targetCategory))
+      .filter(img => img.tags && img.tags.some(tag => tag.slug === filter))
       .sort((a, b) => {
         const dateA = new Date(a.created_at || 0).getTime();
         const dateB = new Date(b.created_at || 0).getTime();
@@ -78,33 +77,18 @@ const Gallery: React.FC = () => {
           >
             {t('gallery.all')}
           </button>
-          <button
-            type='button'
-            onClick={() => setFilter('deepsky')}
-            className={`${styles.filterBtn} ${
-              filter === 'deepsky' ? styles.active : ''
-            }`}
-          >
-            {t('categories.Deep Sky')}
-          </button>
-          <button
-            type='button'
-            onClick={() => setFilter('astrolandscape')}
-            className={`${styles.filterBtn} ${
-              filter === 'astrolandscape' ? styles.active : ''
-            }`}
-          >
-            {t('gallery.astrolandscape')}
-          </button>
-          <button
-            type='button'
-            onClick={() => setFilter('timelapse')}
-            className={`${styles.filterBtn} ${
-              filter === 'timelapse' ? styles.active : ''
-            }`}
-          >
-            {t('gallery.timelapses')}
-          </button>
+          {latestTags.map(tag => (
+            <button
+              key={tag.slug}
+              type='button'
+              onClick={() => setFilter(tag.slug)}
+              className={`${styles.filterBtn} ${
+                filter === tag.slug ? styles.active : ''
+              }`}
+            >
+              {tag.name}
+            </button>
+          ))}
         </div>
       </div>
 

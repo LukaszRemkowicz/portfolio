@@ -49,7 +49,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useSettings());
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['settings'],
+        queryKey: ['settings', 'en'],
         queryFn: expect.any(Function),
       })
     );
@@ -59,7 +59,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useAstroImages({ filter: 'filter', tag: 'tag' }));
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['astro-images', { filter: 'filter', tag: 'tag' }],
+        queryKey: ['astro-images', 'en', { filter: 'filter', tag: 'tag' }],
         queryFn: expect.any(Function),
       })
     );
@@ -69,7 +69,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useAstroImageDetail('m31'));
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['astro-image', 'm31'],
+        queryKey: ['astro-image', 'en', 'm31'],
         queryFn: expect.any(Function),
       })
     );
@@ -89,7 +89,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useCategories());
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['categories'],
+        queryKey: ['categories', 'en'],
         queryFn: expect.any(Function),
       })
     );
@@ -99,7 +99,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useTags('galaxy'));
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['tags', 'galaxy'],
+        queryKey: ['tags', 'en', 'galaxy'],
         queryFn: expect.any(Function),
       })
     );
@@ -109,7 +109,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useProjects());
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['projects'],
+        queryKey: ['projects', 'en'],
         queryFn: expect.any(Function),
       })
     );
@@ -129,7 +129,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useTravelHighlightDetail('italy', 'rome', '2023-05'));
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['travel-highlight', 'italy', 'rome', '2023-05'],
+        queryKey: ['travel-highlight', 'en', 'italy', 'rome', '2023-05'],
         queryFn: expect.any(Function),
       })
     );
@@ -139,7 +139,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useImageUrls(['1', '2']));
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['image-urls', ['1', '2']],
+        queryKey: ['image-urls', 'en', ['1', '2']],
         queryFn: expect.any(Function),
       })
     );

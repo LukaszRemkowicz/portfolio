@@ -7,31 +7,31 @@
 
 ## Executive Verdict
 
-Antigravity is **mostly right on the direction**, but **not right on every implementation decision**.
+The strategic proposal provides correct directional guidance while requiring refinement in specific implementation decisions.
 
-The strongest parts of the Antigravity document are:
+### Validated Strategic Strengths (Alternative Proposal):
 
 - confirming that a **Vite-based incremental SSR migration** is the correct strategy
 - correctly identifying that the current production frontend is **not an SSR runtime**, but a static artifact handoff
 - making **TanStack Query dehydration explicit**
 - treating **i18n and env handling as early SSR concerns**
 
-The weakest parts of the Antigravity document are:
+### Identified Implementation Overreaches:
 
 - upgrading to **React Router v7** as if it were required for the first SSR milestone
 - introducing **Hono** as if it were the preferred or necessary runtime choice
 - proposing to replace **`react-helmet-async`** too early
 - claiming its document should **supersede** the original one
 
-Final judgment:
+Architectural Verdict:
 
-- **My original plan is the better architectural baseline**
-- **Antigravity improves it in several important tactical areas**
-- **Antigravity should be treated as an amendment, not as the new source of truth**
+- The baseline migration plan remains the preferred architectural foundation.
+- The alternative proposal provides validated tactical amendments.
+- Documentation serves as a composite strategy without total document supersession.
 
 ---
 
-## What My Proposal Got Right
+## Baseline Architecture Strengths
 
 The original document was correct on the core architecture:
 
@@ -50,7 +50,7 @@ These points match the real codebase:
 - [docker/frontend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/frontend/entrypoint.sh) copies files into `/frontend_dist`
 - [docker-compose.prod.yml](/Users/lukaszremkowicz/Projects/landingpage/docker-compose.prod.yml) and [docker-compose.stage.yml](/Users/lukaszremkowicz/Projects/landingpage/docker-compose.stage.yml) still model `fe` as an artifact container
 
-That means the original proposal was correct to focus first on:
+Assessment: The original proposal correctly aligns with codebase requirements regarding service boundaries and runtime conversion.
 
 - SSR-safe app boundaries
 - dual entrypoints
@@ -64,9 +64,9 @@ One correction to the original document:
 
 ---
 
-## What Antigravity Got Right
+## Validated Tactical Enhancements (Alternative Proposal)
 
-Antigravity improved the plan in four important ways.
+Improved the plan in four important ways:
 
 ### 1. i18n should be treated as an early SSR concern
 
@@ -78,13 +78,13 @@ This is correct.
 
 This is also correct.
 
-[frontend/src/utils/env.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/utils/env.ts) is built entirely around `import.meta.env`. That works for the browser build, but a Node SSR runtime needs a server-safe path that can read runtime env values. Antigravity’s `env.shared.ts` idea is a good addition.
+[frontend/src/utils/env.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/utils/env.ts) is built entirely around `import.meta.env`. That works for the browser build, but a Node SSR runtime needs a server-safe path that can read runtime env values. `env.shared.ts` idea is a good addition.
 
 ### 3. React Query dehydration should be explicit, not implied
 
 This is correct and useful.
 
-The original document mentioned hydration, but Antigravity made the migration path more concrete:
+The original document mentioned hydration, but made the migration path more concrete:
 
 - prefetch on the server
 - `dehydrate(queryClient)` into HTML
@@ -98,7 +98,7 @@ For this codebase, that is the right first SSR data model for:
 
 ### 4. Route-level acceptance criteria are better
 
-Antigravity was more concrete about what “SSR works” should mean:
+Plan was more concrete about what “SSR works” should mean:
 
 - real HTML content in `curl`
 - no duplicate first-load fetches for prefetched queries
@@ -108,13 +108,13 @@ That improves implementation discipline.
 
 ---
 
-## Where Antigravity Is Wrong Or Too Aggressive
+## Technical Critique of Implementation Overreaches
 
 ### 1. React Router v7 is not required for the first SSR milestone
 
 This is the biggest overreach.
 
-The current app uses component routes in [frontend/src/App.tsx](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/App.tsx), not data routers. Antigravity recommends `react-router-dom@7` and discusses `createStaticHandler`, but that pushes the migration toward a router-model change at the same time as SSR.
+The current app uses component routes in [frontend/src/App.tsx](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/App.tsx), not data routers. recommended `react-router-dom@7` and discusses `createStaticHandler`, but that pushes the migration toward a router-model change at the same time as SSR.
 
 That is unnecessary risk.
 
@@ -126,7 +126,7 @@ For the first SSR milestone, this codebase can stay on:
 
 Then add server prefetching outside the router first. Upgrade to router-driven data APIs later only if the team wants them.
 
-**Verdict:** good future option, wrong default for phase 1.
+Assessment: Recommended for subsequent phases; not a prerequisite for initial SSR.
 
 ### 2. Hono is optional, not a required architectural decision
 
@@ -147,11 +147,11 @@ That can be done with:
 
 Nothing in this repository makes Hono the clearly superior choice. Adding a new server framework during the same migration adds one more dependency and one more integration surface.
 
-**Verdict:** acceptable option, but not a justified requirement.
+Assessment: Viable option but not an architectural requirement.
 
 ### 3. Replacing `react-helmet-async` early is the wrong tradeoff
 
-Antigravity recommends moving toward manual `<head>` injection. That is not the best first move.
+Recommended moving toward manual `<head>` injection. That is not the best first move.
 
 [frontend/src/components/common/SEO.tsx](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/components/common/SEO.tsx) already uses `react-helmet-async`, which supports SSR when a request-scoped `HelmetProvider` context is used on the server.
 
@@ -163,11 +163,11 @@ For this migration:
 
 Replacing working app-level metadata conventions during SSR migration is avoidable scope.
 
-**Verdict:** not a good recommendation for the first implementation.
+Assessment: Not recommended for initial implementation phase.
 
 ### 4. Asset routing through the SSR app is weaker than direct Nginx ownership
 
-Antigravity’s Nginx example proxies `/assets/` to the SSR server. That works, but it is not the cleanest steady-state model.
+Nginx example proxies `/assets/` to the SSR server. That works, but it is not the cleanest steady-state model.
 
 The original document was better here: Nginx should ideally keep ownership of static asset serving, with the SSR app responsible for document requests.
 
@@ -177,7 +177,7 @@ That separation is operationally cleaner:
 - less SSR server load
 - clearer upstream boundaries
 
-**Verdict:** workable, but not the preferred end state.
+Assessment: Nginx remains the preferred owner for static asset serving.
 
 ### 5. “JS disabled” is useful as a smoke test, but too strong as a hard acceptance gate
 
@@ -194,17 +194,17 @@ The first is useful. The second is stricter than the migration goal and can crea
 
 ### 6. “This document supersedes the original” is not justified
 
-Antigravity improved parts of the plan, but it also introduced unnecessary scope and stronger assumptions than the codebase requires.
+Improved parts of the plan, but it also introduced unnecessary scope and stronger assumptions than the codebase requires.
 
 It should not replace the original plan outright.
 
-**Verdict:** incorrect conclusion.
+Assessment: The proposal introduces unnecessary scope.
 
 ---
 
-## Final Recommendation
+## Consolidated Architectural Recommendation
 
-Use the **original plan as the main architectural path**, but merge in the following Antigravity improvements:
+Use the **original plan as the main architectural path**, but merge in the following improvements:
 
 - split i18n into client and server initialization during readiness work
 - add a server-safe env layer instead of relying only on `import.meta.env`
@@ -212,7 +212,7 @@ Use the **original plan as the main architectural path**, but merge in the follo
 - define stronger route-level acceptance criteria
 - add frontend runtime health checks as part of phase 2, not only late hardening
 
-Do **not** merge these Antigravity recommendations into the initial implementation plan:
+Do **not** merge these recommendations into the initial implementation plan:
 
 - mandatory React Router v7 upgrade
 - mandatory Hono adoption
@@ -282,11 +282,9 @@ Do **not** merge these Antigravity recommendations into the initial implementati
 
 ---
 
-## Bottom Line
+## Executive Summary of Analysis
 
-If the question is, “Is Antigravity right about the SSR migration plan?”
-
-The answer is:
+Strategic Assessment Summary:
 
 - **right about the direction**
 - **right about several missing tactical details**
@@ -296,5 +294,5 @@ The answer is:
 The final implementation should follow:
 
 - **my original architecture**
-- **plus Antigravity’s improvements around i18n, env handling, dehydration, and sharper acceptance criteria**
+- **plus improvements around i18n, env handling, dehydration, and sharper acceptance criteria**
 - **without adopting its unnecessary framework churn**

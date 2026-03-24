@@ -1,11 +1,19 @@
-# backend/translation/tests/test_translation_logic.py
+import unittest.mock
+import uuid
+
 import pytest
 
 from django.conf import settings
 
-from astrophotography.tests.factories import AstroImageFactory, PlaceFactory
+from astrophotography.forms import AstroImageForm
+from astrophotography.tests.factories import (
+    AstroImageFactory,
+    MainPageLocationFactory,
+    PlaceFactory,
+)
 from translation.mixins import AutomatedTranslationModelMixin
 from translation.models import TranslationTask
+from translation.services import TranslationService
 
 
 class MockModelMixin(AutomatedTranslationModelMixin):
@@ -17,8 +25,6 @@ class TestTranslationLogic:
     def setup_method(self, method):
         self.mixin = MockModelMixin()
         self.default_lang = settings.DEFAULT_APP_LANGUAGE
-        import unittest.mock
-        import uuid
 
         self.mock_delay = unittest.mock.patch(
             "translation.mixins.translate_instance_task.delay"
@@ -28,8 +34,6 @@ class TestTranslationLogic:
         )
 
     def teardown_method(self, method):
-        import unittest.mock
-
         unittest.mock.patch.stopall()
 
     def test_needs_translation_triggers_when_empty(self):
@@ -96,8 +100,6 @@ class TestTranslationLogic:
         Should return True if at least one trigger field is empty
         (to allow forcing re-translation).
         """
-        from translation.mixins import AutomatedTranslationModelMixin
-
         mixin = AutomatedTranslationModelMixin()
         mixin.translation_trigger_fields = ["name", "description"]
 
@@ -122,9 +124,6 @@ class TestTranslationLogic:
         Verify that if one field is empty it triggers, BUT manually populated fields
         are not 'lost' (handled by TranslationService.force=False).
         """
-        from astrophotography.tests.factories import AstroImageFactory
-        from translation.mixins import AutomatedTranslationModelMixin
-
         mixin = AutomatedTranslationModelMixin()
         mixin.translation_trigger_fields = ["name", "description"]
 
@@ -144,8 +143,6 @@ class TestTranslationLogic:
     @pytest.mark.django_db
     def test_needs_translation_triggers_when_all_empty(self):
         """Should return True ONLY if ALL trigger fields are empty (and source is not)."""
-        from translation.mixins import AutomatedTranslationModelMixin
-
         mixin = AutomatedTranslationModelMixin()
         mixin.translation_trigger_fields = ["name", "description"]
 
@@ -165,9 +162,6 @@ class TestTranslationLogic:
     @pytest.mark.django_db
     def test_astro_image_form_enforces_required_name_in_english(self):
         """Verify that the English name is required despite blank=True in the model."""
-        from astrophotography.forms import AstroImageForm
-        from astrophotography.tests.factories import AstroImageFactory
-
         img = AstroImageFactory(name="Valid Name")
         img.set_current_language("en")
 
@@ -187,9 +181,6 @@ class TestTranslationLogic:
     @pytest.mark.django_db
     def test_astro_image_form_allows_blank_name_in_polish(self):
         """Verify that the Polish name is NOT required in the form (to allow clearing it)."""
-        from astrophotography.forms import AstroImageForm
-        from astrophotography.tests.factories import AstroImageFactory
-
         img = AstroImageFactory(name="Valid Name")
         img.set_current_language("pl")
 
@@ -202,9 +193,6 @@ class TestTranslationLogic:
 class TestTranslationFallbacks:
     def test_translation_service_falls_back_to_default_language_for_missing_translation(self):
         """Verify that TranslationService.get_translation falls back to English."""
-        from astrophotography.tests.factories import AstroImageFactory
-        from translation.services import TranslationService
-
         img = AstroImageFactory(name="English Name")
 
         result = TranslationService.get_translation(img, "name", "pl")
@@ -212,9 +200,6 @@ class TestTranslationFallbacks:
 
     def test_translation_service_strips_failed_marker_and_falls_back(self):
         """Verify failure markers are stripped and default language is returned."""
-        from astrophotography.tests.factories import AstroImageFactory
-        from translation.services import TranslationService
-
         img = AstroImageFactory(name="English Name")
         img.set_current_language("pl")
         img.name = "[TRANSLATION FAILED] Error occurred"
@@ -223,12 +208,33 @@ class TestTranslationFallbacks:
         result = TranslationService.get_translation(img, "name", "pl")
         assert result == "English Name"
 
+    def test_translation_service_falls_back_to_any_available_language(self):
+        """
+        Verify that get_translation falls back to any available language
+        if requested and default are missing.
+        """
+        img = AstroImageFactory()
+        # Delete English (default) translation to simulate a record
+        # created strictly in a non-default language
+        img.translations.all().delete()
+
+        # Create a PL translation
+        img.set_current_language("pl")
+        img.name = "Polish Name"
+        img.save()
+
+        # Request translation in 'en'. The 'en' version is missing,
+        # and the default 'en' is also missing.
+        # It should fall back to the available 'pl' translation.
+        result = TranslationService.get_translation(img, "name", "en")
+
+        assert result == "Polish Name"
+
     def test_main_page_location_get_full_location_empty_fallback(self):
         """
         Verify get_full_location still returns empty string when highlight
         translation is missing.
         """
-        from astrophotography.tests.factories import MainPageLocationFactory, PlaceFactory
 
         place = PlaceFactory(name="English Place")
         loc = MainPageLocationFactory(place=place, highlight_name="")

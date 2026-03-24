@@ -1,43 +1,74 @@
 .container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 300px;
-  width: 100%;
+  min-height: 100vh;
+  width: 100vw;
   padding: var(--space-8);
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--blur-md));
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  margin: var(--space-8) 0;
+  background: radial-gradient(
+    circle at center,
+    var(--celestial-bg-accent) 0%,
+    var(--celestial-bg) 100%
+  );
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  text-align: center;
+  animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .content {
   text-align: center;
-  max-width: 400px;
+  max-width: 500px;
+  padding: var(--space-4);
 }
 
 .title {
   color: var(--celestial-white);
   margin-bottom: var(--space-4);
+  font-family: var(--font-family-heading);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .message {
-  color: var(--text-secondary);
-  margin-bottom: var(--space-6);
+  color: var(--text-muted);
+  margin-bottom: var(--space-8);
+  font-size: 1.1rem;
+  line-height: 1.6;
 }
 
 .refreshBtn {
-  padding: var(--space-3) var(--space-6);
-  background: var(--primary-color);
-  color: var(--celestial-white);
-  border-radius: var(--radius-md);
-  font-weight: var(--font-weight-semibold);
-  transition: all var(--transition-normal);
+  padding: 1rem 2.5rem;
+  background: var(--celestial-blue);
+  color: var(--celestial-bg);
+  border: none;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
 }
 
 .refreshBtn:hover {
-  background: var(--primary-dark);
+  background: var(--celestial-white);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.5);
 }

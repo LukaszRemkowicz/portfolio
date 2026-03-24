@@ -1,151 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Something went wrong | portfolio</title>
+    <title>Celestial Anomaly | portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Extracted from the React app theme variables */
-            --bg-primary: #0f172a;
-            /* Slate 900 */
-            --text-primary: #f8fafc;
-            /* Slate 100 */
-            --text-secondary: #94a3b8;
-            /* Slate 400 */
-            --accent-glow: rgba(56, 189, 248, 0.15);
-            /* Light blue glow */
-            --border-subtle: rgba(255, 255, 255, 0.1);
+            --celestial-bg: #02040a;
+            --celestial-blue: #38bdf8;
+            --celestial-white: #f8fafc;
+            --text-muted: #94a3b8;
+            --glass-bg: rgba(15, 23, 42, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            background-color: var(--celestial-bg);
         }
 
         body {
-            margin: 0;
-            padding: 0;
+            color: var(--celestial-white);
+            font-family: 'Inter', sans-serif;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
             position: relative;
         }
 
-        .stars-bg {
+        /* Animated Space Background */
+        .stars {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+            z-index: -1;
+        }
+
+        .stars::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
             background-image:
-                radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-                radial-gradient(circle at 85% 30%, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-            background-size: 100px 100px, 150px 150px, 200px 200px;
-            z-index: 0;
+                radial-gradient(1px 1px at 20px 30px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 50px 160px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 90px 40px, #fff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 130px 80px, #fff, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            opacity: 0.3;
+            animation: starsMove 100s linear infinite;
+        }
+
+        @keyframes starsMove {
+            from { transform: translateY(0); }
+            to { transform: translateY(-200px); }
         }
 
         .container {
             position: relative;
-            z-index: 1;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            padding: 4rem 3rem;
+            border-radius: 2rem;
             text-align: center;
-            padding: 3rem;
-            max-width: 600px;
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(12px);
-            border-radius: 24px;
-            border: 1px solid var(--border-subtle);
-            box-shadow: 0 0 40px var(--accent-glow);
+            max-width: 540px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                        0 0 40px rgba(56, 189, 248, 0.1);
             animation: float 6s ease-in-out infinite;
         }
 
         @keyframes float {
-            0% {
-                transform: translateY(0px);
-            }
-
-            50% {
-                transform: translateY(-10px);
-            }
-
-            100% {
-                transform: translateY(0px);
-            }
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
         .icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.9;
-            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
+            font-size: 5rem;
+            margin-bottom: 2rem;
+            display: inline-block;
+            filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.4));
         }
 
         h1 {
-            font-size: 2rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
             font-weight: 700;
-            margin: 0.5rem 0;
-            background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, #fff, var(--celestial-blue));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: -0.025em;
         }
 
         p {
+            color: var(--text-muted);
             font-size: 1.125rem;
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
             line-height: 1.6;
+            margin-bottom: 3rem;
         }
 
-        .action-button {
+        .btn {
             display: inline-block;
-            padding: 0.75rem 1.5rem;
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
+            padding: 1.25rem 3rem;
+            background: var(--celestial-blue);
+            color: var(--celestial-bg);
             text-decoration: none;
+            font-weight: 700;
             border-radius: 9999px;
-            font-weight: 500;
-            border: 1px solid var(--border-subtle);
-            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 0.9rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
         }
 
-        .action-button:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        .btn:hover {
+            transform: scale(1.05);
+            background: var(--celestial-white);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.5);
         }
 
-        .home-icon {
-            margin-right: 0.5rem;
-            display: inline-block;
-            vertical-align: middle;
+        .glow-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: -1;
         }
     </style>
 </head>
-
 <body>
-    <div class="stars-bg"></div>
+    <div class="stars"></div>
+    <div class="glow-overlay"></div>
     <div class="container">
-        <div class="icon">🌌</div>
-        <h1>A celestial anomaly occurred</h1>
-        <p>The signal was lost in transit or the destination no longer exists in this quadrant.</p>
-        <a href="/" class="action-button">
-            <span class="home-icon">🏠</span> Return to Base
-        </a>
+        <div class="icon">🛰️</div>
+        <h1>Signal Lost</h1>
+        <p>The cosmic archives are temporarily unreachable or the coordinates led to a void in deep space.</p>
+        <a href="/" class="btn">Return to Base</a>
     </div>
 
-    <!-- Small script to try pulling the user out of a hard error loop if they press back -->
     <script>
-        // If loaded in an iframe, attempt to break out
+        // Automatic breakout from frames
         if (window.top !== window.self) {
             window.top.location = window.self.location;
         }
-
-        // Log to console for debugging
-        console.warn("Nginx Error Page Served. Status context is likely 404/50x.");
     </script>
 </body>
-
 </html>

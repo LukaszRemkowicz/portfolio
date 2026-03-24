@@ -28,6 +28,7 @@ from astrophotography.tests.factories import (
 from astrophotography.utils import get_celestial_categories
 from common.constants import FALLBACK_URL_SLUG
 from common.utils.signing import generate_signed_url_params
+from core.models import LandingPageSettings
 from core.tasks import process_image_task
 
 # URL Names
@@ -86,6 +87,24 @@ class TestAstroImageViewSet:
         response = api_client.get(url, {"filter": "Planetary"})
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 0
+
+    def test_filter_astro_images_by_translated_tag(self, api_client: APIClient) -> None:
+        """Test filtering images by a tag slug that exists only in a non-default language."""
+        image = AstroImageFactory(celestial_object="Deep Sky")
+
+        # Manually create the Polish translation
+        tag = Tag.objects.create()  # Untranslated base model
+        tag.create_translation("pl", name="Polski Tytuł", slug="polski-tytul")
+
+        image.tags.add(tag)
+
+        url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
+
+        # 1. Provide the Polish slug while querying the API in English (default language context)
+        response: Response = api_client.get(url, {"tag": "polski-tytul"})
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]["pk"] == str(image.pk)
 
     def test_latest_astro_images(self, api_client: APIClient) -> None:
         """Test the dedicated 'latest' endpoint returns exactly 9 images."""
@@ -430,6 +449,69 @@ class TestTagsView:
         tags_data = {t["slug"]: t["count"] for t in response.data}
         assert tags_data["night"] == 1
         assert tags_data["galaxy"] == 1
+
+    def test_list_tags_latest_filtering(self, api_client: APIClient) -> None:
+        """Test filtering tags by the 'latest' parameter from LandingPageSettings."""
+        tag1: Tag = TagFactory(name="Tag 1")
+        tag2: Tag = TagFactory(name="Tag 2")
+
+        # Link tags to images so they appear in stats
+        AstroImageFactory(tags=[tag1])
+        AstroImageFactory(tags=[tag2])
+
+        # Configure only tag1 as a latest filter
+        settings, _ = LandingPageSettings.objects.get_or_create()
+        settings.latest_filters.add(tag1)
+
+        url: str = reverse(TAGS_LIST_URL_NAME)
+
+        # 1. Without latest=true - should see both tags
+        response: Response = api_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        tags_data = {t["slug"]: t["name"] for t in response.data}
+        assert "tag-1" in tags_data
+        assert "tag-2" in tags_data
+
+        # 2. With latest=true - should ONLY see tag1
+        response = api_client.get(url, {"latest": "true"})
+        assert response.status_code == status.HTTP_200_OK
+        tags_data = {t["slug"]: t["name"] for t in response.data}
+        assert "tag-1" in tags_data
+        assert "tag-2" not in tags_data
+
+
+@pytest.mark.django_db
+class TestTagTranslation:
+    """Test that tags are correctly translated in API responses."""
+
+    def test_tag_list_translation(self, api_client: APIClient) -> None:
+        """Test that tag names are translated when lang parameter is provided."""
+        tag: Tag = TagFactory(name="Landscape")
+        # Add Polish translation manually if not handled by factory
+        tag.set_current_language("pl")
+        tag.name = "Krajobraz"
+        tag.save()
+        tag.set_current_language("en")
+
+        # Link to an image so it appears in stats
+        AstroImageFactory(tags=[tag])
+
+        url: str = reverse(TAGS_LIST_URL_NAME)
+
+        # 1. Default (English)
+        response = api_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data[0]["name"] == "Landscape"
+
+        # 2. Polish
+        response = api_client.get(url, {"lang": "pl"})
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data[0]["name"] == "Krajobraz"
+
+        # 3. Fallback for unknown language should be default (EN)
+        response = api_client.get(url, {"lang": "fr"})
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data[0]["name"] == "Landscape"
 
 
 @pytest.mark.django_db

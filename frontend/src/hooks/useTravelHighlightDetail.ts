@@ -1,5 +1,5 @@
-// frontend/src/hooks/useTravelHighlightDetail.ts
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/api';
 import type { AxiosInstance } from 'axios';
 import { API_ROUTES, BFF_ROUTES } from '../api/routes';
@@ -72,8 +72,11 @@ export const useTravelHighlightDetail = (
   placeSlug?: string,
   dateSlug?: string
 ) => {
+  const { i18n } = useTranslation();
+  const language = (i18n.language || 'en').split('-')[0];
+
   return useQuery<TravelHighlightDetail, Error>({
-    queryKey: ['travel-highlight', countrySlug, placeSlug, dateSlug],
+    queryKey: ['travel-highlight', language, countrySlug, placeSlug, dateSlug],
     queryFn: () =>
       fetchTravelHighlightDetail({
         countrySlug: countrySlug!,

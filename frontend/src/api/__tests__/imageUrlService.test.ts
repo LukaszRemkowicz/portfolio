@@ -27,7 +27,11 @@ describe('imageUrlService', () => {
 
     const result = await fetchImageUrls(['1']);
 
-    expect(fetchMock).toHaveBeenCalledWith(`${BFF_ROUTES.images}?ids=1`, {
+    const expectedUrl = new URL(`${BFF_ROUTES.images}`, window.location.origin);
+    expectedUrl.searchParams.set('ids', '1');
+    expectedUrl.searchParams.set('lang', 'en');
+
+    expect(fetchMock).toHaveBeenCalledWith(expectedUrl.toString(), {
       headers: {
         Accept: 'application/json',
       },
@@ -47,7 +51,13 @@ describe('imageUrlService', () => {
 
     const result = await fetchSingleImageUrl('m31');
 
-    expect(fetchMock).toHaveBeenCalledWith(`${BFF_ROUTES.images}m31/`, {
+    const expectedUrl = new URL(
+      `${BFF_ROUTES.images}m31/`,
+      window.location.origin
+    );
+    expectedUrl.searchParams.set('lang', 'en');
+
+    expect(fetchMock).toHaveBeenCalledWith(expectedUrl.toString(), {
       headers: {
         Accept: 'application/json',
       },

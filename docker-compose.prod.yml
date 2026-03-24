@@ -16,6 +16,7 @@ x-backend-defaults: &backend-defaults
     DEBUG: "False"
     DOCKER_ENV: "true"
     PYTHONPATH: "."
+    TZ: "Europe/Warsaw"
     SECRET_KEY: ${SECRET_KEY}
     DB_NAME: portfolio_prod
     DB_USER: ${DB_USER}
@@ -74,7 +75,7 @@ services:
     volumes:
       - postgres18_data:/var/lib/postgresql
 
-  # ---------- Database Backup (Audit 3) ----------
+  # ---------- Database Backup ----------
   db-backup:
     image: prodrigestivill/postgres-backup-local:18
     restart: always
@@ -151,6 +152,7 @@ services:
     expose:
       - "8080"
     environment:
+      TZ: "Europe/Warsaw"
       SITE_DOMAIN: ${SITE_DOMAIN}
       SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
       PORT: 8080
@@ -175,14 +177,10 @@ services:
       SSR_CACHE_INVALIDATION_URL: ${SSR_CACHE_INVALIDATION_URL:-http://fe:8080/internal/cache/invalidate}
       SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "python3 -c \"import sys, urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5); sys.exit(0)\" >/dev/null 2>&1 || exit 1",
-        ]
+      test: ["CMD-SHELL", "curl -f -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 3
+
 
   # ---------- Release Job ----------
   release:

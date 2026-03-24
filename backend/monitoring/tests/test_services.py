@@ -1,4 +1,4 @@
-# backend/monitoring/tests/test_services.py
+import logging
 from datetime import date, timedelta
 from unittest.mock import mock_open
 
@@ -45,7 +45,6 @@ class TestDockerLogCollector:
 
     def test_collect_logs_missing_nginx_warns_but_succeeds(self, tmp_path, settings, caplog):
         """nginx.log missing -> warns and returns None for nginx_path, does NOT raise."""
-        import logging
 
         settings.DOCKER_LOGS_DIR = str(tmp_path)
         (tmp_path / "backend.log").write_text("backend log content")
@@ -68,7 +67,6 @@ class TestDockerLogCollector:
 
     def test_check_staleness_warns_when_old(self, tmp_path, settings, caplog):
         """Warning logged when logs are older than MAX_STALENESS_HOURS."""
-        import logging
 
         settings.DOCKER_LOGS_DIR = str(tmp_path)
         (tmp_path / "backend.log").write_text("log")
@@ -264,7 +262,6 @@ class TestOrchestratorHistoricalContextWiring:
 
     def test_historical_context_passed_to_analyzer(self, mocker, mock_llm_response):
         """orchestrator calls HistoricalContextBuilder.build() and passes result to analyzer."""
-        from unittest.mock import mock_open
 
         with override_settings(ENVIRONMENT="test"):
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")

@@ -1,5 +1,5 @@
 // frontend/src/components/Home.tsx
-import { type FC, useState } from 'react';
+import { type FC, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import styles from '../styles/components/App.module.css';
@@ -21,6 +21,17 @@ const Home: FC<HomeProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
 
   const displayDescription = shortDescription || t('hero.defaultDescription');
+
+  // SSR-safe check for already loaded images (e.g. from cache)
+  useEffect(() => {
+    const img = document.querySelector(
+      '[data-testid="hero-background-image"]'
+    ) as HTMLImageElement;
+    if (img?.complete) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoaded(true);
+    }
+  }, []);
 
   return (
     <section id='home' className={styles.heroSection}>

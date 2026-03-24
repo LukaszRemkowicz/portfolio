@@ -18,7 +18,7 @@ body,
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
   color: var(--celestial-white);
-  background-color: transparent;
+  background-color: var(--celestial-bg);
   overflow-x: hidden;
 }
 

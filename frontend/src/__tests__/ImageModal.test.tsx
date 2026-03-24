@@ -16,7 +16,10 @@ const mockImage: AstroImage = {
   thumbnail_url: 'test.jpg',
   description: 'A test nebula',
   capture_date: '2023-01-01',
-  tags: ['nebula', 'space'],
+  tags: [
+    { name: 'nebula', slug: 'nebula', count: 1 },
+    { name: 'space', slug: 'space', count: 1 },
+  ],
 };
 
 const renderModal = (
