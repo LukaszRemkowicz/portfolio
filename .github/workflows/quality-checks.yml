@@ -176,6 +176,7 @@ jobs:
       DEFAULT_FROM_EMAIL: test@example.com
       CONTACT_EMAIL: test@example.com
       SESSION_COOKIE_DOMAIN: .example.com
+      SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
 
     steps:
       - name: Checkout code
@@ -203,7 +204,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./backend
-        run: poetry install --no-root --no-interaction
+        run: poetry sync --no-root --no-interaction
 
       - name: Run Pre-commit hooks
         working-directory: ./backend
@@ -347,30 +348,10 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Run Safety CLI to check for vulnerabilities
+        uses: pyupio/safety-action@v1
         with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Cache Poetry virtualenv
-        uses: actions/cache@v4
-        with:
-          path: backend/.venv
-          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
-
-      - name: Install dependencies
-        working-directory: ./backend
-        run: poetry install --no-root --no-interaction
-
-      - name: Backend safety check
-        working-directory: ./backend
-        run: |
-          poetry run pip install safety
-          poetry run safety check
+          api-key: ${{ secrets.SAFETY_API_KEY }}
 
   # PR Status Reporting
   pr-status:
