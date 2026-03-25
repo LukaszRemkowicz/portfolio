@@ -24,6 +24,7 @@ import {
   replacePublicEnvPlaceholders,
   resolvePublicEnv,
 } from './publicEnv.js';
+import { detectLanguage } from '../src/shared/i18n/detectLanguage.ts';
 import { invalidateCacheTags } from './ssrCache.js';
 import {
   normalizeBffPayload,
@@ -63,24 +64,6 @@ const MIME_TYPES = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
 };
-
-/**
- * Detect a supported language tag from an Accept-Language header or cookie.
- */
-function detectLanguage(acceptLanguage) {
-  if (!acceptLanguage) return 'en';
-
-  const languages = acceptLanguage
-    .split(',')
-    .map(lang => lang.split(';')[0].trim().toLowerCase());
-
-  for (const lang of languages) {
-    if (lang.startsWith('pl')) return 'pl';
-    if (lang.startsWith('en')) return 'en';
-  }
-
-  return 'en';
-}
 
 const INTERNAL_CACHE_INVALIDATION_ROUTE = '/internal/cache/invalidate';
 const MAX_JSON_BODY_BYTES = 64 * 1024;

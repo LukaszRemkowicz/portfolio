@@ -4,7 +4,6 @@
  * This module resolves the correct API base URL for both SSR and browser
  * environments and keeps route-independent constants in one place.
  */
-import { getSharedEnv } from '../utils/env.shared';
 import { publicEnv } from '../../server/publicEnv.js';
 
 const SSR_API_BASE_URL =
@@ -18,14 +17,9 @@ const BROWSER_API_BASE_URL =
       (publicEnv.SITE_DOMAIN ? `https://${publicEnv.SITE_DOMAIN}` : '')
     : '';
 
-// getSharedEnv reads from process.env in Node (SSR) and VITE_* in the browser build.
-// env.ts is NOT imported here — import.meta.env crashes in Node at module level.
 /** Public base URL used by API transport helpers in the current runtime context. */
 export const API_BASE_URL =
-  SSR_API_BASE_URL ||
-  BROWSER_API_BASE_URL ||
-  publicEnv.API_URL ||
-  getSharedEnv('API_URL');
+  SSR_API_BASE_URL || BROWSER_API_BASE_URL || publicEnv.API_URL;
 
 if (!API_BASE_URL) {
   console.warn(

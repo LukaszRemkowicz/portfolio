@@ -5,6 +5,8 @@ process.env.VITE_ENABLE_GA = 'false';
 process.env.VITE_SENTRY_DSN_FE = '';
 process.env.VITE_ENVIRONMENT = 'test';
 process.env.MODE = 'test';
+process.env.NODE_ENV = 'test';
+process.env.BABEL_ENV = 'test';
 
 module.exports = {
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
