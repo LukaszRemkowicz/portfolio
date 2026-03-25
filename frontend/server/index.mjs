@@ -25,6 +25,10 @@ import {
   resolvePublicEnv,
 } from './publicEnv.js';
 import { invalidateCacheTags } from './ssrCache.js';
+import {
+  normalizeBffPayload,
+  normalizePublicMediaUrl,
+} from './mediaNormalization.js';
 import { getFrontendTransportRoute } from './views/bff.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -79,6 +83,15 @@ function detectLanguage(acceptLanguage) {
 }
 
 const INTERNAL_CACHE_INVALIDATION_ROUTE = '/internal/cache/invalidate';
+const MAX_JSON_BODY_BYTES = 64 * 1024;
+
+class RequestValidationError extends Error {
+  constructor(statusCode, message) {
+    super(message);
+    this.name = 'RequestValidationError';
+    this.statusCode = statusCode;
+  }
+}
 
 /**
  * Build cache and content-type headers for a static asset response.
@@ -257,107 +270,20 @@ function getBackendBaseUrl(requestPublicEnv) {
   return process.env.SSR_API_URL || requestPublicEnv.API_URL;
 }
 
-function normalizePublicMediaUrl(value, requestOrigin) {
-  if (typeof value !== 'string' || !value) {
-    return value;
-  }
-
-  const toFrontendImageFilePath = pathname =>
-    pathname.startsWith('/image-files/') ? `/app${pathname}` : pathname;
-
-  const isRelativePublicMedia =
-    value.startsWith('/media/') ||
-    value.startsWith('/static/') ||
-    value.startsWith('/app/image-files/') ||
-    value.startsWith('/image-files/') ||
-    /^\/v1\/images\/[^/]+\/serve\/?(?:\?.*)?$/.test(value);
-
-  if (isRelativePublicMedia) {
-    if (/^\/v1\/images\/[^/]+\/serve\/?(?:\?.*)?$/.test(value)) {
-      return value.replace(/^\/v1\/images\//, '/app/image-files/');
-    }
-    return toFrontendImageFilePath(value);
-  }
-
-  if (!value.startsWith('http://') && !value.startsWith('https://')) {
-    return value;
-  }
-
-  try {
-    const parsed = new URL(value);
-    const isPublicMedia = parsed.pathname.startsWith('/media/');
-    const isPublicStatic = parsed.pathname.startsWith('/static/');
-    const isFrontendImageFile = parsed.pathname.startsWith('/app/image-files/');
-    const isInternalImageFile = parsed.pathname.startsWith('/image-files/');
-    const isSecureImage = /^\/v1\/images\/[^/]+\/serve\/?$/.test(
-      parsed.pathname
-    );
-
-    if (isPublicMedia || isPublicStatic || isFrontendImageFile) {
-      return `${parsed.pathname}${parsed.search}`;
-    }
-
-    if (isInternalImageFile) {
-      return `/app${parsed.pathname}${parsed.search}`;
-    }
-
-    if (isSecureImage) {
-      return `${parsed.pathname.replace(/^\/v1\/images\//, '/app/image-files/')}${parsed.search}`;
-    }
-  } catch {
-    return value;
-  }
-
-  return value;
-}
-
-function normalizeBffPayload(payload, kind, requestOrigin) {
-  if (!payload) return payload;
-
-  // Unwrap paginated results if present
-  const data =
-    kind === 'astroimages' && payload.results ? payload.results : payload;
-
-  if (kind !== 'images' && kind !== 'astroimages') {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.map(item =>
-      typeof item === 'object' && item.url
-        ? { ...item, url: normalizePublicMediaUrl(item.url, requestOrigin) }
-        : item
-    );
-  }
-
-  if (typeof data.url === 'string') {
-    return {
-      ...data,
-      url: normalizePublicMediaUrl(data.url, requestOrigin),
-    };
-  }
-
-  if (typeof data === 'object' && !Array.isArray(data)) {
-    return Object.fromEntries(
-      Object.entries(data).map(([key, value]) => [
-        key,
-        normalizePublicMediaUrl(value, requestOrigin),
-      ])
-    );
-  }
-
-  return data;
-}
-
 /**
  * Build backend request headers that preserve public host, language, and request correlation.
+ *
+ * @param {string|null} clientForwardedFor — The X-Forwarded-For value from the incoming
+ *   nginx request. Forwarded to Django so DRF throttling operates on the real client IP
+ *   rather than the frontend container's internal Docker IP.
  */
 function getBackendForwardHeaders(
   requestPublicEnv,
   acceptLanguage,
   requestOrigin,
   requestId,
-  cookieHeader = null
+  cookieHeader = null,
+  clientForwardedFor = null
 ) {
   const headers = {
     Accept: 'application/json',
@@ -396,6 +322,12 @@ function getBackendForwardHeaders(
     headers['X-Request-ID'] = requestId;
   }
 
+  // Forward the real client IP so Django DRF throttling can rate-limit by the
+  // original caller's address, not the frontend container's internal Docker IP.
+  if (clientForwardedFor) {
+    headers['X-Forwarded-For'] = clientForwardedFor;
+  }
+
   return headers;
 }
 
@@ -419,7 +351,8 @@ async function fetchBackendJson(req, backendPath, requestUrl, requestId) {
       req.headers['accept-language'],
       requestOrigin,
       requestId,
-      req.headers.cookie
+      req.headers.cookie,
+      req.headers['x-forwarded-for']
     ),
   });
   const durationMs = Date.now() - startedAt;
@@ -447,9 +380,20 @@ async function fetchBackendJson(req, backendPath, requestUrl, requestId) {
  */
 async function readJsonBody(req) {
   const chunks = [];
+  let totalBytes = 0;
 
   for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    totalBytes += buffer.length;
+
+    if (totalBytes > MAX_JSON_BODY_BYTES) {
+      throw new RequestValidationError(
+        413,
+        `Request body exceeds ${MAX_JSON_BODY_BYTES} bytes.`
+      );
+    }
+
+    chunks.push(buffer);
   }
 
   if (chunks.length === 0) {
@@ -457,13 +401,45 @@ async function readJsonBody(req) {
   }
 
   const rawBody = Buffer.concat(chunks).toString('utf8');
-  return rawBody ? JSON.parse(rawBody) : null;
+
+  try {
+    return rawBody ? JSON.parse(rawBody) : null;
+  } catch {
+    throw new RequestValidationError(400, 'Malformed JSON request body.');
+  }
+}
+
+function getHeaderValue(value) {
+  if (Array.isArray(value)) {
+    return value[0] || '';
+  }
+
+  return typeof value === 'string' ? value : '';
+}
+
+function assertJsonContentType(req) {
+  const contentType = getHeaderValue(req.headers['content-type'])
+    .split(';')[0]
+    .trim()
+    .toLowerCase();
+
+  if (contentType !== 'application/json') {
+    throw new RequestValidationError(
+      415,
+      'Unsupported Media Type. Expected application/json.'
+    );
+  }
 }
 
 function isAuthorizedInternalCacheRequest(req) {
   const expectedToken = process.env.SSR_CACHE_INVALIDATION_TOKEN || '';
   if (!expectedToken) {
-    return true;
+    // Fail closed: if no token is configured this endpoint must be denied.
+    // A missing token is a misconfiguration — log loudly so it is visible.
+    console.error(
+      '[frontend-ssr] SSR_CACHE_INVALIDATION_TOKEN is not set — rejecting cache invalidation request'
+    );
+    return false;
   }
 
   const authHeader = req.headers.authorization || '';
@@ -510,7 +486,32 @@ async function handleInternalRequest(req, res, requestUrl, start, requestId) {
     return true;
   }
 
-  const body = (await readJsonBody(req)) || {};
+  let body;
+  try {
+    assertJsonContentType(req);
+    body = (await readJsonBody(req)) || {};
+  } catch (error) {
+    if (error instanceof RequestValidationError) {
+      res.writeHead(error.statusCode, {
+        'Content-Type': 'application/json; charset=utf-8',
+      });
+      res.end(JSON.stringify({ message: error.message }));
+      logRequest(
+        {
+          kind: 'cache-invalidate',
+          method: req.method,
+          path: requestUrl.pathname,
+          status: error.statusCode,
+          duration_ms: Date.now() - start,
+          error: error.message,
+        },
+        requestId
+      );
+      return true;
+    }
+    throw error;
+  }
+
   const result = invalidateCacheTags(Array.isArray(body.tags) ? body.tags : []);
 
   res.writeHead(200, {
@@ -536,6 +537,8 @@ async function handleInternalRequest(req, res, requestUrl, start, requestId) {
 }
 
 async function forwardBackendWrite(req, backendPath, requestId) {
+  assertJsonContentType(req);
+
   const requestPublicEnv = getRequestPublicEnv(req);
   const requestOrigin = getRequestOrigin(req);
   const upstreamBaseUrl = getBackendBaseUrl(requestPublicEnv);
@@ -551,7 +554,8 @@ async function forwardBackendWrite(req, backendPath, requestId) {
         req.headers['accept-language'],
         requestOrigin,
         requestId,
-        req.headers.cookie
+        req.headers.cookie,
+        req.headers['x-forwarded-for']
       ),
       'Content-Type': 'application/json',
     },
@@ -617,7 +621,8 @@ async function handleBffRequest(req, res, requestUrl, start, requestId) {
         req.headers['accept-language'],
         requestOrigin,
         requestId,
-        req.headers.cookie
+        req.headers.cookie,
+        req.headers['x-forwarded-for']
       ),
       redirect: 'manual',
     });
@@ -655,15 +660,40 @@ async function handleBffRequest(req, res, requestUrl, start, requestId) {
     return true;
   }
 
-  const backendFetch =
-    req.method === 'POST'
-      ? await forwardBackendWrite(req, resolvedView.backendPath, requestId)
-      : await fetchBackendJson(
-          req,
-          resolvedView.backendPath,
-          requestUrl,
-          requestId
-        );
+  let backendFetch;
+  try {
+    backendFetch =
+      req.method === 'POST'
+        ? await forwardBackendWrite(req, resolvedView.backendPath, requestId)
+        : await fetchBackendJson(
+            req,
+            resolvedView.backendPath,
+            requestUrl,
+            requestId
+          );
+  } catch (error) {
+    if (error instanceof RequestValidationError) {
+      res.writeHead(error.statusCode, {
+        'Content-Type': 'application/json; charset=utf-8',
+      });
+      res.end(JSON.stringify({ message: error.message }));
+      logRequest(
+        {
+          kind: 'bff',
+          method: req.method,
+          path: requestUrl.pathname,
+          query: requestUrl.search || '',
+          status: error.statusCode,
+          duration_ms: Date.now() - start,
+          error: error.message,
+        },
+        requestId
+      );
+      return true;
+    }
+    throw error;
+  }
+
   const { durationMs, payload, response, upstreamBaseUrl, upstreamUrl } =
     backendFetch;
   const normalizedPayload = normalizeBffPayload(

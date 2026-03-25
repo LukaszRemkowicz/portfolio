@@ -236,9 +236,8 @@ export const fetchSettings = async (
     );
   } catch (error: unknown) {
     console.error('Error fetching settings:', error);
-    // Return empty features and empty meteors on error (or handle appropriately)
-    // For now throwing to let callers handle or defaulting might be safer?
-    // Given the previous code returned {}, I'll return a partial mock or throw.
+    // Unexpected failures should propagate so SSR and client callers can decide
+    // whether to surface an error state or fall back at a higher level.
     throw error;
   }
 };

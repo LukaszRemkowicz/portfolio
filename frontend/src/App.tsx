@@ -104,6 +104,8 @@ const App: React.FC = () => {
   );
 };
 
+// This stays null intentionally to avoid flashing a generic route-level loader
+// while route components handle their own loading states.
 const RouteSuspense: React.FC<React.PropsWithChildren> = ({ children }) => (
   <Suspense fallback={null}>{children}</Suspense>
 );

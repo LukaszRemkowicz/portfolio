@@ -235,6 +235,9 @@ async function prepareRenderContext(
     defaultOptions: {
       queries: {
         retry: false,
+        // Server-side QueryClient instances are request-scoped and discarded
+        // after render. We dehydrate their data into HTML and the browser uses
+        // its own QueryClient after hydration, so Infinity is intentional here.
         staleTime: Infinity,
       },
     },

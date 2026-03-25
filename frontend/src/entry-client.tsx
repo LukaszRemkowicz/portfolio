@@ -50,6 +50,8 @@ const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');
 
 const environment = getEnv('ENVIRONMENT', getEnv('NODE_ENV', 'development'));
+// Local development prefers a clean client mount over hydration recovery noise.
+// Production-like environments should hydrate so SSR/client mismatches stay visible.
 const useClientRenderOnly = ['development', 'dev'].includes(environment);
 
 const tree = (
@@ -67,7 +69,6 @@ const tree = (
   </AppShell>
 );
 
-// Local dev favors deterministic client render over noisy hydration recoveries.
 if (rootElement.childElementCount > 0 && !useClientRenderOnly) {
   hydrateRoot(rootElement, tree);
 } else {
