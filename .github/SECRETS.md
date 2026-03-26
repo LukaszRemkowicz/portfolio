@@ -4,8 +4,20 @@ This file documents the required GitHub secrets for the CI/CD pipeline.
 
 ## Required Secrets
 
-### None Required! 🎉
-The current CI/CD pipeline uses only `GITHUB_TOKEN` which is automatically provided by GitHub.
+### Container Publish
+- `SENTRY_DSN_FE` - frontend production build argument
+
+### Built-in Token
+- `GITHUB_TOKEN` - automatically provided by GitHub Actions
+
+## Required Variables
+
+### Container Publish
+- `SITE_DOMAIN` - frontend production build argument
+- `API_DOMAIN` - frontend production build argument
+- `GA_TRACKING_ID` - frontend production build argument
+- `ALLOWED_HOSTS` - frontend production build argument
+- `PROJECT_OWNER` - frontend production build argument
 
 ## Optional Secrets
 
@@ -36,11 +48,11 @@ CODECOV_TOKEN=your-codecov-token
 - ✅ **Frontend tests** - No secrets needed
 - ✅ **Backend tests** - No secrets needed
 - ✅ **Docker build & test** - No secrets needed
+- ✅ **Production image publish to GHCR** - Uses built-in `GITHUB_TOKEN` plus repo vars/secrets above
 
 ### What's NOT Included:
 - ❌ **Docker Hub push** - Removed (was using public images)
 - ❌ **Production deployment** - Uses `deploy.sh` script instead
-- ❌ **Release automation** - Removed (unnecessary for portfolio)
 
 ## Security Notes
 
@@ -57,7 +69,7 @@ For production deployment, use the provided `deploy.sh` script:
 ./scripts/deploy.sh
 ```
 
-No GitHub secrets needed for deployment!
+GitHub secrets are not used for VPS deployment itself. GHCR pull credentials for the server should live outside the repo, for example in Doppler.
 
 ## Branch Protection Rules
 

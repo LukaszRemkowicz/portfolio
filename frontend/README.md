@@ -135,21 +135,21 @@ Request flow:
 
 ### Browser-side low-level transport
 
-- [frontend/src/api/api.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/api/api.ts)
-- [frontend/src/api/bff.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/api/bff.ts)
-- [frontend/src/api/services.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/api/services.ts)
-- [frontend/src/api/media.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/api/media.ts)
+- [frontend/src/api/api.ts](src/api/api.ts)
+- [frontend/src/api/bff.ts](src/api/bff.ts)
+- [frontend/src/api/services.ts](src/api/services.ts)
+- [frontend/src/api/media.ts](src/api/media.ts)
 
 ### Server-side views
 
-- [frontend/server/views/shell.js](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/views/shell.js)
-- [frontend/server/views/bff.js](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/views/bff.js)
+- [frontend/server/views/shell.js](server/views/shell.js)
+- [frontend/server/views/bff.js](server/views/bff.js)
 
 These `views` are the beginning of the FE-side source of truth for server-owned data contracts.
 
 ### Server runtime
 
-- [frontend/server/index.mjs](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/index.mjs)
+- [frontend/server/index.mjs](server/index.mjs)
 
 Responsibilities:
 
@@ -161,7 +161,7 @@ Responsibilities:
 
 ### SSR entrypoint
 
-- [frontend/src/entry-server.tsx](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/entry-server.tsx)
+- [frontend/src/entry-server.tsx](src/entry-server.tsx)
 
 Responsibilities:
 
@@ -173,8 +173,8 @@ Responsibilities:
 
 Backend API route definitions are centralized in:
 
-- [frontend/src/api/routes.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/api/routes.ts)
-- [frontend/src/api/constants.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/api/constants.ts)
+- [frontend/src/api/routes.ts](src/api/routes.ts)
+- [frontend/src/api/constants.ts](src/api/constants.ts)
 
 These files define:
 
@@ -259,7 +259,7 @@ npm run cache:clear:ssr -- --all-tags
 
 Internal cache files:
 
-- [frontend/server/ssrCache.js](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/ssrCache.js)
+- [frontend/server/ssrCache.js](server/ssrCache.js)
 
 ## 📈 Observability
 
@@ -348,9 +348,9 @@ The frontend also includes browser-level end-to-end coverage with Playwright.
 
 Relevant files:
 
-- [frontend/playwright.config.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/playwright.config.ts)
-- [frontend/e2e/cookie-consent.spec.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/e2e/cookie-consent.spec.ts)
-- [frontend/e2e/stability.spec.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/e2e/stability.spec.ts)
+- [frontend/playwright.config.ts](playwright.config.ts)
+- [frontend/e2e/cookie-consent.spec.ts](e2e/cookie-consent.spec.ts)
+- [frontend/e2e/stability.spec.ts](e2e/stability.spec.ts)
 
 Available commands inside the frontend container:
 
@@ -364,7 +364,7 @@ doppler --config dev run -- docker compose exec -T fe npm run test:e2e:ui
 
 There is also a lightweight SSR smoke test:
 
-- [frontend/scripts/ssr-smoke-test.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/scripts/ssr-smoke-test.ts)
+- [frontend/scripts/ssr-smoke-test.ts](scripts/ssr-smoke-test.ts)
 
 Run it with:
 

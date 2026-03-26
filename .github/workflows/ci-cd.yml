@@ -1,4 +1,4 @@
-name: Quality Checks
+name: CI/CD
 
 on:
   pull_request:
@@ -18,7 +18,6 @@ permissions:
   contents: read
 
 jobs:
-  # Versioning
   version-check:
     name: Version bump check (dev → main)
     runs-on: ubuntu-latest
@@ -42,9 +41,6 @@ jobs:
       - name: Validate VERSION file and bump
         shell: bash
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_REF: ${{ github.head_ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
@@ -214,8 +210,7 @@ jobs:
 
       - name: Run tests
         working-directory: ./backend
-        run: |
-          poetry run pytest --cov=. --cov-report=xml
+        run: poetry run pytest --cov=. --cov-report=xml
 
       - name: Upload coverage reports
         if: github.event_name == 'push'
@@ -237,6 +232,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Build and load for scanning
         uses: docker/bake-action@v6.1.0
         with:
@@ -247,46 +245,6 @@ jobs:
             *.cache-to=type=gha,mode=max
           load: true
 
-  # Production Images Build Test
-  production-build-test:
-    name: Production Image Build Check
-    runs-on: ubuntu-latest
-    needs: [frontend, backend]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Test Backend Production Build
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: docker/backend/Dockerfile
-          target: production
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Test Frontend Production Build
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: docker/frontend/Dockerfile
-          target: prod
-          push: false
-          build-args: |
-            SITE_DOMAIN=test.local
-            API_URL=https://api.test.local
-            GA_TRACKING_ID=test
-            SENTRY_DSN_FE=test
-            ENVIRONMENT=production
-            PROJECT_OWNER=test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Security Scanning
   security-scan:
     name: Security Analysis
     runs-on: ubuntu-latest
@@ -305,7 +263,6 @@ jobs:
       DEFAULT_FROM_EMAIL: test@example.com
       CONTACT_EMAIL: test@example.com
       SESSION_COOKIE_DOMAIN: .example.com
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -354,16 +311,68 @@ jobs:
         with:
           api-key: ${{ secrets.SAFETY_API_KEY }}
 
+  image-build-check:
+    name: Production Image Build Check
+    runs-on: ubuntu-latest
+    needs: [frontend, backend, docker-build, security-scan]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build production backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backend/Dockerfile
+          target: production
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build production frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          target: prod
+          platforms: linux/amd64,linux/arm64
+          push: false
+          build-args: |
+            SITE_DOMAIN=test.local
+            API_URL=https://api.test.local
+            GA_TRACKING_ID=test
+            SENTRY_DSN_FE=test
+            ENVIRONMENT=production
+            ALLOWED_HOSTS=test.local,localhost,127.0.0.1
+            PROJECT_OWNER=test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build production nginx image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/nginx/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   # PR Status Reporting
   pr-status:
     name: PR Status Report
     runs-on: ubuntu-latest
-    needs:
-      [frontend, backend, docker-build, production-build-test, security-scan]
+    needs: [frontend, backend, docker-build, security-scan, image-build-check]
     if: always() && github.event_name == 'pull_request'
     permissions:
       pull-requests: write
-
     steps:
       - name: Report Status
         uses: actions/github-script@v7
@@ -373,8 +382,8 @@ jobs:
               'Frontend (Lint/Types/Tests)': '${{ needs.frontend.result }}',
               'Backend (Lint/Types/Tests)': '${{ needs.backend.result }}',
               'Docker Dev Build': '${{ needs.docker-build.result }}',
-              'Docker Prod Build': '${{ needs.production-build-test.result }}',
-              'Security Analysis': '${{ needs.security-scan.result }}'
+              'Security Analysis': '${{ needs.security-scan.result }}',
+              'Production Image Build Check': '${{ needs.image-build-check.result }}'
             };
 
             const emoji = (s) => s === 'success' ? '✅' : (s === 'failure' ? '❌' : '⏹️');

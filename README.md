@@ -22,9 +22,9 @@ Personal portfolio web app for astrophotography, travel stories, and programming
 
 Component docs:
 
-- Frontend: [frontend/README.md](/Users/lukaszremkowicz/Projects/landingpage/frontend/README.md)
-- Backend: [backend/README.md](/Users/lukaszremkowicz/Projects/landingpage/backend/README.md)
-- Infra scripts: [infra/scripts/README.md](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/README.md)
+- Frontend: [frontend/README.md](frontend/README.md)
+- Backend: [backend/README.md](backend/README.md)
+- Infra scripts: [infra/scripts/README.md](infra/scripts/README.md)
 
 ## 📸 Screenshots
 
@@ -432,12 +432,12 @@ Monitoring analyses:
 
 Collector docs:
 
-- [infra/scripts/monitoring/README.md](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/monitoring/README.md)
+- [infra/scripts/monitoring/README.md](infra/scripts/monitoring/README.md)
 
 ## 📝 Notes
 
-- Active Node scripts live in [frontend/package.json](/Users/lukaszremkowicz/Projects/landingpage/frontend/package.json).
-- Python dependency and tool configuration live in [backend/pyproject.toml](/Users/lukaszremkowicz/Projects/landingpage/backend/pyproject.toml).
+- Active Node scripts live in [frontend/package.json](frontend/package.json).
+- Python dependency and tool configuration live in [backend/pyproject.toml](backend/pyproject.toml).
 - Local startup runs Django migrations, `seed_settings`, message compilation, and `collectstatic` automatically as part of the `be` service command.
 
 ### Cache Invalidation
@@ -479,7 +479,7 @@ Always verify your backups by running a test restore:
 ```
 This script creates a temporary container and verifies that the SQL dump is valid and can be fully imported.
 
-See [Backup Maintenance Guide](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/db_backup/MAINTENANCE.md) for more details.
+See [Backup Maintenance Guide](infra/scripts/db_backup/MAINTENANCE.md) for more details.
 
 ## Testing
 
@@ -528,8 +528,8 @@ On your production server, simply run:
 
 ## Component Docs
 
-- Frontend: [frontend/README.md](/Users/lukaszremkowicz/Projects/landingpage/frontend/README.md)
-- Backend: [backend/README.md](/Users/lukaszremkowicz/Projects/landingpage/backend/README.md)
+- Frontend: [frontend/README.md](frontend/README.md)
+- Backend: [backend/README.md](backend/README.md)
 
 
 ### TODO:
@@ -539,3 +539,4 @@ On your production server, simply run:
 - Add email template
 - Fix issues with "go back" on the website (Fe)
 - fix small visual issues in django admin
+- Agent check structured data + move prompts to yaml or md add skills. Add function, which llm could use to get proper prompt? Make agent more agent, not like a function. Rebuild response with userID, ID session, speed reasoning.

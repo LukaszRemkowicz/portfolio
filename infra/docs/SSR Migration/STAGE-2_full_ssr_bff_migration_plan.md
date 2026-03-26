@@ -126,10 +126,10 @@ Target Attribution Definitions:
 
 Current frontend/backend contract derived from:
 
-- [frontend/src/api/services.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/api/services.ts)
-- [frontend/src/api/imageUrlService.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/api/imageUrlService.ts)
-- [frontend/src/entry-server.tsx](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/entry-server.tsx)
-- frontend hooks and component call sites under [frontend/src/hooks](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/hooks) and [frontend/src/components](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/components)
+- [frontend/src/api/services.ts](../../../frontend/src/api/services.ts)
+- [frontend/src/api/imageUrlService.ts](../../../frontend/src/api/imageUrlService.ts)
+- [frontend/src/entry-server.tsx](../../../frontend/src/entry-server.tsx)
+- frontend hooks and component call sites under [frontend/src/hooks](../../../frontend/src/hooks) and [frontend/src/components](../../../frontend/src/components)
 
 | Backend endpoint | Current caller | Used on routes | SSR-prefetched | Browser calls today | Target owner |
 | --- | --- | --- | --- | --- | --- |
@@ -626,7 +626,7 @@ Rollout safety checks:
 
 This migration is complete when all of the following are true:
 
-- browser no longer calls `api.lukaszremkowicz.com` for normal site usage
+- browser no longer calls `api.<site-domain>` for normal site usage
 - browser no longer calls the public API domain for normal site usage
 - frontend hostname is the only public site entrypoint
 - backend API is internal-only in production

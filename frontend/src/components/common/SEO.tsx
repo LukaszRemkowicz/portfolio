@@ -29,11 +29,12 @@ const SEO: FC<SEOProps> = ({ title, description, ogImage, url }) => {
 
   const finalTitle = title ? `${title} | ${defaultTitle}` : defaultTitle;
   const finalDescription = description || defaultDescription;
+  const publicOrigin = publicEnv.SITE_DOMAIN
+    ? `https://${publicEnv.SITE_DOMAIN}`
+    : 'http://localhost';
   const origin =
     requestOrigin ||
-    (typeof window !== 'undefined'
-      ? window.location.origin
-      : 'https://lukaszremkowicz.com');
+    (typeof window !== 'undefined' ? window.location.origin : publicOrigin);
   const routePath = url || `${location.pathname}${location.search}`;
   const finalUrl = new URL(routePath || '/', origin).toString();
 
