@@ -179,7 +179,7 @@ async function prefetchRouteQueries(
             countrySlug: countrySlug!,
             placeSlug: placeSlug!,
             dateSlug: dateSlug!,
-            client,
+            clientOrTransport: client,
           }),
       }),
     ]);

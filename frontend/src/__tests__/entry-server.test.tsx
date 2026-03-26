@@ -179,7 +179,7 @@ describe('SSR entry server', () => {
       countrySlug: 'poland',
       placeSlug: 'tatras',
       dateSlug: 'dec2025',
-      client: 'mock-client',
+      clientOrTransport: 'mock-client',
     });
   });
 

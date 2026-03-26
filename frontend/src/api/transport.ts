@@ -7,12 +7,13 @@ type RouteTargets = {
   server: string;
 };
 
-type QueryValue = boolean | number | string | undefined;
+export type QueryValue = boolean | number | string | undefined;
+export type QueryParams = Record<string, QueryValue>;
 
 export type DataTransport = {
   __dataTransport: true;
   kind: 'browser' | 'server';
-  get<T>(routes: RouteTargets, params?: Record<string, QueryValue>): Promise<T>;
+  get<T>(routes: RouteTargets, params?: QueryParams): Promise<T>;
   post<T>(routes: RouteTargets, body: unknown): Promise<T>;
 };
 
@@ -26,10 +27,7 @@ export const handleAxiosResponse = <T>(response: AxiosResponse<T>): T => {
   throw new Error('Invalid response from server.');
 };
 
-const appendParams = (
-  url: string,
-  params?: Record<string, QueryValue>
-): string => {
+const appendParams = (url: string, params?: QueryParams): string => {
   if (!params) {
     return url;
   }
@@ -46,10 +44,10 @@ const appendParams = (
 export const browserTransport: DataTransport = {
   __dataTransport: true,
   kind: 'browser',
-  async get<T>(routes, params) {
+  async get<T>(routes: RouteTargets, params?: QueryParams) {
     return fetchBffJson<T>(appendParams(routes.browser, params));
   },
-  async post<T>(routes, body) {
+  async post<T>(routes: RouteTargets, body: unknown) {
     return postBffJson<T>(routes.browser, body);
   },
 };
@@ -59,14 +57,14 @@ export const createAxiosTransport = (
 ): DataTransport => ({
   __dataTransport: true,
   kind: 'server',
-  async get<T>(routes, params) {
+  async get<T>(routes: RouteTargets, params?: QueryParams) {
     const response =
       params && Object.keys(params).length > 0
         ? await client.get<T>(routes.server, { params })
         : await client.get<T>(routes.server);
     return handleAxiosResponse(response);
   },
-  async post<T>(routes, body) {
+  async post<T>(routes: RouteTargets, body: unknown) {
     const response = await client.post<T>(routes.server, body);
     return handleAxiosResponse(response);
   },

@@ -1,7 +1,11 @@
 describe('ssrCache', () => {
   beforeEach(() => {
     jest.resetModules();
-    delete globalThis.__portfolioSsrCacheState;
+    delete (
+      globalThis as typeof globalThis & {
+        __portfolioSsrCacheState?: unknown;
+      }
+    ).__portfolioSsrCacheState;
   });
 
   it('returns cached shell data until TTL expires', async () => {

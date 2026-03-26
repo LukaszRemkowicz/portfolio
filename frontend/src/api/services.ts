@@ -31,7 +31,7 @@ import {
   Tag,
 } from '../types';
 import { NotFoundError } from './errors';
-import { DataTransport, resolveDataTransport } from './transport';
+import { DataTransport, QueryParams, resolveDataTransport } from './transport';
 
 /** Fetch and normalize the public user profile used across the site shell. */
 export const fetchProfile = async (
@@ -101,7 +101,7 @@ export const fetchAstroImages = async (
       browser: BFF_ROUTES.astroImages,
       server: API_ROUTES.astroImages,
     },
-    params
+    params as QueryParams
   );
   const items = Array.isArray(data) ? data : data?.results || [];
   return normalizeAstroImages(items);
@@ -169,7 +169,7 @@ export const fetchTags = async (
       browser: BFF_ROUTES.tags,
       server: API_ROUTES.tags,
     },
-    params
+    params as QueryParams
   );
 };
 

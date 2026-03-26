@@ -68,7 +68,7 @@ export function normalizeBffPayload(payload, kind, requestOrigin) {
   if (Array.isArray(data)) {
     return data.map(item =>
       typeof item === 'object' && item.url
-        ? { ...item, url: normalizePublicMediaUrl(item.url, requestOrigin) }
+        ? { ...item, url: normalizePublicMediaUrl(item.url) }
         : item
     );
   }
@@ -76,7 +76,7 @@ export function normalizeBffPayload(payload, kind, requestOrigin) {
   if (typeof data.url === 'string') {
     return {
       ...data,
-      url: normalizePublicMediaUrl(data.url, requestOrigin),
+      url: normalizePublicMediaUrl(data.url),
     };
   }
 
@@ -84,7 +84,7 @@ export function normalizeBffPayload(payload, kind, requestOrigin) {
     return Object.fromEntries(
       Object.entries(data).map(([key, value]) => [
         key,
-        normalizePublicMediaUrl(value, requestOrigin),
+        normalizePublicMediaUrl(value),
       ])
     );
   }
