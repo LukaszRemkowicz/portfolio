@@ -2,6 +2,8 @@ name: Publish Production Images
 
 on:
   push:
+    branches:
+      - "feat/add-image-registry"
     tags:
       - "v*"
   workflow_dispatch:
@@ -26,8 +28,6 @@ jobs:
     name: Build and push production images
     runs-on: ubuntu-latest
     environment: portfolio-registry
-    env:
-      IMAGE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.image_tag || github.ref_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
           fetch-depth: 0
 
       - name: Validate release tag against VERSION
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref_type == 'tag'
         shell: bash
         run: |
           set -euo pipefail
@@ -55,13 +55,40 @@ jobs:
 
           echo "✅ Release tag matches VERSION: ${TAG}"
 
+      - name: Resolve image tag
+        id: image_tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.image_tag }}"
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            SAFE_BRANCH="$(echo "${GITHUB_REF_NAME}" | tr '/_' '-' | tr -cd '[:alnum:]-.' | tr '[:upper:]' '[:lower:]')"
+            SHORT_SHA="${GITHUB_SHA::7}"
+            TAG="branch-${SAFE_BRANCH}-${SHORT_SHA}"
+          fi
+
+          echo "value=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "Resolved image tag: ${TAG}"
+
       - name: Use manual image tag for temporary testing
         if: github.event_name == 'workflow_dispatch'
         run: |
           echo "⚠️ Temporary manual publish path enabled"
-          echo "🏷️ Using manual image tag: ${IMAGE_TAG}"
+          echo "🏷️ Using manual image tag: ${{ steps.image_tag.outputs.value }}"
           # Temporary bypass for branch testing:
           # tag/VERSION validation is intentionally skipped for workflow_dispatch runs.
+
+      - name: Use branch image tag for temporary testing
+        if: github.event_name == 'push' && github.ref_type == 'branch'
+        run: |
+          echo "⚠️ Temporary branch publish path enabled"
+          echo "🏷️ Using branch image tag: ${{ steps.image_tag.outputs.value }}"
+          # Temporary bypass for branch testing:
+          # tag/VERSION validation is intentionally skipped for this trusted branch.
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -79,7 +106,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/production-be
           tags: |
-            type=raw,value=${{ env.IMAGE_TAG }}
+            type=raw,value=${{ steps.image_tag.outputs.value }}
 
       - name: Build and push production backend
         uses: docker/build-push-action@v6
@@ -101,7 +128,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/production-fe
           tags: |
-            type=raw,value=${{ env.IMAGE_TAG }}
+            type=raw,value=${{ steps.image_tag.outputs.value }}
 
       - name: Build and push production frontend
         uses: docker/build-push-action@v6
@@ -131,7 +158,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/production-nginx
           tags: |
-            type=raw,value=${{ env.IMAGE_TAG }}
+            type=raw,value=${{ steps.image_tag.outputs.value }}
 
       - name: Build and push production nginx
         uses: docker/build-push-action@v6
