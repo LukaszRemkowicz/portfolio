@@ -165,7 +165,13 @@ sudo chmod -R u+rwX /var/backups/portfolio
 Optional smoke check:
 
 ```bash
-echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+doppler -c dev run -- sh -c 'printenv GHCR_TOKEN | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin'
+```
+
+Manual test pull example:
+
+```bash
+doppler -c dev run -- sh -c 'printenv GHCR_TOKEN | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin && docker pull <registry url>'
 ```
 
 ## Production Release Flow

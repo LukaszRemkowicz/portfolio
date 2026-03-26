@@ -18,7 +18,7 @@ Primary script groups:
 Release scripts manage **Staging** and **Production** deployments on a single VPS.
 
 - `release/build.sh` -> **builds Docker images** with environment prefixes and service suffixes (e.g. `production-be:v1.0.0`)
-- `release/prepare_images.sh` -> pulls production images from GHCR and tags them locally to the names already expected by compose
+- `release/prepare_images.sh` -> pulls production images from GHCR and tags them locally to the names already expected by production compose
 - `release/release.sh` -> runs **one-shot release tasks** (migrations, collectstatic, etc.) targeting the correct environment services
 - `release/deploy.sh` -> performs the **deployment switch** and updates environment-specific rollback state
 
@@ -38,6 +38,12 @@ These scripts **require** several variables to be set, typically via Doppler.
 - `GHCR_TOKEN`: registry token with package read access
 - `GHCR_REGISTRY`: registry host used by `prepare_images.sh` (defaults to `ghcr.io`)
 - `GHCR_NAMESPACE`: full image namespace used by `prepare_images.sh`
+
+### 🔐 Manual GHCR login and pull example
+
+```bash
+doppler -c dev run -- sh -c 'printenv GHCR_TOKEN | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin && docker pull <registry image url>'
+```
 
 ### ➕ Optional
 - `FRONTEND_PORT`: Defaults to `8080`

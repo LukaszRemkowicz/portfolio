@@ -221,6 +221,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Build and load for scanning
         uses: docker/bake-action@v6.1.0
         with:
@@ -457,6 +460,7 @@ jobs:
           context: .
           file: docker/backend/Dockerfile
           target: production
+          platforms: linux/amd64,linux/arm64
           push: true
           provenance: true
           sbom: true
@@ -479,6 +483,7 @@ jobs:
           context: .
           file: docker/frontend/Dockerfile
           target: prod
+          platforms: linux/amd64,linux/arm64
           push: true
           provenance: true
           sbom: true
@@ -508,6 +513,7 @@ jobs:
         with:
           context: .
           file: docker/nginx/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           provenance: true
           sbom: true
@@ -564,6 +570,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Docker metadata for production backend
         id: meta_backend
         uses: docker/metadata-action@v5
@@ -578,6 +587,7 @@ jobs:
           context: .
           file: docker/backend/Dockerfile
           target: production
+          platforms: linux/amd64,linux/arm64
           push: true
           provenance: true
           sbom: true
@@ -600,6 +610,7 @@ jobs:
           context: .
           file: docker/frontend/Dockerfile
           target: prod
+          platforms: linux/amd64,linux/arm64
           push: true
           provenance: true
           sbom: true
@@ -629,6 +640,7 @@ jobs:
         with:
           context: .
           file: docker/nginx/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           provenance: true
           sbom: true
