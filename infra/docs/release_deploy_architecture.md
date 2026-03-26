@@ -66,15 +66,15 @@ Release identity is derived from `VERSION` and Git tags.
 - compares it to the latest `v*` tag
 - creates a new annotated tag `vX.Y.Z` if needed
 
-`.github/workflows/publish-images.yml`:
+The `Publish Production Images` job in `.github/workflows/ci-cd.yml`:
 
-- runs on push of `v*` tags
+- runs after validation jobs on push of `v*` tags
 - validates that the pushed tag matches `VERSION`
 - builds and pushes production images to GHCR
 
 Temporary testing note:
 
-- `publish-images.yml` currently also exposes a `workflow_dispatch` path for manual branch testing with a plain text `image_tag`
+- `ci-cd.yml` currently also exposes a `workflow_dispatch` path for manual testing with a plain text `image_tag`
 
 ## Artifact Sources
 
@@ -317,7 +317,7 @@ High-level production flow:
 1. update `VERSION`
 2. merge to `main`
 3. `release.yml` creates tag `vX.Y.Z`
-4. `publish-images.yml` builds and pushes production images to GHCR
+4. the `Publish Production Images` job in `ci-cd.yml` builds and pushes production images to GHCR
 5. on VPS, run `prepare_images.sh`
 6. run `release.sh`
 7. run `deploy.sh`

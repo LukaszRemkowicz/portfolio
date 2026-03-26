@@ -1,9 +1,16 @@
-name: Quality Checks
+name: CI/CD
 
 on:
   pull_request:
   push:
     branches: [main, dev]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Temporary manual image tag for branch testing"
+        required: true
+        type: string
 
 env:
   PYTHON_VERSION: "3.13"
@@ -18,7 +25,6 @@ permissions:
   contents: read
 
 jobs:
-  # Versioning
   version-check:
     name: Version bump check (dev → main)
     runs-on: ubuntu-latest
@@ -33,18 +39,15 @@ jobs:
         run: |
           if [[ -f VERSION ]]; then
             VER=$(tr -d ' \t\r\n' < VERSION)
-            echo "✅ PR introduces VERSION: $VER"
-            echo "🏷️  Release tag would be: v$VER"
+            echo "VERSION: $VER"
+            echo "Release tag would be: v$VER"
           else
-            echo "⚠️ VERSION file not found"
+            echo "VERSION file not found"
           fi
 
       - name: Validate VERSION file and bump
         shell: bash
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_REF: ${{ github.head_ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
@@ -52,59 +55,46 @@ jobs:
 
           VERSION_FILE="VERSION"
 
-          echo "🔎 Version check (dev → main)"
-          echo "📌 Base SHA: $BASE_SHA"
-          echo "📌 Head SHA: $HEAD_SHA"
-
-          # PR/DEV must have VERSION
           if ! git cat-file -e "${HEAD_SHA}:${VERSION_FILE}" 2>/dev/null; then
-            echo "❌ ERROR: ${VERSION_FILE} is missing in PR branch (dev)."
+            echo "ERROR: ${VERSION_FILE} is missing in PR branch."
             exit 1
           fi
 
           NEW="$(git show "${HEAD_SHA}:${VERSION_FILE}" | tr -d ' \t\r\n')"
           if ! [[ "$NEW" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ ERROR: VERSION must be MAJOR.MINOR.PATCH (e.g. 1.0.2). Got: '$NEW'"
+            echo "ERROR: VERSION must be MAJOR.MINOR.PATCH. Got: '$NEW'"
             exit 1
           fi
 
-          # If main/base doesn't have VERSION yet -> bootstrap pass
           if ! git cat-file -e "${BASE_SHA}:${VERSION_FILE}" 2>/dev/null; then
-            echo "⚠️  Bootstrap: ${VERSION_FILE} does not exist on base branch (main)."
-            echo "✅ PR introduces VERSION: $NEW"
-            echo "🏷️  Release tag would be: v$NEW"
+            echo "Bootstrap: ${VERSION_FILE} does not exist on base branch."
+            echo "VERSION introduced: $NEW"
             exit 0
           fi
 
           OLD="$(git show "${BASE_SHA}:${VERSION_FILE}" | tr -d ' \t\r\n')"
           if ! [[ "$OLD" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ ERROR: Base VERSION is invalid on main. Got: '$OLD'"
+            echo "ERROR: Base VERSION is invalid. Got: '$OLD'"
             exit 1
           fi
 
-          echo "🔢 Base version: $OLD"
-          echo "🔢 PR version:   $NEW"
-
           if [[ "$OLD" == "$NEW" ]]; then
-            echo "❌ ERROR: VERSION was not changed in this PR (still $NEW)."
+            echo "ERROR: VERSION was not changed in this PR."
             exit 1
           fi
 
           IFS='.' read -r oldM oldm oldp <<< "$OLD"
           IFS='.' read -r newM newm newp <<< "$NEW"
 
-          # Require strictly greater
           if (( newM < oldM )) || \
             (( newM == oldM && newm < oldm )) || \
             (( newM == oldM && newm == oldm && newp <= oldp )); then
-            echo "❌ ERROR: VERSION must increase. Base=$OLD PR=$NEW"
+            echo "ERROR: VERSION must increase. Base=$OLD PR=$NEW"
             exit 1
           fi
 
-          echo "✅ VERSION bump is valid: $OLD → $NEW"
-          echo "🏷️  Release tag would be: v$NEW"
+          echo "VERSION bump is valid: $OLD -> $NEW"
 
-  # Frontend: Lint, Type Check, and Test
   frontend:
     name: Frontend Quality & Tests
     runs-on: ubuntu-latest
@@ -149,11 +139,9 @@ jobs:
           flags: frontend
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  # Backend: Lint, Type Check, and Test
   backend:
     name: Backend Quality & Tests
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:18
@@ -176,7 +164,6 @@ jobs:
       DEFAULT_FROM_EMAIL: test@example.com
       CONTACT_EMAIL: test@example.com
       SESSION_COOKIE_DOMAIN: .example.com
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -213,8 +200,7 @@ jobs:
 
       - name: Run tests
         working-directory: ./backend
-        run: |
-          poetry run pytest --cov=. --cov-report=xml
+        run: poetry run pytest --cov=. --cov-report=xml
 
       - name: Upload coverage reports
         if: github.event_name == 'push'
@@ -224,7 +210,6 @@ jobs:
           flags: backend
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  # Docker Build/Test
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -246,46 +231,6 @@ jobs:
             *.cache-to=type=gha,mode=max
           load: true
 
-  # Production Images Build Test
-  production-build-test:
-    name: Production Image Build Check
-    runs-on: ubuntu-latest
-    needs: [frontend, backend]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Test Backend Production Build
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: docker/backend/Dockerfile
-          target: production
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Test Frontend Production Build
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: docker/frontend/Dockerfile
-          target: prod
-          push: false
-          build-args: |
-            SITE_DOMAIN=test.local
-            API_URL=https://api.test.local
-            GA_TRACKING_ID=test
-            SENTRY_DSN_FE=test
-            ENVIRONMENT=production
-            PROJECT_OWNER=test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Security Scanning
   security-scan:
     name: Security Analysis
     runs-on: ubuntu-latest
@@ -303,7 +248,6 @@ jobs:
       DEFAULT_FROM_EMAIL: test@example.com
       CONTACT_EMAIL: test@example.com
       SESSION_COOKIE_DOMAIN: .example.com
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -372,16 +316,13 @@ jobs:
           poetry run pip install safety
           poetry run safety check
 
-  # PR Status Reporting
   pr-status:
     name: PR Status Report
     runs-on: ubuntu-latest
-    needs:
-      [frontend, backend, docker-build, production-build-test, security-scan]
+    needs: [frontend, backend, docker-build, security-scan]
     if: always() && github.event_name == 'pull_request'
     permissions:
       pull-requests: write
-
     steps:
       - name: Report Status
         uses: actions/github-script@v7
@@ -391,7 +332,6 @@ jobs:
               'Frontend (Lint/Types/Tests)': '${{ needs.frontend.result }}',
               'Backend (Lint/Types/Tests)': '${{ needs.backend.result }}',
               'Docker Dev Build': '${{ needs.docker-build.result }}',
-              'Docker Prod Build': '${{ needs.production-build-test.result }}',
               'Security Analysis': '${{ needs.security-scan.result }}'
             };
 
@@ -428,3 +368,271 @@ jobs:
                 body
               });
             }
+
+  publish-production:
+    name: Publish Production Images
+    runs-on: ubuntu-latest
+    needs: [frontend, backend, docker-build, security-scan]
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      github.event_name == 'workflow_dispatch'
+    environment: portfolio-registry
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAMESPACE: lukaszremkowicz/portfolio
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate release tag against VERSION
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG="${GITHUB_REF_NAME}"
+          VER="$(tr -d ' \t\r\n' < VERSION)"
+
+          if ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([\-+].+)?$ ]]; then
+            echo "ERROR: Tag '${TAG}' is not SemVer-like."
+            exit 1
+          fi
+
+          if [[ "${TAG}" != "v${VER}" ]]; then
+            echo "ERROR: Tag '${TAG}' does not match VERSION='${VER}'."
+            exit 1
+          fi
+
+          echo "Release tag matches VERSION: ${TAG}"
+
+      - name: Resolve image tag
+        id: image_tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.image_tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+
+          echo "value=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "Resolved image tag: ${TAG}"
+
+      - name: Use manual image tag for temporary testing
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Temporary manual publish path enabled"
+          echo "Using manual image tag: ${{ steps.image_tag.outputs.value }}"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker metadata for production backend
+        id: meta_backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/production-be
+          tags: |
+            type=raw,value=${{ steps.image_tag.outputs.value }}
+
+      - name: Build and push production backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backend/Dockerfile
+          target: production
+          push: true
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta_backend.outputs.tags }}
+          labels: ${{ steps.meta_backend.outputs.labels }}
+
+      - name: Docker metadata for production frontend
+        id: meta_frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/production-fe
+          tags: |
+            type=raw,value=${{ steps.image_tag.outputs.value }}
+
+      - name: Build and push production frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          target: prod
+          push: true
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            SITE_DOMAIN=${{ vars.SITE_DOMAIN }}
+            API_URL=https://${{ vars.API_DOMAIN }}
+            GA_TRACKING_ID=${{ vars.GA_TRACKING_ID }}
+            SENTRY_DSN_FE=${{ secrets.SENTRY_DSN_FE }}
+            ENVIRONMENT=production
+            ALLOWED_HOSTS=${{ vars.ALLOWED_HOSTS }}
+            PROJECT_OWNER=${{ vars.PROJECT_OWNER }}
+          tags: ${{ steps.meta_frontend.outputs.tags }}
+          labels: ${{ steps.meta_frontend.outputs.labels }}
+
+      - name: Docker metadata for production nginx
+        id: meta_nginx
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/production-nginx
+          tags: |
+            type=raw,value=${{ steps.image_tag.outputs.value }}
+
+      - name: Build and push production nginx
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/nginx/Dockerfile
+          push: true
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta_nginx.outputs.tags }}
+          labels: ${{ steps.meta_nginx.outputs.labels }}
+
+  temporary-registry-publish:
+    name: Temporary Registry Publish
+    runs-on: ubuntu-latest
+    needs: [pr-status]
+    if: |
+      github.event_name == 'pull_request' &&
+      needs.pr-status.result == 'success' &&
+      github.head_ref == 'feat/add-image-registry' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    environment: portfolio-registry
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAMESPACE: lukaszremkowicz/portfolio
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Resolve temporary branch image tag
+        id: image_tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SAFE_BRANCH="$(echo "${{ github.head_ref }}" | tr '/_' '-' | tr -cd '[:alnum:]-.' | tr '[:upper:]' '[:lower:]')"
+          SHORT_SHA="$(echo "${{ github.event.pull_request.head.sha }}" | cut -c1-7)"
+          TAG="branch-${SAFE_BRANCH}-${SHORT_SHA}"
+
+          echo "value=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "Resolved image tag: ${TAG}"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker metadata for production backend
+        id: meta_backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/production-be
+          tags: |
+            type=raw,value=${{ steps.image_tag.outputs.value }}
+
+      - name: Build and push production backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backend/Dockerfile
+          target: production
+          push: true
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta_backend.outputs.tags }}
+          labels: ${{ steps.meta_backend.outputs.labels }}
+
+      - name: Docker metadata for production frontend
+        id: meta_frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/production-fe
+          tags: |
+            type=raw,value=${{ steps.image_tag.outputs.value }}
+
+      - name: Build and push production frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          target: prod
+          push: true
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            SITE_DOMAIN=${{ vars.SITE_DOMAIN }}
+            API_URL=https://${{ vars.API_DOMAIN }}
+            GA_TRACKING_ID=${{ vars.GA_TRACKING_ID }}
+            SENTRY_DSN_FE=${{ secrets.SENTRY_DSN_FE }}
+            ENVIRONMENT=production
+            ALLOWED_HOSTS=${{ vars.ALLOWED_HOSTS }}
+            PROJECT_OWNER=${{ vars.PROJECT_OWNER }}
+          tags: ${{ steps.meta_frontend.outputs.tags }}
+          labels: ${{ steps.meta_frontend.outputs.labels }}
+
+      - name: Docker metadata for production nginx
+        id: meta_nginx
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/production-nginx
+          tags: |
+            type=raw,value=${{ steps.image_tag.outputs.value }}
+
+      - name: Build and push production nginx
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/nginx/Dockerfile
+          push: true
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta_nginx.outputs.tags }}
+          labels: ${{ steps.meta_nginx.outputs.labels }}
