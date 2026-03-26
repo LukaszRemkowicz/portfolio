@@ -77,7 +77,14 @@ repos:
           if [ -z "${SAFETY_API_KEY:-}" ] && command -v security >/dev/null 2>&1; then
             export SAFETY_API_KEY="$(security find-generic-password -a "$USER" -s SAFETY_API_KEY -w 2>/dev/null)";
           fi &&
-          : "${SAFETY_API_KEY:?Set SAFETY_API_KEY in your shell or store it in macOS Keychain as SAFETY_API_KEY before running pre-commit.}" &&
+          if [ -z "${SAFETY_API_KEY:-}" ]; then
+            if [ -n "${CI:-}" ]; then
+              echo "Skipping safety pre-commit hook in CI because SAFETY_API_KEY is not available; the dedicated security workflow performs the authoritative Safety scan.";
+              exit 0;
+            fi;
+            echo "Set SAFETY_API_KEY in your shell or store it in macOS Keychain as SAFETY_API_KEY before running pre-commit." >&2;
+            exit 1;
+          fi &&
           poetry run safety --stage cicd scan --target .'
         language: system
         pass_filenames: false
