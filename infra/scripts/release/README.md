@@ -2,15 +2,15 @@
 
 The canonical operational documentation for infrastructure scripts now lives in:
 
-- [infra/scripts/README.md](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/README.md)
+- [infra/scripts/README.md](../README.md)
 
 ## 🗂️ This Folder Contains
 
 This folder contains:
 
-- [build.sh](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/release/build.sh)
-- [release.sh](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/release/release.sh)
-- [deploy.sh](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/release/deploy.sh)
+- [build.sh](./build.sh)
+- [release.sh](./release.sh)
+- [deploy.sh](./deploy.sh)
 
 ## 📖 Use The Shared Runbook For
 
