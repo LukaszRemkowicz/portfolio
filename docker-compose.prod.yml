@@ -113,7 +113,7 @@ services:
   # ---------- Celery Worker ----------
   celery-worker:
     <<: *backend-defaults
-    image: ${ENVIRONMENT}-worker:${TAG}
+    image: ${ENVIRONMENT}-be:${TAG}
     restart: always
     command: celery -A settings worker -l info -Q celery,monitoring --concurrency=${CELERY_WORKERS:-4}
     environment:
