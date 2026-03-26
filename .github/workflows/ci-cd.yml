@@ -549,7 +549,7 @@ jobs:
 
           SAFE_BRANCH="$(echo "${{ github.head_ref }}" | tr '/_' '-' | tr -cd '[:alnum:]-.' | tr '[:upper:]' '[:lower:]')"
           SHORT_SHA="$(echo "${{ github.event.pull_request.head.sha }}" | cut -c1-7)"
-          TAG="branch-${SAFE_BRANCH}-${SHORT_SHA}"
+          TAG="test-${SAFE_BRANCH}-${SHORT_SHA}"
 
           echo "value=${TAG}" >> "${GITHUB_OUTPUT}"
           echo "Resolved image tag: ${TAG}"
