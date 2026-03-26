@@ -290,6 +290,7 @@ jobs:
   security-scan:
     name: Security Analysis
     runs-on: ubuntu-latest
+    environment: portfolio_tests
     needs: [frontend, backend]
     permissions:
       security-events: write
