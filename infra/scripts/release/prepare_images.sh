@@ -9,9 +9,11 @@
 #
 # Usage:
 #   TAG=v1.2.3 doppler run -- ./prepare_images.sh
+#   TEST=true TAG=test-branch-sha doppler run -- ./prepare_images.sh
 #
 # Parameters (Environment Variables):
 #   TAG            - Release tag (vX.Y.Z). If omitted, uses 'git describe'
+#   TEST           - If 'true', bypasses SemVer tag validation for test tags
 #   GHCR_REGISTRY  - Registry host. Defaults to ghcr.io
 #   GHCR_NAMESPACE - Full image namespace, injected via Doppler
 #
@@ -31,7 +33,12 @@ cd "${PROJECT_DIR}"
 
 git fetch --tags >/dev/null 2>&1 || true
 TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || true)}"
-validate_tag "$TAG"
+TEST="${TEST:-false}"
+if [[ "${TEST}" == "true" ]]; then
+  echo "🧪 TEST=true: skipping SemVer validation for TAG=${TAG}"
+else
+  validate_tag "$TAG"
+fi
 
 ENVIRONMENT="production"
 GHCR_REGISTRY="${GHCR_REGISTRY:-ghcr.io}"

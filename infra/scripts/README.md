@@ -85,6 +85,12 @@ TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/release
 TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.sh
 ```
 
+For test-only GHCR tags that are not SemVer-like:
+
+```bash
+TEST=true TAG=test-feat-add-image-registry-2f0b23d doppler -c dev run -- ./infra/scripts/release/prepare_images.sh
+```
+
 ## ↩️ Rollback
 
 1. Check current and previous tags in `/var/lib/portfolio/<environment>/` or your fallback state directory.

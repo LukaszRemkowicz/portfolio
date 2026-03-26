@@ -51,8 +51,9 @@ Required for production image publish:
 - `GA_TRACKING_ID`
 - `ALLOWED_HOSTS`
 - `PROJECT_OWNER`
+- `IMAGE_NAMESPACE`
 
-These are used by `.github/workflows/ci-cd.yml` during the production frontend build.
+These are used by `.github/workflows/release.yml` during the production frontend build.
 
 ## Repository Secrets
 
@@ -73,10 +74,7 @@ You do not add `GITHUB_TOKEN` manually.
 ## GitHub Workflows Involved
 
 - `.github/workflows/release.yml`
-  Creates `vX.Y.Z` tag from `VERSION` when `main` changes.
-
-- `.github/workflows/ci-cd.yml`
-  Runs validation jobs first and then publishes production images to GHCR as the final job for release tags or manual publish runs.
+  Creates `vX.Y.Z` tag from `VERSION` when `main` changes and then publishes production images to GHCR.
 
 ## Package Visibility
 
@@ -182,7 +180,7 @@ doppler -c dev run -- sh -c 'printenv GHCR_TOKEN | docker login ghcr.io -u "$GHC
 2. Merge to `main`.
 3. GitHub Actions runs `.github/workflows/release.yml`.
 4. That workflow creates and pushes tag `vX.Y.Z`.
-5. GitHub Actions runs the publish job inside `.github/workflows/ci-cd.yml`.
+5. GitHub Actions runs the publish job inside `.github/workflows/release.yml`.
 6. Production images are pushed to GHCR.
 
 ## 2. On The Production VPS, Pull Prepared Images
@@ -283,7 +281,7 @@ This is intentional, because staging is used for branch-based testing and should
 
 Before calling the production flow complete, verify:
 
-1. The `Publish Production Images` job in `ci-cd.yml` succeeded for the target tag.
+1. The `Publish Production Images` job in `release.yml` succeeded for the target tag.
 2. GHCR package visibility is private.
 3. `prepare_images.sh` works on the production VPS.
 4. `release.sh` succeeds using the prepared images.
@@ -372,7 +370,7 @@ docker image inspect --format '{{join .RepoDigests "\n"}}' production-be:vX.Y.Z
 ## Related Files
 
 - `.github/workflows/release.yml`
-- `.github/workflows/ci-cd.yml`
+- `.github/workflows/release.yml`
 - `infra/scripts/release/prepare_images.sh`
 - `infra/scripts/release/release.sh`
 - `infra/scripts/release/deploy.sh`
