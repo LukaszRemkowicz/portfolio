@@ -121,7 +121,7 @@ What exists:
 
 Middleware path:
 
-- [backend/common/middleware.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/middleware.py)
+- [backend/common/middleware.py](common/middleware.py)
 
 ## 🤖 Monitoring
 
@@ -196,13 +196,13 @@ doppler --config dev run -- docker compose up --build
 ## 🗂️ Important Backend Areas
 
 - settings and singleton config:
-  - [backend/core/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/models.py)
+  - [backend/core/models.py](core/models.py)
 - astrophotography domain:
-  - [backend/astrophotography/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/astrophotography/models.py)
+  - [backend/astrophotography/models.py](astrophotography/models.py)
 - user/profile domain:
-  - [backend/users/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/users/models.py)
+  - [backend/users/models.py](users/models.py)
 - monitoring:
-  - [backend/monitoring/services.py](/Users/lukaszremkowicz/Projects/landingpage/backend/monitoring/services.py)
+  - [backend/monitoring/services.py](monitoring/services.py)
 
 ## 📝 Notes
 

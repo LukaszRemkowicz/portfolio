@@ -103,5 +103,5 @@ sudo chmod 644 /etc/cron.d/portfolio-collect-logs
 
 ## 🔗 Related docs
 
-- Infra runbook: [infra/scripts/README.md](/Users/lukaszremkowicz/Projects/landingpage/infra/scripts/README.md)
-- Root project README: [README.md](/Users/lukaszremkowicz/Projects/landingpage/README.md)
+- Infra runbook: [infra/scripts/README.md](../README.md)
+- Root project README: [README.md](../../../README.md)

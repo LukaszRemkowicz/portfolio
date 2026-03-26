@@ -44,11 +44,11 @@ The original document was correct on the core architecture:
 
 These points match the real codebase:
 
-- [frontend/src/index.tsx](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/index.tsx) is client-only today
-- [frontend/src/App.tsx](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/App.tsx) is tied to `BrowserRouter`
-- [docker/frontend/Dockerfile](/Users/lukaszremkowicz/Projects/landingpage/docker/frontend/Dockerfile) builds static artifacts today
-- [docker/frontend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/frontend/entrypoint.sh) copies files into `/frontend_dist`
-- [docker-compose.prod.yml](/Users/lukaszremkowicz/Projects/landingpage/docker-compose.prod.yml) and [docker-compose.stage.yml](/Users/lukaszremkowicz/Projects/landingpage/docker-compose.stage.yml) still model `fe` as an artifact container
+- [frontend/src/index.tsx](../../../frontend/src/index.tsx) is client-only today
+- [frontend/src/App.tsx](../../../frontend/src/App.tsx) is tied to `BrowserRouter`
+- [docker/frontend/Dockerfile](../../../docker/frontend/Dockerfile) builds static artifacts today
+- [docker/frontend/entrypoint.sh](../../../docker/frontend/entrypoint.sh) copies files into `/frontend_dist`
+- [docker-compose.prod.yml](../../../docker-compose.prod.yml) and [docker-compose.stage.yml](../../../docker-compose.stage.yml) still model `fe` as an artifact container
 
 Assessment: The original proposal correctly aligns with codebase requirements regarding service boundaries and runtime conversion.
 
@@ -60,7 +60,7 @@ Assessment: The original proposal correctly aligns with codebase requirements re
 
 One correction to the original document:
 
-- it refers to `/travel-highlights/:countrySlug/:placeSlug/:dateSlug` in a few places, but the real route is `/travel/:countrySlug/:placeSlug/:dateSlug` in [frontend/src/App.tsx](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/App.tsx)
+- it refers to `/travel-highlights/:countrySlug/:placeSlug/:dateSlug` in a few places, but the real route is `/travel/:countrySlug/:placeSlug/:dateSlug` in [frontend/src/App.tsx](../../../frontend/src/App.tsx)
 
 ---
 
@@ -72,13 +72,13 @@ Improved the plan in four important ways:
 
 This is correct.
 
-[frontend/src/i18n.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/i18n.ts) uses `i18next-browser-languagedetector` with `localStorage` and `navigator`. That is not safe to carry unchanged into SSR. The split between client and server i18n initialization should happen before real server rendering begins.
+[frontend/src/i18n.ts](../../../frontend/src/i18n.ts) uses `i18next-browser-languagedetector` with `localStorage` and `navigator`. That is not safe to carry unchanged into SSR. The split between client and server i18n initialization should happen before real server rendering begins.
 
 ### 2. Environment resolution must stop being client-only
 
 This is also correct.
 
-[frontend/src/utils/env.ts](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/utils/env.ts) is built entirely around `import.meta.env`. That works for the browser build, but a Node SSR runtime needs a server-safe path that can read runtime env values. `env.shared.ts` idea is a good addition.
+[frontend/src/utils/env.ts](../../../frontend/src/utils/env.ts) is built entirely around `import.meta.env`. That works for the browser build, but a Node SSR runtime needs a server-safe path that can read runtime env values. `env.shared.ts` idea is a good addition.
 
 ### 3. React Query dehydration should be explicit, not implied
 
@@ -114,7 +114,7 @@ That improves implementation discipline.
 
 This is the biggest overreach.
 
-The current app uses component routes in [frontend/src/App.tsx](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/App.tsx), not data routers. recommended `react-router-dom@7` and discusses `createStaticHandler`, but that pushes the migration toward a router-model change at the same time as SSR.
+The current app uses component routes in [frontend/src/App.tsx](../../../frontend/src/App.tsx), not data routers. recommended `react-router-dom@7` and discusses `createStaticHandler`, but that pushes the migration toward a router-model change at the same time as SSR.
 
 That is unnecessary risk.
 
@@ -153,7 +153,7 @@ Assessment: Viable option but not an architectural requirement.
 
 Recommended moving toward manual `<head>` injection. That is not the best first move.
 
-[frontend/src/components/common/SEO.tsx](/Users/lukaszremkowicz/Projects/landingpage/frontend/src/components/common/SEO.tsx) already uses `react-helmet-async`, which supports SSR when a request-scoped `HelmetProvider` context is used on the server.
+[frontend/src/components/common/SEO.tsx](../../../frontend/src/components/common/SEO.tsx) already uses `react-helmet-async`, which supports SSR when a request-scoped `HelmetProvider` context is used on the server.
 
 For this migration:
 
