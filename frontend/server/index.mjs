@@ -15,7 +15,7 @@
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { detectLanguage } from '../src/shared/i18n/detectLanguage.ts';
+import { detectLanguage } from './detectLanguage.js';
 import { pipeDocument } from './documentRender.js';
 import { handleBffRequest } from './backendProxy.js';
 import { handleInternalRequest } from './internalCacheRoute.js';

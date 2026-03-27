@@ -355,6 +355,58 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build frontend runtime smoke image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          target: prod
+          platforms: linux/amd64
+          load: true
+          tags: frontend-smoke:ci
+          build-args: |
+            SITE_DOMAIN=test.local
+            API_URL=https://api.test.local
+            GA_TRACKING_ID=test
+            SENTRY_DSN_FE=test
+            ENVIRONMENT=production
+            ALLOWED_HOSTS=test.local,localhost,127.0.0.1
+            PROJECT_OWNER=test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test frontend runtime
+        run: |
+          set -euo pipefail
+
+          docker rm -f frontend-smoke-test >/dev/null 2>&1 || true
+
+          docker run -d \
+            --name frontend-smoke-test \
+            -p 18080:8080 \
+            frontend-smoke:ci
+
+          cleanup() {
+            status=$?
+            if [[ $status -ne 0 ]]; then
+              docker logs frontend-smoke-test || true
+            fi
+            docker rm -f frontend-smoke-test >/dev/null 2>&1 || true
+            exit $status
+          }
+          trap cleanup EXIT
+
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/health >/dev/null; then
+              echo "Frontend runtime smoke test passed"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Frontend runtime smoke test failed"
+          exit 1
+
       - name: Build production nginx image
         uses: docker/build-push-action@v6
         with:
