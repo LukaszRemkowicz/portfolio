@@ -18,6 +18,7 @@ Primary script groups:
 Release scripts manage **Staging** and **Production** deployments on a single VPS.
 
 - `release/build.sh` -> **builds Docker images** with environment prefixes and service suffixes (e.g. `production-be:v1.0.0`)
+- `release/prepare_images.sh` -> pulls production images from GHCR and tags them locally to the names already expected by production compose
 - `release/release.sh` -> runs **one-shot release tasks** (migrations, collectstatic, etc.) targeting the correct environment services
 - `release/deploy.sh` -> performs the **deployment switch** and updates environment-specific rollback state
 
@@ -31,6 +32,18 @@ These scripts **require** several variables to be set, typically via Doppler.
 3. `PROJECT_OWNER`: Injected into frontend metadata
 4. `SITE_DOMAIN` and `API_DOMAIN`: Used for Nginx templates and frontend builds
 5. `ALLOWED_HOSTS`: Django security setting
+
+### 🏭 Production-only for GHCR image preparation
+- `GHCR_USERNAME`: registry username used by `prepare_images.sh`
+- `GHCR_TOKEN`: registry token with package read access
+- `GHCR_REGISTRY`: registry host used by `prepare_images.sh` (defaults to `ghcr.io`)
+- `GHCR_NAMESPACE`: full image namespace used by `prepare_images.sh`
+
+### 🔐 Manual GHCR login and pull example
+
+```bash
+doppler -c dev run -- sh -c 'printenv GHCR_TOKEN | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin && docker pull <registry image url>'
+```
 
 ### ➕ Optional
 - `FRONTEND_PORT`: Defaults to `8080`
@@ -67,9 +80,15 @@ sudo chmod -R u+rwX /var/backups/portfolio
 ```
 
 ```bash
-TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/build.sh
+TAG=v1.2.0 doppler run -- ./infra/scripts/release/prepare_images.sh
 TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/release.sh
 TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.sh
+```
+
+For test-only GHCR tags that are not SemVer-like:
+
+```bash
+TEST=true TAG=test-feat-add-image-registry-2f0b23d doppler -c dev run -- ./infra/scripts/release/prepare_images.sh
 ```
 
 ## ↩️ Rollback
@@ -91,6 +110,10 @@ TAG=v1.1.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.
 
 ### 📦 Image Naming
 - Images follow `${ENVIRONMENT}-<service>:${TAG}`
+
+### 📥 Artifact Source
+- Staging uses locally built images from `build.sh`
+- Production uses `prepare_images.sh` to pull GHCR images and tag them locally to the same names compose already expects
 
 ### 🧾 Compose File Overrides
 - `build.sh` auto-detects the environment compose file
@@ -137,7 +160,13 @@ sudo chmod -R u+rwX /var/backups/portfolio
 ```
 
 ### “Missing image production-be:<tag>” or similar
-Release expects images to be built before migrations or deploy. Run `build.sh` first for the same `ENVIRONMENT` and `TAG`, then rerun `release.sh`.
+For production, run:
+
+```bash
+TAG=v1.2.0 doppler run -- ./infra/scripts/release/prepare_images.sh
+```
+
+For staging, run `build.sh` first for the same `ENVIRONMENT` and `TAG`, then rerun `release.sh`.
 
 ### 💾 Backup scripts
 

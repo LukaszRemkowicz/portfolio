@@ -1,5 +1,6 @@
 # backend/common/tests/image_helpers.py
 """Shared test helpers for image-related tests."""
+
 from io import BytesIO
 
 from PIL import Image

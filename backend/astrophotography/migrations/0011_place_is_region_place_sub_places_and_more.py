@@ -13,16 +13,14 @@ def reset_mainpagelocation_sequence(apps, schema_editor):
     if schema_editor.connection.vendor != "postgresql":
         return
     with schema_editor.connection.cursor() as cursor:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT setval(
                 pg_get_serial_sequence('astrophotography_mainpagelocation', 'id'),
                 COALESCE(MAX(id), 1),
                 true
             )
             FROM astrophotography_mainpagelocation;
-            """
-        )
+            """)
 
 
 def seed_regions(apps, schema_editor):

@@ -72,7 +72,7 @@ x-frontend-common: &frontend-common
     TZ: "Europe/Warsaw"
 
 x-local-nginx-common: &local-nginx-common
-  image: nginx:latest
+  image: nginx:1.29-alpine
   depends_on:
     nginx-blocklist-init:
       condition: service_completed_successfully

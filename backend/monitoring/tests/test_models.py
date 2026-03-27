@@ -1,5 +1,6 @@
 # backend/monitoring/tests/test_models.py
 """Tests for LogAnalysis model methods, properties, and custom manager."""
+
 from datetime import date, timedelta
 
 import pytest

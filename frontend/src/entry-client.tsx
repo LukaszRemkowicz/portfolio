@@ -43,33 +43,38 @@ i18n.on('languageChanged', () => {
   });
 });
 
-// Initialise browser-only services (Sentry lazy-load + SW unregister)
-initClientServices();
+function bootstrapApp() {
+  // Initialise browser-only services (Sentry lazy-load)
+  initClientServices();
 
-const rootElement = document.getElementById('root');
-if (!rootElement) throw new Error('Root element not found');
+  const rootElement = document.getElementById('root');
+  if (!rootElement) throw new Error('Root element not found');
 
-const environment = getEnv('ENVIRONMENT', getEnv('NODE_ENV', 'development'));
-const useClientRenderOnly = ['development', 'dev'].includes(environment);
+  const environment = getEnv('ENVIRONMENT', getEnv('NODE_ENV', 'development'));
+  // Local development prefers a clean client mount over hydration recovery noise.
+  // Production-like environments should hydrate so SSR/client mismatches stay visible.
+  const useClientRenderOnly = ['development', 'dev'].includes(environment);
 
-const tree = (
-  <AppShell
-    queryClient={queryClient}
-    i18nInstance={i18n}
-    dehydratedState={dehydratedState}
-  >
-    <BrowserRouter
-      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+  const tree = (
+    <AppShell
+      queryClient={queryClient}
+      i18nInstance={i18n}
+      dehydratedState={dehydratedState}
     >
-      <App />
-    </BrowserRouter>
-    {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-  </AppShell>
-);
+      <BrowserRouter
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <App />
+      </BrowserRouter>
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+    </AppShell>
+  );
 
-// Local dev favors deterministic client render over noisy hydration recoveries.
-if (rootElement.childElementCount > 0 && !useClientRenderOnly) {
-  hydrateRoot(rootElement, tree);
-} else {
-  createRoot(rootElement).render(tree);
+  if (rootElement.childElementCount > 0 && !useClientRenderOnly) {
+    hydrateRoot(rootElement, tree);
+  } else {
+    createRoot(rootElement).render(tree);
+  }
 }
+
+bootstrapApp();

@@ -4,6 +4,10 @@
  * The cache is intentionally process-local and keyed by resource, language, and
  * public site host. It is used only for low-churn shell queries that are
  * shared across many SSR requests.
+ *
+ * IMPORTANT: this cache is safe only for a single Node.js process. If the
+ * frontend server is ever scaled to multiple workers or replicas, invalidation
+ * must move to a shared mechanism instead of relying on local process memory.
  */
 
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;

@@ -1,4 +1,4 @@
-name: Quality Checks
+name: CI/CD
 
 on:
   pull_request:
@@ -18,11 +18,10 @@ permissions:
   contents: read
 
 jobs:
-  # Versioning
   version-check:
     name: Version bump check (dev → main)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref == 'dev'
     steps:
       - name: Checkout PR HEAD
         uses: actions/checkout@v4
@@ -42,9 +41,6 @@ jobs:
       - name: Validate VERSION file and bump
         shell: bash
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_REF: ${{ github.head_ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
@@ -176,6 +172,7 @@ jobs:
       DEFAULT_FROM_EMAIL: test@example.com
       CONTACT_EMAIL: test@example.com
       SESSION_COOKIE_DOMAIN: .example.com
+      SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
 
     steps:
       - name: Checkout code
@@ -203,7 +200,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./backend
-        run: poetry install --no-root --no-interaction
+        run: poetry sync --no-root --no-interaction
 
       - name: Run Pre-commit hooks
         working-directory: ./backend
@@ -213,8 +210,7 @@ jobs:
 
       - name: Run tests
         working-directory: ./backend
-        run: |
-          poetry run pytest --cov=. --cov-report=xml
+        run: poetry run pytest --cov=. --cov-report=xml
 
       - name: Upload coverage reports
         if: github.event_name == 'push'
@@ -236,6 +232,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Build and load for scanning
         uses: docker/bake-action@v6.1.0
         with:
@@ -246,49 +245,10 @@ jobs:
             *.cache-to=type=gha,mode=max
           load: true
 
-  # Production Images Build Test
-  production-build-test:
-    name: Production Image Build Check
-    runs-on: ubuntu-latest
-    needs: [frontend, backend]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Test Backend Production Build
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: docker/backend/Dockerfile
-          target: production
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Test Frontend Production Build
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: docker/frontend/Dockerfile
-          target: prod
-          push: false
-          build-args: |
-            SITE_DOMAIN=test.local
-            API_URL=https://api.test.local
-            GA_TRACKING_ID=test
-            SENTRY_DSN_FE=test
-            ENVIRONMENT=production
-            PROJECT_OWNER=test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Security Scanning
   security-scan:
     name: Security Analysis
     runs-on: ubuntu-latest
+    environment: portfolio_tests
     needs: [frontend, backend]
     permissions:
       security-events: write
@@ -303,7 +263,6 @@ jobs:
       DEFAULT_FROM_EMAIL: test@example.com
       CONTACT_EMAIL: test@example.com
       SESSION_COOKIE_DOMAIN: .example.com
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -347,52 +306,141 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Run Safety CLI to check for vulnerabilities
+        uses: pyupio/safety-action@v1
         with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+          api-key: ${{ secrets.SAFETY_API_KEY }}
 
-      - name: Cache Poetry virtualenv
-        uses: actions/cache@v4
+  image-build-check:
+    name: Production Image Build Check
+    runs-on: ubuntu-latest
+    needs: [frontend, backend, docker-build, security-scan]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build production backend image
+        uses: docker/build-push-action@v6
         with:
-          path: backend/.venv
-          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
+          context: .
+          file: docker/backend/Dockerfile
+          target: production
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Install dependencies
-        working-directory: ./backend
-        run: poetry install --no-root --no-interaction
+      - name: Build production frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          target: prod
+          platforms: linux/amd64,linux/arm64
+          push: false
+          build-args: |
+            SITE_DOMAIN=test.local
+            API_URL=https://api.test.local
+            GA_TRACKING_ID=test
+            SENTRY_DSN_FE=test
+            ENVIRONMENT=production
+            ALLOWED_HOSTS=test.local,localhost,127.0.0.1
+            PROJECT_OWNER=test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Backend safety check
-        working-directory: ./backend
+      - name: Build frontend runtime smoke image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          target: prod
+          platforms: linux/amd64
+          load: true
+          tags: frontend-smoke:ci
+          build-args: |
+            SITE_DOMAIN=test.local
+            API_URL=https://api.test.local
+            GA_TRACKING_ID=test
+            SENTRY_DSN_FE=test
+            ENVIRONMENT=production
+            ALLOWED_HOSTS=test.local,localhost,127.0.0.1
+            PROJECT_OWNER=test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test frontend runtime
         run: |
-          poetry run pip install safety
-          poetry run safety check
+          set -euo pipefail
+
+          docker rm -f frontend-smoke-test >/dev/null 2>&1 || true
+
+          docker run -d \
+            --name frontend-smoke-test \
+            -p 18080:8080 \
+            frontend-smoke:ci
+
+          cleanup() {
+            status=$?
+            if [[ $status -ne 0 ]]; then
+              docker logs frontend-smoke-test || true
+            fi
+            docker rm -f frontend-smoke-test >/dev/null 2>&1 || true
+            exit $status
+          }
+          trap cleanup EXIT
+
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/health >/dev/null; then
+              echo "Frontend runtime smoke test passed"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Frontend runtime smoke test failed"
+          exit 1
+
+      - name: Build production nginx image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/nginx/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   # PR Status Reporting
   pr-status:
     name: PR Status Report
     runs-on: ubuntu-latest
-    needs:
-      [frontend, backend, docker-build, production-build-test, security-scan]
+    needs: [frontend, backend, docker-build, security-scan, image-build-check]
     if: always() && github.event_name == 'pull_request'
     permissions:
-      pull-requests: write
-
+      issues: write
     steps:
       - name: Report Status
         uses: actions/github-script@v7
         with:
           script: |
+            if (context.payload.pull_request?.head?.repo?.fork) {
+              core.info('Skipping PR status comment for forked pull request: GITHUB_TOKEN cannot write issue comments in this context.');
+              return;
+            }
+
             const results = {
               'Frontend (Lint/Types/Tests)': '${{ needs.frontend.result }}',
               'Backend (Lint/Types/Tests)': '${{ needs.backend.result }}',
               'Docker Dev Build': '${{ needs.docker-build.result }}',
-              'Docker Prod Build': '${{ needs.production-build-test.result }}',
-              'Security Analysis': '${{ needs.security-scan.result }}'
+              'Security Analysis': '${{ needs.security-scan.result }}',
+              'Production Image Build Check': '${{ needs.image-build-check.result }}'
             };
 
             const emoji = (s) => s === 'success' ? '✅' : (s === 'failure' ? '❌' : '⏹️');
@@ -405,26 +453,34 @@ jobs:
             const allSuccess = Object.values(results).every(s => s === 'success');
             body += `\n${allSuccess ? '🎉 **All checks passed!**' : '⚠️ **Some checks failed. Please review the logs.**'}`;
 
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const botComment = comments.find(c => c.body.includes('CI/CD Pipeline Results'));
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body
-              });
-            } else {
-              await github.rest.issues.createComment({
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body
               });
+
+              const botComment = comments.find(c => c.body.includes('CI/CD Pipeline Results'));
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body
+                });
+              }
+            } catch (error) {
+              if (error.status === 403) {
+                core.warning(`Skipping PR status comment because the GitHub token cannot write comments in this context: ${error.message}`);
+                return;
+              }
+              throw error;
             }
