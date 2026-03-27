@@ -86,3 +86,31 @@ class LLMRunRecord:
             raise ValueError("execution_time_seconds must be >= 0")
         if not isinstance(self.metadata, dict):
             raise ValueError("metadata must be a dict")
+
+
+@dataclass(frozen=True)
+class LogReportResult:
+    summary: str
+    severity: str
+    key_findings: list[str] = field(default_factory=list)
+    recommendations: str = ""
+    trend_summary: str = ""
+    gpt_tokens_used: int = 0
+    gpt_cost_usd: float = 0.0
+
+    def __post_init__(self) -> None:
+        validate_non_empty_text(self.summary, "summary")
+        validate_non_empty_text(self.severity, "severity")
+        validate_string_list(self.key_findings, "key_findings")
+        validate_non_negative_int(self.gpt_tokens_used, "gpt_tokens_used")
+        validate_non_negative_float(self.gpt_cost_usd, "gpt_cost_usd")
+
+
+def validate_non_negative_int(value: int, field_name: str) -> None:
+    if value < 0:
+        raise ValueError(f"{field_name} must be >= 0")
+
+
+def validate_non_negative_float(value: float, field_name: str) -> None:
+    if value < 0:
+        raise ValueError(f"{field_name} must be >= 0")

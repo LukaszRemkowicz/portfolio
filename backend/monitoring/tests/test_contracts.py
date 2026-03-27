@@ -3,6 +3,7 @@ import pytest
 from monitoring.contracts import (
     LLMRunRecord,
     LLMSummaryResult,
+    LogReportResult,
     MonitoringJobDefinition,
     MonitoringJobExecutionContext,
     MonitoringJobName,
@@ -63,3 +64,17 @@ class TestMonitoringContracts:
         result = LLMSummaryResult(summary="Healthy", findings=["No issues found."])
 
         assert result.reasoning_effort is ReasoningEffort.LOW
+
+    def test_log_report_result_normalizes_valid_contract(self):
+        result = LogReportResult(
+            summary="Healthy",
+            severity="INFO",
+            key_findings=["No anomalies"],
+            recommendations="No action needed.",
+            trend_summary="Stable versus yesterday.",
+            gpt_tokens_used=100,
+            gpt_cost_usd=0.005,
+        )
+
+        assert result.severity == "INFO"
+        assert result.key_findings == ["No anomalies"]

@@ -13,6 +13,7 @@ from monitoring.services import (
     LogAnalysisOrchestrator,
     LogAnalyzer,
     LogCleanupService,
+    LogReportPreparationService,
     LogStorageService,
 )
 from monitoring.tests.factories import LogAnalysisFactory
@@ -125,6 +126,25 @@ class TestLogStorageService:
         assert LogAnalysis.objects.count() == 1  # Still only 1
         assert analysis.summary == "Second"
         assert analysis.severity == "WARNING"
+
+
+class TestLogReportPreparationService:
+    def test_prepare_report_from_files_returns_typed_result(self, mocker, mock_llm_response):
+        mock_agent = mocker.MagicMock()
+        mock_agent.analyze_logs_from_files.return_value = mock_llm_response
+        analyzer = LogAnalyzer(mock_agent)
+        service = LogReportPreparationService(analyzer)
+
+        report = service.prepare_report_from_files(
+            {"backend": "/tmp/backend.log"},
+            collected_at="2026-03-05T12:00:00Z",
+            historical_context="prior context",
+        )
+
+        assert report.summary == mock_llm_response["summary"]
+        assert report.severity == mock_llm_response["severity"]
+        assert report.gpt_tokens_used == mock_llm_response["gpt_tokens_used"]
+        assert report.gpt_cost_usd == mock_llm_response["gpt_cost_usd"]
 
 
 @pytest.mark.django_db

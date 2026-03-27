@@ -13,6 +13,7 @@ from common.llm.registry import LLMProviderRegistry
 from common.services import BaseEmailService
 
 from .agents import LogAnalysisAgent
+from .contracts import LogReportResult
 from .log_sources import LOG_SOURCES, REQUIRED_LOG_SOURCE
 from .models import LogAnalysis
 
@@ -151,6 +152,43 @@ class LogAnalyzer:
         return result
 
 
+class LogReportPreparationService:
+    """Build a typed log report result from the existing analyzer output."""
+
+    def __init__(self, analyzer: LogAnalyzer):
+        self.analyzer = analyzer
+
+    def prepare_report_from_files(
+        self,
+        log_paths: Mapping[str, Optional[str]],
+        collected_at: str = "",
+        historical_context: str = "",
+    ) -> LogReportResult:
+        raw_result: dict = self.analyzer.analyze_logs_from_files(
+            log_paths,
+            collected_at,
+            historical_context=historical_context,
+        )
+        findings: object = raw_result.get("key_findings", [])
+        normalized_findings: list[str]
+        if isinstance(findings, list):
+            normalized_findings = [str(item) for item in findings]
+        elif isinstance(findings, str):
+            normalized_findings = [findings]
+        else:
+            normalized_findings = []
+
+        return LogReportResult(
+            summary=str(raw_result.get("summary", "No summary provided")),
+            severity=str(raw_result.get("severity", "INFO")),
+            key_findings=normalized_findings,
+            recommendations=str(raw_result.get("recommendations", "")),
+            trend_summary=str(raw_result.get("trend_summary", "")),
+            gpt_tokens_used=int(raw_result.get("gpt_tokens_used", 0)),
+            gpt_cost_usd=float(raw_result.get("gpt_cost_usd", 0.0)),
+        )
+
+
 class LogStorageService:
     """Stores log analysis results in database."""
 
@@ -258,6 +296,7 @@ class LogAnalysisOrchestrator:
     ):
         self.collector = collector
         self.analyzer = analyzer
+        self.report_preparer = LogReportPreparationService(analyzer)
         self.storage = storage
 
     def analyze_and_store(self, analysis_date: Optional[date] = None) -> LogAnalysis:
@@ -352,10 +391,10 @@ class LogAnalysisOrchestrator:
         self,
         log_paths: Mapping[str, Optional[str]],
         historical_context: str,
-    ) -> dict:
-        """Run LLM analysis and return the result dict."""
+    ) -> LogReportResult:
+        """Run LLM analysis and return the typed log report result."""
         collected_at = self.collector.get_collected_at()
-        return self.analyzer.analyze_logs_from_files(
+        return self.report_preparer.prepare_report_from_files(
             log_paths,
             collected_at,
             historical_context=historical_context,
@@ -365,7 +404,7 @@ class LogAnalysisOrchestrator:
         self,
         analysis_date: date,
         log_size: int,
-        analysis_result: dict,
+        analysis_result: LogReportResult,
         start_time: float,
         log_paths: Mapping[str, Optional[str]],
     ) -> LogAnalysis:
@@ -373,14 +412,14 @@ class LogAnalysisOrchestrator:
         log_analysis = self.storage.create_or_replace_analysis(
             analysis_date=analysis_date,
             log_size_bytes=log_size,
-            summary=analysis_result.get("summary", "No summary provided"),
-            severity=analysis_result.get("severity", "INFO"),
-            key_findings=analysis_result.get("key_findings", []),
-            recommendations=analysis_result.get("recommendations", ""),
-            trend_summary=analysis_result.get("trend_summary", ""),
+            summary=analysis_result.summary,
+            severity=analysis_result.severity,
+            key_findings=analysis_result.key_findings,
+            recommendations=analysis_result.recommendations,
+            trend_summary=analysis_result.trend_summary,
             execution_time_seconds=time.time() - start_time,
-            gpt_tokens_used=analysis_result.get("gpt_tokens_used", 0),
-            gpt_cost_usd=analysis_result.get("gpt_cost_usd", 0.0),
+            gpt_tokens_used=analysis_result.gpt_tokens_used,
+            gpt_cost_usd=analysis_result.gpt_cost_usd,
         )
         self.storage.attach_log_files(log_analysis, analysis_date, log_paths)
         return log_analysis
