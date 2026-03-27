@@ -12,13 +12,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({ isSsrBuild }: ConfigEnv) => {
   const appEnvironment =
     process.env.ENVIRONMENT || process.env.VITE_ENVIRONMENT || 'development';
-  const disablePwaEnvironments = [
-    'development',
-    'dev',
-    'local',
-    'stage',
-    'stg',
-  ];
+  const disablePwaEnvironments = ['development', 'dev', 'local'];
   const enablePwa =
     !isSsrBuild && !disablePwaEnvironments.includes(appEnvironment);
 
@@ -116,6 +110,11 @@ export default defineConfig(({ isSsrBuild }: ConfigEnv) => {
         VitePWA({
           registerType: 'autoUpdate',
           injectRegister: 'script-defer',
+          workbox: {
+            cleanupOutdatedCaches: true,
+            clientsClaim: true,
+            skipWaiting: true,
+          },
           includeAssets: [
             'favicon.ico',
             'robots.txt',

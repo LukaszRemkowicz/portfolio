@@ -39,3 +39,11 @@ log:
 
 accessLog:
   bufferingSize: 100
+  format: json
+  fields:
+    defaultMode: keep
+    names:
+      RequestHost: keep
+      RouterName: keep
+      ServiceName: keep
+      ServiceURL: keep
