@@ -4,7 +4,6 @@
 // This file must NEVER be imported in any server (SSR) path.
 
 import { getEnv } from './env';
-import * as serviceWorkerRegistration from '../serviceWorkerRegistration';
 
 function initSentry(dsn: string, environment: string): void {
   if (!dsn || ['development', 'dev'].includes(environment)) return;
@@ -56,7 +55,4 @@ export function initClientServices(): void {
   const environment = getEnv('ENVIRONMENT', 'development');
 
   initSentry(sentryDsn, environment);
-
-  // Unregister service worker — rely on Nginx caching instead.
-  serviceWorkerRegistration.unregister();
 }

@@ -190,10 +190,12 @@ docker build \
   --pull \
   -f docker/frontend/Dockerfile \
   --target prod \
+  --build-arg "ENVIRONMENT=${ENVIRONMENT}" \
   --build-arg "SITE_DOMAIN=${SITE_DOMAIN}" \
   --build-arg "API_URL=https://${API_DOMAIN}" \
   --build-arg "GA_TRACKING_ID=${GA_TRACKING_ID}" \
   --build-arg "SENTRY_DSN_FE=${SENTRY_DSN_FE}" \
+  --build-arg "ALLOWED_HOSTS=${ALLOWED_HOSTS}" \
   --build-arg "FRONTEND_PORT=${FRONTEND_PORT}" \
   --build-arg "PROJECT_OWNER=${PROJECT_OWNER}" \
   -t "${ENVIRONMENT}-fe:${TAG}" \
