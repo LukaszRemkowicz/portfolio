@@ -378,6 +378,11 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            if (context.payload.pull_request?.head?.repo?.fork) {
+              core.info('Skipping PR status comment for forked pull request: GITHUB_TOKEN cannot write issue comments in this context.');
+              return;
+            }
+
             const results = {
               'Frontend (Lint/Types/Tests)': '${{ needs.frontend.result }}',
               'Backend (Lint/Types/Tests)': '${{ needs.backend.result }}',
@@ -396,26 +401,34 @@ jobs:
             const allSuccess = Object.values(results).every(s => s === 'success');
             body += `\n${allSuccess ? '🎉 **All checks passed!**' : '⚠️ **Some checks failed. Please review the logs.**'}`;
 
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const botComment = comments.find(c => c.body.includes('CI/CD Pipeline Results'));
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body
-              });
-            } else {
-              await github.rest.issues.createComment({
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body
               });
+
+              const botComment = comments.find(c => c.body.includes('CI/CD Pipeline Results'));
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body
+                });
+              }
+            } catch (error) {
+              if (error.status === 403) {
+                core.warning(`Skipping PR status comment because the GitHub token cannot write comments in this context: ${error.message}`);
+                return;
+              }
+              throw error;
             }
