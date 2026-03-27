@@ -1,6 +1,6 @@
 import pytest
 
-from monitoring.contracts import (
+from monitoring.types import (
     LLMRunRecord,
     LLMSummaryResult,
     LogReportResult,
@@ -11,7 +11,7 @@ from monitoring.contracts import (
 )
 
 
-class TestMonitoringContracts:
+class TestMonitoringTypes:
     def test_monitoring_job_definition_accepts_valid_values(self):
         definition = MonitoringJobDefinition(
             job_name=MonitoringJobName.LOG_REPORT,

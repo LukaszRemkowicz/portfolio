@@ -13,9 +13,9 @@ from common.llm.registry import LLMProviderRegistry
 from common.services import BaseEmailService
 
 from .agents import LogAnalysisAgent
-from .contracts import LogReportResult
 from .log_sources import LOG_SOURCES, REQUIRED_LOG_SOURCE
 from .models import LogAnalysis
+from .types import LogReportResult
 
 logger = logging.getLogger(__name__)
 LogPathMap = dict[str, Optional[str]]
