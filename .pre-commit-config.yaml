@@ -43,7 +43,7 @@ repos:
           ["--settings-path", "backend/pyproject.toml", "--profile", "black"]
 
   - repo: https://github.com/psf/black
-    rev: 25.9.0
+    rev: 26.3.1
     hooks:
       - id: black
         files: ^backend/
@@ -68,6 +68,28 @@ repos:
         types: [python]
         pass_filenames: false
         always_run: true
+        stages: [pre-commit]
+
+      - id: safety
+        name: safety
+        entry: >-
+          bash -c 'cd backend &&
+          if [ -z "${SAFETY_API_KEY:-}" ] && command -v security >/dev/null 2>&1; then
+            export SAFETY_API_KEY="$(security find-generic-password -a "$USER" -s SAFETY_API_KEY -w 2>/dev/null)";
+          fi &&
+          if [ -z "${SAFETY_API_KEY:-}" ]; then
+            if [ -n "${CI:-}" ]; then
+              echo "Skipping safety pre-commit hook in CI because SAFETY_API_KEY is not available; the dedicated security workflow performs the authoritative Safety scan.";
+              exit 0;
+            fi;
+            echo "Set SAFETY_API_KEY in your shell or store it in macOS Keychain as SAFETY_API_KEY before running pre-commit." >&2;
+            exit 1;
+          fi &&
+          poetry run safety --stage cicd scan --target .'
+        language: system
+        pass_filenames: false
+        files: ^backend/(pyproject\.toml|poetry\.lock)$
+        always_run: false
         stages: [pre-commit]
 
   # Testing hooks

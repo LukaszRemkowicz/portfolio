@@ -1,5 +1,6 @@
 # backend/common/tests/test_image_utils.py
 """Unit tests for common.utils.image — convert_to_webp utility."""
+
 from unittest.mock import MagicMock
 
 from PIL import Image

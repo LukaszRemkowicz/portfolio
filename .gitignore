@@ -155,3 +155,5 @@ celerybeat-schedule*
 *.pem
 acme.json
 backups/
+
+.safety-project.ini

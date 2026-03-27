@@ -1,5 +1,6 @@
 # backend/users/tests/test_webp.py
 """Tests for WebP-related methods on the User model."""
+
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest

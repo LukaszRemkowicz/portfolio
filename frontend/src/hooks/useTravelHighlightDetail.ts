@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/api';
-import type { AxiosInstance } from 'axios';
 import { API_ROUTES, BFF_ROUTES } from '../api/routes';
-import { fetchBffJson, isBrowserDefaultClient } from '../api/bff';
 import { normalizeAstroImages } from '../api/media';
+import { DataTransport, resolveDataTransport } from '../api/transport';
 import { AstroImage } from '../types';
+import type { AxiosInstance } from 'axios';
 
 export interface ExtendedAstroImage extends AstroImage {
   url?: string;
@@ -25,25 +25,18 @@ export const fetchTravelHighlightDetail = async ({
   countrySlug,
   placeSlug,
   dateSlug,
-  client = api,
+  clientOrTransport = api,
 }: {
   countrySlug: string;
   placeSlug: string;
   dateSlug: string;
-  client?: AxiosInstance;
+  clientOrTransport?: AxiosInstance | DataTransport;
 }): Promise<TravelHighlightDetail> => {
-  const useFrontendBff = isBrowserDefaultClient(client);
-  const response = useFrontendBff
-    ? {
-        data: await fetchBffJson<TravelHighlightDetail>(
-          `${BFF_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`
-        ),
-      }
-    : await client.get(
-        `${API_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`
-      );
-
-  const data = response.data;
+  const transport = resolveDataTransport(clientOrTransport);
+  const data = await transport.get<TravelHighlightDetail>({
+    browser: `${BFF_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`,
+    server: `${API_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`,
+  });
   if (!data || typeof data !== 'object') {
     throw new Error('Invalid API response structure');
   }

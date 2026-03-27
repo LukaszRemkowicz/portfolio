@@ -1,5 +1,6 @@
 # backend/core/tests/test_webp.py
 """Tests for WebP-related methods on BaseImage and LandingPageSettings."""
+
 from unittest.mock import MagicMock, patch
 
 import pytest
