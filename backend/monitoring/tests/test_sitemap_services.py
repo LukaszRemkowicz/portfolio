@@ -212,6 +212,68 @@ class TestSitemapAuditService:
 
         assert SitemapIssueCategory.FETCH_ERROR in categories
 
+    def test_audit_flags_canonical_mismatch_on_html_page(self):
+        responses: dict[tuple[str, bool], FakeResponse] = {
+            ("https://portfolio.example/sitemap.xml", True): FakeResponse(
+                status_code=200,
+                text=URLSET_XML,
+                url="https://portfolio.example/sitemap.xml",
+            ),
+            ("https://portfolio.example/", False): FakeResponse(
+                status_code=200,
+                text=(
+                    '<html><head><link rel="canonical" '
+                    'href="https://portfolio.example/home"></head></html>'
+                ),
+                url="https://portfolio.example/",
+            ),
+            ("https://portfolio.example/travel", False): FakeResponse(
+                status_code=200,
+                text="<html></html>",
+                url="https://portfolio.example/travel",
+            ),
+        }
+        session: FakeSession = FakeSession(responses)
+        service = SitemapAuditService(
+            client=SitemapHTTPClient(session=session),
+            production_domain="portfolio.example",
+        )
+
+        report = service.audit("https://portfolio.example/sitemap.xml")
+        categories: list[SitemapIssueCategory] = [issue.category for issue in report.issues]
+
+        assert SitemapIssueCategory.CANONICAL_MISMATCH in categories
+
+    def test_audit_flags_noindex_from_meta_robots_and_headers(self):
+        responses: dict[tuple[str, bool], FakeResponse] = {
+            ("https://portfolio.example/sitemap.xml", True): FakeResponse(
+                status_code=200,
+                text=URLSET_XML,
+                url="https://portfolio.example/sitemap.xml",
+            ),
+            ("https://portfolio.example/", False): FakeResponse(
+                status_code=200,
+                text='<html><head><meta name="robots" content="index, noindex"></head></html>',
+                url="https://portfolio.example/",
+            ),
+            ("https://portfolio.example/travel", False): FakeResponse(
+                status_code=200,
+                text="<html></html>",
+                url="https://portfolio.example/travel",
+                headers={"X-Robots-Tag": "noindex"},
+            ),
+        }
+        session: FakeSession = FakeSession(responses)
+        service = SitemapAuditService(
+            client=SitemapHTTPClient(session=session),
+            production_domain="portfolio.example",
+        )
+
+        report = service.audit("https://portfolio.example/sitemap.xml")
+        issue_categories: Counter[str] = Counter(issue.category.value for issue in report.issues)
+
+        assert issue_categories[SitemapIssueCategory.NOINDEX_PAGE.value] == 2
+
     def test_summarize_issues_returns_category_counts(self):
         service = SitemapAuditService(
             client=SitemapHTTPClient(session=FakeSession({})),
@@ -235,6 +297,11 @@ class TestSitemapAuditService:
                 category=SitemapIssueCategory.NON_PROD_DOMAIN,
                 message="wrong domain",
             ),
+            SitemapIssue(
+                url="https://portfolio.example/d",
+                category=SitemapIssueCategory.NOINDEX_PAGE,
+                message="noindex",
+            ),
         ]
 
         summary: dict[str, int] = service.summarize_issues(issues)
@@ -242,4 +309,5 @@ class TestSitemapAuditService:
         assert summary == {
             SitemapIssueCategory.BROKEN_URL.value: 2,
             SitemapIssueCategory.NON_PROD_DOMAIN.value: 1,
+            SitemapIssueCategory.NOINDEX_PAGE.value: 1,
         }

@@ -131,6 +131,8 @@ class SitemapIssueCategory(str, Enum):
     DUPLICATE_URL = "duplicate_url"
     NON_PROD_DOMAIN = "non_prod_domain"
     FETCH_ERROR = "fetch_error"
+    CANONICAL_MISMATCH = "canonical_mismatch"
+    NOINDEX_PAGE = "noindex_page"
 
 
 @dataclass(frozen=True)

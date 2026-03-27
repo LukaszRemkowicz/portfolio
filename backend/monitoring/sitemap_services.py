@@ -1,6 +1,7 @@
 from collections import Counter
 from collections.abc import Iterable
-from urllib.parse import urlparse
+from html.parser import HTMLParser
+from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree
 
 import requests
@@ -53,6 +54,44 @@ class SitemapXMLParser:
         if "}" in tag_name:
             return tag_name.split("}", 1)[1]
         return tag_name
+
+
+class HTMLMetadataParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.canonical_href: str | None = None
+        self.robots_directives: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributes: dict[str, str] = {
+            key.lower(): value for key, value in attrs if value is not None
+        }
+
+        if tag.lower() == "link" and self._is_canonical_link(attributes):
+            href: str | None = attributes.get("href")
+            if href and not self.canonical_href:
+                self.canonical_href = href.strip()
+
+        if tag.lower() != "meta":
+            return
+
+        metadata_name: str = attributes.get("name", "").strip().lower()
+        if metadata_name != "robots":
+            return
+
+        content: str = attributes.get("content", "")
+        directives: list[str] = [
+            directive.strip().lower() for directive in content.split(",") if directive.strip()
+        ]
+        self.robots_directives.extend(directives)
+
+    @staticmethod
+    def _is_canonical_link(attributes: dict[str, str]) -> bool:
+        rel_value: str = attributes.get("rel", "")
+        rel_tokens: set[str] = {
+            token.strip().lower() for token in rel_value.split() if token.strip()
+        }
+        return "canonical" in rel_tokens
 
 
 class SitemapAuditService:
@@ -185,7 +224,50 @@ class SitemapAuditService:
                 )
             )
 
+        if status_code == 200:
+            issues.extend(self._audit_page_metadata(url, response))
+
         return issues
+
+    def _audit_page_metadata(self, url: str, response: HTTPResponseData) -> list[SitemapIssue]:
+        issues: list[SitemapIssue] = []
+        parser: HTMLMetadataParser = HTMLMetadataParser()
+        parser.feed(response.text)
+
+        canonical_href: str | None = parser.canonical_href
+        if canonical_href:
+            canonical_url: str = urljoin(url, canonical_href)
+            if canonical_url != url:
+                issues.append(
+                    SitemapIssue(
+                        url=url,
+                        category=SitemapIssueCategory.CANONICAL_MISMATCH,
+                        message="Canonical URL differs from the sitemap URL.",
+                        status_code=response.status_code,
+                        final_url=canonical_url,
+                    )
+                )
+
+        robot_directives: list[str] = parser.robots_directives + self._parse_x_robots_tag(response)
+        if "noindex" in robot_directives:
+            issues.append(
+                SitemapIssue(
+                    url=url,
+                    category=SitemapIssueCategory.NOINDEX_PAGE,
+                    message="Page is marked as noindex.",
+                    status_code=response.status_code,
+                )
+            )
+
+        return issues
+
+    @staticmethod
+    def _parse_x_robots_tag(response: HTTPResponseData) -> list[str]:
+        header_value: str = response.headers.get("X-Robots-Tag", "")
+        directives: list[str] = [
+            directive.strip().lower() for directive in header_value.split(",") if directive.strip()
+        ]
+        return directives
 
     @staticmethod
     def _find_duplicates(urls: list[str]) -> set[str]:

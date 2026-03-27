@@ -1,15 +1,6 @@
-"""
-Prompt builder functions for the LogAnalysisAgent.
+"""Prompt builder functions for the LogAnalysisAgent."""
 
-Each function assembles a system prompt from context constants for a specific
-analysis scenario. Name the function after what it does, so the caller site
-reads like documentation.
-
-Usage:
-    from monitoring.agent.skills import build_monitoring_system_prompt_with_owasp
-
-    prompt = build_monitoring_system_prompt_with_owasp()
-"""
+from collections.abc import Sequence
 
 from monitoring.agent.context import (
     APPLICATION_MONITORING_CONTEXT,
@@ -23,49 +14,43 @@ from monitoring.agent.context import (
     SEVERITY_GUIDE,
 )
 
+BASE_MONITORING_SKILLS: tuple[str, ...] = (
+    PROJECT_CONTEXT,
+    NORMAL_PATTERNS_CONTEXT,
+    APPLICATION_MONITORING_CONTEXT,
+    SEVERITY_GUIDE,
+    RECOMMENDATIONS_GUIDE,
+)
 
-def build_monitoring_system_prompt_with_owasp(historical_context: str = "") -> str:
-    """
-    Full production prompt: project context + application monitoring + bot detection
-    + OWASP security expertise.
+SECURITY_MONITORING_SKILLS: tuple[str, ...] = (
+    BOT_DETECTION_CONTEXT,
+    OWASP_SECURITY_CONTEXT,
+)
 
-    Use for: nightly production log analysis where security awareness is critical.
-    Cost: ~2.5k tokens for the system prompt.
-    """
-    historical_section = (
+
+def _compose_monitoring_prompt(
+    sections: Sequence[str],
+    historical_context: str = "",
+) -> str:
+    historical_section: str = (
         HISTORICAL_CONTEXT.format(historical_data=historical_context) if historical_context else ""
     )
-    return (
-        PROJECT_CONTEXT
-        + NORMAL_PATTERNS_CONTEXT
-        + APPLICATION_MONITORING_CONTEXT
-        + BOT_DETECTION_CONTEXT
-        + OWASP_SECURITY_CONTEXT
-        + SEVERITY_GUIDE
-        + RECOMMENDATIONS_GUIDE
-        + historical_section
-        + RESPONSE_FORMAT
+    ordered_sections: list[str] = [*sections]
+    if historical_section:
+        ordered_sections.append(historical_section)
+    ordered_sections.append(RESPONSE_FORMAT)
+    return "\n\n".join(section.strip() for section in ordered_sections if section.strip())
+
+
+def build_monitoring_system_prompt_with_owasp(historical_context: str = "") -> str:
+    return _compose_monitoring_prompt(
+        (
+            *BASE_MONITORING_SKILLS,
+            *SECURITY_MONITORING_SKILLS,
+        ),
+        historical_context=historical_context,
     )
 
 
 def build_monitoring_system_prompt_basic(historical_context: str = "") -> str:
-    """
-    Lightweight prompt: project context + application monitoring only.
-    No OWASP security expertise or bot detection.
-
-    Use for: development/test environments, or quick sanity checks where
-    security analysis is not needed and cost matters.
-    Cost: ~1k tokens for the system prompt.
-    """
-    historical_section = (
-        HISTORICAL_CONTEXT.format(historical_data=historical_context) if historical_context else ""
-    )
-    return (
-        PROJECT_CONTEXT
-        + NORMAL_PATTERNS_CONTEXT
-        + APPLICATION_MONITORING_CONTEXT
-        + SEVERITY_GUIDE
-        + RECOMMENDATIONS_GUIDE
-        + historical_section
-        + RESPONSE_FORMAT
-    )
+    return _compose_monitoring_prompt(BASE_MONITORING_SKILLS, historical_context=historical_context)
