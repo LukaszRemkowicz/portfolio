@@ -135,6 +135,28 @@ class TestMonitoringToolLoopRunner:
         assert result.tool_results == []
         assert result.iterations == 1
 
+    def test_run_accepts_wrapped_final_report_shape(self):
+        provider = StubProvider(
+            [
+                (
+                    '{"final_report":{"severity":"CRITICAL","summary":"Wrapped summary",'
+                    '"key_findings":["Wrapped finding"],'
+                    '"recommendations":"Fix it.","trend_summary":"Persistent."}}'
+                )
+            ]
+        )
+        runner = MonitoringToolLoopRunner(provider=provider, max_iterations=10)
+
+        result = runner.run(
+            job_name=MonitoringJobName.LOG_REPORT,
+            job_context={"log_report": {"summary": "Warning", "severity": "WARNING"}},
+        )
+
+        assert result.stop_reason == "final_report"
+        assert result.summary == "Wrapped summary"
+        assert result.findings == ["Wrapped finding"]
+        assert result.final_payload["severity"] == "CRITICAL"
+
     def test_run_blocks_duplicate_tool_calls(self):
         provider = StubProvider(
             [

@@ -1,5 +1,7 @@
 # backend/users/tests/test_admin.py
 
+from pathlib import Path
+
 import pytest
 from pytest_mock import MockerFixture
 
@@ -62,3 +64,19 @@ class TestUserAdmin:
         expected_url = reverse("admin:users_user_change", args=[user.pk])
         assert response.status_code == 302
         assert response.url == expected_url
+
+
+def test_change_form_template_uses_jazzmin_wrapper():
+    """The custom user change form should stay on the Jazzmin admin path."""
+    template_path = (
+        Path(__file__).resolve().parents[1]
+        / "templates"
+        / "admin"
+        / "users"
+        / "user"
+        / "robust_change_form.html"
+    )
+
+    template_source = template_path.read_text()
+
+    assert '{% extends "admin/change_form.html" %}' in template_source

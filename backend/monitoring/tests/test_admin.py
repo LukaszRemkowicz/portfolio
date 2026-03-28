@@ -1,5 +1,3 @@
-from typing import Any
-
 import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -52,7 +50,7 @@ class TestLogAnalysisAdminSecureMediaView:
             kwargs={"pk": str(log_analysis.pk), "field_name": "backend_logs"},
         )
         sig_id: str = f"admin_media_monitoring_loganalysis_{log_analysis.pk}_backend_logs"
-        params: dict[str, Any] = generate_signed_url_params(sig_id)
+        params: dict[str, str] = generate_signed_url_params(sig_id)
         response = admin_client.get(url, params)
         assert response.status_code == status.HTTP_200_OK
         assert "X-Accel-Redirect" in response
@@ -66,7 +64,7 @@ class TestLogAnalysisAdminSecureMediaView:
             kwargs={"pk": str(log_analysis.pk), "field_name": "backend_logs"},
         )
         sig_id: str = f"admin_media_monitoring_loganalysis_{log_analysis.pk}_backend_logs"
-        params: dict[str, Any] = generate_signed_url_params(sig_id)
+        params: dict[str, str] = generate_signed_url_params(sig_id)
         response = api_client.get(url, params)
         assert response.status_code == status.HTTP_404_NOT_FOUND
 

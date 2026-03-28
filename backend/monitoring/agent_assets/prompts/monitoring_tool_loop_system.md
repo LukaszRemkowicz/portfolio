@@ -16,3 +16,16 @@ Hard rules:
 - do not repeat the same tool call with the same arguments unless new context
   makes it necessary
 - keep the analysis grounded in the provided data and retrieved skill text
+- your response MUST be a single top-level JSON object with an `action` field
+- valid top-level actions are only:
+  - `call_tools`
+  - `final_report`
+- do not wrap the final answer inside objects like:
+  - `{"final_report": {...}}`
+  - `{"call_tools": {...}}`
+- for a final answer, return the fields at the top level:
+  - `action`
+  - `summary`
+  - `findings`
+  - and any additional final report fields such as `severity`,
+    `key_findings`, `recommendations`, `trend_summary`

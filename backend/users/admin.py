@@ -53,9 +53,19 @@ class UserAdmin(  # type: ignore[misc]
                     "short_description",
                     "bio",
                     "contact_email",
+                )
+            },
+        ),
+        (
+            _("Media"),
+            {
+                "fields": (
                     "avatar",
+                    "avatar_webp_path",
                     "about_me_image",
+                    "about_me_image_webp_path",
                     "about_me_image2",
+                    "about_me_image2_webp_path",
                 )
             },
         ),
@@ -179,7 +189,32 @@ class UserAdmin(  # type: ignore[misc]
     list_display_links = ("email",)
     search_fields = ("email", "first_name", "last_name")
     ordering = ("email",)
-    readonly_fields = ("created_at", "updated_at", "translation_status")
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "translation_status",
+        "avatar_webp_path",
+        "about_me_image_webp_path",
+        "about_me_image2_webp_path",
+    )
+
+    def _get_webp_path(self, obj: Any, field_name: str) -> str:
+        field = getattr(obj, field_name, None)
+        if not field:
+            return "—"
+        return str(field.name or "—")
+
+    @admin.display(description=_("Avatar WebP Path"))
+    def avatar_webp_path(self, obj: Any) -> str:
+        return self._get_webp_path(obj, "avatar_webp")
+
+    @admin.display(description=_("About Me Image WebP Path"))
+    def about_me_image_webp_path(self, obj: Any) -> str:
+        return self._get_webp_path(obj, "about_me_image_webp")
+
+    @admin.display(description=_("About Me Image 2 WebP Path"))
+    def about_me_image2_webp_path(self, obj: Any) -> str:
+        return self._get_webp_path(obj, "about_me_image2_webp")
 
     def has_add_permission(self, request) -> bool:
         """Only allow adding a user if no user exists (singleton pattern)"""

@@ -1,6 +1,25 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TypeAlias, TypedDict
+
+MonitoringFindingsValue: TypeAlias = list[str] | str
+JSONScalar: TypeAlias = str | int | float | bool | None
+JSONValue: TypeAlias = "JSONScalar | JSONObject | JSONArray"
+JSONObject: TypeAlias = "dict[str, JSONValue]"
+JSONArray: TypeAlias = "list[JSONValue]"
+RawCollectedLogPaths: TypeAlias = dict[str, str | None] | tuple[str | None, ...]
+
+
+class LogAnalysisPayload(TypedDict, total=False):
+    summary: str
+    severity: str
+    key_findings: MonitoringFindingsValue
+    recommendations: str
+    trend_summary: str
+    gpt_tokens_used: int
+    gpt_cost_usd: float
 
 
 @dataclass(frozen=True)
@@ -111,7 +130,7 @@ class LLMRunRecord:
     cost_usd: float = 0.0
     execution_time_seconds: float = 0.0
     findings_summary: list[str] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: JSONObject = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         validate_non_empty_text(self.session_id, "session_id")
@@ -178,6 +197,7 @@ class MonitoringToolDecision:
     tool_calls: list[MonitoringToolCall] = field(default_factory=list)
     summary: str = ""
     findings: list[str] = field(default_factory=list)
+    payload: JSONObject = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not isinstance(self.tool_calls, list):
@@ -186,11 +206,15 @@ class MonitoringToolDecision:
             if not isinstance(tool_call, MonitoringToolCall):
                 raise ValueError("tool_calls must contain only MonitoringToolCall objects")
         validate_string_list(self.findings, "findings")
+        if not isinstance(self.payload, dict):
+            raise ValueError("payload must be a dict")
         if self.action is MonitoringToolDecisionAction.CALL_TOOLS:
             if not self.tool_calls:
                 raise ValueError("tool_calls action requires at least one tool call")
             if self.summary:
                 raise ValueError("tool_calls action cannot include summary")
+            if self.payload:
+                raise ValueError("tool_calls action cannot include payload")
         if self.action is MonitoringToolDecisionAction.FINAL_REPORT:
             validate_non_empty_text(self.summary, "summary")
 
@@ -198,7 +222,7 @@ class MonitoringToolDecision:
 @dataclass(frozen=True)
 class MonitoringToolResult:
     tool_name: MonitoringToolName
-    payload: dict[str, Any]
+    payload: JSONObject
 
     def __post_init__(self) -> None:
         if not isinstance(self.payload, dict):
@@ -211,6 +235,7 @@ class MonitoringToolLoopResult:
     findings: list[str]
     tool_results: list[MonitoringToolResult] = field(default_factory=list)
     trace: list[MonitoringAgentTraceEvent] = field(default_factory=list)
+    final_payload: JSONObject = field(default_factory=dict)
     iterations: int = 0
     stop_reason: str = ""
 
@@ -219,6 +244,8 @@ class MonitoringToolLoopResult:
         validate_string_list(self.findings, "findings")
         validate_non_negative_int(self.iterations, "iterations")
         validate_non_empty_text(self.stop_reason, "stop_reason")
+        if not isinstance(self.final_payload, dict):
+            raise ValueError("final_payload must be a dict")
         if not isinstance(self.tool_results, list):
             raise ValueError("tool_results must be a list")
         for tool_result in self.tool_results:
@@ -247,6 +274,17 @@ class LogReportResult:
         validate_string_list(self.key_findings, "key_findings")
         validate_non_negative_int(self.gpt_tokens_used, "gpt_tokens_used")
         validate_non_negative_float(self.gpt_cost_usd, "gpt_cost_usd")
+
+    def to_payload(self) -> JSONObject:
+        return {
+            "summary": self.summary,
+            "severity": self.severity,
+            "key_findings": list(self.key_findings),
+            "recommendations": self.recommendations,
+            "trend_summary": self.trend_summary,
+            "gpt_tokens_used": self.gpt_tokens_used,
+            "gpt_cost_usd": self.gpt_cost_usd,
+        }
 
 
 class SitemapIssueCategory(str, Enum):

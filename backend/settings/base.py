@@ -163,6 +163,11 @@ INSTALLED_APPS = [
     "monitoring.apps.MonitoringConfig",
 ]
 
+# django-extensions shell_plus should default to IPython so interactive
+# sessions have proper readline/history behavior instead of plain
+# InteractiveConsole fallback.
+SHELL_PLUS = "ipython"
+
 # Security Settings (for Nginx SSL termination)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
@@ -214,6 +219,7 @@ OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 # Each service can use a different provider
 TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
 MONITORING_LLM_PROVIDER = env.str("MONITORING_LLM_PROVIDER", default="gpt")
+RUN_LEGACY_DAILY_TASK = env.bool("RUN_LEGACY_DAILY_TASK", default=False)
 DOCKER_LOGS_DIR = env.str("DOCKER_LOGS_DIR", default="/app/docker-logs")
 SSR_CACHE_INVALIDATION_URL = env.str(
     "SSR_CACHE_INVALIDATION_URL", default="http://fe:8080/internal/cache/invalidate"
@@ -602,13 +608,6 @@ ADMIN_SITE_ORDERING = (
 
 
 CELERY_BEAT_SCHEDULE = {
-    "daily-log-analysis": {
-        "task": "monitoring.tasks.daily_log_analysis_task",
-        "schedule": crontab(hour=2, minute=0),  # 2:00 AM UTC daily
-        "options": {
-            "expires": 3600,  # Task expires after 1 hour
-        },
-    },
     "weekly-log-cleanup": {
         "task": "monitoring.tasks.cleanup_old_logs_task",
         "schedule": crontab(hour=8, minute=0, day_of_week=0),  # 8:00 AM UTC every Sunday
@@ -620,6 +619,23 @@ CELERY_BEAT_SCHEDULE = {
         },
     },
 }
+
+if RUN_LEGACY_DAILY_TASK:
+    CELERY_BEAT_SCHEDULE["daily-log-analysis"] = {
+        "task": "monitoring.tasks.daily_log_analysis_task",
+        "schedule": crontab(hour=2, minute=0),  # 2:00 AM UTC daily
+        "options": {
+            "expires": 3600,  # Task expires after 1 hour
+        },
+    }
+else:
+    CELERY_BEAT_SCHEDULE["daily-monitoring-agent-log-analysis"] = {
+        "task": "monitoring.tasks.daily_monitoring_agent_log_task",
+        "schedule": crontab(hour=2, minute=0),  # 2:00 AM UTC daily
+        "options": {
+            "expires": 3600,  # Task expires after 1 hour
+        },
+    }
 
 # ===========================
 # Celery Configuration
@@ -643,6 +659,7 @@ CELERY_TIMEZONE = TIME_ZONE
 # ONLY by the host-based worker (which has access to docker CLI)
 CELERY_TASK_ROUTES = {
     "monitoring.tasks.daily_log_analysis_task": {"queue": "monitoring"},
+    "monitoring.tasks.daily_monitoring_agent_log_task": {"queue": "monitoring"},
     "monitoring.tasks.cleanup_old_logs_task": {"queue": "monitoring"},
 }
 

@@ -16,12 +16,14 @@ import json
 import logging
 import re
 from collections.abc import Mapping
-from typing import Any, cast
 
 from common.llm.protocols import LLMProvider
 
 from .prompt_assets import PromptAssetLoader
 from .types import (
+    JSONArray,
+    JSONObject,
+    JSONValue,
     MonitoringAgentEventType,
     MonitoringAgentTraceEvent,
     MonitoringJobName,
@@ -130,7 +132,7 @@ class MonitoringToolExecutor:
         self,
         tool_call: MonitoringToolCall,
         job_name: MonitoringJobName,
-        job_context: Mapping[str, Any],
+        job_context: Mapping[str, JSONValue],
     ) -> MonitoringToolResult:
         """Execute a single tool request and return its structured payload.
 
@@ -181,19 +183,19 @@ class MonitoringToolExecutor:
     def _prepare_log_report(
         self,
         job_name: MonitoringJobName,
-        job_context: Mapping[str, Any],
+        job_context: Mapping[str, JSONValue],
     ) -> MonitoringToolResult:
         """Return the prepared deterministic log report for a log-monitoring job."""
         if job_name is not MonitoringJobName.LOG_REPORT:
             raise ValueError("prepare_log_report can only be used for log monitoring jobs")
 
-        log_report: Any = job_context.get("log_report")
+        log_report: JSONValue | None = job_context.get("log_report")
         if not isinstance(log_report, dict):
             raise ValueError("job_context must include a dict log_report for prepare_log_report")
 
         return MonitoringToolResult(
             tool_name=MonitoringToolName.PREPARE_LOG_REPORT,
-            payload=cast(dict[str, Any], log_report),
+            payload=log_report,
         )
 
     def _load_skill(
@@ -267,7 +269,7 @@ class MonitoringToolLoopRunner:
         self,
         *,
         job_name: MonitoringJobName,
-        job_context: Mapping[str, Any],
+        job_context: Mapping[str, JSONValue],
     ) -> MonitoringToolLoopResult:
         """Run the bounded monitoring-agent loop for one scheduled job.
 
@@ -357,6 +359,7 @@ class MonitoringToolLoopRunner:
                     findings=["The LLM did not produce a tool decision or final report."],
                     tool_results=tool_results,
                     trace=trace,
+                    final_payload={},
                     iterations=iteration,
                     stop_reason="empty_llm_response",
                 )
@@ -409,6 +412,7 @@ class MonitoringToolLoopRunner:
                     findings=decision.findings,
                     tool_results=tool_results,
                     trace=trace,
+                    final_payload=decision.payload,
                     iterations=iteration,
                     stop_reason="final_report",
                 )
@@ -499,6 +503,7 @@ class MonitoringToolLoopRunner:
                     ],
                     tool_results=tool_results,
                     trace=trace,
+                    final_payload={},
                     iterations=iteration,
                     stop_reason="duplicate_tool_call",
                 )
@@ -523,6 +528,7 @@ class MonitoringToolLoopRunner:
             ],
             tool_results=tool_results,
             trace=trace,
+            final_payload={},
             iterations=self.max_iterations,
             stop_reason="max_iterations",
         )
@@ -551,40 +557,51 @@ class MonitoringToolLoopRunner:
         self,
         *,
         job_name: MonitoringJobName,
-        job_context: Mapping[str, Any],
+        job_context: Mapping[str, JSONValue],
         tool_results: list[MonitoringToolResult],
     ) -> str:
         """Serialize the current job context, tools, and prior tool results for the LLM."""
-        tool_definitions: list[dict[str, Any]] = []
+        tool_definitions: JSONArray = []
         for definition in MonitoringToolRegistry.get_definitions():
+            when_to_use: JSONArray = [item for item in definition.when_to_use]
+            when_not_to_use: JSONArray = [item for item in definition.when_not_to_use]
             tool_definitions.append(
                 {
                     "tool_name": definition.tool_name.value,
                     "description": definition.description,
                     "documentation": self.asset_loader.load_text(definition.documentation_asset),
-                    "when_to_use": definition.when_to_use,
-                    "when_not_to_use": definition.when_not_to_use,
+                    "when_to_use": when_to_use,
+                    "when_not_to_use": when_not_to_use,
                 }
             )
 
-        payload: dict[str, Any] = {
+        tool_result_payloads: JSONArray = [
+            {
+                "tool_name": result.tool_name.value,
+                "payload": result.payload,
+            }
+            for result in tool_results
+        ]
+        payload: JSONObject = {
             "job_name": job_name.value,
             "job_context": dict(job_context),
             "available_tools": tool_definitions,
-            "tool_results": [
-                {
-                    "tool_name": result.tool_name.value,
-                    "payload": result.payload,
-                }
-                for result in tool_results
-            ],
+            "tool_results": tool_result_payloads,
         }
         return json.dumps(payload, indent=2, sort_keys=True)
 
     def _parse_decision(self, response_text: str) -> MonitoringToolDecision:
         """Parse the LLM response into a structured monitoring tool decision."""
-        payload: dict[str, Any] = self._load_json_object(response_text)
+        payload: JSONObject = self._normalize_decision_payload(
+            self._load_json_object(response_text)
+        )
         action_raw: str = str(payload.get("action", "")).strip()
+        if not action_raw:
+            logger.error(
+                "Invalid monitoring agent response: missing action. Preview=%s",
+                response_text[:500],
+            )
+            raise ValueError("Invalid monitoring agent response: missing top-level action")
         action: MonitoringToolDecisionAction = MonitoringToolDecisionAction(action_raw)
 
         if action is MonitoringToolDecisionAction.FINAL_REPORT:
@@ -593,9 +610,10 @@ class MonitoringToolLoopRunner:
                 action=action,
                 summary=str(payload.get("summary", "")),
                 findings=findings,
+                payload=payload,
             )
 
-        tool_calls_raw: Any = payload.get("tool_calls", [])
+        tool_calls_raw: JSONValue = payload.get("tool_calls", [])
         if not isinstance(tool_calls_raw, list):
             raise ValueError("tool_calls must be a list")
         tool_calls: list[MonitoringToolCall] = []
@@ -603,7 +621,7 @@ class MonitoringToolLoopRunner:
             if not isinstance(item, dict):
                 raise ValueError("tool_calls items must be objects")
             tool_name = MonitoringToolName(str(item.get("tool_name", "")).strip())
-            arguments_raw: Any = item.get("arguments", {})
+            arguments_raw: JSONValue = item.get("arguments", {})
             if not isinstance(arguments_raw, dict):
                 raise ValueError("tool call arguments must be a dict")
             arguments: dict[str, str] = {
@@ -617,6 +635,39 @@ class MonitoringToolLoopRunner:
         )
 
     @staticmethod
+    def _normalize_decision_payload(payload: JSONObject) -> JSONObject:
+        """Normalize common wrapper-style LLM responses into the expected top-level shape."""
+        if "action" in payload:
+            return payload
+
+        final_report: JSONValue = payload.get("final_report")
+        if isinstance(final_report, dict):
+            normalized_final_report: JSONObject = dict(final_report)
+            normalized_final_report["action"] = MonitoringToolDecisionAction.FINAL_REPORT.value
+            if "findings" not in normalized_final_report:
+                findings_raw: JSONValue = normalized_final_report.get("key_findings", [])
+                if isinstance(findings_raw, list):
+                    normalized_final_report["findings"] = [str(item) for item in findings_raw]
+                elif isinstance(findings_raw, str):
+                    normalized_final_report["findings"] = [findings_raw]
+                else:
+                    normalized_final_report["findings"] = []
+            return normalized_final_report
+
+        call_tools: JSONValue = payload.get("call_tools")
+        if isinstance(call_tools, list):
+            return {
+                "action": MonitoringToolDecisionAction.CALL_TOOLS.value,
+                "tool_calls": call_tools,
+            }
+        if isinstance(call_tools, dict):
+            normalized_call_tools: JSONObject = dict(call_tools)
+            normalized_call_tools["action"] = MonitoringToolDecisionAction.CALL_TOOLS.value
+            return normalized_call_tools
+
+        return payload
+
+    @staticmethod
     def _build_call_signature(tool_call: MonitoringToolCall) -> str:
         """Build a stable signature used to detect duplicate tool calls."""
         return json.dumps(
@@ -628,32 +679,32 @@ class MonitoringToolLoopRunner:
         )
 
     @staticmethod
-    def _coerce_string_list(value: Any) -> list[str]:
+    def _coerce_string_list(value: JSONValue) -> list[str]:
         """Normalize an arbitrary value into a list of strings when possible."""
         if not isinstance(value, list):
             return []
         return [str(item) for item in value]
 
     @staticmethod
-    def _load_json_object(response_text: str) -> dict[str, Any]:
+    def _load_json_object(response_text: str) -> JSONObject:
         """Load a JSON object from plain text, fenced JSON, or embedded JSON text."""
         try:
-            payload: Any = json.loads(response_text)
+            payload: JSONValue = json.loads(response_text)
             if not isinstance(payload, dict):
                 raise ValueError("response must be a JSON object")
-            return cast(dict[str, Any], payload)
+            return payload
         except json.JSONDecodeError:
             match = re.search(r"```json\s*(\{.*?\})\s*```", response_text, re.DOTALL)
             if match:
                 payload = json.loads(match.group(1))
                 if not isinstance(payload, dict):
                     raise ValueError("response must be a JSON object")
-                return cast(dict[str, Any], payload)
+                return payload
             start_index: int = response_text.find("{")
             end_index: int = response_text.rfind("}")
             if start_index != -1 and end_index != -1:
                 payload = json.loads(response_text[start_index : end_index + 1])
                 if not isinstance(payload, dict):
                     raise ValueError("response must be a JSON object")
-                return cast(dict[str, Any], payload)
+                return payload
             raise

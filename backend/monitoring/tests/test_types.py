@@ -9,6 +9,8 @@ from monitoring.types import (
     MonitoringJobDefinition,
     MonitoringJobExecutionContext,
     MonitoringJobName,
+    MonitoringToolDecision,
+    MonitoringToolDecisionAction,
     MonitoringToolLoopResult,
     MonitoringToolName,
     MonitoringToolResult,
@@ -107,8 +109,19 @@ class TestMonitoringTypes:
                     message="starting job=log_report",
                 )
             ],
+            final_payload={"summary": "Done", "severity": "INFO"},
             iterations=1,
             stop_reason="final_report",
         )
 
         assert result.trace[0].event_type is MonitoringAgentEventType.START
+
+    def test_tool_decision_final_report_accepts_payload(self):
+        decision = MonitoringToolDecision(
+            action=MonitoringToolDecisionAction.FINAL_REPORT,
+            summary="Healthy",
+            findings=["No issues found."],
+            payload={"summary": "Healthy", "severity": "INFO"},
+        )
+
+        assert decision.payload["severity"] == "INFO"

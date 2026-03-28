@@ -4,7 +4,11 @@ from django.core import mail
 
 from common.llm.providers import MockLLMProvider
 from monitoring.models import LogAnalysis
-from monitoring.tasks import cleanup_old_logs_task, daily_log_analysis_task
+from monitoring.tasks import (
+    cleanup_old_logs_task,
+    daily_log_analysis_task,
+    daily_monitoring_agent_log_task,
+)
 
 
 @pytest.mark.django_db
@@ -12,6 +16,8 @@ class TestMonitoringTasks:
 
     def test_daily_log_analysis_task_orchestration(self, mocker, log_analysis):
         """Test that the orchestrator task coordinates analysis and email sending."""
+        mocker.patch("monitoring.tasks.settings.RUN_LEGACY_DAILY_TASK", True)
+
         # Setup mocks
         mock_orchestrator = mocker.MagicMock()
         mock_create_default = mocker.patch(
@@ -59,6 +65,8 @@ class TestMonitoringTasks:
 
         Verifies: Data is processed -> DB is populated correctly -> Email renders and sends.
         """
+        mocker.patch("monitoring.tasks.settings.RUN_LEGACY_DAILY_TASK", True)
+
         # 1. Configure the LLM mock to return the attack sequence
         # We read the file FIRST before we mock `builtins.open` below to prevent I/O conflicts.
         attack_json_path = settings.BASE_DIR / "monitoring/tests/llm_responses/attack.json"
@@ -138,3 +146,31 @@ class TestMonitoringTasks:
         mock_cleanup.assert_called_once_with(20)
         assert result["status"] == "success"
         assert result["deleted_count"] == 5
+
+    def test_daily_monitoring_agent_log_task_orchestration(self, mocker, log_analysis):
+        """Test that the monitoring-agent task coordinates analysis and email sending."""
+        mock_orchestrator = mocker.MagicMock()
+        mock_create_default = mocker.patch(
+            "monitoring.tasks.MonitoringAgentLogOrchestrator.create_default"
+        )
+        mock_create_default.return_value = mock_orchestrator
+
+        mock_email_service_cls = mocker.patch("monitoring.tasks.LogAnalysisEmailService")
+        mock_email_service_instance = mock_email_service_cls.return_value
+
+        log_analysis.email_sent = False
+        log_analysis.save()
+
+        mock_orchestrator.analyze_and_store.return_value = log_analysis
+
+        result = daily_monitoring_agent_log_task()
+
+        mock_create_default.assert_called_once()
+        mock_orchestrator.analyze_and_store.assert_called_once()
+        mock_email_service_cls.assert_called_once_with(log_analysis)
+        mock_email_service_instance.send_email.assert_called_once()
+
+        log_analysis.refresh_from_db()
+        assert log_analysis.email_sent is True
+        assert result["status"] == "success"
+        assert result["runtime"] == "monitoring_agent"

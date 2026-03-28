@@ -7,6 +7,7 @@ import pytest
 from django.test import override_settings
 
 from monitoring.models import LogAnalysis
+from monitoring.monitoring_agent_runner import MonitoringToolLoopRunner
 from monitoring.services import (
     DockerLogCollector,
     HistoricalContextBuilder,
@@ -15,8 +16,15 @@ from monitoring.services import (
     LogCleanupService,
     LogReportPreparationService,
     LogStorageService,
+    MonitoringAgentLogOrchestrator,
 )
 from monitoring.tests.factories import LogAnalysisFactory
+from monitoring.types import (
+    LogReportResult,
+    MonitoringAgentEventType,
+    MonitoringAgentTraceEvent,
+    MonitoringToolLoopResult,
+)
 
 
 @pytest.mark.django_db
@@ -145,6 +153,86 @@ class TestLogReportPreparationService:
         assert report.severity == mock_llm_response["severity"]
         assert report.gpt_tokens_used == mock_llm_response["gpt_tokens_used"]
         assert report.gpt_cost_usd == mock_llm_response["gpt_cost_usd"]
+
+
+class TestMonitoringAgentLogOrchestrator:
+    def test_run_monitoring_agent_prefers_final_payload_over_deterministic_report(self, mocker):
+        mock_agent = mocker.MagicMock()
+        analyzer = LogAnalyzer(mock_agent)
+        runner = mocker.MagicMock(spec=MonitoringToolLoopRunner)
+        runner.run.return_value = MonitoringToolLoopResult(
+            summary="Agent summary",
+            findings=["Agent finding"],
+            trace=[
+                MonitoringAgentTraceEvent(
+                    event_type=MonitoringAgentEventType.START,
+                    message="starting job=log_report",
+                )
+            ],
+            final_payload={
+                "summary": "Agent summary",
+                "severity": "CRITICAL",
+                "key_findings": ["Agent finding"],
+                "recommendations": "Review nginx logs.",
+                "trend_summary": "New today.",
+            },
+            stop_reason="final_report",
+        )
+        orchestrator = MonitoringAgentLogOrchestrator(
+            collector=DockerLogCollector(),
+            analyzer=analyzer,
+            storage=LogStorageService(),
+            agent_runner=runner,
+        )
+
+        deterministic_report = LogReportResult(
+            summary="Deterministic summary",
+            severity="WARNING",
+            key_findings=["Deterministic finding"],
+            recommendations="Deterministic recommendation",
+            trend_summary="Stable.",
+            gpt_tokens_used=10,
+            gpt_cost_usd=0.001,
+        )
+
+        result = orchestrator._run_monitoring_agent(deterministic_report)
+
+        assert result.summary == "Agent summary"
+        assert result.severity == "CRITICAL"
+        assert result.key_findings == ["Agent finding"]
+
+    def test_run_monitoring_agent_falls_back_to_deterministic_report(self, mocker):
+        mock_agent = mocker.MagicMock()
+        analyzer = LogAnalyzer(mock_agent)
+        runner = mocker.MagicMock(spec=MonitoringToolLoopRunner)
+        runner.run.return_value = MonitoringToolLoopResult(
+            summary="Deterministic summary",
+            findings=["Deterministic finding"],
+            trace=[],
+            final_payload={"summary": "Deterministic summary"},
+            stop_reason="final_report",
+        )
+        orchestrator = MonitoringAgentLogOrchestrator(
+            collector=DockerLogCollector(),
+            analyzer=analyzer,
+            storage=LogStorageService(),
+            agent_runner=runner,
+        )
+
+        deterministic_report = LogReportResult(
+            summary="Deterministic summary",
+            severity="WARNING",
+            key_findings=["Deterministic finding"],
+            recommendations="Deterministic recommendation",
+            trend_summary="Stable.",
+            gpt_tokens_used=10,
+            gpt_cost_usd=0.001,
+        )
+
+        result = orchestrator._run_monitoring_agent(deterministic_report)
+
+        assert result.severity == "WARNING"
+        assert result.recommendations == "Deterministic recommendation"
 
 
 @pytest.mark.django_db

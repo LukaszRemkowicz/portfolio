@@ -9,6 +9,7 @@ from pytest_mock import MockerFixture
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
+from django.utils import timezone
 
 from common.utils.image import ImageSpec
 from users.models import Profile
@@ -154,6 +155,17 @@ class TestUserDomainMethods:
         user = UserFactory.create_superuser(email="test@example.com")
         url = user.get_avatar_url()
         assert url == "/static/images/default-avatar.png"
+
+    def test_get_avatar_url_appends_version_for_admin_cache_busting(self):
+        """Jazzmin sidebar avatar should get a versioned URL after avatar updates."""
+        user = UserFactory.build(email="test@example.com")
+        user.avatar.name = "avatars/avatar.jpg"
+        user.updated_at = timezone.now()
+
+        url = user.get_avatar_url()
+
+        assert url.startswith("/media/avatars/avatar.jpg")
+        assert "?v=" in url
 
     def test_has_complete_profile_false_missing_fields(self):
         """Test has_complete_profile returns False when incomplete."""
