@@ -1,0 +1,31 @@
+{% load i18n %}
+<section
+    class="card"
+    data-admin-image-cropper-root
+    data-field-name="{{ cropper.field_name }}"
+    data-source-input-id="{{ cropper.source_input_id }}"
+    data-visible-tab-panel="{{ cropper.visible_tab_panel }}"
+    data-preview-shape="{{ cropper.preview_shape }}"
+    style="display: none;"
+>
+    <div class="card-header">
+        <strong>{{ cropper.component_title }}</strong>
+    </div>
+    <div class="card-body">
+        <p class="text-sm text-muted mb-2">
+            {% trans "This reusable cropper component is mounted for the avatar field and will become interactive in the next phase." %}
+        </p>
+        <dl class="mb-0">
+            <dt class="small text-muted text-uppercase mb-1">{% trans "Target field" %}</dt>
+            <dd class="mb-3"><code>{{ cropper.field_name }}</code></dd>
+            <dt class="small text-muted text-uppercase mb-1">{% trans "Current source" %}</dt>
+            <dd class="mb-0">
+                {% if cropper.current_image_name %}
+                <span>{{ cropper.current_image_name }}</span>
+                {% else %}
+                <span class="text-muted">{% trans "No image selected yet." %}</span>
+                {% endif %}
+            </dd>
+        </dl>
+    </div>
+</section>

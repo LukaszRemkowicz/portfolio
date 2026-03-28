@@ -146,6 +146,24 @@ class UserAdmin(  # type: ignore[misc]
             extra_context["language_tabs"] = self.get_language_tabs(
                 request, obj, available_languages
             )
+            avatar_name = ""
+            avatar_url = ""
+            avatar = getattr(obj, "avatar", None)
+            if avatar:
+                avatar_name = str(avatar.name or "")
+                try:
+                    avatar_url = str(avatar.url)
+                except ValueError:
+                    avatar_url = ""
+            extra_context["admin_image_cropper"] = {
+                "field_name": "avatar",
+                "source_input_id": "id_avatar",
+                "visible_tab_panel": "media-tab",
+                "preview_shape": "circle",
+                "component_title": _("Avatar Cropper"),
+                "current_image_name": avatar_name,
+                "current_image_url": avatar_url,
+            }
 
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 

@@ -1,5 +1,5 @@
 {% extends "admin/change_form.html" %}
-{% load i18n jazzmin %}
+{% load i18n jazzmin static %}
 
 {% block field_sets %}
 <div class="col-12 col-lg-9">
@@ -34,4 +34,18 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block submit_buttons_bottom %}
+{{ block.super }}
+{% if admin_image_cropper %}
+<div class="mt-3">
+    {% include "admin/users/widgets/admin_image_cropper.html" with cropper=admin_image_cropper %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script src="{% static 'users/js/admin_image_cropper.js' %}"></script>
 {% endblock %}

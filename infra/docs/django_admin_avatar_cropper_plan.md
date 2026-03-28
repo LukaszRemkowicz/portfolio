@@ -6,7 +6,6 @@ Implement a Facebook-style zoom/crop experience in Django admin for the portfoli
 - upload a large source image,
 - drag and zoom it inside a fixed avatar frame,
 - save the chosen crop,
-- keep the original upload for future recropping,
 - preserve the existing WebP optimization and cache invalidation flow.
 
 This plan is scoped to `users.User.avatar` first. It should be designed so the same pattern can be reused later for `about_me_image` and `about_me_image2`.
@@ -16,7 +15,6 @@ This plan is scoped to `users.User.avatar` first. It should be designed so the s
 ### Relevant code paths
 - `backend/users/models.py`
   - `User.avatar`
-  - `User.avatar_original_image`
   - async save trigger via `process_user_images_task.delay_on_commit(...)`
 - `backend/users/tasks.py`
   - `process_user_images_task()` converts uploaded images to WebP and persists optimized files
@@ -32,8 +30,15 @@ This plan is scoped to `users.User.avatar` first. It should be designed so the s
 ### Constraint summary
 - The admin already separates translated content from media.
 - The avatar is processed asynchronously after model save.
-- The system keeps an original file for rollback and alternate serving.
+- The system currently does **not** keep a separate original avatar source field.
 - Cache invalidation must happen after the final cropped/optimized file is persisted.
+
+### Phase 0 findings from codebase review
+- `avatar_original_image` does not exist in the current `User` model. It existed historically and was removed in migration `0014_replace_original_image_fields_with_webp_fields.py`.
+- The current source-of-truth image is `User.avatar`; derived output is stored in `User.avatar_webp`.
+- The current async save trigger only watches `avatar`, `about_me_image`, and `about_me_image2`. Crop-only edits are not yet detectable.
+- Current avatar optimization settings come from `settings.IMAGE_OPTIMIZATION_SPECS["AVATAR"]`, which is `dimension=280` and `quality=10`.
+- Cache invalidation currently happens on normal model saves via signals and again after async processing completes. The plan must preserve post-processing invalidation and avoid depending on pre-processing invalidation for correctness.
 
 ## Target UX
 
@@ -47,46 +52,43 @@ Inside the Django admin `Media` tab for the user:
    - optionally reset crop,
    - preview the final circular or square avatar framing.
 4. On save:
-   - crop metadata is submitted with the form,
-   - backend stores the original upload,
-   - backend generates the cropped avatar variant,
-   - existing WebP optimization runs on the cropped result,
+   - the widget submits the cropped image as the new `avatar` file,
+   - backend saves the cropped avatar source image,
+   - existing WebP optimization runs on that saved source file,
    - backend and frontend caches are invalidated.
 
 ## Recommended Design
 
 ### Core decision
-Store crop metadata in the database and perform the actual crop server-side.
+Perform cropping in the admin widget and submit the cropped image as the new source file.
 
-This is better than trusting a client-generated cropped blob because it:
+This fits the current architecture because it:
 
-- keeps a high-quality original for re-editing,
-- makes output deterministic,
+- keeps `avatar` as the source field and `avatar_webp` as the derived optimized field,
+- avoids adding crop-state fields to the database,
 - integrates cleanly with the current async processing task,
-- avoids browser-specific image encoding differences,
-- allows future regeneration of different avatar sizes.
+- keeps the backend flow consistent with the other `User` image fields.
+
+## Assessment
+
+I agree with the direction of this plan.
+
+Recommended adjustments before implementation:
+
+- keep the existing architecture: `avatar` as the source field and `avatar_webp` as the optimized derivative,
+- crop in the widget and submit the cropped result as the saved `avatar`,
+- keep phase 1 focused on backend contract and regeneration semantics before introducing JS complexity,
+- resolve the storage/UI shape decision now: square file output, circular admin preview overlay.
 
 ## Data Model Changes
 
-Add avatar crop metadata to `users.User`.
-
-Recommended fields:
-
-- `avatar_crop_x = models.FloatField(null=True, blank=True)`
-- `avatar_crop_y = models.FloatField(null=True, blank=True)`
-- `avatar_crop_width = models.FloatField(null=True, blank=True)`
-- `avatar_crop_height = models.FloatField(null=True, blank=True)`
-- `avatar_crop_scale = models.FloatField(null=True, blank=True)`
-
-Optional:
-
-- `avatar_crop_version = models.PositiveIntegerField(default=1)`
-  - useful if crop math changes later
+No crop metadata fields are needed in the database.
 
 Notes:
-- Store coordinates in the natural pixel space of the original uploaded image if possible.
-- If the JS cropper reports values relative to the rendered preview, convert them on the client or server into natural-image coordinates before persistence.
-- Keep `avatar_original_image` as the canonical source for recropping after the first optimization pass.
+- `avatar` remains the canonical source field,
+- `avatar_webp` remains the derived optimized field,
+- crop state exists only in the browser while editing,
+- saving stores the cropped file itself rather than persisted crop instructions.
 
 ## Admin Form and Widget Design
 
@@ -97,10 +99,9 @@ Recommended file:
 - `backend/users/forms.py`
 
 Responsibilities:
-- expose hidden crop metadata fields,
-- validate crop numbers,
 - attach a custom cropper widget to `avatar`,
-- optionally expose a non-model boolean like `avatar_crop_reset`.
+- coordinate the upload field with the cropper component,
+- ensure the cropped file is posted as `avatar`.
 
 ### New widget
 Create a custom admin widget for avatar cropping.
@@ -116,9 +117,28 @@ Widget responsibilities:
 - render current avatar preview,
 - render upload input,
 - initialize cropper JS when a file is selected,
-- maintain hidden inputs for crop metadata,
-- support loading previously saved crop values,
+- export the selected crop into a file/blob for form submission,
 - show a square viewport sized to the real avatar target behavior.
+
+Reusability requirement:
+- the widget must be implemented as a general cropper widget, not an avatar-only widget,
+- the widget must be a portable component that can be placed wherever needed in the admin UI,
+- field-specific behavior should be driven by configuration such as field name, aspect ratio, preview shape, and output spec,
+- Phase 1-4 should wire the reusable widget only to `avatar`,
+- the reusable contract must be suitable for later rollout to `about_me_image` and `about_me_image2` in the last stage.
+
+Placement requirement:
+- placement in the existing `Media` tab is only the first integration point,
+- the component must not depend on the `Media` tab structure to function,
+- markup, JS initialization, and hidden-field binding should work if the component is moved to another admin section or template later,
+- avoid hardcoded selectors tied to one page layout when a component root container can be used instead.
+
+Initial mount requirement:
+- the first real integration point should be in the right sidebar of the admin change page,
+- place the component directly under the `Historia` box,
+- the component must be visible only while the `Media` tab is active,
+- visibility must work the same for both Polish and English language tabs,
+- because media is non-translatable, the same component instance/behavior should be shared across translation tabs rather than duplicated per language tab.
 
 ### JS library
 Use a mature cropper library instead of building custom drag/zoom logic.
@@ -132,6 +152,12 @@ Why:
 - supports zoom, drag, crop box locking, preview hooks,
 - much lower risk than custom pointer math.
 
+JavaScript constraint:
+- do not use `jQuery`,
+- do not use `django.jQuery`,
+- do not use legacy Django admin JS patterns for DOM binding,
+- implement the widget behavior in modern vanilla JavaScript scoped to the component root.
+
 ### Admin placement
 Place the cropper only in the existing `Media` tab of the user admin.
 
@@ -139,75 +165,50 @@ Do not add it to translated language tabs.
 
 ## Backend Image Pipeline Changes
 
-### New crop utility
-Add a reusable crop helper in the image utilities layer.
-
-Recommended additions:
-- `backend/common/utils/image.py`
-
-New function:
-- `crop_image_field(image_field, crop_box, output_format=None, max_dimension=None, quality=None)`
-
-Expected behavior:
-- open original image,
-- apply validated crop box,
-- optionally resize to avatar spec,
-- return a `ContentFile`,
-- keep aspect ratio rules explicit.
-
 ### Avatar-specific pipeline
 Update `process_user_images_task()` in `backend/users/tasks.py`.
 
 New flow for `avatar`:
-1. Load `avatar_original_image` if present, otherwise `avatar`.
-2. If crop metadata exists, crop from the original source first.
-3. Resize cropped image according to avatar spec.
-4. Save final processed avatar file.
-5. Keep `avatar_original_image` untouched as source-of-truth original.
+1. Load `avatar`.
+2. Assume the saved `avatar` is already cropped by the widget.
+3. Resize/optimize according to avatar spec.
+4. Save final processed avatar file to `avatar_webp`.
+5. Keep `avatar` untouched as the source image.
 6. Invalidate user caches after persistence.
 
 Important:
-- Cropping must happen before WebP compression.
-- The crop should not overwrite the original upload.
-- Re-saving with updated crop metadata and no new file should still regenerate the avatar from `avatar_original_image`.
+- Cropping happens before backend optimization because the widget submits the cropped file.
+- The crop should not overwrite `avatar`.
+- The backend remains responsible only for optimized derivative generation.
 
 ## Save Flow Changes
 
 ### Existing issue to avoid
 Today image processing is triggered when the image field itself changes.
 
-For crop support, this is not enough because the admin may:
-- keep the same source image,
-- only change crop metadata,
-- expect a new avatar output.
-
 ### Required logic change
-Update `User.save()` in `backend/users/models.py` so async processing is triggered when either:
+No crop-field trigger is needed.
 
-- `avatar` changed, or
-- any avatar crop metadata field changed.
-
-Recommended approach:
-- extend the `FieldTracker` set to include avatar crop fields, or
-- add explicit comparison logic for crop fields.
+The widget must ensure that saving a new crop results in a new uploaded `avatar` file so the existing save trigger continues to work.
 
 Result:
-- changing crop values without uploading a new file still queues `process_user_images_task(self.pk, ["avatar"])`.
+- submitting a cropped avatar file queues `process_user_images_task(self.pk, ["avatar"])` through the existing mechanism.
 
 ## Validation Rules
 
 Validate crop data both client-side and server-side.
 
+Client-side rules:
+- crop area must remain within image bounds,
+- exported crop must respect the configured aspect ratio,
+- reset must restore the default cropper state for the currently selected image.
+
 Server-side rules:
-- all crop values must be finite numbers,
-- width and height must be positive,
-- crop box must remain inside source image bounds after normalization,
-- reject impossible crop boxes,
-- if crop data is missing, fall back to center crop or current no-crop behavior,
-- if `avatar_original_image` is missing, fall back to `avatar`.
+- validate the uploaded file as a normal image upload,
+- if `avatar` is missing, preserve current empty-image behavior.
 
 Suggested fallback:
-- if no crop metadata exists, preserve current behavior initially.
+- if the widget is not used, preserve current behavior and treat the upload as a normal avatar image.
 
 ## Output Rules
 
@@ -221,45 +222,216 @@ Reason:
 - circular display can remain a frontend/CSS concern,
 - square image storage is more reusable.
 
-## Migration Plan
+## Delivery Workflow Requirements
 
-### Phase 1: Schema
-Create migration for avatar crop fields.
+These requirements apply to every implementation phase in this document:
 
-Files:
-- `backend/users/models.py`
-- new migration under `backend/users/migrations/`
+- each implementation phase starts only after explicit approval,
+- each implementation phase ends with all tests green via `poetry run test`,
+- each implementation phase prepares a commit message using the local skill/process for commit-message generation,
+- after a phase is complete, work stops and waits for approval before the next phase begins.
 
-### Phase 2: Admin UI
-Add:
-- custom form,
-- custom widget,
-- widget template,
-- JS/CSS assets,
-- `UserAdmin.form = UserAdminForm`
+Exception:
+- the analysis stage is not an implementation phase, so it does not require `poetry run test` or a commit message.
+
+## Phased Delivery Plan
+
+### Pre-Phase: Analysis and decision lock
+Lock the implementation contract before coding.
+
+Scope:
+- review current model, admin, async image-processing, and cache invalidation flow,
+- confirm avatar output shape and preview behavior,
+- confirm `avatar` remains the canonical source field and `avatar_webp` remains the derived field,
+- confirm rollout scope is `avatar` only.
+
+Decisions to freeze:
+- storage output is square,
+- admin preview may be circular,
+- processing stays asynchronous through Celery,
+- the widget submits the cropped file as `avatar`,
+- backend optimization uses `avatar` as the source and writes optimized output to `avatar_webp`.
+
+Deliverables:
+- agreed implementation contract,
+- agreed phase boundaries,
+- agreed acceptance criteria for phase completion.
+
+Exit criteria:
+- output shape and save semantics are explicitly agreed,
+- no crop-state database fields are introduced,
+- no migration is created,
+- cropped avatar upload is the agreed save mechanism,
+- no unresolved question blocks implementation,
+- approval is given to start Phase 1.
+
+### Phase 1: Admin component contract
+Introduce the reusable admin component and mount it in the correct place before adding full cropper behavior.
+
+Scope:
+- add custom `ModelForm`,
+- add reset semantics,
+- design a reusable widget API that can support multiple `User` image fields later,
+- design the widget/template contract so the component can be moved to a different admin page location later with minimal or no JS changes,
+- connect `UserAdmin.form`,
+- render the first mounted component under `Historia` in the right sidebar,
+- make the mounted component visible only when the `Media` tab is active.
 
 Files:
 - `backend/users/forms.py`
 - `backend/users/widgets.py`
 - `backend/users/admin.py`
 - `backend/users/templates/admin/users/widgets/avatar_cropper.html`
+
+Required tests:
+- run full `poetry run test`,
+- verify admin form posts the cropped avatar file correctly,
+- verify the component is mounted under `Historia`,
+- verify the component is visible only when the `Media` tab is active,
+- verify the behavior is the same for Polish and English tabs.
+
+Approval gate:
+- pause after this phase and wait for approval before starting Phase 2.
+
+Commit message:
+- prepare a commit message using the project skill/process for commit-message generation.
+
+Exit criteria:
+- admin form posts the cropped avatar file correctly,
+- existing avatar management remains functional,
+- widget API is reusable for other image fields without redesign,
+- component is portable and not coupled to one template section structure,
+- first integration is under `Historia` in the sidebar,
+- cropper UI is visible only in the `Media` tab across language tabs.
+
+### Phase 2: Interactive cropper UI
+Add the JavaScript cropper experience and align it with the backend contract.
+
+Scope:
+- integrate `Cropper.js`,
+- initialize cropper state for the selected file,
+- export the crop result to a file/blob assigned to the form submission,
+- reset stale crop values on new upload,
+- keep the JS/component structure reusable for other image fields,
+- scope all DOM behavior to a component root so the component can be relocated later,
+- bind component visibility to admin tab state rather than language-tab state,
+- use modern vanilla JS only, with no `jQuery` dependency,
+- show a square crop area with circular preview overlay if desired.
+
+Files:
 - `backend/users/static/users/js/avatar_cropper.js`
 - `backend/users/static/users/css/avatar_cropper.css`
+- `backend/users/templates/admin/users/widgets/avatar_cropper.html`
 
-### Phase 3: Processing
-Update:
-- `backend/common/utils/image.py`
+Required tests:
+- run full `poetry run test`,
+- verify upload, zoom, drag, reset, and resave flows work,
+- verify the component toggles correctly with `Media` tab activation,
+- verify switching between Polish and English does not break visibility or cropper behavior,
+- verify new uploads do not reuse stale crop state.
+
+Approval gate:
+- pause after this phase and wait for approval before starting Phase 3.
+
+Commit message:
+- prepare a commit message using the project skill/process for commit-message generation.
+
+Exit criteria:
+- upload, zoom, drag, reset, and resave flows work in admin,
+- widget implementation is reusable even though only `avatar` is enabled in this release,
+- component can be moved to another admin page location without redesigning the JS contract,
+- first mount location under `Historia` behaves correctly,
+- new uploads do not reuse stale crop state.
+
+### Phase 3: Image pipeline and validation
+Keep backend processing focused on derivative generation and validation of the uploaded cropped file.
+
+Scope:
+- keep backend image processing centered on `convert_to_webp()` and derivative generation,
+- validate uploaded cropped files through existing image handling,
+- preserve `avatar` untouched,
+- keep cache invalidation after final processed file persistence.
+
+Files:
 - `backend/users/tasks.py`
-- `backend/users/models.py`
 
-### Phase 4: Cache and save semantics
-Confirm:
-- backend API profile cache clears,
-- frontend SSR `profile` tag clears,
-- crop-only edits regenerate avatar correctly.
+Required tests:
+- run full `poetry run test`,
+- verify uploaded cropped avatar files are processed into `avatar_webp`,
+- verify `avatar` remains untouched,
+- verify cache invalidation still occurs after async completion.
 
-### Phase 5: Tests
-Add tests before rollout.
+Approval gate:
+- pause after this phase and wait for approval before starting Phase 4.
+
+Commit message:
+- prepare a commit message using the project skill/process for commit-message generation.
+
+Exit criteria:
+- regenerated avatar is derived from the uploaded `avatar` file,
+- cache invalidation still happens after async completion.
+
+### Phase 4: Automated tests
+Cover the contract from utility layer through admin behavior.
+
+Scope:
+- image utility tests,
+- model save-trigger tests,
+- Celery task processing tests,
+- admin/form rendering and POST tests.
+
+Required tests:
+- run full `poetry run test`,
+- ensure new and updated tests are green in the full suite.
+
+Approval gate:
+- pause after this phase and wait for approval before starting Phase 5.
+
+Commit message:
+- prepare a commit message using the project skill/process for commit-message generation.
+
+Exit criteria:
+- crop math and fallback behavior are covered,
+- cropped upload behavior is covered,
+- cache invalidation assertions are covered,
+- admin integration is covered.
+
+### Phase 5: Manual QA and rollout
+Validate end-to-end behavior before extending the pattern to other fields.
+
+Scope:
+- browser QA in admin,
+- verify delayed async update behavior,
+- verify public avatar refresh after cache invalidation,
+- confirm recropping works against the current `avatar` source file.
+
+Required validation:
+- if code changes are made in this phase, run full `poetry run test`,
+- complete manual QA checklist and record the result.
+
+Approval gate:
+- pause after this phase for rollout approval or next-scope approval.
+
+Commit message:
+- only required if this phase includes code changes.
+
+Exit criteria:
+- admin workflow is stable,
+- frontend displays updated avatar,
+- no regression in existing avatar optimization flow.
+
+### Final stage extension
+After the avatar rollout is stable, extend the same reusable widget and backend pattern to:
+
+- `about_me_image`
+- `about_me_image2`
+
+Requirements for the final stage:
+- reuse the same widget/component contract rather than introducing separate field-specific implementations,
+- keep field-specific differences configurable,
+- run full `poetry run test`,
+- prepare a commit message,
+- stop for approval before release.
 
 ## Test Plan
 
@@ -270,19 +442,16 @@ Recommended targets:
 - `backend/common/tests/test_image_utils.py`
 
 Cases:
-- valid square crop,
-- crop outside image bounds rejected,
-- crop metadata omitted,
-- crop metadata with floats,
+- valid square crop export,
+- crop outside image bounds rejected by widget logic,
 - image already webp,
-- crop then resize order.
+- cropped upload then backend optimization order.
 
 ### Model tests
 Recommended target:
 - `backend/users/tests/test_models.py`
 
 Cases:
-- crop-only metadata change queues image task,
 - avatar upload queues task,
 - no-op save does not queue task.
 
@@ -291,8 +460,8 @@ Recommended target:
 - `backend/users/tests/test_tasks.py`
 
 Cases:
-- task crops avatar from original image,
-- task preserves original image,
+- task processes uploaded cropped avatar from `avatar`,
+- task preserves `avatar`,
 - task overwrites final avatar output,
 - task invalidates caches after crop regeneration.
 
@@ -302,9 +471,11 @@ Recommended target:
 
 Cases:
 - media tab renders cropper widget,
-- saved crop values are present in form,
-- changing crop metadata posts correctly,
-- cropper remains in `Media` tab only.
+- cropper widget is mounted under `Historia`,
+- cropper widget is hidden outside the `Media` tab,
+- cropper widget remains available when switching Polish/English tabs,
+- cropped avatar submission posts correctly,
+- cropper visibility remains tied to `Media` tab only.
 
 ### Manual QA
 Test in browser:
@@ -313,6 +484,7 @@ Test in browser:
 - drag to reframe face,
 - save,
 - refresh admin page and confirm crop persists,
+- refresh admin page and confirm saved cropped avatar is displayed,
 - open public page and confirm avatar updates,
 - verify cache refresh on both FE and BE.
 
@@ -324,7 +496,7 @@ Implement cropper for `avatar` only.
 Do not include `about_me_image` or `about_me_image2` in the first pass because:
 - avatar has the clearest fixed-frame use case,
 - it exercises the full admin + async + cache path,
-- it reduces migration and UI complexity.
+- it reduces implementation and UI complexity.
 
 ### Second release candidates
 After avatar is stable, extend the same pattern to:
@@ -335,17 +507,20 @@ For those fields, prefer focal-point support or aspect-ratio-specific crop prese
 
 ## Risks
 
-### 1. Crop metadata drift
-If crop coordinates are stored in preview-space instead of natural-image space, regeneration may be inaccurate.
+### 1. Crop export mismatch
+If the widget exports a crop that does not match the preview, the saved avatar may differ from what the admin selected.
 
 Mitigation:
-- normalize coordinates against natural image dimensions.
+- use a mature cropper library,
+- keep preview and export behavior driven by the same cropper state,
+- test exported output against expected framing.
 
 ### 2. Losing original source
 If processing overwrites the only source image, recropping quality degrades permanently.
 
 Mitigation:
-- always keep `avatar_original_image` intact.
+- never overwrite the uploaded source during backend optimization,
+- store the cropped result in `avatar` and only generate the optimized derivative in `avatar_webp`.
 
 ### 3. Async race conditions
 Admin save may finish before the final cropped asset exists.
@@ -355,32 +530,26 @@ Mitigation:
 - optionally show help text in admin that processed avatar appears after async completion.
 
 ### 4. Re-upload edge cases
-Uploading a new avatar while stale crop metadata remains may create an invalid crop.
+Uploading a new avatar while stale cropper UI state remains may create an invalid or misleading preview.
 
 Mitigation:
-- reset crop metadata when a new file is chosen unless the widget recalculates immediately.
+- fully reset cropper state when a new file is chosen.
 
-## Open Decisions
+## Decision Resolution
 
-These need confirmation before implementation:
-
-1. Should the avatar crop be strictly square, or should the UI preview be circular while storage remains square?
-2. Should crop-only edits regenerate immediately via current async Celery flow, or should avatar crop save synchronously in admin for instant feedback?
-3. Do we want a visible live preview of the final frontend avatar size, or just a general crop window?
-4. Should a new upload automatically clear existing crop metadata before the user touches the cropper?
-
-## Recommended Default Answers
+Recommended defaults for implementation:
 
 - store square output,
 - show circular preview overlay in admin,
 - process asynchronously through the existing task pipeline,
-- clear old crop metadata on new upload until the cropper writes fresh values.
+- provide a live preview inside the widget,
+- clear old cropper state on new upload until the cropper initializes the new file.
 
 ## Suggested Implementation Order
 
-1. Add avatar crop model fields and migration.
-2. Add custom admin form and cropper widget in the existing `Media` tab.
-3. Extend `User.save()` trigger conditions to include crop metadata changes.
-4. Add crop utility and update `process_user_images_task()`.
-5. Add tests for crop generation, crop-only save, and cache invalidation.
-6. Manually QA admin upload, recrop, and frontend refresh behavior.
+1. Freeze phase 0 decisions.
+2. Implement phase 1 image pipeline changes.
+3. Implement phase 2 admin form contract.
+4. Implement phase 3 interactive cropper UI.
+5. Implement phase 4 automated tests.
+6. Complete phase 5 manual QA before rollout.
