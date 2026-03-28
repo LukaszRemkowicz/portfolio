@@ -4,9 +4,14 @@ from monitoring.types import (
     LLMRunRecord,
     LLMSummaryResult,
     LogReportResult,
+    MonitoringAgentEventType,
+    MonitoringAgentTraceEvent,
     MonitoringJobDefinition,
     MonitoringJobExecutionContext,
     MonitoringJobName,
+    MonitoringToolLoopResult,
+    MonitoringToolName,
+    MonitoringToolResult,
     ReasoningEffort,
 )
 
@@ -78,3 +83,32 @@ class TestMonitoringTypes:
 
         assert result.severity == "INFO"
         assert result.key_findings == ["No anomalies"]
+
+    def test_monitoring_agent_trace_event_validates_message(self):
+        with pytest.raises(ValueError, match="message must be a non-empty string"):
+            MonitoringAgentTraceEvent(
+                event_type=MonitoringAgentEventType.START,
+                message="",
+            )
+
+    def test_tool_loop_result_accepts_trace_events(self):
+        result = MonitoringToolLoopResult(
+            summary="Done",
+            findings=["Used one tool."],
+            tool_results=[
+                MonitoringToolResult(
+                    tool_name=MonitoringToolName.GET_SKILL_OWASP,
+                    payload={"skill_name": "owasp_security"},
+                )
+            ],
+            trace=[
+                MonitoringAgentTraceEvent(
+                    event_type=MonitoringAgentEventType.START,
+                    message="starting job=log_report",
+                )
+            ],
+            iterations=1,
+            stop_reason="final_report",
+        )
+
+        assert result.trace[0].event_type is MonitoringAgentEventType.START

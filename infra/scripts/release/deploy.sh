@@ -36,7 +36,6 @@
 #   COMPOSE_FILE  - Path to the docker-compose file. Defaults to docker-compose.${ENVIRONMENT}.yml.
 #
 # Optional:
-#   NGINX_HTTPS_PORT - Port for Nginx HTTPS (defaults to 8443 for non-production)
 #   --dry-run   Print what would happen without making changes
 #
 ###############################################################################
@@ -51,7 +50,6 @@ set -euo pipefail
 : "${ENVIRONMENT:?ENVIRONMENT is required (stg|prod) (inject via: doppler run -- ./deploy.sh)}"
 
 # Optional / Dynamic variables with defaults
-NGINX_HTTPS_PORT="${NGINX_HTTPS_PORT:-8443}"
 DEBUG="${DEBUG:-false}"
 DRY_RUN=false
 
@@ -63,7 +61,7 @@ for arg in "$@"; do
     --dry-run) DRY_RUN=true; echo "🧪 Dry-run mode enabled" ;;
     *)
       echo "❌ ERROR: Unknown argument: ${arg}"
-      echo "✅ Usage: TAG=vX.Y.Z ENVIRONMENT=stg|prod NGINX_HTTPS_PORT=8443 doppler run -- ./deploy.sh [--dry-run]"
+      echo "✅ Usage: TAG=vX.Y.Z ENVIRONMENT=stg|prod doppler run -- ./deploy.sh [--dry-run]"
       exit 1
       ;;
   esac
@@ -297,7 +295,6 @@ else
 
   if [[ "${ENVIRONMENT}" == "production" ]]; then
     HEALTH_PORT="443"
-    export NGINX_HTTPS_PORT="" # Empty for production to trigger Nginx mapping suffix ""
     # Hit the local Traefik listener directly while preserving Host/SNI for the
     # production domain. This avoids false negatives when the server cannot
     # loop back to its own public DNS/IP during deploy-time checks.
@@ -312,7 +309,6 @@ else
     # with the correct Host header is more reliable than a full HTTPS loopback
     # check during deploy. A 301/302 redirect to HTTPS is considered healthy.
     HEALTH_PORT="80"
-    export NGINX_HTTPS_PORT="443"
     HEALTH_URL="http://127.0.0.1:${HEALTH_PORT}/"
     CURL_ARGS=(
       "-sS"
@@ -323,7 +319,6 @@ else
   fi
 
   echo "🩺 TARGET: ${HEALTH_URL} (Host: ${HEALTH_SITE_DOMAIN})"
-  echo "🩺 PORT_VARS: NGINX_HTTPS_PORT=${NGINX_HTTPS_PORT}"
 
   # Retry loop for frontend accessibility (accounts for slow Nginx or SSL generation).
   MAX_RETRIES_FE=20 # Extended to 60s (20 * 3s) for certificates and warmup.

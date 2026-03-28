@@ -16,6 +16,13 @@ class MonitoringJobName(str, Enum):
     SITEMAP_REPORT = "sitemap_report"
 
 
+class MonitoringToolName(str, Enum):
+    PREPARE_LOG_REPORT = "prepare_log_report"
+    GET_SKILL_OWASP = "get_skill_owasp"
+    GET_SKILL_RESPONSE_FORMAT = "get_skill_response_format"
+    GET_SKILL_BOT_DETECTION = "get_skill_bot_detection"
+
+
 class ReasoningEffort(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
@@ -55,6 +62,21 @@ class MonitoringJobDefinition:
         validate_non_empty_text(self.prompt_asset, "prompt_asset")
         validate_non_empty_text(self.response_schema_asset, "response_schema_asset")
         validate_non_empty_text(self.description, "description")
+
+
+@dataclass(frozen=True)
+class MonitoringToolDefinition:
+    tool_name: MonitoringToolName
+    description: str
+    documentation_asset: str
+    when_to_use: list[str] = field(default_factory=list)
+    when_not_to_use: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        validate_non_empty_text(self.description, "description")
+        validate_non_empty_text(self.documentation_asset, "documentation_asset")
+        validate_string_list(self.when_to_use, "when_to_use")
+        validate_string_list(self.when_not_to_use, "when_not_to_use")
 
 
 @dataclass(frozen=True)
@@ -104,6 +126,109 @@ class LLMRunRecord:
             raise ValueError("execution_time_seconds must be >= 0")
         if not isinstance(self.metadata, dict):
             raise ValueError("metadata must be a dict")
+
+
+class MonitoringToolDecisionAction(str, Enum):
+    CALL_TOOLS = "call_tools"
+    FINAL_REPORT = "final_report"
+
+
+class MonitoringAgentEventType(str, Enum):
+    START = "start"
+    ITERATION = "iteration"
+    ASKING_LLM = "asking_llm"
+    DECISION = "decision"
+    TOOL_START = "tool_start"
+    TOOL_DONE = "tool_done"
+    TOOL_SKIPPED = "tool_skipped"
+    STOP = "stop"
+
+
+@dataclass(frozen=True)
+class MonitoringAgentTraceEvent:
+    event_type: MonitoringAgentEventType
+    message: str
+    iteration: int | None = None
+    tool_name: MonitoringToolName | None = None
+    decision_action: MonitoringToolDecisionAction | None = None
+
+    def __post_init__(self) -> None:
+        validate_non_empty_text(self.message, "message")
+        if self.iteration is not None:
+            validate_non_negative_int(self.iteration, "iteration")
+
+
+@dataclass(frozen=True)
+class MonitoringToolCall:
+    tool_name: MonitoringToolName
+    arguments: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.arguments, dict):
+            raise ValueError("arguments must be a dict")
+        for key, value in self.arguments.items():
+            validate_non_empty_text(key, "arguments key")
+            if not isinstance(value, str):
+                raise ValueError("arguments values must contain only strings")
+
+
+@dataclass(frozen=True)
+class MonitoringToolDecision:
+    action: MonitoringToolDecisionAction
+    tool_calls: list[MonitoringToolCall] = field(default_factory=list)
+    summary: str = ""
+    findings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.tool_calls, list):
+            raise ValueError("tool_calls must be a list")
+        for tool_call in self.tool_calls:
+            if not isinstance(tool_call, MonitoringToolCall):
+                raise ValueError("tool_calls must contain only MonitoringToolCall objects")
+        validate_string_list(self.findings, "findings")
+        if self.action is MonitoringToolDecisionAction.CALL_TOOLS:
+            if not self.tool_calls:
+                raise ValueError("tool_calls action requires at least one tool call")
+            if self.summary:
+                raise ValueError("tool_calls action cannot include summary")
+        if self.action is MonitoringToolDecisionAction.FINAL_REPORT:
+            validate_non_empty_text(self.summary, "summary")
+
+
+@dataclass(frozen=True)
+class MonitoringToolResult:
+    tool_name: MonitoringToolName
+    payload: dict[str, Any]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.payload, dict):
+            raise ValueError("payload must be a dict")
+
+
+@dataclass(frozen=True)
+class MonitoringToolLoopResult:
+    summary: str
+    findings: list[str]
+    tool_results: list[MonitoringToolResult] = field(default_factory=list)
+    trace: list[MonitoringAgentTraceEvent] = field(default_factory=list)
+    iterations: int = 0
+    stop_reason: str = ""
+
+    def __post_init__(self) -> None:
+        validate_non_empty_text(self.summary, "summary")
+        validate_string_list(self.findings, "findings")
+        validate_non_negative_int(self.iterations, "iterations")
+        validate_non_empty_text(self.stop_reason, "stop_reason")
+        if not isinstance(self.tool_results, list):
+            raise ValueError("tool_results must be a list")
+        for tool_result in self.tool_results:
+            if not isinstance(tool_result, MonitoringToolResult):
+                raise ValueError("tool_results must contain only MonitoringToolResult objects")
+        if not isinstance(self.trace, list):
+            raise ValueError("trace must be a list")
+        for trace_event in self.trace:
+            if not isinstance(trace_event, MonitoringAgentTraceEvent):
+                raise ValueError("trace must contain only MonitoringAgentTraceEvent objects")
 
 
 @dataclass(frozen=True)
