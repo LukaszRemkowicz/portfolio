@@ -1,6 +1,6 @@
 import pytest
 
-from common.tests.image_helpers import _jpeg_field
+from common.tests.image_helpers import _jpeg_field, _png_field
 from users.tasks import process_user_images_task
 from users.tests.factories import UserFactory
 
@@ -60,3 +60,21 @@ class TestProcessUserImagesTask:
         assert user.avatar.name.endswith(".jpg")
         assert "new_avatar" in user.avatar_webp.name
         assert user.avatar_webp.name.endswith(".webp")
+
+    def test_process_user_images_task_handles_cropped_png_avatar_upload(self):
+        """
+        GIVEN a cropped PNG avatar upload from the admin cropper
+        WHEN process_user_images_task is called
+        THEN the source avatar stays PNG and the derived avatar_webp is regenerated from it.
+        """
+        user = UserFactory.create_superuser()
+        user.avatar = _png_field("cropped_avatar.png", size=(280, 280))
+        user.save()
+
+        process_user_images_task(user.pk, ["avatar"])
+
+        user.refresh_from_db()
+        assert user.avatar.name.endswith(".png")
+        assert "cropped_avatar" in user.avatar.name
+        assert user.avatar_webp.name.endswith(".webp")
+        assert "cropped_avatar" in user.avatar_webp.name

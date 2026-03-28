@@ -371,7 +371,45 @@ Exit criteria:
 - regenerated avatar is derived from the uploaded `avatar` file,
 - cache invalidation still happens after async completion.
 
-### Phase 4: Automated tests
+### Phase 4: Multi-field widget refinement
+Expand the reusable admin image cropper so one widget can target multiple image fields from backend-provided configuration.
+
+Scope:
+- keep a single reusable `admin_image_cropper` component in the sidebar,
+- add a dropdown for selectable image fields,
+- populate the dropdown from backend-provided field definitions rather than hardcoding options in JS,
+- prefer a class attribute or equivalent admin-level configuration as the source of supported crop fields,
+- allow field-specific config such as label, input id, preview shape, output size, and future aspect-ratio rules,
+- add a widget-level `Apply` button that writes the cropped file into the currently selected file input,
+- keep normal admin save buttons as the only mechanism that persists the model,
+- do not render separate cropper widgets for each file field.
+
+Files:
+- `backend/users/admin.py`
+- `backend/users/templates/admin/users/widgets/admin_image_cropper.html`
+- `backend/users/static/users/js/admin_image_cropper.js`
+- `backend/users/static/users/css/admin_image_cropper.css`
+
+Required tests:
+- run full `poetry run test`,
+- verify the dropdown options are rendered from backend config,
+- verify switching selected field updates the widget target correctly,
+- verify `Apply` updates the selected field input without submitting the admin form,
+- verify the widget still remains visible only on the `Media` tab.
+
+Approval gate:
+- pause after this phase and wait for approval before starting Phase 5.
+
+Commit message:
+- prepare a commit message using the project skill/process for commit-message generation.
+
+Exit criteria:
+- one widget can target multiple configured image fields,
+- field list is backend-driven,
+- widget-level `Apply` updates the selected input without saving the model,
+- no duplicate cropper widgets are needed in the UI.
+
+### Phase 5: Automated tests
 Cover the contract from utility layer through admin behavior.
 
 Scope:
@@ -385,7 +423,7 @@ Required tests:
 - ensure new and updated tests are green in the full suite.
 
 Approval gate:
-- pause after this phase and wait for approval before starting Phase 5.
+- pause after this phase and wait for approval before starting Phase 6.
 
 Commit message:
 - prepare a commit message using the project skill/process for commit-message generation.
@@ -396,7 +434,7 @@ Exit criteria:
 - cache invalidation assertions are covered,
 - admin integration is covered.
 
-### Phase 5: Manual QA and rollout
+### Phase 6: Manual QA and rollout
 Validate end-to-end behavior before extending the pattern to other fields.
 
 Scope:
@@ -474,6 +512,8 @@ Cases:
 - cropper widget is mounted under `Historia`,
 - cropper widget is hidden outside the `Media` tab,
 - cropper widget remains available when switching Polish/English tabs,
+- dropdown renders backend-provided crop field options,
+- widget-level `Apply` updates the selected field input without submitting the form,
 - cropped avatar submission posts correctly,
 - cropper visibility remains tied to `Media` tab only.
 
@@ -491,19 +531,19 @@ Test in browser:
 ## Rollout Notes
 
 ### First release scope
-Implement cropper for `avatar` only.
+Ship the reusable widget with backend-driven field selection, but keep the initial verified crop behavior focused on `avatar`.
 
-Do not include `about_me_image` or `about_me_image2` in the first pass because:
-- avatar has the clearest fixed-frame use case,
-- it exercises the full admin + async + cache path,
-- it reduces implementation and UI complexity.
+Why:
+- the widget architecture can support multiple fields immediately,
+- `avatar` remains the first fully validated crop flow,
+- this keeps rollout risk lower while avoiding duplicated UI.
 
 ### Second release candidates
-After avatar is stable, extend the same pattern to:
+After avatar is stable, enable verified crop flows for:
 - `about_me_image`
 - `about_me_image2`
 
-For those fields, prefer focal-point support or aspect-ratio-specific crop presets instead of hardcoding square behavior.
+For those fields, prefer focal-point support or aspect-ratio-specific crop presets instead of hardcoding square behavior, but reuse the same dropdown-driven widget.
 
 ## Risks
 

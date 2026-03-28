@@ -133,6 +133,8 @@ def test_change_form_renders_cropper_component_for_each_language_tab(client, lan
     assert "data-admin-image-cropper-root" in content
     assert 'data-visible-tab-panel="media-tab"' in content
     assert "/static/users/js/admin_image_cropper.js" in content
+    assert "/static/users/css/admin_image_cropper.css" in content
+    assert "data-admin-image-cropper-canvas" in content
 
 
 def test_change_form_template_uses_jazzmin_wrapper():

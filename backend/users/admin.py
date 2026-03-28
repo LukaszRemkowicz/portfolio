@@ -161,6 +161,7 @@ class UserAdmin(  # type: ignore[misc]
                 "visible_tab_panel": "media-tab",
                 "preview_shape": "circle",
                 "component_title": _("Avatar Cropper"),
+                "output_size": obj.get_avatar_spec().dimension,
                 "current_image_name": avatar_name,
                 "current_image_url": avatar_url,
             }

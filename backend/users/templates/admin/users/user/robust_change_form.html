@@ -1,6 +1,11 @@
 {% extends "admin/change_form.html" %}
 {% load i18n jazzmin static %}
 
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'users/css/admin_image_cropper.css' %}">
+{% endblock %}
+
 {% block field_sets %}
 <div class="col-12 col-lg-9">
     <div class="card">

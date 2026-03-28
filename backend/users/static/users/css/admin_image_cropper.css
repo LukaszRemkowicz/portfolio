@@ -1,0 +1,89 @@
+.admin-image-cropper .card-body {
+    display: grid;
+    gap: 1rem;
+}
+
+.admin-image-cropper__hint {
+    margin: 0;
+    color: #b2b7c2;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.admin-image-cropper__viewport-wrap {
+    position: relative;
+    width: min(100%, 320px);
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+    border-radius: 24px;
+    overflow: hidden;
+    background:
+        linear-gradient(135deg, rgba(72, 89, 117, 0.2), rgba(20, 26, 36, 0.95)),
+        #111722;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.admin-image-cropper__canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+}
+
+.admin-image-cropper__canvas.is-dragging {
+    cursor: grabbing;
+}
+
+.admin-image-cropper__overlay {
+    position: absolute;
+    inset: 12px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    box-shadow: 0 0 0 9999px rgba(8, 10, 16, 0.38);
+    pointer-events: none;
+}
+
+.admin-image-cropper__controls {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.admin-image-cropper__control {
+    display: grid;
+    gap: 0.4rem;
+    color: #d8dee9;
+    font-size: 0.9rem;
+}
+
+.admin-image-cropper__control input[type="range"] {
+    width: 100%;
+}
+
+.admin-image-cropper__actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.admin-image-cropper__meta {
+    display: grid;
+    gap: 0.25rem 0.75rem;
+    grid-template-columns: auto 1fr;
+    margin: 0;
+}
+
+.admin-image-cropper__meta dt {
+    margin: 0;
+    color: #9aa3b2;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.admin-image-cropper__meta dd {
+    margin: 0;
+    color: #edf2f7;
+    word-break: break-word;
+}
