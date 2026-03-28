@@ -68,7 +68,9 @@ class TestUserAdmin:
         assert response.status_code == 302
         assert response.url == expected_url
 
-    def test_change_view_adds_avatar_cropper_context(self, mocker: MockerFixture):
+    def test_change_view_adds_cropper_context_with_backend_field_options(
+        self, mocker: MockerFixture
+    ):
         user = UserFactory.create_superuser()
         request = MockRequest(user=user)
         request.GET = QueryDict("", mutable=True)
@@ -88,8 +90,21 @@ class TestUserAdmin:
         response = self.admin.change_view(request, str(user.pk))
 
         assert response == "ok"
-        assert captured["extra_context"]["admin_image_cropper"]["field_name"] == "avatar"
-        assert captured["extra_context"]["admin_image_cropper"]["visible_tab_panel"] == "media-tab"
+        cropper = captured["extra_context"]["admin_image_cropper"]
+        assert cropper["default_field_name"] == "avatar"
+        assert cropper["visible_tab_panel"] == "media-tab"
+        assert [field["field_name"] for field in cropper["fields"]] == [
+            "avatar",
+            "about_me_image",
+            "about_me_image2",
+        ]
+        assert cropper["fields"][0]["preview_shape"] == "circle"
+        assert cropper["fields"][0]["crop_aspect_ratio"] == 1.0
+        assert cropper["fields"][0]["output_width"] == 280
+        assert cropper["fields"][0]["output_height"] == 280
+        assert cropper["fields"][1]["preview_shape"] == "rounded-square"
+        assert cropper["fields"][1]["output_width"] == 800
+        assert cropper["fields"][1]["output_height"] == 800
 
 
 @pytest.mark.django_db
@@ -111,8 +126,8 @@ def test_change_form_mounts_cropper_component_in_sidebar(client):
 
     assert object_tools is not None
     assert cropper_root is not None
-    assert cropper_root["data-field-name"] == "avatar"
     assert cropper_root["data-visible-tab-panel"] == "media-tab"
+    assert cropper_root["data-default-field-name"] == "avatar"
 
     object_tools_index = str(jazzy_actions).index("object-tools")
     cropper_index = str(jazzy_actions).index("data-admin-image-cropper-root")
@@ -135,6 +150,10 @@ def test_change_form_renders_cropper_component_for_each_language_tab(client, lan
     assert "/static/users/js/admin_image_cropper.js" in content
     assert "/static/users/css/admin_image_cropper.css" in content
     assert "data-admin-image-cropper-canvas" in content
+    assert "data-admin-image-cropper-field-select" in content
+    assert "data-admin-image-cropper-apply" in content
+    assert "about_me_image" in content
+    assert "about_me_image2" in content
 
 
 def test_change_form_template_uses_jazzmin_wrapper():

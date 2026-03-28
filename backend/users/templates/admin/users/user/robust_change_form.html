@@ -3,7 +3,7 @@
 
 {% block extrastyle %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'users/css/admin_image_cropper.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/admin_image_cropper.css' %}?v=20260328-2">
 {% endblock %}
 
 {% block field_sets %}
@@ -52,5 +52,5 @@
 
 {% block admin_change_form_document_ready %}
 {{ block.super }}
-<script src="{% static 'users/js/admin_image_cropper.js' %}"></script>
+<script src="{% static 'users/js/admin_image_cropper.js' %}?v=20260328-2"></script>
 {% endblock %}

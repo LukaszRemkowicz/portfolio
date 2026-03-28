@@ -12,6 +12,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 from django.utils.translation import gettext_lazy as _
 
 from common.utils.image import ImageSpec
+from users.types import CropperFieldConfig, CropperPreviewShape
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -362,6 +363,34 @@ IMAGE_OPTIMIZATION_SPECS = {
     "THUMBNAIL": ImageSpec(dimension=560, quality=100),
     "DEFAULT": ImageSpec(dimension=1200, quality=75),
 }
+
+# TODO: add it somewhere else
+USER_ADMIN_CROPPER_FIELD_CONFIGS = (
+    CropperFieldConfig(
+        field_name="avatar",
+        label=_("Avatar"),
+        input_id="id_avatar",
+        preview_shape=CropperPreviewShape.CIRCLE,
+        spec_method="get_avatar_spec",
+        crop_aspect_ratio=1.0,
+    ),
+    CropperFieldConfig(
+        field_name="about_me_image",
+        label=_("About me image"),
+        input_id="id_about_me_image",
+        preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
+        spec_method="get_portrait_spec",
+        crop_aspect_ratio=1.0,
+    ),
+    CropperFieldConfig(
+        field_name="about_me_image2",
+        label=_("About me image 2"),
+        input_id="id_about_me_image2",
+        preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
+        spec_method="get_portrait_spec",
+        crop_aspect_ratio=1.0,
+    ),
+)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

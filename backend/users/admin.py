@@ -1,4 +1,3 @@
-# backend/users/admin.py
 import logging
 from typing import Any
 
@@ -23,6 +22,7 @@ from translation.mixins import (
 )
 
 from .models import Profile
+from .types import CropperFieldConfig
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -109,6 +109,10 @@ class UserAdmin(  # type: ignore[misc]
     # Fields to show when editing a translation (used by HideNonTranslatableFieldsMixin)
     translatable_fields = ["short_description", "bio"]
 
+    @property
+    def cropper_field_configs(self) -> tuple[CropperFieldConfig, ...]:
+        return settings.USER_ADMIN_CROPPER_FIELD_CONFIGS
+
     def get_fieldsets(self, request: HttpRequest, obj: models.Model | None = None):
         """Dynamically add translation_status to Personal info on default language tab."""
         fieldsets = super().get_fieldsets(request, obj)
@@ -146,24 +150,45 @@ class UserAdmin(  # type: ignore[misc]
             extra_context["language_tabs"] = self.get_language_tabs(
                 request, obj, available_languages
             )
-            avatar_name = ""
-            avatar_url = ""
-            avatar = getattr(obj, "avatar", None)
-            if avatar:
-                avatar_name = str(avatar.name or "")
-                try:
-                    avatar_url = str(avatar.url)
-                except ValueError:
-                    avatar_url = ""
+            cropper_fields = []
+            for field_config in self.cropper_field_configs:
+                field_name = field_config.field_name
+                image_field = getattr(obj, field_name, None)
+                current_image_name = ""
+                current_image_url = ""
+                if image_field:
+                    current_image_name = str(image_field.name or "")
+                    try:
+                        current_image_url = str(image_field.url)
+                    except ValueError:
+                        current_image_url = ""
+
+                spec = getattr(obj, field_config.spec_method)()
+                crop_aspect_ratio = field_config.crop_aspect_ratio or 1.0
+                if crop_aspect_ratio >= 1:
+                    output_width = spec.dimension
+                    output_height = round(spec.dimension / crop_aspect_ratio)
+                else:
+                    output_width = round(spec.dimension * crop_aspect_ratio)
+                    output_height = spec.dimension
+                cropper_fields.append(
+                    {
+                        "field_name": field_name,
+                        "label": str(field_config.label),
+                        "input_id": field_config.input_id,
+                        "preview_shape": field_config.preview_shape.value,
+                        "crop_aspect_ratio": crop_aspect_ratio,
+                        "output_width": output_width,
+                        "output_height": output_height,
+                        "current_image_name": current_image_name,
+                        "current_image_url": current_image_url,
+                    }
+                )
             extra_context["admin_image_cropper"] = {
-                "field_name": "avatar",
-                "source_input_id": "id_avatar",
                 "visible_tab_panel": "media-tab",
-                "preview_shape": "circle",
-                "component_title": _("Avatar Cropper"),
-                "output_size": obj.get_avatar_spec().dimension,
-                "current_image_name": avatar_name,
-                "current_image_url": avatar_url,
+                "component_title": _("Image Cropper"),
+                "fields": cropper_fields,
+                "default_field_name": "avatar",
             }
 
         return super().change_view(request, object_id, form_url, extra_context=extra_context)

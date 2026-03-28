@@ -71,10 +71,15 @@ urlpatterns = [
 ]
 
 
-def safe_serve(*args, **kwargs):
-    if "logs/" in args[0].path or "images/" in args[0].path:
+def safe_serve(request, path, document_root=None, show_indexes=False):
+    if path.startswith("logs/") or path.startswith("images/"):
         raise Http404()
-    return serve(*args, **kwargs)
+    return serve(
+        request,
+        path,
+        document_root=document_root,
+        show_indexes=show_indexes,
+    )
 
 
 if settings.ADMIN_DOMAIN in settings.ALLOWED_HOSTS:

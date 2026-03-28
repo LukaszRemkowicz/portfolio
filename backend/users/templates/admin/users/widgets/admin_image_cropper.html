@@ -1,38 +1,45 @@
 {% load i18n %}
+{{ cropper.fields|json_script:"admin-image-cropper-fields" }}
 <section
     class="card admin-image-cropper"
     data-admin-image-cropper-root
-    data-field-name="{{ cropper.field_name }}"
-    data-source-input-id="{{ cropper.source_input_id }}"
     data-visible-tab-panel="{{ cropper.visible_tab_panel }}"
-    data-preview-shape="{{ cropper.preview_shape }}"
-    data-output-size="{{ cropper.output_size }}"
-    data-current-image-url="{{ cropper.current_image_url }}"
-    data-current-image-name="{{ cropper.current_image_name }}"
+    data-default-field-name="{{ cropper.default_field_name }}"
 >
     <div class="card-header">
         <strong>{{ cropper.component_title }}</strong>
     </div>
     <div class="card-body">
         <p class="admin-image-cropper__hint">
-            {% trans "Select an image in the Media tab or adjust the current one here. The cropped result will be saved back into the avatar field." %}
+            {% trans "Choose a target image field, adjust the crop here, then apply the cropped file back to that field before saving the form." %}
         </p>
+
+        <label class="admin-image-cropper__control" for="admin-image-cropper-target-field">
+            <span>{% trans "Target field" %}</span>
+            <select id="admin-image-cropper-target-field" class="form-control" data-admin-image-cropper-field-select>
+                {% for field in cropper.fields %}
+                <option value="{{ field.field_name }}"{% if field.field_name == cropper.default_field_name %} selected{% endif %}>
+                    {{ field.label }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
 
         <div class="admin-image-cropper__viewport-wrap">
             <canvas
                 class="admin-image-cropper__canvas"
                 data-admin-image-cropper-canvas
-                width="{{ cropper.output_size }}"
-                height="{{ cropper.output_size }}"
+                width="800"
+                height="800"
             ></canvas>
-            <div class="admin-image-cropper__overlay"></div>
+            <div class="admin-image-cropper__overlay" data-admin-image-cropper-overlay></div>
         </div>
 
         <div class="admin-image-cropper__controls">
-            <label class="admin-image-cropper__control" for="{{ cropper.field_name }}-cropper-zoom">
+            <label class="admin-image-cropper__control" for="admin-image-cropper-zoom">
                 <span>{% trans "Zoom" %}</span>
                 <input
-                    id="{{ cropper.field_name }}-cropper-zoom"
+                    id="admin-image-cropper-zoom"
                     type="range"
                     min="1"
                     max="3"
@@ -43,6 +50,9 @@
             </label>
 
             <div class="admin-image-cropper__actions">
+                <button type="button" class="btn btn-sm btn-outline-info" data-admin-image-cropper-apply>
+                    {% trans "Apply" %}
+                </button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-admin-image-cropper-reset>
                     {% trans "Reset" %}
                 </button>
@@ -51,14 +61,10 @@
 
         <dl class="admin-image-cropper__meta mb-0">
             <dt>{% trans "Target field" %}</dt>
-            <dd><code>{{ cropper.field_name }}</code></dd>
+            <dd data-admin-image-cropper-field-label><code>{{ cropper.default_field_name }}</code></dd>
             <dt>{% trans "Current source" %}</dt>
             <dd data-admin-image-cropper-source-label>
-                {% if cropper.current_image_name %}
-                <span>{{ cropper.current_image_name }}</span>
-                {% else %}
                 <span class="text-muted">{% trans "No image selected yet." %}</span>
-                {% endif %}
             </dd>
             <dt>{% trans "Status" %}</dt>
             <dd data-admin-image-cropper-status>{% trans "Ready" %}</dd>

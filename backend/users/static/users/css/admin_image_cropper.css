@@ -11,9 +11,10 @@
 }
 
 .admin-image-cropper__viewport-wrap {
+    --admin-image-cropper-aspect-ratio: 1 / 1;
     position: relative;
     width: min(100%, 320px);
-    aspect-ratio: 1 / 1;
+    aspect-ratio: var(--admin-image-cropper-aspect-ratio);
     margin: 0 auto;
     border-radius: 24px;
     overflow: hidden;
@@ -39,10 +40,14 @@
 .admin-image-cropper__overlay {
     position: absolute;
     inset: 12px;
-    border-radius: 50%;
+    border-radius: 24px;
     border: 2px solid rgba(255, 255, 255, 0.92);
     box-shadow: 0 0 0 9999px rgba(8, 10, 16, 0.38);
     pointer-events: none;
+}
+
+.admin-image-cropper__overlay[data-preview-shape="circle"] {
+    border-radius: 50%;
 }
 
 .admin-image-cropper__controls {
