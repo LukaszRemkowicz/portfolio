@@ -1,3 +1,6 @@
+//  TODO: TEMPORARY legacy migration worker for clients still registered to
+// /service-worker.js from the old PWA path. Remove this file after the
+// transition window ends and old clients have had time to clean up.
 self.addEventListener('install', () => {
   self.skipWaiting();
 });

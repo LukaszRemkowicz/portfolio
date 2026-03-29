@@ -63,31 +63,31 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
     image_tracker = FieldTracker(fields=["avatar", "about_me_image", "about_me_image2"])
 
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
-    avatar_original_image = models.ImageField(
+    avatar_webp = models.ImageField(
         upload_to="avatars/",
         null=True,
         blank=True,
         editable=False,
-        verbose_name=_("Original Avatar"),
-        help_text=_("Original avatar before WebP conversion. Used for rollback."),
+        verbose_name=_("Avatar WebP"),
+        help_text=_("Derived WebP avatar generated from the source avatar."),
     )
     about_me_image = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
-    about_me_image_original_image = models.ImageField(
+    about_me_image_webp = models.ImageField(
         upload_to="about_me_images/",
         null=True,
         blank=True,
         editable=False,
-        verbose_name=_("Original About Me Image"),
-        help_text=_("Original about_me_image before WebP conversion. Used for rollback. "),
+        verbose_name=_("About Me Image WebP"),
+        help_text=_("Derived WebP portrait generated from the source about_me_image."),
     )
     about_me_image2 = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
-    about_me_image2_original_image = models.ImageField(
+    about_me_image2_webp = models.ImageField(
         upload_to="about_me_images/",
         null=True,
         blank=True,
         editable=False,
-        verbose_name=_("Original About Me Image 2"),
-        help_text=_("Original about_me_image2 before WebP conversion. Used for rollback. "),
+        verbose_name=_("About Me Image 2 WebP"),
+        help_text=_("Derived WebP portrait generated from the source about_me_image2."),
     )
 
     translations = TranslatedFields(
@@ -143,35 +143,45 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
             raise ValueError("Failed to save user. Only one user is allowed.") from exc
 
     def _convert_image_field_to_webp(
-        self, field_name: str, original_field_name: str, max_dimension: int, quality: int
+        self, source_field_name: str, webp_field_name: str, max_dimension: int, quality: int
     ) -> None:
-        """Convert a single ImageField to WebP and store the original for rollback."""
-        field: Any = getattr(self, field_name)
-        original_field: Any = getattr(self, original_field_name)
-        source: Any = original_field or field
+        """Convert a source ImageField into its derived WebP field."""
+        source_field: Any = getattr(self, source_field_name)
+        webp_field: Any = getattr(self, webp_field_name)
         dimension_percentage = None
-        spec_method_name = "get_avatar_spec" if field_name == "avatar" else "get_portrait_spec"
+        spec_method_name = (
+            "get_avatar_spec" if source_field_name == "avatar" else "get_portrait_spec"
+        )
         spec: ImageSpec = getattr(self, spec_method_name)()
+
+        if not source_field:
+            setattr(self, webp_field_name, None)
+            return
+
+        if str(source_field.name).lower().endswith(".webp"):
+            setattr(self, webp_field_name, source_field.name)
+            return
+
         result: tuple[str, Any] | None = convert_to_webp(
-            source,
+            source_field,
             quality=quality,
             max_dimension=max_dimension,
             dimension_percentage=dimension_percentage or spec.dimension_percentage,
         )
         if result is None:
-            setattr(self, original_field_name, None)
+            setattr(self, webp_field_name, None)
             return
-        original_name, webp_content = result
-        setattr(self, original_field_name, original_name)
-        field.save(webp_content.name, webp_content, save=False)
 
-    def _get_serving_image_url(self, field_name: str, original_field_name: str) -> str:
-        """Return the URL of the field to serve based on the Admin serve_webp_images toggle."""
+        _, webp_content = result
+        webp_field.save(webp_content.name, webp_content, save=False)
+
+    def _get_serving_image_url(self, source_field_name: str, webp_field_name: str) -> str:
+        """Return the source or WebP URL according to the admin serving toggle."""
         settings_obj: LandingPageSettings | None = LandingPageSettings.get_current()
         if settings_obj and settings_obj.serve_webp_images:
-            serving_field = getattr(self, field_name)
+            serving_field = getattr(self, webp_field_name) or getattr(self, source_field_name)
         else:
-            serving_field = getattr(self, original_field_name) or getattr(self, field_name)
+            serving_field = getattr(self, source_field_name)
         if serving_field:
             try:
                 return str(serving_field.url)
@@ -199,8 +209,15 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
 
     def get_avatar_url(self) -> str:
         """Get avatar URL or default placeholder."""
-        url = self._get_serving_image_url("avatar", "avatar_original_image")
-        return url if url else "/static/images/default-avatar.png"
+        url = self._get_serving_image_url("avatar", "avatar_webp")
+        if not url:
+            return "/static/images/default-avatar.png"
+
+        if not self.updated_at:
+            return url
+
+        separator = "&" if "?" in url else "?"
+        return f"{url}{separator}v={int(self.updated_at.timestamp())}"
 
     def has_complete_profile(self) -> bool:
         """Check if user has completed their profile."""

@@ -54,8 +54,8 @@ class TestConvertImagesToWebpCommand:
 
         # Verify User avatar was converted
         user.refresh_from_db()
-        assert user.avatar.name.endswith(".webp")
-        assert user.avatar_original_image is not None
+        assert user.avatar.name.endswith(".jpg")
+        assert user.avatar_webp is not None
 
         # Verify cache clearing was called
         mock_call_command.assert_any_call("clear_cache")

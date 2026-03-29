@@ -1,6 +1,6 @@
 import pytest
 
-from common.tests.image_helpers import _jpeg_field
+from common.tests.image_helpers import _jpeg_field, _png_field
 from users.tasks import process_user_images_task
 from users.tests.factories import UserFactory
 
@@ -21,8 +21,60 @@ class TestProcessUserImagesTask:
 
         user.refresh_from_db()
         # In Green phase, we expect conversion to succeed
-        assert user.avatar.name.endswith(".webp")
-        # Django adds a random suffix (e.g. test_avatar_PRCHIn5.jpg),
-        # so we check if the base name is in the field name
-        assert "test_avatar" in user.avatar_original_image.name
-        assert user.avatar_original_image.name.endswith(".jpg")
+        assert user.avatar.name.endswith(".jpg")
+        assert user.avatar_webp.name.endswith(".webp")
+        assert "test_avatar" in user.avatar_webp.name
+
+    def test_process_user_images_task_invalidates_caches_after_conversion(self, mocker):
+        user = UserFactory.create_superuser()
+        user.avatar = _jpeg_field("test_avatar.jpg")
+        user.save()
+
+        mock_invalidate_user_cache = mocker.patch("users.tasks.CacheService.invalidate_user_cache")
+        mock_invalidate_frontend = mocker.patch(
+            "users.tasks.invalidate_frontend_ssr_cache_task.delay_on_commit"
+        )
+
+        process_user_images_task(user.pk, ["avatar"])
+
+        assert mock_invalidate_user_cache.call_count == 2
+        assert mock_invalidate_frontend.call_count == 2
+        mock_invalidate_frontend.assert_called_with(["profile"])
+
+    def test_process_user_images_task_uses_new_upload_not_stale_original(self):
+        user = UserFactory.create_superuser()
+        user.avatar = _jpeg_field("old_avatar.jpg")
+        user.save()
+        process_user_images_task(user.pk, ["avatar"])
+
+        user.refresh_from_db()
+        assert "old_avatar" in user.avatar.name
+        assert "old_avatar" in user.avatar_webp.name
+
+        user.avatar = _jpeg_field("new_avatar.jpg")
+        user.save()
+        process_user_images_task(user.pk, ["avatar"])
+
+        user.refresh_from_db()
+        assert "new_avatar" in user.avatar.name
+        assert user.avatar.name.endswith(".jpg")
+        assert "new_avatar" in user.avatar_webp.name
+        assert user.avatar_webp.name.endswith(".webp")
+
+    def test_process_user_images_task_handles_cropped_png_avatar_upload(self):
+        """
+        GIVEN a cropped PNG avatar upload from the admin cropper
+        WHEN process_user_images_task is called
+        THEN the source avatar stays PNG and the derived avatar_webp is regenerated from it.
+        """
+        user = UserFactory.create_superuser()
+        user.avatar = _png_field("cropped_avatar.png", size=(280, 280))
+        user.save()
+
+        process_user_images_task(user.pk, ["avatar"])
+
+        user.refresh_from_db()
+        assert user.avatar.name.endswith(".png")
+        assert "cropped_avatar" in user.avatar.name
+        assert user.avatar_webp.name.endswith(".webp")
+        assert "cropped_avatar" in user.avatar_webp.name

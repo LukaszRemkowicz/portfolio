@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 class LogAnalysisQuerySet(models.QuerySet):
@@ -76,45 +77,70 @@ class LogAnalysis(models.Model):
     objects = LogAnalysisManager()
 
     # Metadata
-    created_at = models.DateTimeField(default=timezone.now, db_index=True)
-    analysis_date = models.DateField(db_index=True, unique=True)  # One per day
+    created_at = models.DateTimeField(_("Created at"), default=timezone.now, db_index=True)
+    analysis_date = models.DateField(_("Analysis date"), db_index=True, unique=True)  # One per day
 
     # Log collection
     backend_logs = models.FileField(
-        upload_to="logs/%Y/%m/%d/", help_text="Raw backend logs", null=True, blank=True
+        _("Backend logs"),
+        upload_to="logs/%Y/%m/%d/",
+        help_text="Raw backend logs",
+        null=True,
+        blank=True,
     )
     frontend_logs = models.FileField(
-        upload_to="logs/%Y/%m/%d/", help_text="Raw frontend logs", null=True, blank=True
+        _("Frontend logs"),
+        upload_to="logs/%Y/%m/%d/",
+        help_text="Raw frontend logs",
+        null=True,
+        blank=True,
     )
     nginx_logs = models.FileField(
-        upload_to="logs/%Y/%m/%d/", help_text="Raw nginx logs", null=True, blank=True
+        _("Nginx logs"),
+        upload_to="logs/%Y/%m/%d/",
+        help_text="Raw nginx logs",
+        null=True,
+        blank=True,
     )
     traefik_logs = models.FileField(
-        upload_to="logs/%Y/%m/%d/", help_text="Raw traefik logs", null=True, blank=True
+        _("Traefik logs"),
+        upload_to="logs/%Y/%m/%d/",
+        help_text="Raw traefik logs",
+        null=True,
+        blank=True,
     )
-    log_size_bytes = models.IntegerField(default=0)
+    log_size_bytes = models.IntegerField(_("Log Size"), default=0)
 
     # GPT Analysis
-    summary = models.TextField(help_text="GPT-generated summary")
-    severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.INFO)
-    key_findings = models.JSONField(default=list, help_text="List of important findings")
-    recommendations = models.TextField(blank=True, help_text="GPT recommendations")
+    summary = models.TextField(_("Summary"), help_text="GPT-generated summary")
+    severity = models.CharField(
+        _("Severity"), max_length=10, choices=Severity.choices, default=Severity.INFO
+    )
+    key_findings = models.JSONField(
+        _("Key findings"), default=list, help_text="List of important findings"
+    )
+    recommendations = models.TextField(
+        _("Recommendations"), blank=True, help_text="GPT recommendations"
+    )
     trend_summary = models.TextField(
+        _("Trend summary"),
         blank=True,
         help_text="LLM-generated trend comparison vs. prior days",
     )
 
     # Execution tracking
-    execution_time_seconds = models.FloatField(default=0.0)
-    gpt_tokens_used = models.IntegerField(default=0)
-    gpt_cost_usd = models.FloatField(default=0.0, help_text="Estimated OpenAI API cost in USD")
-    email_sent = models.BooleanField(default=False)
-    error_message = models.TextField(blank=True)
+    execution_time_seconds = models.FloatField(_("Execution time seconds"), default=0.0)
+    gpt_tokens_used = models.IntegerField(_("Gpt tokens used"), default=0)
+    gpt_cost_usd = models.FloatField(
+        _("Gpt cost usd"), default=0.0, help_text="Estimated OpenAI API cost in USD"
+    )
+    email_sent = models.BooleanField(_("Email sent"), default=False)
+    error_message = models.TextField(_("Error message"), blank=True)
 
     class Meta:
         ordering = ["-analysis_date"]
-        verbose_name = "Log Analysis"
-        verbose_name_plural = "Log Analyses"
+        verbose_name = _("Log Analysis")
+        verbose_name_plural = _("Log Analyses")
 
     def __str__(self):
         return f"Log Analysis {self.analysis_date} ({self.severity})"
@@ -148,5 +174,88 @@ class LogAnalysis(models.Model):
 
     def mark_email_sent(self) -> None:
         """Mark email as sent (state transition)."""
+        self.email_sent = True
+        self.save(update_fields=["email_sent"])
+
+
+class SitemapAnalysis(models.Model):
+    """Stores scheduled sitemap audit results and the LLM summary."""
+
+    class Severity(models.TextChoices):
+        INFO = "INFO", "Info"
+        WARNING = "WARNING", "Warning"
+        CRITICAL = "CRITICAL", "Critical"
+
+    created_at = models.DateTimeField(_("Created at"), default=timezone.now, db_index=True)
+    analysis_date = models.DateField(_("Analysis date"), db_index=True, unique=True)
+
+    root_sitemap_url = models.URLField(_("Root sitemap URL"))
+    total_sitemaps = models.IntegerField(_("Total sitemaps"), default=0)
+    total_urls = models.IntegerField(_("Total urls"), default=0)
+    issue_summary = models.JSONField(
+        _("Issue summary"), default=dict, help_text=_("Counts by sitemap issue category")
+    )
+    issues = models.JSONField(
+        _("Issues"), default=list, help_text=_("Detailed deterministic sitemap issues")
+    )
+
+    summary = models.TextField(_("Summary"), help_text=_("LLM-generated sitemap summary"))
+    severity = models.CharField(
+        _("Severity"), max_length=10, choices=Severity.choices, default=Severity.INFO
+    )
+    key_findings = models.JSONField(
+        _("Key findings"), default=list, help_text=_("List of important sitemap findings")
+    )
+    recommendations = models.TextField(
+        _("Recommendations"), blank=True, help_text=_("LLM recommendations")
+    )
+    trend_summary = models.TextField(
+        _("Trend summary"), blank=True, help_text=_("Sitemap trend comparison summary")
+    )
+
+    execution_time_seconds = models.FloatField(_("Execution time seconds"), default=0.0)
+    gpt_tokens_used = models.IntegerField(_("GPT tokens used"), default=0)
+    gpt_cost_usd = models.FloatField(
+        _("GPT cost usd"), default=0.0, help_text=_("Estimated OpenAI API cost in USD")
+    )
+    email_sent = models.BooleanField(_("Email sent"), default=False)
+    error_message = models.TextField(_("Error message"), blank=True)
+
+    class Meta:
+        ordering = ["-analysis_date"]
+        verbose_name = _("Sitemap Analysis")
+        verbose_name_plural = _("Sitemap Analyses")
+
+    def __str__(self) -> str:
+        return f"Sitemap Analysis {self.analysis_date} ({self.severity})"
+
+    @property
+    def execution_time_formatted(self) -> str:
+        return f"{self.execution_time_seconds:.1f}"
+
+    @property
+    def issue_count(self) -> int:
+        return len(self.issues)
+
+    @property
+    def issue_summary_lines(self) -> list[str]:
+        lines: list[str] = []
+        for category, count in sorted(self.issue_summary.items()):
+            lines.append(f"{category.replace('_', ' ')}: {count}")
+        return lines
+
+    def get_email_subject(self) -> str:
+        environment = settings.ENVIRONMENT.upper()
+        return f"[{environment}][{self.severity}] Sitemap Analysis - {self.analysis_date}"
+
+    def get_email_context(self) -> dict:
+        return {
+            "environment": settings.ENVIRONMENT,
+            "sitemap_analysis": self,
+            "execution_time": self.execution_time_formatted,
+            "admin_domain": settings.ADMIN_DOMAIN,
+        }
+
+    def mark_email_sent(self) -> None:
         self.email_sent = True
         self.save(update_fields=["email_sent"])

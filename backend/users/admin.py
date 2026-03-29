@@ -1,4 +1,3 @@
-# backend/users/admin.py
 import logging
 from typing import Any
 
@@ -23,6 +22,7 @@ from translation.mixins import (
 )
 
 from .models import Profile
+from .types import CropperFieldConfig
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -53,9 +53,19 @@ class UserAdmin(  # type: ignore[misc]
                     "short_description",
                     "bio",
                     "contact_email",
+                )
+            },
+        ),
+        (
+            _("Media"),
+            {
+                "fields": (
                     "avatar",
+                    "avatar_webp_path",
                     "about_me_image",
+                    "about_me_image_webp_path",
                     "about_me_image2",
+                    "about_me_image2_webp_path",
                 )
             },
         ),
@@ -99,6 +109,10 @@ class UserAdmin(  # type: ignore[misc]
     # Fields to show when editing a translation (used by HideNonTranslatableFieldsMixin)
     translatable_fields = ["short_description", "bio"]
 
+    @property
+    def cropper_field_configs(self) -> tuple[CropperFieldConfig, ...]:
+        return settings.USER_ADMIN_CROPPER_FIELD_CONFIGS
+
     def get_fieldsets(self, request: HttpRequest, obj: models.Model | None = None):
         """Dynamically add translation_status to Personal info on default language tab."""
         fieldsets = super().get_fieldsets(request, obj)
@@ -136,6 +150,46 @@ class UserAdmin(  # type: ignore[misc]
             extra_context["language_tabs"] = self.get_language_tabs(
                 request, obj, available_languages
             )
+            cropper_fields = []
+            for field_config in self.cropper_field_configs:
+                field_name = field_config.field_name
+                image_field = getattr(obj, field_name, None)
+                current_image_name = ""
+                current_image_url = ""
+                if image_field:
+                    current_image_name = str(image_field.name or "")
+                    try:
+                        current_image_url = str(image_field.url)
+                    except ValueError:
+                        current_image_url = ""
+
+                spec = getattr(obj, field_config.spec_method)()
+                crop_aspect_ratio = field_config.crop_aspect_ratio or 1.0
+                if crop_aspect_ratio >= 1:
+                    output_width = spec.dimension
+                    output_height = round(spec.dimension / crop_aspect_ratio)
+                else:
+                    output_width = round(spec.dimension * crop_aspect_ratio)
+                    output_height = spec.dimension
+                cropper_fields.append(
+                    {
+                        "field_name": field_name,
+                        "label": str(field_config.label),
+                        "input_id": field_config.input_id,
+                        "preview_shape": field_config.preview_shape.value,
+                        "crop_aspect_ratio": crop_aspect_ratio,
+                        "output_width": output_width,
+                        "output_height": output_height,
+                        "current_image_name": current_image_name,
+                        "current_image_url": current_image_url,
+                    }
+                )
+            extra_context["admin_image_cropper"] = {
+                "visible_tab_panel": "media-tab",
+                "component_title": _("Image Cropper"),
+                "fields": cropper_fields,
+                "default_field_name": "avatar",
+            }
 
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
@@ -179,7 +233,32 @@ class UserAdmin(  # type: ignore[misc]
     list_display_links = ("email",)
     search_fields = ("email", "first_name", "last_name")
     ordering = ("email",)
-    readonly_fields = ("created_at", "updated_at", "translation_status")
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "translation_status",
+        "avatar_webp_path",
+        "about_me_image_webp_path",
+        "about_me_image2_webp_path",
+    )
+
+    def _get_webp_path(self, obj: Any, field_name: str) -> str:
+        field = getattr(obj, field_name, None)
+        if not field:
+            return "—"
+        return str(field.name or "—")
+
+    @admin.display(description=_("Avatar WebP Path"))
+    def avatar_webp_path(self, obj: Any) -> str:
+        return self._get_webp_path(obj, "avatar_webp")
+
+    @admin.display(description=_("About Me Image WebP Path"))
+    def about_me_image_webp_path(self, obj: Any) -> str:
+        return self._get_webp_path(obj, "about_me_image_webp")
+
+    @admin.display(description=_("About Me Image 2 WebP Path"))
+    def about_me_image2_webp_path(self, obj: Any) -> str:
+        return self._get_webp_path(obj, "about_me_image2_webp")
 
     def has_add_permission(self, request) -> bool:
         """Only allow adding a user if no user exists (singleton pattern)"""
