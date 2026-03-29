@@ -80,7 +80,7 @@ msgstr ""
 
 #: core/models.py:135 core/models.py:136 core/models.py:139
 msgid "Landing Page Settings"
-msgstr "Ustawienia Strony Lądowania"
+msgstr "Ustawienia Strony głównej"
 
 #: core/templates/admin/base_site.html:3
 msgid "Django site admin"
@@ -219,6 +219,42 @@ msgstr "Język docelowy"
 #: translation/models.py:27
 msgid "Translation Method"
 msgstr "Metoda tłumaczenia"
+
+msgid "Choose a target image field, adjust the crop here, then apply the cropped file back to that field before saving the form."
+msgstr "Wybierz docelowe pole obrazu, dopasuj tutaj kadr, a następnie zapisz ("Zastosuj")."
+
+msgid "Target field"
+msgstr "Pole docelowe"
+
+msgid "Image Cropper"
+msgstr "Kadrowanie obrazu"
+
+msgid "Apply"
+msgstr "Zastosuj"
+
+msgid "Current source"
+msgstr "Aktualne źródło"
+
+msgid "Ready"
+msgstr "Gotowe"
+
+msgid "Avatar WebP Path"
+msgstr "Ścieżka Avatar WebP"
+
+msgid "About me image"
+msgstr "Zdjęcie sekcji 'o mnie'."
+
+msgid "About Me Image WebP Path"
+msgstr "Ścieżka zdjęcia WebP 'o mnie'."
+
+msgid "About me image2"
+msgstr "Zdjecie sekcji 'o mnie'."
+
+msgid "About Me Image 2 WebP Path"
+msgstr "Ścieżka zdjęci WebP 'o mnie 2'."
+
+msgid "Access failures"
+msgstr "Nieudane próby dostępu"
 
 #: translation/models.py:33
 msgid "Task Status"
