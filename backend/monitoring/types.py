@@ -331,3 +331,21 @@ class SitemapReportResult:
         for issue in self.issues:
             if not isinstance(issue, SitemapIssue):
                 raise ValueError("issues must contain only SitemapIssue objects")
+
+
+@dataclass(frozen=True)
+class SitemapSummaryResult:
+    summary: str
+    severity: str
+    key_findings: list[str] = field(default_factory=list)
+    recommendations: str = ""
+    trend_summary: str = ""
+    gpt_tokens_used: int = 0
+    gpt_cost_usd: float = 0.0
+
+    def __post_init__(self) -> None:
+        validate_non_empty_text(self.summary, "summary")
+        validate_non_empty_text(self.severity, "severity")
+        validate_string_list(self.key_findings, "key_findings")
+        validate_non_negative_int(self.gpt_tokens_used, "gpt_tokens_used")
+        validate_non_negative_float(self.gpt_cost_usd, "gpt_cost_usd")

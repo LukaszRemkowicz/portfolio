@@ -13,16 +13,23 @@ from .types import HTTPResponseData, SitemapIssue, SitemapIssueCategory, Sitemap
 
 
 class SitemapHTTPClient:
-    def __init__(self, session: HTTPSession | None = None, timeout_seconds: float = 10.0) -> None:
+    def __init__(
+        self,
+        session: HTTPSession | None = None,
+        timeout_seconds: float = 10.0,
+        verify_ssl: bool = True,
+    ) -> None:
         resolved_session: HTTPSession = session or requests.Session()
         self.session: HTTPSession = resolved_session
         self.timeout_seconds: float = timeout_seconds
+        self.verify_ssl: bool = verify_ssl
 
     def get(self, url: str, allow_redirects: bool = True) -> HTTPResponseData:
         response: requests.Response = self.session.get(
             url,
             timeout=self.timeout_seconds,
             allow_redirects=allow_redirects,
+            verify=self.verify_ssl,
         )
         response_headers: dict[str, str] = dict(response.headers)
         return HTTPResponseData(

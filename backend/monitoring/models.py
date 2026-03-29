@@ -150,3 +150,61 @@ class LogAnalysis(models.Model):
         """Mark email as sent (state transition)."""
         self.email_sent = True
         self.save(update_fields=["email_sent"])
+
+
+class SitemapAnalysis(models.Model):
+    """Stores scheduled sitemap audit results and the LLM summary."""
+
+    class Severity(models.TextChoices):
+        INFO = "INFO", "Info"
+        WARNING = "WARNING", "Warning"
+        CRITICAL = "CRITICAL", "Critical"
+
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    analysis_date = models.DateField(db_index=True, unique=True)
+
+    root_sitemap_url = models.URLField()
+    total_sitemaps = models.IntegerField(default=0)
+    total_urls = models.IntegerField(default=0)
+    issue_summary = models.JSONField(default=dict, help_text="Counts by sitemap issue category")
+    issues = models.JSONField(default=list, help_text="Detailed deterministic sitemap issues")
+
+    summary = models.TextField(help_text="LLM-generated sitemap summary")
+    severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.INFO)
+    key_findings = models.JSONField(default=list, help_text="List of important sitemap findings")
+    recommendations = models.TextField(blank=True, help_text="LLM recommendations")
+    trend_summary = models.TextField(blank=True, help_text="Sitemap trend comparison summary")
+
+    execution_time_seconds = models.FloatField(default=0.0)
+    gpt_tokens_used = models.IntegerField(default=0)
+    gpt_cost_usd = models.FloatField(default=0.0, help_text="Estimated OpenAI API cost in USD")
+    email_sent = models.BooleanField(default=False)
+    error_message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-analysis_date"]
+        verbose_name = "Sitemap Analysis"
+        verbose_name_plural = "Sitemap Analyses"
+
+    def __str__(self) -> str:
+        return f"Sitemap Analysis {self.analysis_date} ({self.severity})"
+
+    @property
+    def execution_time_formatted(self) -> str:
+        return f"{self.execution_time_seconds:.1f}"
+
+    def get_email_subject(self) -> str:
+        environment = settings.ENVIRONMENT.upper()
+        return f"[{environment}][{self.severity}] Sitemap Analysis - {self.analysis_date}"
+
+    def get_email_context(self) -> dict:
+        return {
+            "environment": settings.ENVIRONMENT,
+            "sitemap_analysis": self,
+            "execution_time": self.execution_time_formatted,
+            "admin_domain": settings.ADMIN_DOMAIN,
+        }
+
+    def mark_email_sent(self) -> None:
+        self.email_sent = True
+        self.save(update_fields=["email_sent"])

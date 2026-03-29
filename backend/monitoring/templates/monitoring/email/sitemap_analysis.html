@@ -1,0 +1,144 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sitemap Analysis</title>
+  <style>
+    body.body {
+      margin: 0;
+      padding: 0;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: Arial, sans-serif;
+    }
+    .wrapper {
+      width: 100%;
+      padding: 24px 0;
+    }
+    .container-bg {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #111827;
+      border-radius: 16px;
+      padding: 32px;
+      border: 1px solid #1f2937;
+    }
+    .text-main {
+      color: #f8fafc;
+    }
+    .muted {
+      color: #94a3b8;
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #1d4ed8;
+      color: #eff6ff;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .section {
+      margin-top: 24px;
+    }
+    .card {
+      background: #0b1220;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+    .stats {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    .stats td {
+      padding: 10px 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    .stats td:last-child {
+      text-align: right;
+      color: #f8fafc;
+      font-weight: 700;
+    }
+    .findings {
+      padding-left: 18px;
+    }
+    .findings li {
+      margin: 8px 0;
+    }
+    a {
+      color: #93c5fd;
+    }
+    @media (prefers-color-scheme: dark) {
+      body.body {
+        background: #020617;
+      }
+    }
+    u+.body .wrapper {
+      width: 100% !important;
+    }
+  </style>
+</head>
+<body class="body">
+  <div class="wrapper">
+    <div class="container-bg">
+      <div class="badge">{{ environment|upper }}</div>
+      <h1 class="text-main">Daily Sitemap Analysis</h1>
+      <p class="muted">{{ sitemap_analysis.analysis_date }} • Severity: {{ sitemap_analysis.severity }}</p>
+
+      <div class="section card">
+        <h2 class="text-main">Summary</h2>
+        <p>{{ sitemap_analysis.summary }}</p>
+      </div>
+
+      <div class="section card">
+        <h2 class="text-main">Sitemap Scope</h2>
+        <table class="stats">
+          <tr><td>Root sitemap URL</td><td>{{ sitemap_analysis.root_sitemap_url }}</td></tr>
+          <tr><td>Total sitemap files</td><td>{{ sitemap_analysis.total_sitemaps }}</td></tr>
+          <tr><td>Total URLs checked</td><td>{{ sitemap_analysis.total_urls }}</td></tr>
+          <tr><td>Execution time</td><td>{{ execution_time }} s</td></tr>
+          <tr><td>Tokens used</td><td>{{ sitemap_analysis.gpt_tokens_used }}</td></tr>
+          <tr><td>Cost</td><td>${{ sitemap_analysis.gpt_cost_usd }}</td></tr>
+        </table>
+      </div>
+
+      <div class="section card">
+        <h2 class="text-main">Key Findings</h2>
+        <ul class="findings">
+          {% for finding in sitemap_analysis.key_findings %}
+            <li>{{ finding }}</li>
+          {% empty %}
+            <li>No key findings provided.</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="section card">
+        <h2 class="text-main">Recommendations</h2>
+        <p>{{ sitemap_analysis.recommendations|default:"No additional recommendations." }}</p>
+      </div>
+
+      <div class="section card">
+        <h2 class="text-main">Trend Summary</h2>
+        <p>{{ sitemap_analysis.trend_summary|default:"No trend summary provided." }}</p>
+      </div>
+
+      <div class="section card">
+        <h2 class="text-main">Admin</h2>
+        <p>
+          <a href="https://{{ admin_domain }}/admin/monitoring/sitemapanalysis/{{ sitemap_analysis.id }}/change/">
+            Open sitemap analysis in admin
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -8,7 +8,9 @@ from monitoring.tasks import (
     cleanup_old_logs_task,
     daily_log_analysis_task,
     daily_monitoring_agent_log_task,
+    daily_sitemap_analysis_task,
 )
+from monitoring.tests.factories import SitemapAnalysisFactory
 
 
 @pytest.mark.django_db
@@ -174,3 +176,27 @@ class TestMonitoringTasks:
         assert log_analysis.email_sent is True
         assert result["status"] == "success"
         assert result["runtime"] == "monitoring_agent"
+
+    def test_daily_sitemap_analysis_task_orchestration(self, mocker):
+        sitemap_analysis = SitemapAnalysisFactory(email_sent=False)
+        mock_orchestrator = mocker.MagicMock()
+        mock_create_default = mocker.patch(
+            "monitoring.tasks.SitemapAnalysisOrchestrator.create_default"
+        )
+        mock_create_default.return_value = mock_orchestrator
+
+        mock_email_service_cls = mocker.patch("monitoring.tasks.SitemapAnalysisEmailService")
+        mock_email_service_instance = mock_email_service_cls.return_value
+        mock_orchestrator.analyze_and_store.return_value = sitemap_analysis
+
+        result = daily_sitemap_analysis_task()
+
+        mock_create_default.assert_called_once()
+        mock_orchestrator.analyze_and_store.assert_called_once()
+        mock_email_service_cls.assert_called_once_with(sitemap_analysis)
+        mock_email_service_instance.send_email.assert_called_once()
+
+        sitemap_analysis.refresh_from_db()
+        assert sitemap_analysis.email_sent is True
+        assert result["status"] == "success"
+        assert result["sitemap_analysis_id"] == sitemap_analysis.id

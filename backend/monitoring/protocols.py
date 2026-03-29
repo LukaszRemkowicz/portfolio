@@ -10,4 +10,5 @@ class HTTPSession(Protocol):
         *,
         timeout: float,
         allow_redirects: bool = True,
+        verify: bool = True,
     ) -> requests.Response: ...

@@ -1,6 +1,7 @@
-# backend/monitoring/services.py
+import json
 import logging
 import os
+import re
 import time
 from collections.abc import Mapping
 from datetime import date, datetime, timezone
@@ -9,20 +10,27 @@ from typing import Optional
 from django.conf import settings
 from django.core.files import File
 
+from common.llm.protocols import LLMProvider
 from common.llm.registry import LLMProviderRegistry
 from common.services import BaseEmailService
 
 from .agents import LogAnalysisAgent
 from .log_sources import LOG_SOURCES, REQUIRED_LOG_SOURCE
-from .models import LogAnalysis
+from .models import LogAnalysis, SitemapAnalysis
 from .monitoring_agent_runner import MonitoringToolLoopRunner
+from .prompt_assets import PromptAssetLoader
+from .sitemap_services import SitemapAuditService, SitemapHTTPClient
 from .types import (
+    JSONObject,
     JSONValue,
     LogAnalysisPayload,
     LogReportResult,
     MonitoringFindingsValue,
     MonitoringJobName,
     RawCollectedLogPaths,
+    SitemapIssue,
+    SitemapReportResult,
+    SitemapSummaryResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -518,6 +526,294 @@ class LogAnalysisEmailService(BaseEmailService):
     def get_template_name(self) -> str:
         """Return path to email template."""
         return "monitoring/email/log_analysis.html"
+
+
+class SitemapSummaryService:
+    """Summarize deterministic sitemap findings with the configured LLM provider."""
+
+    def __init__(
+        self,
+        provider: LLMProvider,
+        asset_loader: PromptAssetLoader | None = None,
+    ) -> None:
+        self.provider: LLMProvider = provider
+        self.asset_loader: PromptAssetLoader = asset_loader or PromptAssetLoader()
+
+    def summarize(self, report: SitemapReportResult) -> SitemapSummaryResult:
+        system_prompt: str = self._build_system_prompt()
+        user_message: str = self._build_user_message(report)
+        response_text, usage = self.provider.ask_question_with_usage(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            temperature=0.0,
+        )
+
+        if not response_text:
+            return self._build_fallback_summary(report)
+
+        try:
+            payload: JSONObject = self._parse_response(response_text)
+        except Exception:
+            logger.exception("Failed to parse sitemap LLM summary, using deterministic fallback")
+            return self._build_fallback_summary(report)
+
+        findings_raw: JSONValue = payload.get("key_findings", [])
+        key_findings: list[str]
+        if isinstance(findings_raw, list):
+            key_findings = [str(item) for item in findings_raw]
+        elif isinstance(findings_raw, str):
+            key_findings = [findings_raw]
+        else:
+            key_findings = []
+
+        return SitemapSummaryResult(
+            summary=str(payload.get("summary", self._build_fallback_summary(report).summary)),
+            severity=str(payload.get("severity", self._build_default_severity(report))),
+            key_findings=key_findings,
+            recommendations=str(payload.get("recommendations", "")),
+            trend_summary=str(payload.get("trend_summary", "")),
+            gpt_tokens_used=int(usage.get("total_tokens", 0)),
+            gpt_cost_usd=float(usage.get("cost_usd", 0.0)),
+        )
+
+    def _build_system_prompt(self) -> str:
+        summary_prompt: str = self.asset_loader.load_text("prompts/monitoring_sitemap_summary.md")
+        return "\n\n".join(
+            [
+                summary_prompt.strip(),
+                (
+                    "Return a single JSON object with keys: "
+                    "summary, severity, key_findings, recommendations, trend_summary."
+                ),
+                "Severity must be one of INFO, WARNING, CRITICAL.",
+                "Do not wrap the JSON in markdown fences.",
+            ]
+        )
+
+    def _build_user_message(self, report: SitemapReportResult) -> str:
+        payload: JSONObject = {
+            "root_sitemap_url": report.root_sitemap_url,
+            "total_sitemaps": report.total_sitemaps,
+            "total_urls": report.total_urls,
+            "issue_summary": self._summarize_issues(report.issues),
+            "issues": [self._serialize_issue(issue) for issue in report.issues],
+        }
+        return json.dumps(payload, indent=2, sort_keys=True)
+
+    def _summarize_issues(self, issues: list[SitemapIssue]) -> JSONObject:
+        counts: JSONObject = {}
+        for issue in issues:
+            current_count_raw: JSONValue = counts.get(issue.category.value, 0)
+            current_count: int = (
+                int(current_count_raw) if isinstance(current_count_raw, (int, float, str)) else 0
+            )
+            counts[issue.category.value] = current_count + 1
+        return counts
+
+    def _serialize_issue(self, issue: SitemapIssue) -> JSONObject:
+        payload: JSONObject = {
+            "url": issue.url,
+            "category": issue.category.value,
+            "message": issue.message,
+        }
+        if issue.status_code is not None:
+            payload["status_code"] = issue.status_code
+        if issue.final_url is not None:
+            payload["final_url"] = issue.final_url
+        return payload
+
+    def _build_default_severity(self, report: SitemapReportResult) -> str:
+        if not report.issues:
+            return SitemapAnalysis.Severity.INFO
+        if any(issue.category.value in {"broken_url", "fetch_error"} for issue in report.issues):
+            return SitemapAnalysis.Severity.CRITICAL
+        return SitemapAnalysis.Severity.WARNING
+
+    def _build_fallback_summary(self, report: SitemapReportResult) -> SitemapSummaryResult:
+        issue_summary: dict[str, int] = {
+            key: value
+            for key, value in self._summarize_issues(report.issues).items()
+            if isinstance(value, int)
+        }
+        if not report.issues:
+            return SitemapSummaryResult(
+                summary="Sitemap audit completed with no issues detected.",
+                severity=SitemapAnalysis.Severity.INFO,
+                key_findings=["All sitemap URLs resolved without deterministic issues."],
+                recommendations="No action needed.",
+                trend_summary="No sitemap issues were detected in this run.",
+            )
+
+        key_findings: list[str] = [
+            f"{category.replace('_', ' ')}: {count}"
+            for category, count in sorted(issue_summary.items())
+        ]
+        return SitemapSummaryResult(
+            summary=(
+                f"Sitemap audit completed with {len(report.issues)} issue(s) "
+                f"across {report.total_urls} URL(s)."
+            ),
+            severity=self._build_default_severity(report),
+            key_findings=key_findings,
+            recommendations="Review the deterministic sitemap issues and fix the affected URLs.",
+            trend_summary="Trend summary unavailable because the sitemap LLM summary was skipped.",
+        )
+
+    def _parse_response(self, response_text: str) -> JSONObject:
+        try:
+            payload: JSONValue = json.loads(response_text)
+            if not isinstance(payload, dict):
+                raise ValueError("Sitemap summary response must be a JSON object")
+            return payload
+        except json.JSONDecodeError:
+            match = re.search(r"```json\s*(\{.*?\})\s*```", response_text, re.DOTALL)
+            if match:
+                payload = json.loads(match.group(1))
+                if not isinstance(payload, dict):
+                    raise ValueError("Sitemap summary response must be a JSON object")
+                return payload
+            start_index: int = response_text.find("{")
+            end_index: int = response_text.rfind("}")
+            if start_index != -1 and end_index != -1:
+                payload = json.loads(response_text[start_index : end_index + 1])
+                if not isinstance(payload, dict):
+                    raise ValueError("Sitemap summary response must be a JSON object")
+                return payload
+            raise
+
+
+class SitemapAnalysisStorageService:
+    """Store sitemap analysis results independently from daily log analyses."""
+
+    @classmethod
+    def create_or_replace_analysis(
+        cls,
+        analysis_date: date,
+        report: SitemapReportResult,
+        summary: SitemapSummaryResult,
+        execution_time_seconds: float,
+    ) -> SitemapAnalysis:
+        existing_count: int = SitemapAnalysis.objects.filter(analysis_date=analysis_date).count()
+        if existing_count > 0:
+            SitemapAnalysis.objects.filter(analysis_date=analysis_date).delete()
+
+        issue_summary: dict[str, int] = {}
+        serialized_issues: list[dict[str, JSONValue]] = []
+        for issue in report.issues:
+            issue_summary[issue.category.value] = issue_summary.get(issue.category.value, 0) + 1
+            serialized_issues.append(
+                {
+                    "url": issue.url,
+                    "category": issue.category.value,
+                    "message": issue.message,
+                    "status_code": issue.status_code,
+                    "final_url": issue.final_url,
+                }
+            )
+
+        return SitemapAnalysis.objects.create(
+            analysis_date=analysis_date,
+            root_sitemap_url=report.root_sitemap_url,
+            total_sitemaps=report.total_sitemaps,
+            total_urls=report.total_urls,
+            issue_summary=issue_summary,
+            issues=serialized_issues,
+            summary=summary.summary,
+            severity=summary.severity,
+            key_findings=summary.key_findings,
+            recommendations=summary.recommendations,
+            trend_summary=summary.trend_summary,
+            execution_time_seconds=execution_time_seconds,
+            gpt_tokens_used=summary.gpt_tokens_used,
+            gpt_cost_usd=summary.gpt_cost_usd,
+        )
+
+
+class SitemapAnalysisEmailService(BaseEmailService):
+    """Generate and send the sitemap analysis email."""
+
+    def __init__(self, sitemap_analysis: SitemapAnalysis) -> None:
+        self.sitemap_analysis: SitemapAnalysis = sitemap_analysis
+
+    def get_subject(self) -> str:
+        return self.sitemap_analysis.get_email_subject()
+
+    def get_context(self) -> dict:
+        return self.sitemap_analysis.get_email_context()
+
+    def get_template_name(self) -> str:
+        return "monitoring/email/sitemap_analysis.html"
+
+
+class SitemapAnalysisOrchestrator:
+    """Run deterministic sitemap auditing and summarize it with the configured LLM."""
+
+    def __init__(
+        self,
+        audit_service: SitemapAuditService,
+        summary_service: SitemapSummaryService,
+        storage: SitemapAnalysisStorageService,
+    ) -> None:
+        self.audit_service: SitemapAuditService = audit_service
+        self.summary_service: SitemapSummaryService = summary_service
+        self.storage: SitemapAnalysisStorageService = storage
+
+    def analyze_and_store(self, analysis_date: date | None = None) -> SitemapAnalysis:
+        if analysis_date is None:
+            analysis_date = date.today()
+
+        start_time: float = time.time()
+        try:
+            sitemap_report: SitemapReportResult = self.audit_service.audit()
+            summary: SitemapSummaryResult = self.summary_service.summarize(sitemap_report)
+            execution_time_seconds: float = time.time() - start_time
+            sitemap_analysis: SitemapAnalysis = self.storage.create_or_replace_analysis(
+                analysis_date=analysis_date,
+                report=sitemap_report,
+                summary=summary,
+                execution_time_seconds=execution_time_seconds,
+            )
+            logger.info(
+                "Sitemap analysis complete for %s: record_id=%s severity=%s",
+                analysis_date,
+                sitemap_analysis.id,
+                sitemap_analysis.severity,
+            )
+            return sitemap_analysis
+        except Exception as error:
+            logger.exception("Sitemap analysis failed for date %s", analysis_date)
+            existing_count: int = SitemapAnalysis.objects.filter(
+                analysis_date=analysis_date
+            ).count()
+            if existing_count > 0:
+                SitemapAnalysis.objects.filter(analysis_date=analysis_date).delete()
+            return SitemapAnalysis.objects.create(
+                analysis_date=analysis_date,
+                root_sitemap_url=self.audit_service.get_default_sitemap_url(),
+                summary=f"Analysis Failed: {error}",
+                severity=SitemapAnalysis.Severity.CRITICAL,
+                error_message=str(error),
+                execution_time_seconds=time.time() - start_time,
+            )
+
+    @classmethod
+    def create_default(cls) -> "SitemapAnalysisOrchestrator":
+        provider_name: str = settings.MONITORING_LLM_PROVIDER
+        provider = LLMProviderRegistry.get(provider_name)
+        production_domain: str = settings.SITE_DOMAIN
+        http_client = SitemapHTTPClient(
+            verify_ssl=not settings.DEBUG,
+        )
+        audit_service = SitemapAuditService(
+            client=http_client,
+            production_domain=production_domain,
+        )
+        summary_service = SitemapSummaryService(provider=provider)
+        return cls(
+            audit_service=audit_service,
+            summary_service=summary_service,
+            storage=SitemapAnalysisStorageService(),
+        )
 
 
 class MonitoringAgentLogOrchestrator:

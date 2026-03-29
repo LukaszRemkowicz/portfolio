@@ -6,7 +6,8 @@ import pytest
 from django.conf import settings
 from django.template.loader import render_to_string
 
-from monitoring.services import LogAnalysisEmailService
+from monitoring.services import LogAnalysisEmailService, SitemapAnalysisEmailService
+from monitoring.tests.factories import SitemapAnalysisFactory
 
 
 @pytest.mark.django_db
@@ -88,3 +89,30 @@ class TestEmailNotifications:
 
         assert f"[{settings.ENVIRONMENT.upper()}][INFO] Daily Log Analysis" in subject
         assert "System is healthy." in html_content
+
+    def test_sitemap_email_rendering_context_and_content(self):
+        sitemap_analysis = SitemapAnalysisFactory()
+        context = sitemap_analysis.get_email_context()
+
+        html_content = render_to_string("monitoring/email/sitemap_analysis.html", context)
+
+        assert "Daily Sitemap Analysis" in html_content
+        assert sitemap_analysis.summary in html_content
+        assert "broken_url: 1" in html_content
+        assert sitemap_analysis.root_sitemap_url in html_content
+        assert "@media (prefers-color-scheme: dark)" in html_content
+        assert "u+.body" in html_content
+
+    def test_sitemap_analysis_email_service_integration(self, mocker):
+        sitemap_analysis = SitemapAnalysisFactory()
+        mock_send_async = mocker.patch("common.services.EmailService.send_async")
+
+        SitemapAnalysisEmailService(sitemap_analysis).send_email()
+
+        mock_send_async.assert_called_once()
+        call_args = mock_send_async.call_args
+        subject = call_args[0][0]
+        html_content = call_args[0][1]
+
+        assert f"[{settings.ENVIRONMENT.upper()}][WARNING] Sitemap Analysis" in subject
+        assert sitemap_analysis.summary in html_content

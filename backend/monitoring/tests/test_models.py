@@ -7,8 +7,8 @@ import pytest
 
 from django.conf import settings
 
-from monitoring.models import LogAnalysis
-from monitoring.tests.factories import LogAnalysisFactory
+from monitoring.models import LogAnalysis, SitemapAnalysis
+from monitoring.tests.factories import LogAnalysisFactory, SitemapAnalysisFactory
 
 
 @pytest.mark.django_db
@@ -249,3 +249,34 @@ class TestLogAnalysisManager:
         log = LogAnalysisFactory()
         assert hasattr(log, "trend_summary")
         assert log.trend_summary == ""
+
+
+@pytest.mark.django_db
+class TestSitemapAnalysisMethods:
+    def test_get_email_subject_format(self):
+        sitemap_analysis = SitemapAnalysisFactory(
+            severity=SitemapAnalysis.Severity.WARNING,
+            analysis_date=date(2024, 3, 10),
+        )
+
+        subject = sitemap_analysis.get_email_subject()
+
+        assert subject == f"[{settings.ENVIRONMENT.upper()}][WARNING] Sitemap Analysis - 2024-03-10"
+
+    def test_get_email_context_contains_required_keys(self):
+        sitemap_analysis = SitemapAnalysisFactory(execution_time_seconds=8.6)
+
+        context = sitemap_analysis.get_email_context()
+
+        assert context["environment"] == settings.ENVIRONMENT
+        assert context["sitemap_analysis"] == sitemap_analysis
+        assert context["execution_time"] == "8.6"
+        assert context["admin_domain"] == settings.ADMIN_DOMAIN
+
+    def test_mark_email_sent_updates_field(self):
+        sitemap_analysis = SitemapAnalysisFactory(email_sent=False)
+
+        sitemap_analysis.mark_email_sent()
+        sitemap_analysis.refresh_from_db()
+
+        assert sitemap_analysis.email_sent is True

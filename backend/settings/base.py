@@ -666,6 +666,14 @@ else:
         },
     }
 
+CELERY_BEAT_SCHEDULE["sitemap-analysis"] = {
+    "task": "monitoring.tasks.daily_sitemap_analysis_task",
+    "schedule": crontab(hour=3, minute=0, day_of_month="1-31/5"),
+    "options": {
+        "expires": 3600,
+    },
+}
+
 # ===========================
 # Celery Configuration
 # ===========================
@@ -689,6 +697,7 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ROUTES = {
     "monitoring.tasks.daily_log_analysis_task": {"queue": "monitoring"},
     "monitoring.tasks.daily_monitoring_agent_log_task": {"queue": "monitoring"},
+    "monitoring.tasks.daily_sitemap_analysis_task": {"queue": "monitoring"},
     "monitoring.tasks.cleanup_old_logs_task": {"queue": "monitoring"},
 }
 

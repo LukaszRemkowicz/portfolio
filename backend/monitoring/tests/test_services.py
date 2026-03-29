@@ -6,6 +6,7 @@ import pytest
 
 from django.test import override_settings
 
+from common.llm.providers import MockLLMProvider
 from monitoring.models import LogAnalysis
 from monitoring.monitoring_agent_runner import MonitoringToolLoopRunner
 from monitoring.services import (
@@ -17,13 +18,20 @@ from monitoring.services import (
     LogReportPreparationService,
     LogStorageService,
     MonitoringAgentLogOrchestrator,
+    SitemapAnalysisOrchestrator,
+    SitemapAnalysisStorageService,
+    SitemapSummaryService,
 )
+from monitoring.sitemap_services import SitemapAuditService
 from monitoring.tests.factories import LogAnalysisFactory
 from monitoring.types import (
     LogReportResult,
     MonitoringAgentEventType,
     MonitoringAgentTraceEvent,
     MonitoringToolLoopResult,
+    SitemapIssue,
+    SitemapIssueCategory,
+    SitemapReportResult,
 )
 
 
@@ -233,6 +241,101 @@ class TestMonitoringAgentLogOrchestrator:
 
         assert result.severity == "WARNING"
         assert result.recommendations == "Deterministic recommendation"
+
+
+class TestSitemapSummaryService:
+    def test_summarize_returns_llm_summary(self):
+        provider = MockLLMProvider()
+        provider.configure(
+            mock_response=(
+                '{"summary":"Sitemap has one broken URL.","severity":"WARNING",'
+                '"key_findings":["broken_url: 1"],'
+                '"recommendations":"Fix the broken URL.",'
+                '"trend_summary":"New issue detected."}'
+            ),
+            mock_usage={"total_tokens": 44, "cost_usd": 0.0012},
+        )
+        service = SitemapSummaryService(provider=provider)
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=1,
+            total_urls=3,
+            issues=[
+                SitemapIssue(
+                    url="https://portfolio.example/missing",
+                    category=SitemapIssueCategory.BROKEN_URL,
+                    message="URL returned an error status.",
+                    status_code=404,
+                )
+            ],
+        )
+
+        result = service.summarize(report)
+
+        assert result.summary == "Sitemap has one broken URL."
+        assert result.severity == "WARNING"
+        assert result.gpt_tokens_used == 44
+        assert result.gpt_cost_usd == 0.0012
+
+
+@pytest.mark.django_db
+class TestSitemapAnalysisStorageService:
+    def test_create_or_replace_analysis_stores_sitemap_results(self):
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=2,
+            total_urls=20,
+            issues=[
+                SitemapIssue(
+                    url="https://portfolio.example/missing",
+                    category=SitemapIssueCategory.BROKEN_URL,
+                    message="URL returned an error status.",
+                    status_code=404,
+                )
+            ],
+        )
+        summary = SitemapSummaryService(provider=MockLLMProvider())._build_fallback_summary(report)
+
+        analysis = SitemapAnalysisStorageService.create_or_replace_analysis(
+            analysis_date=date.today(),
+            report=report,
+            summary=summary,
+            execution_time_seconds=4.0,
+        )
+
+        assert analysis.total_sitemaps == 2
+        assert analysis.issue_summary["broken_url"] == 1
+        assert analysis.key_findings
+
+
+class TestSitemapAnalysisOrchestrator:
+    @pytest.mark.django_db
+    def test_analyze_and_store_creates_sitemap_analysis(self, mocker):
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=1,
+            total_urls=2,
+            issues=[],
+        )
+        audit_service = mocker.MagicMock(spec=SitemapAuditService)
+        audit_service.audit.return_value = report
+        audit_service.get_default_sitemap_url.return_value = "https://portfolio.example/sitemap.xml"
+
+        summary_service = mocker.MagicMock(spec=SitemapSummaryService)
+        summary_service.summarize.return_value = SitemapSummaryService(
+            provider=MockLLMProvider()
+        )._build_fallback_summary(report)
+
+        orchestrator = SitemapAnalysisOrchestrator(
+            audit_service=audit_service,
+            summary_service=summary_service,
+            storage=SitemapAnalysisStorageService(),
+        )
+
+        analysis = orchestrator.analyze_and_store(date.today())
+
+        assert analysis.total_urls == 2
+        assert analysis.root_sitemap_url == "https://portfolio.example/sitemap.xml"
 
 
 @pytest.mark.django_db

@@ -10,6 +10,8 @@ from .services import (
     LogAnalysisOrchestrator,
     LogCleanupService,
     MonitoringAgentLogOrchestrator,
+    SitemapAnalysisEmailService,
+    SitemapAnalysisOrchestrator,
 )
 
 logger = logging.getLogger(__name__)
@@ -119,6 +121,43 @@ def daily_monitoring_agent_log_task(self, analysis_date: str | None = None):
 
     except Exception as exc:
         logger.exception("Monitoring agent log analysis failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(  # type: ignore
+    bind=True,
+    max_retries=2,
+    default_retry_delay=300,
+    retry_backoff=True,
+)
+def daily_sitemap_analysis_task(self, analysis_date: str | None = None):
+    """Run the scheduled sitemap analysis flow and send a separate sitemap email."""
+    try:
+        if analysis_date:
+            date_obj = date.fromisoformat(analysis_date)
+        else:
+            date_obj = date.today()
+
+        logger.info("Starting sitemap analysis for %s", date_obj)
+
+        orchestrator = SitemapAnalysisOrchestrator.create_default()
+        sitemap_analysis = orchestrator.analyze_and_store(date_obj)
+
+        email_service = SitemapAnalysisEmailService(sitemap_analysis)
+        email_service.send_email()
+        sitemap_analysis.mark_email_sent()
+
+        logger.info("Sitemap analysis complete: %s", sitemap_analysis.id)
+
+        return {
+            "status": "success",
+            "sitemap_analysis_id": sitemap_analysis.id,
+            "severity": sitemap_analysis.severity,
+            "date": str(sitemap_analysis.analysis_date),
+        }
+
+    except Exception as exc:
+        logger.exception("Sitemap analysis failed: %s", exc)
         raise self.retry(exc=exc)
 
 

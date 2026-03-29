@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from common.utils.signing import generate_signed_url_params
 
 from .log_sources import LOG_SOURCES
-from .models import LogAnalysis
+from .models import LogAnalysis, SitemapAnalysis
 
 
 def _build_raw_log_fields() -> tuple[str, ...]:
@@ -129,4 +129,52 @@ for _source in LOG_SOURCES:
         LogAnalysisAdmin,
         f"server_{_source.key}_log_path",
         _make_server_log_path_method(_source.key, _source.model_field),
+    )
+
+
+@admin.register(SitemapAnalysis)
+class SitemapAnalysisAdmin(admin.ModelAdmin):
+    list_display = [
+        "analysis_date",
+        "severity",
+        "total_sitemaps",
+        "total_urls",
+        "execution_time_seconds",
+        "email_sent",
+        "created_at",
+    ]
+    list_filter = ["severity", "email_sent", "analysis_date"]
+    search_fields = ["summary", "recommendations", "root_sitemap_url"]
+    readonly_fields = [
+        "created_at",
+        "analysis_date",
+        "root_sitemap_url",
+        "total_sitemaps",
+        "total_urls",
+        "issue_summary",
+        "issues",
+        "execution_time_seconds",
+        "gpt_tokens_used",
+        "gpt_cost_usd",
+    ]
+    fieldsets = (
+        ("Metadata", {"fields": ("created_at", "analysis_date", "severity")}),
+        ("Sitemap Scope", {"fields": ("root_sitemap_url", "total_sitemaps", "total_urls")}),
+        ("Analysis Results", {"fields": ("summary", "key_findings", "recommendations")}),
+        (
+            "Deterministic Findings",
+            {"fields": ("issue_summary", "issues"), "classes": ("collapse",)},
+        ),
+        (
+            "Execution Details",
+            {
+                "fields": (
+                    "execution_time_seconds",
+                    "gpt_tokens_used",
+                    "gpt_cost_usd",
+                    "email_sent",
+                    "error_message",
+                )
+            },
+        ),
     )

@@ -30,8 +30,10 @@ class FakeSession:
         *,
         timeout: float,
         allow_redirects: bool = True,
+        verify: bool = True,
     ) -> FakeResponse:
         del timeout
+        del verify
         key: tuple[str, bool] = (url, allow_redirects)
         if key in self.errors:
             raise self.errors[key]
