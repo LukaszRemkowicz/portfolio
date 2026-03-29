@@ -280,3 +280,19 @@ class TestSitemapAnalysisMethods:
         sitemap_analysis.refresh_from_db()
 
         assert sitemap_analysis.email_sent is True
+
+    def test_issue_count_and_summary_lines(self):
+        sitemap_analysis = SitemapAnalysisFactory(
+            issue_summary={"broken_url": 2, "canonical_mismatch": 1},
+            issues=[
+                {"url": "https://portfolio.example/a"},
+                {"url": "https://portfolio.example/b"},
+                {"url": "https://portfolio.example/c"},
+            ],
+        )
+
+        assert sitemap_analysis.issue_count == 3
+        assert sitemap_analysis.issue_summary_lines == [
+            "broken url: 2",
+            "canonical mismatch: 1",
+        ]

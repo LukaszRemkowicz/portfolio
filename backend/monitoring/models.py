@@ -193,6 +193,17 @@ class SitemapAnalysis(models.Model):
     def execution_time_formatted(self) -> str:
         return f"{self.execution_time_seconds:.1f}"
 
+    @property
+    def issue_count(self) -> int:
+        return len(self.issues)
+
+    @property
+    def issue_summary_lines(self) -> list[str]:
+        lines: list[str] = []
+        for category, count in sorted(self.issue_summary.items()):
+            lines.append(f"{category.replace('_', ' ')}: {count}")
+        return lines
+
     def get_email_subject(self) -> str:
         environment = settings.ENVIRONMENT.upper()
         return f"[{environment}][{self.severity}] Sitemap Analysis - {self.analysis_date}"

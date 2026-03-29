@@ -32,9 +32,9 @@ Relevant code:
 - `backend/monitoring/agent_assets/`
 
 
-## Two Celery Beat Tasks
+## Monitoring Celery Beat Tasks
 
-The app currently has two monitoring-related Celery beat tasks.
+The app currently has three monitoring-related Celery beat tasks.
 
 ### 1. `daily_log_analysis_task`
 
@@ -57,7 +57,43 @@ Return shape:
 - severity
 - analysis date
 
-### 2. `cleanup_old_logs_task`
+Legacy status:
+- guarded by `RUN_LEGACY_DAILY_TASK`
+- disabled by default
+- kept only as a compatibility fallback while the bounded monitoring-agent
+  path remains under validation
+
+### 2. `daily_monitoring_agent_log_task`
+
+Location:
+- `backend/monitoring/tasks.py`
+
+Schedule:
+- configured in `backend/settings/base.py`
+- runs daily at `02:00` UTC by default
+
+Responsibility:
+- run the current log-monitoring path through the bounded monitoring agent
+- store the final `LogAnalysis` result
+- send the existing log-monitoring email
+
+### 3. `daily_sitemap_analysis_task`
+
+Location:
+- `backend/monitoring/tasks.py`
+
+Schedule:
+- configured in `backend/settings/base.py`
+- runs at `03:00` UTC
+- every `5` days
+
+Responsibility:
+- run deterministic sitemap auditing against `SITE_DOMAIN`
+- summarize findings with the LLM only when the sitemap audit finds issues
+- store `SitemapAnalysis`
+- send a separate sitemap email
+
+### 4. `cleanup_old_logs_task`
 
 Location:
 - `backend/monitoring/tasks.py`
@@ -128,12 +164,12 @@ This is why the current log-monitoring email is readable by a human operator
 instead of being only a raw machine report.
 
 
-## Planned Sitemap Monitoring Flow
+## Sitemap Monitoring Flow
 
-The planned sitemap flow follows the same principle, but with a stricter split
+The sitemap flow follows the same principle, but with a stricter split
 between deterministic checks and LLM explanation.
 
-Planned schedule:
+Live schedule:
 - sitemap reporting task at `03:00` UTC
 - every `5` days
 - production sitemap only
@@ -197,6 +233,12 @@ it can say:
 
 That kind of explanation is valuable for operators and future debugging, but
 it should be built on top of deterministic evidence, not instead of it.
+
+Operational hardening detail:
+- when the deterministic sitemap audit finds no issues, the system skips the
+  sitemap LLM call and sends a deterministic all-clear summary instead
+- this keeps healthy runs cheaper and quieter while still storing the audit
+  result
 
 
 ## Why We Do Not Want A Fake Agent

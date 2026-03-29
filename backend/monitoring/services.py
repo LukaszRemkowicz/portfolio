@@ -540,6 +540,10 @@ class SitemapSummaryService:
         self.asset_loader: PromptAssetLoader = asset_loader or PromptAssetLoader()
 
     def summarize(self, report: SitemapReportResult) -> SitemapSummaryResult:
+        if not report.issues:
+            logger.info("Skipping sitemap LLM summary because deterministic audit is clean")
+            return self._build_fallback_summary(report)
+
         system_prompt: str = self._build_system_prompt()
         user_message: str = self._build_user_message(report)
         response_text, usage = self.provider.ask_question_with_usage(

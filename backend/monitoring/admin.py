@@ -137,6 +137,7 @@ class SitemapAnalysisAdmin(admin.ModelAdmin):
     list_display = [
         "analysis_date",
         "severity",
+        "issue_count",
         "total_sitemaps",
         "total_urls",
         "execution_time_seconds",
@@ -151,6 +152,8 @@ class SitemapAnalysisAdmin(admin.ModelAdmin):
         "root_sitemap_url",
         "total_sitemaps",
         "total_urls",
+        "issue_count",
+        "issue_summary_pretty",
         "issue_summary",
         "issues",
         "execution_time_seconds",
@@ -159,11 +162,17 @@ class SitemapAnalysisAdmin(admin.ModelAdmin):
     ]
     fieldsets = (
         ("Metadata", {"fields": ("created_at", "analysis_date", "severity")}),
-        ("Sitemap Scope", {"fields": ("root_sitemap_url", "total_sitemaps", "total_urls")}),
+        (
+            "Sitemap Scope",
+            {"fields": ("root_sitemap_url", "total_sitemaps", "total_urls", "issue_count")},
+        ),
         ("Analysis Results", {"fields": ("summary", "key_findings", "recommendations")}),
         (
             "Deterministic Findings",
-            {"fields": ("issue_summary", "issues"), "classes": ("collapse",)},
+            {
+                "fields": ("issue_summary_pretty", "issue_summary", "issues"),
+                "classes": ("collapse",),
+            },
         ),
         (
             "Execution Details",
@@ -178,3 +187,11 @@ class SitemapAnalysisAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+    @admin.display(description="Issue Count")
+    def issue_count(self, obj: SitemapAnalysis) -> int:
+        return obj.issue_count
+
+    @admin.display(description="Issue Summary")
+    def issue_summary_pretty(self, obj: SitemapAnalysis) -> str:
+        return "\n".join(obj.issue_summary_lines) or "-"

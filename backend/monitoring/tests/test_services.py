@@ -244,6 +244,23 @@ class TestMonitoringAgentLogOrchestrator:
 
 
 class TestSitemapSummaryService:
+    def test_summarize_skips_llm_when_report_is_clean(self, mocker):
+        provider = MockLLMProvider()
+        ask_question_mock = mocker.patch.object(provider, "ask_question_with_usage")
+        service = SitemapSummaryService(provider=provider)
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=1,
+            total_urls=3,
+            issues=[],
+        )
+
+        result = service.summarize(report)
+
+        ask_question_mock.assert_not_called()
+        assert result.severity == "INFO"
+        assert "no issues detected" in result.summary.lower()
+
     def test_summarize_returns_llm_summary(self):
         provider = MockLLMProvider()
         provider.configure(

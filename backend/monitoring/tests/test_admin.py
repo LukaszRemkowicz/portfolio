@@ -2,14 +2,16 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 
 from common.utils.signing import generate_signed_url_params
-from monitoring.models import LogAnalysis
-from monitoring.tests.factories import LogAnalysisFactory
+from monitoring.admin import SitemapAnalysisAdmin
+from monitoring.models import LogAnalysis, SitemapAnalysis
+from monitoring.tests.factories import LogAnalysisFactory, SitemapAnalysisFactory
 
 
 @pytest.fixture
@@ -77,3 +79,19 @@ class TestLogAnalysisAdminSecureMediaView:
         )
         response = admin_client.get(url)
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+class TestSitemapAnalysisAdmin:
+    def test_issue_count_and_summary_helpers(self) -> None:
+        sitemap_analysis: SitemapAnalysis = SitemapAnalysisFactory(
+            issue_summary={"broken_url": 2, "canonical_mismatch": 1},
+            issues=[{"url": "a"}, {"url": "b"}, {"url": "c"}],
+        )
+        admin_site = AdminSite()
+        admin_instance = SitemapAnalysisAdmin(SitemapAnalysis, admin_site)
+
+        assert admin_instance.issue_count(sitemap_analysis) == 3
+        assert admin_instance.issue_summary_pretty(sitemap_analysis) == (
+            "broken url: 2\ncanonical mismatch: 1"
+        )
