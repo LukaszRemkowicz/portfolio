@@ -1,14 +1,20 @@
 import os
+from datetime import timedelta
 from urllib.parse import urlencode
 
-from django.contrib import admin
-from django.urls import reverse
+from django.contrib import admin, messages
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.shortcuts import redirect
+from django.urls import URLPattern, path, reverse
+from django.utils import timezone
 from django.utils.html import format_html
+from django.utils.translation import gettext_lazy as _
 
 from common.utils.signing import generate_signed_url_params
 
 from .log_sources import LOG_SOURCES
 from .models import LogAnalysis, SitemapAnalysis
+from .tasks import daily_sitemap_analysis_task
 
 
 def _build_raw_log_fields() -> tuple[str, ...]:
@@ -134,13 +140,15 @@ for _source in LOG_SOURCES:
 
 @admin.register(SitemapAnalysis)
 class SitemapAnalysisAdmin(admin.ModelAdmin):
+    SESSION_TASK_ID_KEY = "monitoring_sitemap_task_id"
+    change_list_template = "admin/monitoring/sitemapanalysis/change_list.html"
     list_display = [
         "analysis_date",
         "severity",
         "issue_count",
         "total_sitemaps",
         "total_urls",
-        "execution_time_seconds",
+        "execution_time_seconds_pretty",
         "email_sent",
         "created_at",
     ]
@@ -188,10 +196,62 @@ class SitemapAnalysisAdmin(admin.ModelAdmin):
         ),
     )
 
-    @admin.display(description="Issue Count")
+    @admin.display(description=_("Issue Count"))
     def issue_count(self, obj: SitemapAnalysis) -> int:
         return obj.issue_count
 
-    @admin.display(description="Issue Summary")
+    @admin.display(description=_("Issue Summary"))
     def issue_summary_pretty(self, obj: SitemapAnalysis) -> str:
         return "\n".join(obj.issue_summary_lines) or "-"
+
+    @admin.display(description=_("Execution time seconds"), ordering="execution_time_seconds")
+    def execution_time_seconds_pretty(self, obj: SitemapAnalysis) -> str:
+        return f"{obj.execution_time_seconds:.2f}"
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def get_urls(self) -> list[URLPattern]:
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "run-now/",
+                self.admin_site.admin_view(self.run_sitemap_analysis_now_view),
+                name="monitoring_sitemapanalysis_run_now",
+            )
+        ]
+        return custom_urls + urls
+
+    def changelist_view(
+        self, request: HttpRequest, extra_context: dict[str, object] | None = None
+    ) -> HttpResponse:
+        context: dict[str, object] = extra_context or {}
+        today = timezone.localdate()
+        context["run_sitemap_analysis_now_url"] = reverse(
+            "admin:monitoring_sitemapanalysis_run_now"
+        )
+        context["sitemap_task_id"] = str(request.session.pop(self.SESSION_TASK_ID_KEY, ""))
+        context["sitemap_task_status_url_template"] = reverse(
+            "admin-sitemap-analysis-task-status",
+            kwargs={"task_id": "__TASK_ID__"},
+        )
+        context["today"] = today
+        context["last_7_days"] = today - timedelta(days=7)
+        context["first_day_of_month"] = today.replace(day=1)
+        context["first_day_of_year"] = today.replace(month=1, day=1)
+        return super().changelist_view(request, extra_context=context)
+
+    def run_sitemap_analysis_now_view(self, request: HttpRequest) -> HttpResponseRedirect:
+        if request.method != "POST":
+            changelist_url = reverse("admin:monitoring_sitemapanalysis_changelist")
+            return redirect(changelist_url)
+
+        analysis_date = timezone.localdate().isoformat()
+        task_result = daily_sitemap_analysis_task.delay(analysis_date=analysis_date)
+        self.message_user(
+            request,
+            _("Queued sitemap analysis run for today."),
+            level=messages.SUCCESS,
+        )
+        request.session[self.SESSION_TASK_ID_KEY] = task_result.id
+        return redirect("admin:monitoring_sitemapanalysis_changelist")

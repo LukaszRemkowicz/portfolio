@@ -221,7 +221,7 @@ msgid "Translation Method"
 msgstr "Metoda tłumaczenia"
 
 msgid "Choose a target image field, adjust the crop here, then apply the cropped file back to that field before saving the form."
-msgstr "Wybierz docelowe pole obrazu, dopasuj tutaj kadr, a następnie zapisz ("Zastosuj")."
+msgstr "Wybierz docelowe pole obrazu, dopasuj tutaj kadr, a następnie zastosuj wykadrowany plik do tego pola przed zapisaniem formularza."
 
 msgid "Target field"
 msgstr "Pole docelowe"
@@ -334,6 +334,39 @@ msgstr "Profile"
 #| msgid "Translations"
 msgid "Delete Translation"
 msgstr "Usuń tłumaczenie"
+
+msgid "Analysis date"
+msgstr "Data analizy"
+
+msgid "Severity"
+msgstr "Poziom"
+
+msgid "Issue Count"
+msgstr "Liczba problemów"
+
+msgid "Total sitemaps"
+msgstr "Łączna liczba sitemap"
+
+msgid "Total urls"
+msgstr "Łączna liczba adresów URL"
+
+msgid "Execution time seconds"
+msgstr "Czas wykonania w sekundach"
+
+msgid "Email sent"
+msgstr "E-mail wysłany"
+
+msgid "Created at"
+msgstr "Utworzono"
+
+msgid "Queued sitemap analysis run for today."
+msgstr "Dodano dzisiejszą analizę sitemap do kolejki."
+
+msgid "Run Sitemap Analysis Now"
+msgstr "Uruchom analizę sitemap teraz"
+
+msgid "Sort by date"
+msgstr "Sortuj po dacie"
 
 #~ msgid "Meteors Enabled"
 #~ msgstr "Formularz Kontaktowy Włączony"

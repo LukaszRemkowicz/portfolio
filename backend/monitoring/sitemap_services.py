@@ -18,18 +18,35 @@ class SitemapHTTPClient:
         session: HTTPSession | None = None,
         timeout_seconds: float = 10.0,
         verify_ssl: bool = True,
+        internal_base_url: str | None = None,
+        public_host: str | None = None,
     ) -> None:
         resolved_session: HTTPSession = session or requests.Session()
         self.session: HTTPSession = resolved_session
         self.timeout_seconds: float = timeout_seconds
         self.verify_ssl: bool = verify_ssl
+        self.internal_base_url: str | None = (
+            internal_base_url.rstrip("/") if internal_base_url else None
+        )
+        self.public_host: str | None = public_host
 
     def get(self, url: str, allow_redirects: bool = True) -> HTTPResponseData:
+        request_url: str = url
+        request_headers: dict[str, str] | None = None
+        if self.internal_base_url and self.public_host:
+            parsed_url = urlparse(url)
+            if parsed_url.netloc == self.public_host:
+                request_url = f"{self.internal_base_url}{parsed_url.path or '/'}"
+                if parsed_url.query:
+                    request_url = f"{request_url}?{parsed_url.query}"
+                request_headers = {"Host": self.public_host}
+
         response: requests.Response = self.session.get(
-            url,
+            request_url,
             timeout=self.timeout_seconds,
             allow_redirects=allow_redirects,
             verify=self.verify_ssl,
+            headers=request_headers,
         )
         response_headers: dict[str, str] = dict(response.headers)
         return HTTPResponseData(

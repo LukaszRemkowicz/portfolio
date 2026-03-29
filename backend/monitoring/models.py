@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 class LogAnalysisQuerySet(models.QuerySet):
@@ -160,31 +161,45 @@ class SitemapAnalysis(models.Model):
         WARNING = "WARNING", "Warning"
         CRITICAL = "CRITICAL", "Critical"
 
-    created_at = models.DateTimeField(default=timezone.now, db_index=True)
-    analysis_date = models.DateField(db_index=True, unique=True)
+    created_at = models.DateTimeField(_("Created at"), default=timezone.now, db_index=True)
+    analysis_date = models.DateField(_("Analysis date"), db_index=True, unique=True)
 
-    root_sitemap_url = models.URLField()
-    total_sitemaps = models.IntegerField(default=0)
-    total_urls = models.IntegerField(default=0)
-    issue_summary = models.JSONField(default=dict, help_text="Counts by sitemap issue category")
-    issues = models.JSONField(default=list, help_text="Detailed deterministic sitemap issues")
+    root_sitemap_url = models.URLField(_("Root sitemap URL"))
+    total_sitemaps = models.IntegerField(_("Total sitemaps"), default=0)
+    total_urls = models.IntegerField(_("Total urls"), default=0)
+    issue_summary = models.JSONField(
+        _("Issue summary"), default=dict, help_text=_("Counts by sitemap issue category")
+    )
+    issues = models.JSONField(
+        _("Issues"), default=list, help_text=_("Detailed deterministic sitemap issues")
+    )
 
-    summary = models.TextField(help_text="LLM-generated sitemap summary")
-    severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.INFO)
-    key_findings = models.JSONField(default=list, help_text="List of important sitemap findings")
-    recommendations = models.TextField(blank=True, help_text="LLM recommendations")
-    trend_summary = models.TextField(blank=True, help_text="Sitemap trend comparison summary")
+    summary = models.TextField(_("Summary"), help_text=_("LLM-generated sitemap summary"))
+    severity = models.CharField(
+        _("Severity"), max_length=10, choices=Severity.choices, default=Severity.INFO
+    )
+    key_findings = models.JSONField(
+        _("Key findings"), default=list, help_text=_("List of important sitemap findings")
+    )
+    recommendations = models.TextField(
+        _("Recommendations"), blank=True, help_text=_("LLM recommendations")
+    )
+    trend_summary = models.TextField(
+        _("Trend summary"), blank=True, help_text=_("Sitemap trend comparison summary")
+    )
 
-    execution_time_seconds = models.FloatField(default=0.0)
-    gpt_tokens_used = models.IntegerField(default=0)
-    gpt_cost_usd = models.FloatField(default=0.0, help_text="Estimated OpenAI API cost in USD")
-    email_sent = models.BooleanField(default=False)
-    error_message = models.TextField(blank=True)
+    execution_time_seconds = models.FloatField(_("Execution time seconds"), default=0.0)
+    gpt_tokens_used = models.IntegerField(_("GPT tokens used"), default=0)
+    gpt_cost_usd = models.FloatField(
+        _("GPT cost usd"), default=0.0, help_text=_("Estimated OpenAI API cost in USD")
+    )
+    email_sent = models.BooleanField(_("Email sent"), default=False)
+    error_message = models.TextField(_("Error message"), blank=True)
 
     class Meta:
         ordering = ["-analysis_date"]
-        verbose_name = "Sitemap Analysis"
-        verbose_name_plural = "Sitemap Analyses"
+        verbose_name = _("Sitemap Analysis")
+        verbose_name_plural = _("Sitemap Analyses")
 
     def __str__(self) -> str:
         return f"Sitemap Analysis {self.analysis_date} ({self.severity})"

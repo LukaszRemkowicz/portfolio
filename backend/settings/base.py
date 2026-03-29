@@ -627,7 +627,7 @@ ADMIN_SITE_ORDERING = (
     {
         "app": "monitoring",
         "label": "Monitoring",
-        "models": ("monitoring.LogAnalysis",),
+        "models": ("monitoring.LogAnalysis", "monitoring.SitemapAnalysis"),
     },
 )
 
@@ -761,6 +761,7 @@ JAZZMIN_SETTINGS = {
         "core.LandingPageSettings": "fas fa-sliders-h",
         "translation.TranslationTask": "fas fa-language",
         "monitoring.LogAnalysis": "fas fa-chart-line",
+        "monitoring.SitemapAnalysis": "fas fa-sitemap",
     },
     # Changing the order
     "order_with_respect_to": [

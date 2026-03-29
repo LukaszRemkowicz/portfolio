@@ -7,7 +7,7 @@ import pytest
 from django.test import override_settings
 
 from common.llm.providers import MockLLMProvider
-from monitoring.models import LogAnalysis
+from monitoring.models import LogAnalysis, SitemapAnalysis
 from monitoring.monitoring_agent_runner import MonitoringToolLoopRunner
 from monitoring.services import (
     DockerLogCollector,
@@ -23,7 +23,7 @@ from monitoring.services import (
     SitemapSummaryService,
 )
 from monitoring.sitemap_services import SitemapAuditService
-from monitoring.tests.factories import LogAnalysisFactory
+from monitoring.tests.factories import LogAnalysisFactory, SitemapAnalysisFactory
 from monitoring.types import (
     LogReportResult,
     MonitoringAgentEventType,
@@ -323,6 +323,36 @@ class TestSitemapAnalysisStorageService:
         assert analysis.total_sitemaps == 2
         assert analysis.issue_summary["broken_url"] == 1
         assert analysis.key_findings
+
+    def test_create_or_replace_analysis_updates_existing_same_day_record(self):
+        analysis_date = date.today()
+        existing = SitemapAnalysisFactory(
+            analysis_date=analysis_date,
+            summary="Old summary",
+            email_sent=True,
+            error_message="Old error",
+        )
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=3,
+            total_urls=42,
+            issues=[],
+        )
+        summary = SitemapSummaryService(provider=MockLLMProvider())._build_fallback_summary(report)
+
+        analysis = SitemapAnalysisStorageService.create_or_replace_analysis(
+            analysis_date=analysis_date,
+            report=report,
+            summary=summary,
+            execution_time_seconds=5.0,
+        )
+
+        assert SitemapAnalysis.objects.count() == 1
+        assert analysis.id == existing.id
+        assert analysis.total_sitemaps == 3
+        assert analysis.total_urls == 42
+        assert analysis.email_sent is False
+        assert analysis.error_message == ""
 
 
 class TestSitemapAnalysisOrchestrator:

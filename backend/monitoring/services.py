@@ -697,10 +697,7 @@ class SitemapAnalysisStorageService:
         summary: SitemapSummaryResult,
         execution_time_seconds: float,
     ) -> SitemapAnalysis:
-        existing_count: int = SitemapAnalysis.objects.filter(analysis_date=analysis_date).count()
-        if existing_count > 0:
-            SitemapAnalysis.objects.filter(analysis_date=analysis_date).delete()
-
+        rounded_execution_time_seconds: float = round(execution_time_seconds, 2)
         issue_summary: dict[str, int] = {}
         serialized_issues: list[dict[str, JSONValue]] = []
         for issue in report.issues:
@@ -715,22 +712,27 @@ class SitemapAnalysisStorageService:
                 }
             )
 
-        return SitemapAnalysis.objects.create(
+        analysis, _created = SitemapAnalysis.objects.update_or_create(
             analysis_date=analysis_date,
-            root_sitemap_url=report.root_sitemap_url,
-            total_sitemaps=report.total_sitemaps,
-            total_urls=report.total_urls,
-            issue_summary=issue_summary,
-            issues=serialized_issues,
-            summary=summary.summary,
-            severity=summary.severity,
-            key_findings=summary.key_findings,
-            recommendations=summary.recommendations,
-            trend_summary=summary.trend_summary,
-            execution_time_seconds=execution_time_seconds,
-            gpt_tokens_used=summary.gpt_tokens_used,
-            gpt_cost_usd=summary.gpt_cost_usd,
+            defaults={
+                "root_sitemap_url": report.root_sitemap_url,
+                "total_sitemaps": report.total_sitemaps,
+                "total_urls": report.total_urls,
+                "issue_summary": issue_summary,
+                "issues": serialized_issues,
+                "summary": summary.summary,
+                "severity": summary.severity,
+                "key_findings": summary.key_findings,
+                "recommendations": summary.recommendations,
+                "trend_summary": summary.trend_summary,
+                "execution_time_seconds": rounded_execution_time_seconds,
+                "gpt_tokens_used": summary.gpt_tokens_used,
+                "gpt_cost_usd": summary.gpt_cost_usd,
+                "email_sent": False,
+                "error_message": "",
+            },
         )
+        return analysis
 
 
 class SitemapAnalysisEmailService(BaseEmailService):
@@ -791,13 +793,14 @@ class SitemapAnalysisOrchestrator:
             ).count()
             if existing_count > 0:
                 SitemapAnalysis.objects.filter(analysis_date=analysis_date).delete()
+            rounded_execution_time_seconds: float = round(time.time() - start_time, 2)
             return SitemapAnalysis.objects.create(
                 analysis_date=analysis_date,
                 root_sitemap_url=self.audit_service.get_default_sitemap_url(),
                 summary=f"Analysis Failed: {error}",
                 severity=SitemapAnalysis.Severity.CRITICAL,
                 error_message=str(error),
-                execution_time_seconds=time.time() - start_time,
+                execution_time_seconds=rounded_execution_time_seconds,
             )
 
     @classmethod
@@ -807,6 +810,8 @@ class SitemapAnalysisOrchestrator:
         production_domain: str = settings.SITE_DOMAIN
         http_client = SitemapHTTPClient(
             verify_ssl=not settings.DEBUG,
+            internal_base_url="http://nginx" if settings.DEBUG else None,
+            public_host=production_domain,
         )
         audit_service = SitemapAuditService(
             client=http_client,

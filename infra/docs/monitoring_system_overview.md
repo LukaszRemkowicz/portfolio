@@ -36,6 +36,12 @@ Relevant code:
 
 The app currently has three monitoring-related Celery beat tasks.
 
+Queue routing detail:
+- monitoring tasks are routed to the `monitoring` Celery queue
+- the worker must listen to both `celery` and `monitoring`
+- otherwise scheduled or manually queued monitoring jobs will be created but
+  never consumed
+
 ### 1. `daily_log_analysis_task`
 
 Location:
@@ -92,6 +98,7 @@ Responsibility:
 - summarize findings with the LLM only when the sitemap audit finds issues
 - store `SitemapAnalysis`
 - send a separate sitemap email
+- support an admin-triggered on-demand run from the sitemap changelist
 
 ### 4. `cleanup_old_logs_task`
 
@@ -239,6 +246,17 @@ Operational hardening detail:
   sitemap LLM call and sends a deterministic all-clear summary instead
 - this keeps healthy runs cheaper and quieter while still storing the audit
   result
+
+Admin operations detail:
+- the sitemap admin changelist includes a manual "Run Sitemap Analysis Now"
+  button
+- it queues the existing sitemap Celery task instead of running the analysis
+  inline in the HTTP request
+- the standard add action is hidden so operators use the queued monitoring flow
+  instead of creating raw rows by hand
+- after queueing, the admin page polls a DRF status endpoint every `0.5`
+  seconds and updates a status bar directly under the button
+- polling stops immediately when the task reaches `success` or `failed`
 
 
 ## Why We Do Not Want A Fake Agent

@@ -544,6 +544,32 @@ No phase is considered complete until those three conditions are met.
 - `pre-commit run --all-files`
 - wait for approval
 
+### Phase 6b: Manual Sitemap Trigger In Admin
+
+#### Scope
+
+- add an on-demand sitemap analysis trigger to the sitemap admin changelist
+- hide the standard sitemap add action on the changelist
+- let operators queue a sitemap run without waiting for the scheduled window
+
+#### Deliverables
+
+- sitemap admin changelist button for manual execution
+- dedicated admin URL and POST handler
+- queued task execution through the existing sitemap task
+- changelist template customization for a single operator-focused action button
+
+#### Tests
+
+- admin changelist rendering test for both buttons
+- admin POST test proving the sitemap task is queued
+
+#### Exit Verification
+
+- targeted pytest run
+- `pre-commit run --all-files`
+- wait for approval
+
 ### Phase 7: Cutover and Cleanup
 
 #### Scope

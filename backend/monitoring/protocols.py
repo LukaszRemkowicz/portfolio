@@ -11,4 +11,5 @@ class HTTPSession(Protocol):
         timeout: float,
         allow_redirects: bool = True,
         verify: bool = True,
+        headers: dict[str, str] | None = None,
     ) -> requests.Response: ...

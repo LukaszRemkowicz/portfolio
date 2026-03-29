@@ -1,0 +1,450 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  .change-list #changelist-search {
+    display: none !important;
+  }
+
+  .change-list .sitemap-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    width: 100%;
+    margin-bottom: 1.5rem;
+  }
+
+  .change-list .sitemap-filter-bar {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .change-list .sitemap-filter-bar .form-group {
+    margin-bottom: 0;
+  }
+
+  .change-list .sitemap-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .change-list .sitemap-filter-label {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #94a3b8;
+  }
+
+  .change-list .sitemap-filter-select {
+    min-width: 170px;
+  }
+
+  .change-list .sitemap-sort-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .change-list .sitemap-sort-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .change-list .sitemap-sort-controls {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .change-list .sitemap-sort-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 10px;
+    color: #cbd5e1;
+    text-decoration: none;
+    transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .change-list .sitemap-sort-btn:hover,
+  .change-list .sitemap-sort-btn:focus {
+    border-color: #60a5fa;
+    color: #ffffff;
+    background: rgba(37, 99, 235, 0.15);
+    text-decoration: none;
+  }
+
+  .change-list .sitemap-sort-btn.is-active {
+    border-color: #60a5fa;
+    color: #ffffff;
+    background: rgba(37, 99, 235, 0.18);
+  }
+
+  .change-list .sitemap-action-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    width: 320px;
+    min-width: 320px;
+    gap: 0.5rem;
+  }
+
+  .change-list .sitemap-action-stack form {
+    margin: 0;
+  }
+
+  .change-list .sitemap-action-stack .btn {
+    min-width: 290px;
+  }
+
+  .change-list .sitemap-action-stack .btn i {
+    margin-right: 0.5rem;
+  }
+
+  .change-list .sitemap-task-status {
+    min-width: 290px;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    text-align: left;
+  }
+
+  .change-list .sitemap-task-status[hidden] {
+    display: none !important;
+  }
+
+  .change-list .sitemap-task-status__label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+    color: #cbd5e1;
+    gap: 0.75rem;
+  }
+
+  .change-list .sitemap-task-status__text {
+    flex: 1 1 auto;
+  }
+
+  .change-list .sitemap-task-status__percent {
+    flex: 0 0 auto;
+    min-width: 3.5rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .change-list .sitemap-task-status__bar {
+    width: 100%;
+    height: 0.45rem;
+    overflow: hidden;
+    background: rgba(148, 163, 184, 0.18);
+    border-radius: 999px;
+  }
+
+  .change-list .sitemap-task-status__bar-fill {
+    height: 100%;
+    width: 0%;
+    background: #0d6efd;
+    border-radius: 999px;
+    transition: width 0.25s ease;
+  }
+
+  .change-list .sitemap-task-status[data-status='success'] .sitemap-task-status__bar-fill {
+    background: #198754;
+  }
+
+  .change-list .sitemap-task-status[data-status='failed'] .sitemap-task-status__bar-fill {
+    background: #dc3545;
+  }
+
+  .change-list #result_list th .fa-times,
+  .change-list #result_list th .fa-sort-alpha-up,
+  .change-list #result_list th .fa-sort-alpha-down,
+  .change-list #result_list th .fa-sort-amount-up,
+  .change-list #result_list th .fa-sort-amount-down {
+    display: none !important;
+  }
+
+  @media screen and (max-width: 1200px) {
+    .change-list .sitemap-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .change-list .sitemap-action-stack {
+      width: 100%;
+      min-width: 0;
+      align-items: stretch;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block object-tools-items %}
+<div class="sitemap-toolbar">
+  <div class="sitemap-filter-bar">
+    <div class="form-group sitemap-filter-field">
+      <label class="sitemap-filter-label" for="sitemap-filter-severity">{% translate "Severity" %}</label>
+      <select id="sitemap-filter-severity" class="form-control sitemap-filter-select">
+        <option value="" hidden></option>
+        <option value="INFO" {% if request.GET.severity__exact == "INFO" %}selected{% endif %}>
+          {% translate "Info" %}
+        </option>
+        <option value="WARNING" {% if request.GET.severity__exact == "WARNING" %}selected{% endif %}>
+          {% translate "Warning" %}
+        </option>
+        <option value="CRITICAL" {% if request.GET.severity__exact == "CRITICAL" %}selected{% endif %}>
+          {% translate "Critical" %}
+        </option>
+      </select>
+    </div>
+    <div class="form-group sitemap-filter-field">
+      <label class="sitemap-filter-label" for="sitemap-filter-email-sent">{% translate "Email sent" %}</label>
+      <select id="sitemap-filter-email-sent" class="form-control sitemap-filter-select">
+        <option value="" hidden></option>
+        <option value="1" {% if request.GET.email_sent__exact == "1" %}selected{% endif %}>
+          {% translate "Yes" %}
+        </option>
+        <option value="0" {% if request.GET.email_sent__exact == "0" %}selected{% endif %}>
+          {% translate "No" %}
+        </option>
+      </select>
+    </div>
+    <div class="form-group sitemap-filter-field">
+      <label class="sitemap-filter-label" for="sitemap-filter-analysis-date">{% translate "Analysis date" %}</label>
+      <select id="sitemap-filter-analysis-date" class="form-control sitemap-filter-select">
+        <option value="" hidden></option>
+        <option
+          value="{{ today|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == today|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "Today" %}
+        </option>
+        <option
+          value="{{ last_7_days|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == last_7_days|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "Past 7 days" %}
+        </option>
+        <option
+          value="{{ first_day_of_month|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == first_day_of_month|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "This month" %}
+        </option>
+        <option
+          value="{{ first_day_of_year|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == first_day_of_year|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "This year" %}
+        </option>
+      </select>
+    </div>
+    <div class="form-group sitemap-sort-field">
+      <label class="sitemap-filter-label" for="sitemap-sort-oldest">{% translate "Sort by date" %}</label>
+      <div class="sitemap-sort-controls">
+        <a
+          href="#"
+          id="sitemap-sort-oldest"
+          class="sitemap-sort-btn {% if request.GET.o == '1' %}is-active{% endif %}"
+          title="{% translate 'Sort by oldest first' %}"
+          aria-label="{% translate 'Sort by oldest first' %}"
+        >
+          <i class="fa fa-arrow-up"></i>
+        </a>
+        <a
+          href="#"
+          id="sitemap-sort-newest"
+          class="sitemap-sort-btn {% if request.GET.o != '1' %}is-active{% endif %}"
+          title="{% translate 'Sort by newest first' %}"
+          aria-label="{% translate 'Sort by newest first' %}"
+        >
+          <i class="fa fa-arrow-down"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="sitemap-action-stack">
+    <form id="run-sitemap-analysis-now-form" method="post" action="{{ run_sitemap_analysis_now_url }}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-success">
+        <i class="fa fa-play-circle"></i>
+        {% translate "Run Sitemap Analysis Now" %}
+      </button>
+    </form>
+    <div id="sitemap-task-status"
+         class="sitemap-task-status"
+         data-task-id="{{ sitemap_task_id }}"
+         data-status-url-template="{{ sitemap_task_status_url_template }}"
+         data-complete-text="{% translate 'Completed' %}"
+         data-failed-text="{% translate 'Failed' %}"
+         data-queued-text="{% translate 'Queued...' %}"
+         data-running-text="{% translate 'Running sitemap audit...' %}"
+         hidden>
+      <span class="sitemap-task-status__label">
+        <span class="sitemap-task-status__text" id="sitemap-task-status-label"></span>
+        <span class="sitemap-task-status__percent" id="sitemap-task-status-percent">0%</span>
+      </span>
+      <div class="sitemap-task-status__bar">
+        <div class="sitemap-task-status__bar-fill" id="sitemap-task-status-bar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+<script>
+  (function () {
+    const filterSelects = document.querySelectorAll(".sitemap-filter-select");
+    if (filterSelects.length > 0) {
+      function navigateWithFilters(orderingValue = null) {
+        const url = new URL(window.location.href);
+        const knownFilterParams = ["severity__exact", "email_sent__exact", "analysis_date__gte"];
+        knownFilterParams.forEach((paramName) => url.searchParams.delete(paramName));
+        url.searchParams.delete("p");
+        if (orderingValue === null) {
+          url.searchParams.delete("o");
+        } else {
+          url.searchParams.set("o", orderingValue);
+        }
+        const severitySelect = document.getElementById("sitemap-filter-severity");
+        const emailSentSelect = document.getElementById("sitemap-filter-email-sent");
+        const analysisDateSelect = document.getElementById("sitemap-filter-analysis-date");
+
+        if (severitySelect && severitySelect.value) {
+          url.searchParams.set("severity__exact", severitySelect.value);
+        }
+        if (emailSentSelect && emailSentSelect.value) {
+          url.searchParams.set("email_sent__exact", emailSentSelect.value);
+        }
+        if (analysisDateSelect && analysisDateSelect.value) {
+          url.searchParams.set("analysis_date__gte", analysisDateSelect.value);
+        }
+        window.location.assign(url.toString());
+      }
+
+      filterSelects.forEach((selectElement) => {
+        selectElement.addEventListener("change", navigateWithFilters);
+      });
+
+      const sortOldestButton = document.getElementById("sitemap-sort-oldest");
+      if (sortOldestButton) {
+        sortOldestButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          navigateWithFilters("1");
+        });
+      }
+
+      const sortNewestButton = document.getElementById("sitemap-sort-newest");
+      if (sortNewestButton) {
+        sortNewestButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          navigateWithFilters("-1");
+        });
+      }
+    }
+
+    const root = document.getElementById("sitemap-task-status");
+    if (!root) {
+      return;
+    }
+
+    const taskId = root.dataset.taskId || "";
+    const statusUrlTemplate = root.dataset.statusUrlTemplate || "";
+    if (!taskId || !statusUrlTemplate) {
+      return;
+    }
+
+    const label = document.getElementById("sitemap-task-status-label");
+    const percent = document.getElementById("sitemap-task-status-percent");
+    const bar = document.getElementById("sitemap-task-status-bar");
+    const button = document.querySelector("#run-sitemap-analysis-now-form button");
+    if (!label || !percent || !bar || !button) {
+      return;
+    }
+
+    const INITIAL_VISIBILITY_DELAY_MS = 5000;
+    const POLL_INTERVAL_MS = 500;
+    let stopped = false;
+
+    function setStatus(status, progress, text) {
+      root.hidden = false;
+      root.dataset.status = status;
+      label.textContent = text;
+      percent.textContent = `${Math.max(0, Math.min(100, Math.round(progress)))}%`;
+      bar.style.width = `${progress}%`;
+    }
+
+    async function pollStatus() {
+      if (stopped) {
+        return;
+      }
+
+      try {
+        const response = await fetch(statusUrlTemplate.replace("__TASK_ID__", taskId), {
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`Status request failed: ${response.status}`);
+        }
+
+        const payload = await response.json();
+        const progress = Number(payload.progress_percent || 0);
+
+        if (payload.status === "success") {
+          setStatus("success", 100, root.dataset.completeText || "Completed");
+          button.disabled = false;
+          stopped = true;
+          return;
+        }
+
+        if (payload.status === "failed") {
+          const failedText = root.dataset.failedText || "Failed";
+          const message = payload.error ? `${failedText}: ${payload.error}` : failedText;
+          setStatus("failed", 100, message);
+          button.disabled = false;
+          stopped = true;
+          return;
+        }
+
+        if (payload.status === "running") {
+          setStatus(
+            "running",
+            progress || 70,
+            root.dataset.runningText || "Running sitemap audit..."
+          );
+        } else {
+          setStatus("queued", progress || 25, root.dataset.queuedText || "Queued...");
+        }
+
+        button.disabled = true;
+        window.setTimeout(pollStatus, POLL_INTERVAL_MS);
+      } catch (_error) {
+        setStatus("failed", 100, root.dataset.failedText || "Failed");
+        button.disabled = false;
+        stopped = true;
+      }
+    }
+
+    setStatus("queued", 0, root.dataset.queuedText || "Queued...");
+    button.disabled = true;
+    window.setTimeout(pollStatus, INITIAL_VISIBILITY_DELAY_MS);
+  })();
+</script>
+{% endblock %}

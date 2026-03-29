@@ -23,6 +23,7 @@ class FakeSession:
     ) -> None:
         self.responses: dict[tuple[str, bool], FakeResponse] = responses
         self.errors: dict[tuple[str, bool], Exception] = errors or {}
+        self.calls: list[dict[str, str | bool | float | None]] = []
 
     def get(
         self,
@@ -31,9 +32,17 @@ class FakeSession:
         timeout: float,
         allow_redirects: bool = True,
         verify: bool = True,
+        headers: dict[str, str] | None = None,
     ) -> FakeResponse:
-        del timeout
-        del verify
+        self.calls.append(
+            {
+                "url": url,
+                "allow_redirects": allow_redirects,
+                "verify": verify,
+                "timeout": timeout,
+                "host_header": headers.get("Host") if headers else None,
+            }
+        )
         key: tuple[str, bool] = (url, allow_redirects)
         if key in self.errors:
             raise self.errors[key]
@@ -73,6 +82,29 @@ TRAVEL_XML = """<?xml version="1.0" encoding="UTF-8"?>
 
 
 class TestSitemapAuditService:
+    def test_http_client_rewrites_public_domain_to_internal_origin(self):
+        session = FakeSession(
+            {
+                ("http://nginx/sitemap.xml", True): FakeResponse(
+                    status_code=200,
+                    text=URLSET_XML,
+                    url="http://nginx/sitemap.xml",
+                )
+            }
+        )
+        client = SitemapHTTPClient(
+            session=session,
+            verify_ssl=False,
+            internal_base_url="http://nginx",
+            public_host="portfolio.local",
+        )
+
+        response = client.get("https://portfolio.local/sitemap.xml")
+
+        assert response.status_code == 200
+        assert session.calls[0]["url"] == "http://nginx/sitemap.xml"
+        assert session.calls[0]["host_header"] == "portfolio.local"
+
     def test_collect_urls_expands_sitemap_index(self):
         responses: dict[tuple[str, bool], FakeResponse] = {
             ("https://portfolio.example/sitemap.xml", True): FakeResponse(

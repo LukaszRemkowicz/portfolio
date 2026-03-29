@@ -129,6 +129,7 @@ def daily_monitoring_agent_log_task(self, analysis_date: str | None = None):
     max_retries=2,
     default_retry_delay=300,
     retry_backoff=True,
+    track_started=True,
 )
 def daily_sitemap_analysis_task(self, analysis_date: str | None = None):
     """Run the scheduled sitemap analysis flow and send a separate sitemap email."""

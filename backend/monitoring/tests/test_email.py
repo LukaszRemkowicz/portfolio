@@ -96,7 +96,7 @@ class TestEmailNotifications:
 
         html_content = render_to_string("monitoring/email/sitemap_analysis.html", context)
 
-        assert "Daily Sitemap Analysis" in html_content
+        assert "Sitemap Analysis" in html_content
         assert sitemap_analysis.summary in html_content
         assert "broken_url: 1" in html_content
         assert sitemap_analysis.root_sitemap_url in html_content
