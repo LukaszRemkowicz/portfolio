@@ -49,7 +49,7 @@ Location:
 
 Schedule:
 - configured in `backend/settings/base.py`
-- runs daily at `02:00` UTC
+- only scheduled when `RUN_LEGACY_DAILY_TASK=True`
 
 Responsibility:
 - orchestrate the daily log-analysis workflow
@@ -66,8 +66,7 @@ Return shape:
 Legacy status:
 - guarded by `RUN_LEGACY_DAILY_TASK`
 - disabled by default
-- kept only as a compatibility fallback while the bounded monitoring-agent
-  path remains under validation
+- kept only as a rollback fallback
 
 ### 2. `daily_monitoring_agent_log_task`
 
@@ -127,7 +126,7 @@ The daily log-monitoring path is deterministic until the LLM analysis step.
 High-level flow:
 1. A host cron job collects container logs into the mounted directory used by
    the backend.
-2. `daily_log_analysis_task` starts the orchestration.
+2. `daily_monitoring_agent_log_task` starts the orchestration.
 3. `DockerLogCollector` reads the prepared log files from
    `settings.DOCKER_LOGS_DIR`.
 4. `HistoricalContextBuilder` loads recent monitoring history from the
@@ -289,13 +288,14 @@ This is the part already used by the running daily log-monitoring job.
 
 It includes:
 - deterministic log collection handoff from the host scheduler
-- `daily_log_analysis_task`
-- `LogAnalysisOrchestrator`
-- `LogAnalysisAgent`
+- `daily_monitoring_agent_log_task`
+- `MonitoringAgentLogOrchestrator`
+- `MonitoringToolLoopRunner`
 - database persistence in `LogAnalysis`
 - the current log monitoring email
 
-This layer is the compatibility boundary.
+The legacy compatibility boundary remains available only behind
+`RUN_LEGACY_DAILY_TASK`.
 
 ### 2. Emerging bounded-agent layer
 

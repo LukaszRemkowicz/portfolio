@@ -25,17 +25,15 @@ logger = logging.getLogger(__name__)
 )
 def daily_log_analysis_task(self, analysis_date: str | None = None):
     """
-    TODO: Legacy orchestrator task for daily log analysis and email notification.
+    Rollback-only legacy task for daily log analysis and email notification.
 
     Flow:
         1. Analyze logs and store results (synchronous)
         2. Generate and send email (asynchronous via LogAnalysisEmailService)
         3. Update email_sent flag
 
-    This task remains as the compatibility boundary while the bounded
-    monitoring-agent path is verified in production-like use. It is expected
-    to be removed after `daily_monitoring_agent_log_task` is fully trusted and
-    becomes the only scheduled implementation.
+    This task is no longer the default scheduled path. It is kept only as an
+    explicit rollback entry point behind `RUN_LEGACY_DAILY_TASK`.
 
     Args:
         analysis_date: ISO date string (YYYY-MM-DD), defaults to today
@@ -89,11 +87,7 @@ def daily_log_analysis_task(self, analysis_date: str | None = None):
     retry_backoff=True,
 )
 def daily_monitoring_agent_log_task(self, analysis_date: str | None = None):
-    """Run the bounded monitoring-agent log flow and reuse current email delivery.
-
-    This task is the additive Phase 4 entry point for the new monitoring-agent
-    execution path. It does not replace `daily_log_analysis_task` yet.
-    """
+    """Run the primary scheduled monitoring-agent log flow and reuse email delivery."""
     try:
         if analysis_date:
             date_obj = date.fromisoformat(analysis_date)

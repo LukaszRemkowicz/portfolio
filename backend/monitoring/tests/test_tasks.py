@@ -177,6 +177,20 @@ class TestMonitoringTasks:
         assert result["status"] == "success"
         assert result["runtime"] == "monitoring_agent"
 
+    def test_daily_log_analysis_task_skips_when_legacy_disabled(self, mocker):
+        mocker.patch("monitoring.tasks.settings.RUN_LEGACY_DAILY_TASK", False)
+        mock_create_default = mocker.patch(
+            "monitoring.services.LogAnalysisOrchestrator.create_default"
+        )
+
+        result = daily_log_analysis_task()
+
+        mock_create_default.assert_not_called()
+        assert result == {
+            "status": "skipped",
+            "reason": "legacy_task_disabled",
+        }
+
     def test_daily_sitemap_analysis_task_orchestration(self, mocker):
         sitemap_analysis = SitemapAnalysisFactory(email_sent=False)
         mock_orchestrator = mocker.MagicMock()

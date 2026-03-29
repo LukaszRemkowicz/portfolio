@@ -649,22 +649,19 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-if RUN_LEGACY_DAILY_TASK:
-    CELERY_BEAT_SCHEDULE["daily-log-analysis"] = {
-        "task": "monitoring.tasks.daily_log_analysis_task",
-        "schedule": crontab(hour=2, minute=0),  # 2:00 AM UTC daily
-        "options": {
-            "expires": 3600,  # Task expires after 1 hour
-        },
-    }
-else:
-    CELERY_BEAT_SCHEDULE["daily-monitoring-agent-log-analysis"] = {
-        "task": "monitoring.tasks.daily_monitoring_agent_log_task",
-        "schedule": crontab(hour=2, minute=0),  # 2:00 AM UTC daily
-        "options": {
-            "expires": 3600,  # Task expires after 1 hour
-        },
-    }
+DAILY_MONITORING_LOG_TASK_NAME = (
+    "monitoring.tasks.daily_log_analysis_task"
+    if RUN_LEGACY_DAILY_TASK
+    else "monitoring.tasks.daily_monitoring_agent_log_task"
+)
+
+CELERY_BEAT_SCHEDULE["daily-log-analysis"] = {
+    "task": DAILY_MONITORING_LOG_TASK_NAME,
+    "schedule": crontab(hour=2, minute=0),  # 2:00 AM UTC daily
+    "options": {
+        "expires": 3600,  # Task expires after 1 hour
+    },
+}
 
 CELERY_BEAT_SCHEDULE["sitemap-analysis"] = {
     "task": "monitoring.tasks.daily_sitemap_analysis_task",
