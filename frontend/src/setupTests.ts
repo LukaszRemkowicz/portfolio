@@ -12,7 +12,8 @@ Object.defineProperty(global, 'TextDecoder', {
 const mockProjectOwner = process.env.PROJECT_OWNER || 'Portfolio Owner';
 
 window.__PUBLIC_ENV__ = {
-  API_URL: process.env.API_URL || 'https://api.portfolio.local',
+  API_URL:
+    process.env.API_URL || process.env.VITE_API_URL || 'http://localhost:8000',
   GA_TRACKING_ID: process.env.VITE_GA_TRACKING_ID || 'G-TEST',
   PROJECT_OWNER: mockProjectOwner,
   SITE_DOMAIN: process.env.SITE_DOMAIN || 'portfolio.local',

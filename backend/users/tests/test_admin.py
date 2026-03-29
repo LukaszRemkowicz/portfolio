@@ -9,10 +9,12 @@ from pytest_mock import MockerFixture
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.http import QueryDict
+from django.test import override_settings
 from django.urls import reverse
 
 from users.admin import UserAdmin
 from users.tests.factories import UserFactory
+from users.types import CropperFieldConfig, CropperPreviewShape
 
 User = get_user_model()
 
@@ -106,6 +108,41 @@ class TestUserAdmin:
         assert cropper["fields"][1]["output_width"] == 800
         assert cropper["fields"][1]["output_height"] == 800
 
+    @override_settings(
+        USER_ADMIN_CROPPER_FIELD_CONFIGS=(
+            CropperFieldConfig(
+                field_name="avatar",
+                label="Avatar Override",
+                input_id="id_avatar",
+                spec_method="get_avatar_spec",
+                preview_shape=CropperPreviewShape.CIRCLE,
+                crop_aspect_ratio=1.0,
+            ),
+        )
+    )
+    def test_change_view_uses_cropper_field_configs_from_settings(self, mocker: MockerFixture):
+        user = UserFactory.create_superuser()
+        request = MockRequest(user=user)
+
+        captured = {}
+
+        def fake_change_view(self, request, object_id, form_url="", extra_context=None):
+            captured["extra_context"] = extra_context
+            return "ok"
+
+        mocker.patch.object(
+            UserAdmin.__mro__[5],
+            "change_view",
+            fake_change_view,
+        )
+
+        response = self.admin.change_view(request, str(user.pk))
+
+        assert response == "ok"
+        cropper = captured["extra_context"]["admin_image_cropper"]
+        assert [field["field_name"] for field in cropper["fields"]] == ["avatar"]
+        assert cropper["fields"][0]["label"] == "Avatar Override"
+
 
 @pytest.mark.django_db
 def test_change_form_mounts_cropper_component_in_sidebar(client):
@@ -154,6 +191,26 @@ def test_change_form_renders_cropper_component_for_each_language_tab(client, lan
     assert "data-admin-image-cropper-apply" in content
     assert "about_me_image" in content
     assert "about_me_image2" in content
+
+
+@pytest.mark.django_db
+def test_change_form_renders_current_cropper_targets_for_all_supported_user_images(client):
+    user = UserFactory.create_superuser()
+    client.force_login(user)
+
+    url = reverse("admin:users_user_change", args=[user.pk])
+    response = client.get(url)
+
+    assert response.status_code == 200
+
+    soup = BeautifulSoup(response.content, "html.parser")
+    options = soup.select("[data-admin-image-cropper-field-select] option")
+
+    assert [option["value"] for option in options] == [
+        "avatar",
+        "about_me_image",
+        "about_me_image2",
+    ]
 
 
 def test_change_form_template_uses_jazzmin_wrapper():

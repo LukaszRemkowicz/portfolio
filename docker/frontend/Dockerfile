@@ -18,8 +18,7 @@ CMD ["npm", "run", "dev"]
 # --- Production build ---
 FROM base AS build
 ARG SITE_DOMAIN
-# TODO: fix it to api site domain
-ARG API_URL=https://api.portfolio.local
+ARG API_URL
 ARG GA_TRACKING_ID
 ARG SENTRY_DSN_FE
 ARG ENVIRONMENT=production
