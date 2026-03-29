@@ -359,6 +359,15 @@ msgstr "E-mail wysłany"
 msgid "Created at"
 msgstr "Utworzono"
 
+msgid "Log Size"
+msgstr "Rozmiar logów"
+
+msgid "Gpt tokens used"
+msgstr "Zużyte tokeny GPT"
+
+msgid "Error message"
+msgstr "Komunikat błędu"
+
 msgid "Queued sitemap analysis run for today."
 msgstr "Dodano dzisiejszą analizę sitemap do kolejki."
 
@@ -367,6 +376,18 @@ msgstr "Uruchom analizę sitemap teraz"
 
 msgid "Sort by date"
 msgstr "Sortuj po dacie"
+
+msgid "Queued log analysis run for today."
+msgstr "Dodano dzisiejszą analizę logów do kolejki."
+
+msgid "Run Log Analysis Now"
+msgstr "Uruchom analizę logów teraz"
+
+msgid "Running log analysis..."
+msgstr "Trwa analiza logów..."
+
+msgid "All"
+msgstr "Wszystkie"
 
 #~ msgid "Meteors Enabled"
 #~ msgstr "Formularz Kontaktowy Włączony"

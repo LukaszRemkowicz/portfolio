@@ -324,7 +324,7 @@ class TestSitemapAnalysisStorageService:
         assert analysis.issue_summary["broken_url"] == 1
         assert analysis.key_findings
 
-    def test_create_or_replace_analysis_updates_existing_same_day_record(self):
+    def test_create_or_replace_analysis_replaces_existing_same_day_record(self):
         analysis_date = date.today()
         existing = SitemapAnalysisFactory(
             analysis_date=analysis_date,
@@ -348,7 +348,7 @@ class TestSitemapAnalysisStorageService:
         )
 
         assert SitemapAnalysis.objects.count() == 1
-        assert analysis.id == existing.id
+        assert analysis.id != existing.id
         assert analysis.total_sitemaps == 3
         assert analysis.total_urls == 42
         assert analysis.email_sent is False

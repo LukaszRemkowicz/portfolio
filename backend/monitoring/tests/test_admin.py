@@ -13,9 +13,9 @@ from django.urls import reverse
 from django.utils import timezone
 
 from common.utils.signing import generate_signed_url_params
-from monitoring.admin import SitemapAnalysisAdmin
+from monitoring.admin import LogAnalysisAdmin, SitemapAnalysisAdmin
 from monitoring.models import LogAnalysis, SitemapAnalysis
-from monitoring.tasks import daily_sitemap_analysis_task
+from monitoring.tasks import daily_monitoring_agent_log_task, daily_sitemap_analysis_task
 from monitoring.tests.factories import LogAnalysisFactory, SitemapAnalysisFactory
 
 
@@ -87,6 +87,46 @@ class TestLogAnalysisAdminSecureMediaView:
 
 
 @pytest.mark.django_db
+class TestLogAnalysisAdmin:
+    def test_changelist_shows_run_now_button_without_add_button(self, admin_client: Client) -> None:
+        response: HttpResponse = admin_client.get(
+            reverse("admin:monitoring_loganalysis_changelist")
+        )
+
+        assert response.status_code == 200
+
+        soup = BeautifulSoup(response.content, "html.parser")
+        content = soup.get_text(" ", strip=True)
+        assert "Run Log Analysis Now" in content
+        assert "Add Log Analysis" not in content
+        assert "Dodaj Log Analysis" not in content
+
+        run_now_selector = (
+            "form#run-log-analysis-now-form[action='/admin/monitoring/loganalysis/run-now/']"
+        )
+        run_now_form = soup.select_one(run_now_selector)
+        assert run_now_form is not None
+        status_root = soup.select_one("#log-task-status")
+        assert status_root is not None
+
+    def test_run_now_view_queues_task_and_redirects(
+        self, admin_client: Client, mocker: MockerFixture
+    ) -> None:
+        delay_mock = mocker.patch.object(daily_monitoring_agent_log_task, "delay")
+        delay_mock.return_value = AsyncResult("task-log-123")
+
+        response: HttpResponse = admin_client.post(reverse("admin:monitoring_loganalysis_run_now"))
+
+        assert response.status_code == 302
+        assert response.url == reverse("admin:monitoring_loganalysis_changelist")
+        session = admin_client.session
+        assert session[LogAnalysisAdmin.SESSION_TASK_ID_KEY] == "task-log-123"
+        delay_mock.assert_called_once()
+        kwargs = delay_mock.call_args.kwargs
+        assert kwargs["analysis_date"] == timezone.localdate().isoformat()
+
+
+@pytest.mark.django_db
 class TestSitemapAnalysisAdmin:
     def test_issue_count_and_summary_helpers(self) -> None:
         sitemap_analysis: SitemapAnalysis = SitemapAnalysisFactory(
@@ -143,8 +183,8 @@ class TestSitemapAnalysisAdmin:
 
 
 @pytest.mark.django_db
-class TestSitemapTaskStatusView:
-    def test_returns_success_payload_for_finished_task(
+class TestMonitoringTaskStatusView:
+    def test_returns_success_payload_for_finished_log_task(
         self, admin_client: Client, mocker: MockerFixture
     ) -> None:
         async_result = mocker.MagicMock()
@@ -158,13 +198,17 @@ class TestSitemapTaskStatusView:
         mocker.patch("monitoring.views.AsyncResult", return_value=async_result)
 
         response = admin_client.get(
-            reverse("admin-sitemap-analysis-task-status", kwargs={"task_id": "task-123"})
+            reverse(
+                "admin-monitoring-task-status",
+                kwargs={"task_kind": "sitemap", "task_id": "task-123"},
+            )
         )
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["status"] == "success"
         assert response.json()["progress_percent"] == 100
-        assert response.json()["sitemap_analysis_id"] == 17
+        assert response.json()["related_object_type"] == "sitemap_analysis"
+        assert response.json()["related_object_id"] == 17
 
     def test_returns_running_payload_for_started_task(
         self, admin_client: Client, mocker: MockerFixture
@@ -177,9 +221,48 @@ class TestSitemapTaskStatusView:
         mocker.patch("monitoring.views.AsyncResult", return_value=async_result)
 
         response = admin_client.get(
-            reverse("admin-sitemap-analysis-task-status", kwargs={"task_id": "task-456"})
+            reverse(
+                "admin-monitoring-task-status",
+                kwargs={"task_kind": "sitemap", "task_id": "task-456"},
+            )
         )
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["status"] == "running"
         assert response.json()["complete"] is False
+
+    def test_returns_success_payload_for_finished_task(
+        self, admin_client: Client, mocker: MockerFixture
+    ) -> None:
+        async_result = mocker.MagicMock()
+        async_result.status = "SUCCESS"
+        async_result.successful.return_value = True
+        async_result.failed.return_value = False
+        async_result.result = {
+            "log_analysis_id": 21,
+            "severity": "WARNING",
+        }
+        mocker.patch("monitoring.views.AsyncResult", return_value=async_result)
+
+        response = admin_client.get(
+            reverse(
+                "admin-monitoring-task-status",
+                kwargs={"task_kind": "log", "task_id": "task-log-123"},
+            )
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["status"] == "success"
+        assert response.json()["progress_percent"] == 100
+        assert response.json()["related_object_type"] == "log_analysis"
+        assert response.json()["related_object_id"] == 21
+
+    def test_returns_not_found_for_unknown_task_kind(self, admin_client: Client) -> None:
+        response = admin_client.get(
+            reverse(
+                "admin-monitoring-task-status",
+                kwargs={"task_kind": "unknown", "task_id": "task-404"},
+            )
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND

@@ -211,7 +211,10 @@
 
     function renderCurrentFieldMeta() {
         const config = getCurrentFieldConfig();
-        fieldLabelNode.innerHTML = "<code>" + config.field_name + "</code>";
+        fieldLabelNode.textContent = "";
+        const codeElement = document.createElement("code");
+        codeElement.textContent = config.field_name;
+        fieldLabelNode.appendChild(codeElement);
         const sourceInput = getCurrentSourceInput();
         if (sourceInput && sourceInput.files && sourceInput.files[0]) {
             setSourceLabel(sourceInput.files[0].name);

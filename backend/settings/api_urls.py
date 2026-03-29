@@ -8,7 +8,10 @@ from core.views import (
     health_check_view,
     v1_root_view,
 )
-from monitoring.views import LogAnalysisAdminSecureMediaView, SitemapAnalysisTaskStatusView
+from monitoring.views import (
+    LogAnalysisAdminSecureMediaView,
+    MonitoringTaskStatusView,
+)
 
 API_V1_PATH = "v1/"
 
@@ -36,9 +39,9 @@ admin_secure_media_urlpatterns = [
         name="admin-loganalysis-secure-media",
     ),
     path(
-        f"{API_V1_PATH}admin/monitoring/sitemap-task-status/<str:task_id>/",
-        SitemapAnalysisTaskStatusView.as_view(),
-        name="admin-sitemap-analysis-task-status",
+        f"{API_V1_PATH}admin/monitoring/task-status/<str:task_kind>/<str:task_id>/",
+        MonitoringTaskStatusView.as_view(),
+        name="admin-monitoring-task-status",
     ),
     # Universal Admin Media Fallback
     path(

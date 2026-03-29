@@ -77,45 +77,70 @@ class LogAnalysis(models.Model):
     objects = LogAnalysisManager()
 
     # Metadata
-    created_at = models.DateTimeField(default=timezone.now, db_index=True)
-    analysis_date = models.DateField(db_index=True, unique=True)  # One per day
+    created_at = models.DateTimeField(_("Created at"), default=timezone.now, db_index=True)
+    analysis_date = models.DateField(_("Analysis date"), db_index=True, unique=True)  # One per day
 
     # Log collection
     backend_logs = models.FileField(
-        upload_to="logs/%Y/%m/%d/", help_text="Raw backend logs", null=True, blank=True
+        _("Backend logs"),
+        upload_to="logs/%Y/%m/%d/",
+        help_text="Raw backend logs",
+        null=True,
+        blank=True,
     )
     frontend_logs = models.FileField(
-        upload_to="logs/%Y/%m/%d/", help_text="Raw frontend logs", null=True, blank=True
+        _("Frontend logs"),
+        upload_to="logs/%Y/%m/%d/",
+        help_text="Raw frontend logs",
+        null=True,
+        blank=True,
     )
     nginx_logs = models.FileField(
-        upload_to="logs/%Y/%m/%d/", help_text="Raw nginx logs", null=True, blank=True
+        _("Nginx logs"),
+        upload_to="logs/%Y/%m/%d/",
+        help_text="Raw nginx logs",
+        null=True,
+        blank=True,
     )
     traefik_logs = models.FileField(
-        upload_to="logs/%Y/%m/%d/", help_text="Raw traefik logs", null=True, blank=True
+        _("Traefik logs"),
+        upload_to="logs/%Y/%m/%d/",
+        help_text="Raw traefik logs",
+        null=True,
+        blank=True,
     )
-    log_size_bytes = models.IntegerField(default=0)
+    log_size_bytes = models.IntegerField(_("Log Size"), default=0)
 
     # GPT Analysis
-    summary = models.TextField(help_text="GPT-generated summary")
-    severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.INFO)
-    key_findings = models.JSONField(default=list, help_text="List of important findings")
-    recommendations = models.TextField(blank=True, help_text="GPT recommendations")
+    summary = models.TextField(_("Summary"), help_text="GPT-generated summary")
+    severity = models.CharField(
+        _("Severity"), max_length=10, choices=Severity.choices, default=Severity.INFO
+    )
+    key_findings = models.JSONField(
+        _("Key findings"), default=list, help_text="List of important findings"
+    )
+    recommendations = models.TextField(
+        _("Recommendations"), blank=True, help_text="GPT recommendations"
+    )
     trend_summary = models.TextField(
+        _("Trend summary"),
         blank=True,
         help_text="LLM-generated trend comparison vs. prior days",
     )
 
     # Execution tracking
-    execution_time_seconds = models.FloatField(default=0.0)
-    gpt_tokens_used = models.IntegerField(default=0)
-    gpt_cost_usd = models.FloatField(default=0.0, help_text="Estimated OpenAI API cost in USD")
-    email_sent = models.BooleanField(default=False)
-    error_message = models.TextField(blank=True)
+    execution_time_seconds = models.FloatField(_("Execution time seconds"), default=0.0)
+    gpt_tokens_used = models.IntegerField(_("Gpt tokens used"), default=0)
+    gpt_cost_usd = models.FloatField(
+        _("Gpt cost usd"), default=0.0, help_text="Estimated OpenAI API cost in USD"
+    )
+    email_sent = models.BooleanField(_("Email sent"), default=False)
+    error_message = models.TextField(_("Error message"), blank=True)
 
     class Meta:
         ordering = ["-analysis_date"]
-        verbose_name = "Log Analysis"
-        verbose_name_plural = "Log Analyses"
+        verbose_name = _("Log Analysis")
+        verbose_name_plural = _("Log Analyses")
 
     def __str__(self):
         return f"Log Analysis {self.analysis_date} ({self.severity})"

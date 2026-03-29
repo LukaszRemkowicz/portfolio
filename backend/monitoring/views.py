@@ -29,10 +29,12 @@ class LogAnalysisAdminSecureMediaView(GenericAdminSecureMediaView):
         return f"admin_media_monitoring_loganalysis_{pk}_{field}"
 
 
-class SitemapAnalysisTaskStatusView(APIView):
+class BaseMonitoringTaskStatusView(APIView):
     permission_classes = [IsAdminUser]
+    result_type: str | None = None
+    result_id_field: str | None = None
 
-    def get(self, request, task_id: str) -> Response:
+    def build_response(self, task_id: str) -> Response:
         async_result = AsyncResult(task_id)
         celery_status: str = async_result.status
         normalized_status, progress = self._normalize_status(celery_status)
@@ -47,7 +49,10 @@ class SitemapAnalysisTaskStatusView(APIView):
         if async_result.successful() and isinstance(async_result.result, dict):
             result_payload: dict[str, object] = async_result.result
             payload["result"] = result_payload
-            payload["sitemap_analysis_id"] = result_payload.get("sitemap_analysis_id")
+            if self.result_type is not None:
+                payload["related_object_type"] = self.result_type
+            if self.result_id_field is not None:
+                payload["related_object_id"] = result_payload.get(self.result_id_field)
         elif async_result.failed():
             payload["error"] = str(async_result.result)
 
@@ -64,3 +69,17 @@ class SitemapAnalysisTaskStatusView(APIView):
         if status == "RETRY":
             return "running", 80
         return "queued", 25
+
+
+class MonitoringTaskStatusView(BaseMonitoringTaskStatusView):
+    TASK_KIND_CONFIG: dict[str, tuple[str, str]] = {
+        "log": ("log_analysis", "log_analysis_id"),
+        "sitemap": ("sitemap_analysis", "sitemap_analysis_id"),
+    }
+
+    def get(self, request, task_kind: str, task_id: str) -> Response:
+        if task_kind not in self.TASK_KIND_CONFIG:
+            return Response({"detail": "Unknown task kind."}, status=404)
+
+        self.result_type, self.result_id_field = self.TASK_KIND_CONFIG[task_kind]
+        return self.build_response(task_id)

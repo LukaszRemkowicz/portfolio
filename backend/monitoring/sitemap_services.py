@@ -226,7 +226,7 @@ class SitemapAuditService:
             )
             return issues
 
-        if 300 <= status_code < 400:
+        if status_code >= 300:
             followed_response: HTTPResponseData = self.client.get(url, allow_redirects=True)
             final_url = followed_response.url
             issues.append(

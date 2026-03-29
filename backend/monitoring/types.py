@@ -5,8 +5,7 @@ from enum import Enum
 from typing import TypeAlias, TypedDict
 
 MonitoringFindingsValue: TypeAlias = list[str] | str
-JSONScalar: TypeAlias = str | int | float | bool | None
-JSONValue: TypeAlias = "JSONScalar | JSONObject | JSONArray"
+JSONValue: TypeAlias = "str | int | float | bool | None | JSONObject | JSONArray"
 JSONObject: TypeAlias = "dict[str, JSONValue]"
 JSONArray: TypeAlias = "list[JSONValue]"
 RawCollectedLogPaths: TypeAlias = dict[str, str | None] | tuple[str | None, ...]

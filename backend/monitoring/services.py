@@ -241,6 +241,9 @@ class LogStorageService:
                 "Replacing %d existing analysis record(s) for %s", existing_count, analysis_date
             )
             LogAnalysis.objects.for_date(analysis_date).delete()
+        execution_time_raw: object | None = kwargs.get("execution_time_seconds")
+        if isinstance(execution_time_raw, (int, float)):
+            kwargs["execution_time_seconds"] = round(float(execution_time_raw), 2)
         return LogAnalysis.objects.create(analysis_date=analysis_date, **kwargs)
 
     @classmethod
@@ -698,6 +701,14 @@ class SitemapAnalysisStorageService:
         execution_time_seconds: float,
     ) -> SitemapAnalysis:
         rounded_execution_time_seconds: float = round(execution_time_seconds, 2)
+        existing_count: int = SitemapAnalysis.objects.filter(analysis_date=analysis_date).count()
+        if existing_count > 0:
+            logger.info(
+                "Replacing %d existing sitemap analysis record(s) for %s",
+                existing_count,
+                analysis_date,
+            )
+            SitemapAnalysis.objects.filter(analysis_date=analysis_date).delete()
         issue_summary: dict[str, int] = {}
         serialized_issues: list[dict[str, JSONValue]] = []
         for issue in report.issues:
@@ -712,25 +723,23 @@ class SitemapAnalysisStorageService:
                 }
             )
 
-        analysis, _created = SitemapAnalysis.objects.update_or_create(
+        analysis = SitemapAnalysis.objects.create(
             analysis_date=analysis_date,
-            defaults={
-                "root_sitemap_url": report.root_sitemap_url,
-                "total_sitemaps": report.total_sitemaps,
-                "total_urls": report.total_urls,
-                "issue_summary": issue_summary,
-                "issues": serialized_issues,
-                "summary": summary.summary,
-                "severity": summary.severity,
-                "key_findings": summary.key_findings,
-                "recommendations": summary.recommendations,
-                "trend_summary": summary.trend_summary,
-                "execution_time_seconds": rounded_execution_time_seconds,
-                "gpt_tokens_used": summary.gpt_tokens_used,
-                "gpt_cost_usd": summary.gpt_cost_usd,
-                "email_sent": False,
-                "error_message": "",
-            },
+            root_sitemap_url=report.root_sitemap_url,
+            total_sitemaps=report.total_sitemaps,
+            total_urls=report.total_urls,
+            issue_summary=issue_summary,
+            issues=serialized_issues,
+            summary=summary.summary,
+            severity=summary.severity,
+            key_findings=summary.key_findings,
+            recommendations=summary.recommendations,
+            trend_summary=summary.trend_summary,
+            execution_time_seconds=rounded_execution_time_seconds,
+            gpt_tokens_used=summary.gpt_tokens_used,
+            gpt_cost_usd=summary.gpt_cost_usd,
+            email_sent=False,
+            error_message="",
         )
         return analysis
 

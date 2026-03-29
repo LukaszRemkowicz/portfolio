@@ -14,7 +14,7 @@ from common.utils.signing import generate_signed_url_params
 
 from .log_sources import LOG_SOURCES
 from .models import LogAnalysis, SitemapAnalysis
-from .tasks import daily_sitemap_analysis_task
+from .tasks import daily_monitoring_agent_log_task, daily_sitemap_analysis_task
 
 
 def _build_raw_log_fields() -> tuple[str, ...]:
@@ -32,13 +32,15 @@ def _build_raw_log_fields() -> tuple[str, ...]:
 
 @admin.register(LogAnalysis)
 class LogAnalysisAdmin(admin.ModelAdmin):
+    SESSION_TASK_ID_KEY = "monitoring_log_task_id"
+    change_list_template = "admin/monitoring/loganalysis/change_list.html"
     list_display = [
-        "analysis_date",
-        "severity",
+        "analysis_date_display",
+        "severity_display",
         "log_size_kb",
-        "execution_time_seconds",
-        "email_sent",
-        "created_at",
+        "execution_time_seconds_pretty",
+        "email_sent_display",
+        "created_at_display",
     ]
     list_filter = ["severity", "email_sent", "analysis_date"]
     search_fields = ["summary", "recommendations"]
@@ -104,9 +106,75 @@ class LogAnalysisAdmin(admin.ModelAdmin):
                 return "Not supported by storage backend"
         return "-"
 
-    @admin.display(description="Log Size")
+    @admin.display(description=_("Analysis date"), ordering="analysis_date")
+    def analysis_date_display(self, obj: LogAnalysis):
+        return obj.analysis_date
+
+    @admin.display(description=_("Severity"), ordering="severity")
+    def severity_display(self, obj: LogAnalysis):
+        return obj.severity
+
+    @admin.display(description=_("Log Size"), ordering="log_size_bytes")
     def log_size_kb(self, obj):
         return f"{obj.log_size_bytes / 1024:.1f} KB"
+
+    @admin.display(description=_("Execution time seconds"), ordering="execution_time_seconds")
+    def execution_time_seconds_pretty(self, obj: LogAnalysis) -> str:
+        return f"{obj.execution_time_seconds:.2f}"
+
+    @admin.display(description=_("Email sent"), ordering="email_sent", boolean=True)
+    def email_sent_display(self, obj: LogAnalysis) -> bool:
+        return obj.email_sent
+
+    @admin.display(description=_("Created at"), ordering="created_at")
+    def created_at_display(self, obj: LogAnalysis):
+        return obj.created_at
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def get_urls(self) -> list[URLPattern]:
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "run-now/",
+                self.admin_site.admin_view(self.run_log_analysis_now_view),
+                name="monitoring_loganalysis_run_now",
+            )
+        ]
+        return custom_urls + urls
+
+    def changelist_view(
+        self, request: HttpRequest, extra_context: dict[str, object] | None = None
+    ) -> HttpResponse:
+        context: dict[str, object] = extra_context or {}
+        today = timezone.localdate()
+        context["run_log_analysis_now_url"] = reverse("admin:monitoring_loganalysis_run_now")
+        context["log_task_id"] = str(request.session.pop(self.SESSION_TASK_ID_KEY, ""))
+        context["log_task_status_url_template"] = reverse(
+            "admin-monitoring-task-status",
+            kwargs={"task_kind": "log", "task_id": "__TASK_ID__"},
+        )
+        context["today"] = today
+        context["last_7_days"] = today - timedelta(days=7)
+        context["first_day_of_month"] = today.replace(day=1)
+        context["first_day_of_year"] = today.replace(month=1, day=1)
+        return super().changelist_view(request, extra_context=context)
+
+    def run_log_analysis_now_view(self, request: HttpRequest) -> HttpResponseRedirect:
+        if request.method != "POST":
+            changelist_url = reverse("admin:monitoring_loganalysis_changelist")
+            return redirect(changelist_url)
+
+        analysis_date = timezone.localdate().isoformat()
+        task_result = daily_monitoring_agent_log_task.delay(analysis_date=analysis_date)
+        self.message_user(
+            request,
+            _("Queued log analysis run for today."),
+            level=messages.SUCCESS,
+        )
+        request.session[self.SESSION_TASK_ID_KEY] = task_result.id
+        return redirect("admin:monitoring_loganalysis_changelist")
 
 
 def _make_secure_log_method(source_key: str, field_name: str):
@@ -232,8 +300,8 @@ class SitemapAnalysisAdmin(admin.ModelAdmin):
         )
         context["sitemap_task_id"] = str(request.session.pop(self.SESSION_TASK_ID_KEY, ""))
         context["sitemap_task_status_url_template"] = reverse(
-            "admin-sitemap-analysis-task-status",
-            kwargs={"task_id": "__TASK_ID__"},
+            "admin-monitoring-task-status",
+            kwargs={"task_kind": "sitemap", "task_id": "__TASK_ID__"},
         )
         context["today"] = today
         context["last_7_days"] = today - timedelta(days=7)
