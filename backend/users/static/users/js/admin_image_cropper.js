@@ -71,9 +71,19 @@
         return document.getElementById(config.input_id);
     }
 
-    function getCurrentClearCheckbox() {
+    function getCurrentSourceClearCheckbox() {
         const config = getCurrentFieldConfig();
         return document.querySelector('input[name="' + config.field_name + '-clear"]');
+    }
+
+    function getCurrentTargetInput() {
+        const config = getCurrentFieldConfig();
+        return document.getElementById(config.target_input_id);
+    }
+
+    function getCurrentTargetClearCheckbox() {
+        const config = getCurrentFieldConfig();
+        return document.querySelector('input[name="' + config.target_field_name + '-clear"]');
     }
 
     function setStatus(message) {
@@ -232,7 +242,7 @@
         const config = getCurrentFieldConfig();
         updateFieldGeometry(config);
         const sourceInput = getCurrentSourceInput();
-        const clearCheckbox = getCurrentClearCheckbox();
+        const sourceClearCheckbox = getCurrentSourceClearCheckbox();
         state.loadRequestId += 1;
         state.image = null;
         state.imageName = "";
@@ -241,7 +251,7 @@
         renderCurrentFieldMeta();
         drawPreview();
 
-        if (clearCheckbox && clearCheckbox.checked) {
+        if (sourceClearCheckbox && sourceClearCheckbox.checked) {
             setStatus("Image will be cleared on save");
             return;
         }
@@ -381,9 +391,17 @@
         const sourceInput = document.getElementById(config.input_id);
         if (sourceInput) {
             sourceInput.addEventListener("change", function() {
-                const clearCheckbox = document.querySelector('input[name="' + config.field_name + '-clear"]');
-                if (clearCheckbox && clearCheckbox.checked) {
-                    clearCheckbox.checked = false;
+                const sourceClearCheckbox = getCurrentSourceClearCheckbox();
+                const targetInput = getCurrentTargetInput();
+                const targetClearCheckbox = getCurrentTargetClearCheckbox();
+                if (sourceClearCheckbox && sourceClearCheckbox.checked) {
+                    sourceClearCheckbox.checked = false;
+                }
+                if (targetInput) {
+                    targetInput.value = "";
+                }
+                if (targetClearCheckbox && targetClearCheckbox.checked) {
+                    targetClearCheckbox.checked = false;
                 }
                 if (state.currentFieldName !== config.field_name) {
                     return;
@@ -450,9 +468,10 @@
     });
 
     applyButton.addEventListener("click", function() {
-        const sourceInput = getCurrentSourceInput();
-        const clearCheckbox = getCurrentClearCheckbox();
-        if (!sourceInput || !state.image) {
+        const targetInput = getCurrentTargetInput();
+        const sourceClearCheckbox = getCurrentSourceClearCheckbox();
+        const targetClearCheckbox = getCurrentTargetClearCheckbox();
+        if (!targetInput || !state.image) {
             setStatus("Nothing to apply");
             return;
         }
@@ -460,16 +479,16 @@
         exportCroppedFile().then(function(file) {
             const transfer = new DataTransfer();
             transfer.items.add(file);
-            sourceInput.files = transfer.files;
-            if (clearCheckbox) {
-                clearCheckbox.checked = false;
+            targetInput.files = transfer.files;
+            if (sourceClearCheckbox) {
+                sourceClearCheckbox.checked = false;
+            }
+            if (targetClearCheckbox) {
+                targetClearCheckbox.checked = false;
             }
             const config = getCurrentFieldConfig();
-            config.current_image_name = file.name;
-            config.current_image_url = "";
             state.imageName = file.name;
             state.dirty = false;
-            setSourceLabel(file.name);
             setStatus("Applied to " + config.label);
         }).catch(function() {
             setStatus("Crop export failed");

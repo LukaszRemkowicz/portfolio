@@ -49,41 +49,41 @@ This means the cropper does not replace the existing backend image-processing ar
 ## Main Files
 
 ### Backend config and types
-- [backend/users/types.py](../../backend/users/types.py)
+- [backend/users/types.py](../../../backend/users/types.py)
   - `CropperFieldConfig`
   - `CropperPreviewShape`
-- [backend/settings/base.py](../../backend/settings/base.py)
+- [backend/settings/base.py](../../../backend/settings/base.py)
   - `USER_ADMIN_CROPPER_FIELD_CONFIGS`
 
 ### Admin integration
-- [backend/users/admin.py](../../backend/users/admin.py)
+- [backend/users/admin.py](../../../backend/users/admin.py)
   - injects cropper context into the change view
-- [backend/users/templates/admin/users/user/robust_change_form.html](../../backend/users/templates/admin/users/user/robust_change_form.html)
+- [backend/users/templates/admin/users/user/robust_change_form.html](../../../backend/users/templates/admin/users/user/robust_change_form.html)
   - mounts the widget in the sidebar
-- [backend/users/templates/admin/users/widgets/admin_image_cropper.html](../../backend/users/templates/admin/users/widgets/admin_image_cropper.html)
+- [backend/users/templates/admin/users/widgets/admin_image_cropper.html](../../../backend/users/templates/admin/users/widgets/admin_image_cropper.html)
   - widget markup and JSON payload
 
 ### Frontend behavior
-- [backend/users/static/users/js/admin_image_cropper.js](../../backend/users/static/users/js/admin_image_cropper.js)
+- [backend/users/static/users/js/admin_image_cropper.js](../../../backend/users/static/users/js/admin_image_cropper.js)
   - field switching
   - image loading
   - canvas rendering
   - drag / zoom / reset
   - crop export and apply
-- [backend/users/static/users/css/admin_image_cropper.css](../../backend/users/static/users/css/admin_image_cropper.css)
+- [backend/users/static/users/css/admin_image_cropper.css](../../../backend/users/static/users/css/admin_image_cropper.css)
   - widget styling
   - viewport ratio
   - preview overlay shape
 
 ### Media serving and tests
-- [backend/settings/urls.py](../../backend/settings/urls.py)
+- [backend/settings/urls.py](../../../backend/settings/urls.py)
   - admin-domain media serving
   - `safe_serve()`
-- [backend/core/tests/test_admin_media_urls.py](../../backend/core/tests/test_admin_media_urls.py)
+- [backend/core/tests/test_admin_media_urls.py](../../../backend/core/tests/test_admin_media_urls.py)
   - regression coverage for admin media URL behavior
-- [backend/users/tests/test_admin.py](../../backend/users/tests/test_admin.py)
+- [backend/users/tests/test_admin.py](../../../backend/users/tests/test_admin.py)
   - cropper admin integration coverage
-- [backend/users/tests/test_tasks.py](../../backend/users/tests/test_tasks.py)
+- [backend/users/tests/test_tasks.py](../../../backend/users/tests/test_tasks.py)
   - backend regeneration coverage
 
 ## Settings-Backed Field Configuration
@@ -209,7 +209,7 @@ The widget loads persisted images from `current_image_url`, for example:
 These are loaded directly in the browser via `new Image()`.
 
 ### Admin-domain media serving
-On `admin.portfolio.local`, media is served by `safe_serve()` in [backend/settings/urls.py](../../backend/settings/urls.py).
+On `admin.portfolio.local`, media is served by `safe_serve()` in [backend/settings/urls.py](../../../backend/settings/urls.py).
 
 Allowed:
 - `about_me_images/...`
@@ -235,7 +235,7 @@ Current fix:
   - `images/`
 
 Regression test:
-- [backend/core/tests/test_admin_media_urls.py](../../backend/core/tests/test_admin_media_urls.py)
+- [backend/core/tests/test_admin_media_urls.py](../../../backend/core/tests/test_admin_media_urls.py)
 
 ## Image Spec Interaction
 

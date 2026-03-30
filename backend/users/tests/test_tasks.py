@@ -78,3 +78,17 @@ class TestProcessUserImagesTask:
         assert "cropped_avatar" in user.avatar.name
         assert user.avatar_webp.name.endswith(".webp")
         assert "cropped_avatar" in user.avatar_webp.name
+
+    def test_process_user_images_task_prefers_cropped_image_when_present(self):
+        user = UserFactory.create_superuser()
+        user.avatar = _jpeg_field("original_avatar.jpg")
+        user.avatar_cropped = _png_field("cropped_avatar.png", size=(280, 280))
+        user.save()
+
+        process_user_images_task(user.pk, ["avatar"])
+
+        user.refresh_from_db()
+        assert "original_avatar" in user.avatar.name
+        assert "cropped_avatar" in user.avatar_cropped.name
+        assert user.avatar_webp.name.endswith(".webp")
+        assert "cropped_avatar" in user.avatar_webp.name

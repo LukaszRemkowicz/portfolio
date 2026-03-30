@@ -8,8 +8,8 @@ It is intended as compact context for future engineering or LLM-assisted work.
 
 For operator-facing commands and day-to-day usage, see:
 
-- [infra/scripts/README.md](../scripts/README.md)
-- [infra/scripts/release/README.md](../scripts/release/README.md)
+- [infra/scripts/README.md](../../scripts/README.md)
+- [infra/scripts/release/README.md](../../scripts/release/README.md)
 
 It focuses on:
 
@@ -193,8 +193,8 @@ Current intended usage:
 
 Runbook:
 
-- [infra/scripts/README.md](../scripts/README.md)
-- [infra/scripts/release/README.md](../scripts/release/README.md)
+- [infra/scripts/README.md](../../scripts/README.md)
+- [infra/scripts/release/README.md](../../scripts/release/README.md)
 
 It does not:
 
@@ -221,7 +221,7 @@ It does not:
 
 Runbook:
 
-- [infra/scripts/README.md](../scripts/README.md)
+- [infra/scripts/README.md](../../scripts/README.md)
 
 ### `infra/scripts/release/release.sh`
 
@@ -250,8 +250,8 @@ It does not:
 
 Runbook:
 
-- [infra/scripts/README.md](../scripts/README.md)
-- [infra/scripts/release/README.md](../scripts/release/README.md)
+- [infra/scripts/README.md](../../scripts/README.md)
+- [infra/scripts/release/README.md](../../scripts/release/README.md)
 
 ### `infra/scripts/release/deploy.sh`
 
@@ -280,8 +280,8 @@ It does not:
 
 Runbook:
 
-- [infra/scripts/README.md](../scripts/README.md)
-- [infra/scripts/release/README.md](../scripts/release/README.md)
+- [infra/scripts/README.md](../../scripts/README.md)
+- [infra/scripts/release/README.md](../../scripts/release/README.md)
 
 ### Shared Design Principle
 

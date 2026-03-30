@@ -13,6 +13,8 @@ class CropperFieldConfig:
     field_name: str
     label: Any
     input_id: str
+    target_field_name: str
+    target_input_id: str
     spec_method: str
     preview_shape: CropperPreviewShape
     crop_aspect_ratio: float

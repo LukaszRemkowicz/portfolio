@@ -17,6 +17,17 @@ from users.tests.factories import UserFactory
 
 @pytest.mark.django_db
 class TestUserConvertImageFieldToWebp:
+    def test_uses_cropped_image_when_present(self):
+        """If a cropped image exists, the derived WebP should be generated from it."""
+        user = UserFactory.create_superuser()
+        user.avatar = _jpeg_field("avatar-original.jpg")
+        user.avatar_cropped = _jpeg_field("avatar-cropped.jpg")
+
+        user._convert_image_field_to_webp("avatar", "avatar_webp", 1000, 80)
+
+        assert str(user.avatar_webp.name).endswith(".webp")
+        assert "avatar-cropped" in str(user.avatar_webp.name)
+
     def test_skips_empty_field(self):
         """If the source field has no image, the derived WebP field must stay empty."""
         user = UserFactory.create_superuser()
@@ -117,6 +128,27 @@ class TestUserGetServingImageUrl:
             url = user._get_serving_image_url("avatar", "avatar_webp")
 
         assert url == "/media/avatar.jpg"
+
+    def test_prefers_cropped_source_when_webp_toggle_is_off(self):
+        settings = LandingPageSettingsFactory(serve_webp_images=False)
+        user = UserFactory.create_superuser()
+
+        source_field = MagicMock()
+        source_field.__bool__ = MagicMock(return_value=True)
+        source_field.url = "/media/avatar-original.jpg"
+
+        cropped_field = MagicMock()
+        cropped_field.__bool__ = MagicMock(return_value=True)
+        cropped_field.url = "/media/avatar-cropped.jpg"
+
+        user.avatar = source_field
+        user.avatar_cropped = cropped_field
+        user.avatar_webp = None
+
+        with patch.object(LandingPageSettings, "get_current", return_value=settings):
+            url = user._get_serving_image_url("avatar", "avatar_webp")
+
+        assert url == "/media/avatar-cropped.jpg"
 
     def test_returns_empty_string_when_field_has_no_url(self):
         """If the serving field's .url property raises ValueError, '' is returned."""

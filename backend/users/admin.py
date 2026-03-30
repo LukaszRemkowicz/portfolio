@@ -61,10 +61,13 @@ class UserAdmin(  # type: ignore[misc]
             {
                 "fields": (
                     "avatar",
+                    "avatar_cropped",
                     "avatar_webp_path",
                     "about_me_image",
+                    "about_me_image_cropped",
                     "about_me_image_webp_path",
                     "about_me_image2",
+                    "about_me_image2_cropped",
                     "about_me_image2_webp_path",
                 )
             },
@@ -176,6 +179,8 @@ class UserAdmin(  # type: ignore[misc]
                         "field_name": field_name,
                         "label": str(field_config.label),
                         "input_id": field_config.input_id,
+                        "target_field_name": field_config.target_field_name,
+                        "target_input_id": field_config.target_input_id,
                         "preview_shape": field_config.preview_shape.value,
                         "crop_aspect_ratio": crop_aspect_ratio,
                         "output_width": output_width,

@@ -3,7 +3,14 @@
 
 {% block extrastyle %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'users/css/admin_image_cropper.css' %}?v=20260328-2">
+<link rel="stylesheet" href="{% static 'users/css/admin_image_cropper.css' %}?v=20260330-1">
+<style>
+  .field-avatar_cropped,
+  .field-about_me_image_cropped,
+  .field-about_me_image2_cropped {
+    display: none !important;
+  }
+</style>
 {% endblock %}
 
 {% block field_sets %}
@@ -52,5 +59,5 @@
 
 {% block admin_change_form_document_ready %}
 {{ block.super }}
-<script src="{% static 'users/js/admin_image_cropper.js' %}?v=20260328-2"></script>
+<script src="{% static 'users/js/admin_image_cropper.js' %}?v=20260330-1"></script>
 {% endblock %}

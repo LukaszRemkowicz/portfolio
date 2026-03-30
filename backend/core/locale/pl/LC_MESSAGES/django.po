@@ -188,6 +188,18 @@ msgstr "Dzienniki bezpieczeństwa"
 msgid "Translations"
 msgstr "Tłumaczenia"
 
+msgid "Log Analysis"
+msgstr "Analiza logów"
+
+msgid "Log Analyses"
+msgstr "Analizy logów"
+
+msgid "Sitemap Analysis"
+msgstr "Analiza sitemap"
+
+msgid "Sitemap Analyses"
+msgstr "Analizy sitemap"
+
 #: translation/models.py:12
 msgid "Pending"
 msgstr "Oczekujące"

@@ -47,7 +47,7 @@ Component docs:
 
 The project follows a modern, highly decoupled architecture for performance and security. It supports **Environment Isolation** (Production & Staging) on the server, with an identical stack for **Development** (Local):
 
-![Architecture Illustration](infra/docs/architecture.png)
+![Architecture Illustration](infra/docs/project/architecture.png)
 
 ### Key Components:
 - **Traefik (Edge Proxy)**: The central entry point for all subdomains. Handles SSL, HSTS, and routing.

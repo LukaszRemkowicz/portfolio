@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import Any, List
 
 from celery import shared_task
 
@@ -11,6 +11,23 @@ from common.utils.image import convert_to_webp
 from core.cache_service import CacheService
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_webp_field_name(user: Any, field_name: str) -> str | None:
+    user_model = type(user)
+    try:
+        webp_field_name: str = user_model.get_webp_field_name(field_name)
+    except KeyError:
+        return None
+    if not hasattr(user, field_name) or not hasattr(user, webp_field_name):
+        return None
+    return webp_field_name
+
+
+def _get_image_spec(user: Any, field_name: str):
+    if field_name == "avatar":
+        return user.get_avatar_spec()
+    return user.get_portrait_spec()
 
 
 @shared_task(  # type: ignore[untyped-decorator]
@@ -30,26 +47,14 @@ def process_user_images_task(user_id: int, changed_field_names: List[str]) -> No
         return
 
     updated_fields = []
-    webp_field_map = {
-        "avatar": "avatar_webp",
-        "about_me_image": "about_me_image_webp",
-        "about_me_image2": "about_me_image2_webp",
-    }
 
     for field_name in changed_field_names:
-        webp_field_name = webp_field_map.get(field_name)
-        if (
-            not webp_field_name
-            or not hasattr(user, field_name)
-            or not hasattr(user, webp_field_name)
-        ):
+        webp_field_name = _resolve_webp_field_name(user, field_name)
+        if webp_field_name is None:
             continue
 
-        if field_name == "avatar":
-            spec = user.get_avatar_spec()
-        else:
-            spec = user.get_portrait_spec()
-        image_field = getattr(user, field_name)
+        spec = _get_image_spec(user, field_name)
+        image_field = user.get_effective_image_field(field_name)
         webp_field = getattr(user, webp_field_name)
         if not image_field:
             setattr(user, webp_field_name, None)

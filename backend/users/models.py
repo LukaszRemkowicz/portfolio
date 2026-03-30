@@ -19,6 +19,21 @@ from users.tasks import process_user_images_task
 
 logger = logging.getLogger(__name__)
 
+USER_IMAGE_FIELD_MAPPINGS: dict[str, dict[str, str]] = {
+    "avatar": {
+        "cropped": "avatar_cropped",
+        "webp": "avatar_webp",
+    },
+    "about_me_image": {
+        "cropped": "about_me_image_cropped",
+        "webp": "about_me_image_webp",
+    },
+    "about_me_image2": {
+        "cropped": "about_me_image2_cropped",
+        "webp": "about_me_image2_webp",
+    },
+}
+
 
 # Django limitation: AbstractUser's default manager expects 'username' parameter.
 # We MUST override create_superuser to accept 'email' for createsuperuser command to work.
@@ -60,9 +75,25 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
     contact_email = models.EmailField(
         blank=True, help_text="Public contact email displayed in footer"
     )
-    image_tracker = FieldTracker(fields=["avatar", "about_me_image", "about_me_image2"])
+    image_tracker = FieldTracker(
+        fields=[
+            "avatar",
+            "avatar_cropped",
+            "about_me_image",
+            "about_me_image_cropped",
+            "about_me_image2",
+            "about_me_image2_cropped",
+        ]
+    )
 
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
+    avatar_cropped = models.ImageField(
+        upload_to="avatars/",
+        null=True,
+        blank=True,
+        verbose_name=_("Avatar cropped"),
+        help_text=_("Cropped avatar managed by the admin cropper."),
+    )
     avatar_webp = models.ImageField(
         upload_to="avatars/",
         null=True,
@@ -72,6 +103,13 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
         help_text=_("Derived WebP avatar generated from the source avatar."),
     )
     about_me_image = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
+    about_me_image_cropped = models.ImageField(
+        upload_to="about_me_images/",
+        null=True,
+        blank=True,
+        verbose_name=_("About Me Image cropped"),
+        help_text=_("Cropped portrait managed by the admin cropper."),
+    )
     about_me_image_webp = models.ImageField(
         upload_to="about_me_images/",
         null=True,
@@ -81,6 +119,13 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
         help_text=_("Derived WebP portrait generated from the source about_me_image."),
     )
     about_me_image2 = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
+    about_me_image2_cropped = models.ImageField(
+        upload_to="about_me_images/",
+        null=True,
+        blank=True,
+        verbose_name=_("About Me Image 2 cropped"),
+        help_text=_("Cropped portrait managed by the admin cropper."),
+    )
     about_me_image2_webp = models.ImageField(
         upload_to="about_me_images/",
         null=True,
@@ -127,9 +172,13 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Enforce singleton on save and trigger translations/image processing"""
         try:
-            changed_image_fields = []
-            for field_name in ["avatar", "about_me_image", "about_me_image2"]:
-                if self.image_tracker.has_changed(field_name):
+            changed_image_fields: list[str] = []
+            for field_name, variants in USER_IMAGE_FIELD_MAPPINGS.items():
+                source_changed: bool = self.image_tracker.has_changed(field_name)
+                cropped_changed: bool = self.image_tracker.has_changed(variants["cropped"])
+                if source_changed and not cropped_changed:
+                    setattr(self, variants["cropped"], None)
+                if source_changed or cropped_changed:
                     changed_image_fields.append(field_name)
 
             self.clean()
@@ -142,11 +191,26 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
         except IntegrityError as exc:
             raise ValueError("Failed to save user. Only one user is allowed.") from exc
 
+    @classmethod
+    def get_cropped_field_name(cls, source_field_name: str) -> str:
+        return USER_IMAGE_FIELD_MAPPINGS[source_field_name]["cropped"]
+
+    @classmethod
+    def get_webp_field_name(cls, source_field_name: str) -> str:
+        return USER_IMAGE_FIELD_MAPPINGS[source_field_name]["webp"]
+
+    def get_effective_image_field(self, source_field_name: str) -> Any:
+        cropped_field_name = self.get_cropped_field_name(source_field_name)
+        cropped_field = getattr(self, cropped_field_name)
+        if cropped_field:
+            return cropped_field
+        return getattr(self, source_field_name)
+
     def _convert_image_field_to_webp(
         self, source_field_name: str, webp_field_name: str, max_dimension: int, quality: int
     ) -> None:
         """Convert a source ImageField into its derived WebP field."""
-        source_field: Any = getattr(self, source_field_name)
+        source_field: Any = self.get_effective_image_field(source_field_name)
         webp_field: Any = getattr(self, webp_field_name)
         dimension_percentage = None
         spec_method_name = (
@@ -177,11 +241,12 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
 
     def _get_serving_image_url(self, source_field_name: str, webp_field_name: str) -> str:
         """Return the source or WebP URL according to the admin serving toggle."""
+        effective_source_field: Any = self.get_effective_image_field(source_field_name)
         settings_obj: LandingPageSettings | None = LandingPageSettings.get_current()
         if settings_obj and settings_obj.serve_webp_images:
-            serving_field = getattr(self, webp_field_name) or getattr(self, source_field_name)
+            serving_field = getattr(self, webp_field_name) or effective_source_field
         else:
-            serving_field = getattr(self, source_field_name)
+            serving_field = effective_source_field
         if serving_field:
             try:
                 return str(serving_field.url)

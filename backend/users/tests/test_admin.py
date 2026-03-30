@@ -102,9 +102,12 @@ class TestUserAdmin:
         ]
         assert cropper["fields"][0]["preview_shape"] == "circle"
         assert cropper["fields"][0]["crop_aspect_ratio"] == 1.0
+        assert cropper["fields"][0]["target_field_name"] == "avatar_cropped"
+        assert cropper["fields"][0]["target_input_id"] == "id_avatar_cropped"
         assert cropper["fields"][0]["output_width"] == 280
         assert cropper["fields"][0]["output_height"] == 280
         assert cropper["fields"][1]["preview_shape"] == "rounded-square"
+        assert cropper["fields"][1]["target_field_name"] == "about_me_image_cropped"
         assert cropper["fields"][1]["output_width"] == 800
         assert cropper["fields"][1]["output_height"] == 800
 
@@ -114,6 +117,8 @@ class TestUserAdmin:
                 field_name="avatar",
                 label="Avatar Override",
                 input_id="id_avatar",
+                target_field_name="avatar_cropped",
+                target_input_id="id_avatar_cropped",
                 spec_method="get_avatar_spec",
                 preview_shape=CropperPreviewShape.CIRCLE,
                 crop_aspect_ratio=1.0,
@@ -142,6 +147,7 @@ class TestUserAdmin:
         cropper = captured["extra_context"]["admin_image_cropper"]
         assert [field["field_name"] for field in cropper["fields"]] == ["avatar"]
         assert cropper["fields"][0]["label"] == "Avatar Override"
+        assert cropper["fields"][0]["target_field_name"] == "avatar_cropped"
 
 
 @pytest.mark.django_db
