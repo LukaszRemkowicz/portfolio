@@ -153,6 +153,9 @@
           setStatus("success", 100, root.dataset.completeText || "Completed");
           button.disabled = false;
           stopped = true;
+          window.setTimeout(function () {
+            window.location.reload();
+          }, 700);
           return;
         }
 

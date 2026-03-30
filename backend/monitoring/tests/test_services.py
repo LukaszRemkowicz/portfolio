@@ -294,6 +294,36 @@ class TestSitemapSummaryService:
         assert result.gpt_tokens_used == 44
         assert result.gpt_cost_usd == 0.0012
 
+    def test_summarize_normalizes_list_recommendations_to_plain_text(self):
+        provider = MockLLMProvider()
+        provider.configure(
+            mock_response=(
+                '{"summary":"Sitemap has one broken URL.","severity":"WARNING",'
+                '"key_findings":["broken_url: 1"],'
+                '"recommendations":["Fix the broken URL.","Re-run the sitemap audit."],'
+                '"trend_summary":"New issue detected."}'
+            ),
+            mock_usage={"total_tokens": 44, "cost_usd": 0.0012},
+        )
+        service = SitemapSummaryService(provider=provider)
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=1,
+            total_urls=3,
+            issues=[
+                SitemapIssue(
+                    url="https://portfolio.example/missing",
+                    category=SitemapIssueCategory.BROKEN_URL,
+                    message="URL returned an error status.",
+                    status_code=404,
+                )
+            ],
+        )
+
+        result = service.summarize(report)
+
+        assert result.recommendations == "Fix the broken URL.\nRe-run the sitemap audit."
+
 
 @pytest.mark.django_db
 class TestSitemapAnalysisStorageService:

@@ -37,6 +37,18 @@ logger = logging.getLogger(__name__)
 LogPathMap = dict[str, Optional[str]]
 
 
+def normalize_text_value(value: JSONValue, default: str = "") -> str:
+    """Normalize LLM payload text fields into readable plain text."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        text_items: list[str] = [str(item).strip() for item in value if str(item).strip()]
+        return "\n".join(text_items)
+    if value is None:
+        return default
+    return str(value)
+
+
 class DockerLogCollector:
     """Reads pre-collected logs from a volume-mounted directory.
 
@@ -168,7 +180,7 @@ class LogAnalyzer:
         normalized_result: LogAnalysisPayload = {
             "summary": str(raw_result.get("summary", "")),
             "severity": str(raw_result.get("severity", "")),
-            "recommendations": str(raw_result.get("recommendations", "")),
+            "recommendations": normalize_text_value(raw_result.get("recommendations", "")),
             "trend_summary": str(raw_result.get("trend_summary", "")),
             "gpt_tokens_used": normalized_tokens,
             "gpt_cost_usd": normalized_cost,
@@ -211,7 +223,7 @@ class LogReportPreparationService:
             summary=str(raw_result.get("summary", "No summary provided")),
             severity=str(raw_result.get("severity", "INFO")),
             key_findings=normalized_findings,
-            recommendations=str(raw_result.get("recommendations", "")),
+            recommendations=normalize_text_value(raw_result.get("recommendations", "")),
             trend_summary=str(raw_result.get("trend_summary", "")),
             gpt_tokens_used=int(raw_result.get("gpt_tokens_used", 0)),
             gpt_cost_usd=float(raw_result.get("gpt_cost_usd", 0.0)),
@@ -577,7 +589,7 @@ class SitemapSummaryService:
             summary=str(payload.get("summary", self._build_fallback_summary(report).summary)),
             severity=str(payload.get("severity", self._build_default_severity(report))),
             key_findings=key_findings,
-            recommendations=str(payload.get("recommendations", "")),
+            recommendations=normalize_text_value(payload.get("recommendations", "")),
             trend_summary=str(payload.get("trend_summary", "")),
             gpt_tokens_used=int(usage.get("total_tokens", 0)),
             gpt_cost_usd=float(usage.get("cost_usd", 0.0)),
@@ -960,8 +972,9 @@ class MonitoringAgentLogOrchestrator:
             ),
             severity=str(final_payload.get("severity", deterministic_report.severity)),
             key_findings=key_findings or deterministic_report.key_findings,
-            recommendations=str(
-                final_payload.get("recommendations", deterministic_report.recommendations)
+            recommendations=normalize_text_value(
+                final_payload.get("recommendations", deterministic_report.recommendations),
+                deterministic_report.recommendations,
             ),
             trend_summary=str(
                 final_payload.get("trend_summary", deterministic_report.trend_summary)
