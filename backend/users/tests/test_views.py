@@ -155,6 +155,7 @@ def test_profile_endpoint_with_avatar(api_client: APIClient) -> None:
     assert response.data["avatar"] is not None
     assert response.data["avatar"].startswith("http")
     assert ".jpg" in response.data["avatar"]
+    assert "?v=" in response.data["avatar"]
 
 
 @pytest.mark.django_db
@@ -197,10 +198,10 @@ def test_profile_avatar_serves_webp_url_when_toggle_enabled(api_client: APIClien
     the serializer picks the .webp path.
     """
     user = UserFactory()
-    # Simulate converted state: .webp in avatar, original .jpg in legacy
+    # Simulate converted state: source in avatar, derived output in avatar_webp.
     User.objects.filter(pk=user.pk).update(
-        avatar="avatars/photo.webp",
-        avatar_original_image="avatars/photo_legacy.jpg",
+        avatar="avatars/photo_legacy.jpg",
+        avatar_webp="avatars/photo.webp",
     )
     LandingPageSettingsFactory(serve_webp_images=True)
 
@@ -210,9 +211,8 @@ def test_profile_avatar_serves_webp_url_when_toggle_enabled(api_client: APIClien
     assert response.status_code == status.HTTP_200_OK
     avatar_url: str = response.data["avatar"]
     assert avatar_url, "avatar URL should not be empty"
-    assert avatar_url.endswith(
-        ".webp"
-    ), f"Expected .webp extension when toggle is ON, got: {avatar_url}"
+    assert ".webp" in avatar_url, f"Expected .webp URL when toggle is ON, got: {avatar_url}"
+    assert "?v=" in avatar_url, f"Expected versioned URL when toggle is ON, got: {avatar_url}"
 
 
 @pytest.mark.django_db
@@ -221,12 +221,12 @@ def test_profile_avatar_serves_legacy_url_when_toggle_disabled(api_client: APICl
     serve_webp_images=False.
 
     Mirrors the above test with the toggle OFF — the serializer must fall back
-    to the legacy path even though the primary field points to a .webp file.
+    to the source path even though a derived WebP file exists.
     """
     user = UserFactory()
     User.objects.filter(pk=user.pk).update(
-        avatar="avatars/photo.webp",
-        avatar_original_image="avatars/photo_legacy.jpg",
+        avatar="avatars/photo_legacy.jpg",
+        avatar_webp="avatars/photo.webp",
     )
     LandingPageSettingsFactory(serve_webp_images=False)
 
@@ -236,6 +236,5 @@ def test_profile_avatar_serves_legacy_url_when_toggle_disabled(api_client: APICl
     assert response.status_code == status.HTTP_200_OK
     avatar_url: str = response.data["avatar"]
     assert avatar_url, "avatar URL should not be empty"
-    assert avatar_url.endswith(
-        ".jpg"
-    ), f"Expected .jpg extension when toggle is OFF, got: {avatar_url}"
+    assert ".jpg" in avatar_url, f"Expected .jpg URL when toggle is OFF, got: {avatar_url}"
+    assert "?v=" in avatar_url, f"Expected versioned URL when toggle is OFF, got: {avatar_url}"

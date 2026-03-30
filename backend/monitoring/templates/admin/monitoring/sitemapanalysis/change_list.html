@@ -1,0 +1,146 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'monitoring/css/admin_monitoring_changelist.css' %}">
+{% endblock %}
+
+{% block object-tools-items %}
+<div
+  id="monitoring-admin-changelist"
+  data-monitoring-config='{
+    "filterParamNames": ["severity__exact", "email_sent__exact", "analysis_date__gte"],
+    "preserveOrderingOnFilterChange": true,
+    "filters": [
+      {"id": "sitemap-filter-severity", "param": "severity__exact"},
+      {"id": "sitemap-filter-email-sent", "param": "email_sent__exact"},
+      {"id": "sitemap-filter-analysis-date", "param": "analysis_date__gte"}
+    ],
+    "sortOldestId": "sitemap-sort-oldest",
+    "sortNewestId": "sitemap-sort-newest",
+    "statusRootId": "sitemap-task-status",
+    "statusLabelId": "sitemap-task-status-label",
+    "statusPercentId": "sitemap-task-status-percent",
+    "statusBarId": "sitemap-task-status-bar",
+    "statusButtonSelector": "#run-sitemap-analysis-now-form button"
+  }'
+>
+<div class="sitemap-toolbar">
+  <div class="sitemap-filter-bar">
+    <div class="form-group sitemap-filter-field">
+      <label class="sitemap-filter-label" for="sitemap-filter-severity">{% translate "Severity" %}</label>
+      <select id="sitemap-filter-severity" class="form-control sitemap-filter-select">
+        <option value="">{% translate "All" %}</option>
+        <option value="INFO" {% if request.GET.severity__exact == "INFO" %}selected{% endif %}>
+          {% translate "Info" %}
+        </option>
+        <option value="WARNING" {% if request.GET.severity__exact == "WARNING" %}selected{% endif %}>
+          {% translate "Warning" %}
+        </option>
+        <option value="CRITICAL" {% if request.GET.severity__exact == "CRITICAL" %}selected{% endif %}>
+          {% translate "Critical" %}
+        </option>
+      </select>
+    </div>
+    <div class="form-group sitemap-filter-field">
+      <label class="sitemap-filter-label" for="sitemap-filter-email-sent">{% translate "Email sent" %}</label>
+      <select id="sitemap-filter-email-sent" class="form-control sitemap-filter-select">
+        <option value="">{% translate "All" %}</option>
+        <option value="1" {% if request.GET.email_sent__exact == "1" %}selected{% endif %}>
+          {% translate "Yes" %}
+        </option>
+        <option value="0" {% if request.GET.email_sent__exact == "0" %}selected{% endif %}>
+          {% translate "No" %}
+        </option>
+      </select>
+    </div>
+    <div class="form-group sitemap-filter-field">
+      <label class="sitemap-filter-label" for="sitemap-filter-analysis-date">{% translate "Analysis date" %}</label>
+      <select id="sitemap-filter-analysis-date" class="form-control sitemap-filter-select">
+        <option value="">{% translate "All" %}</option>
+        <option
+          value="{{ today|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == today|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "Today" %}
+        </option>
+        <option
+          value="{{ last_7_days|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == last_7_days|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "Past 7 days" %}
+        </option>
+        <option
+          value="{{ first_day_of_month|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == first_day_of_month|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "This month" %}
+        </option>
+        <option
+          value="{{ first_day_of_year|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == first_day_of_year|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "This year" %}
+        </option>
+      </select>
+    </div>
+    <div class="form-group sitemap-sort-field">
+      <label class="sitemap-filter-label" for="sitemap-sort-oldest">{% translate "Sort by date" %}</label>
+      <div class="sitemap-sort-controls">
+        <a
+          href="#"
+          id="sitemap-sort-oldest"
+          class="sitemap-sort-btn {% if request.GET.o == '1' %}is-active{% endif %}"
+          title="{% translate 'Sort by oldest first' %}"
+          aria-label="{% translate 'Sort by oldest first' %}"
+        >
+          <i class="fa fa-arrow-up"></i>
+        </a>
+        <a
+          href="#"
+          id="sitemap-sort-newest"
+          class="sitemap-sort-btn {% if request.GET.o != '1' %}is-active{% endif %}"
+          title="{% translate 'Sort by newest first' %}"
+          aria-label="{% translate 'Sort by newest first' %}"
+        >
+          <i class="fa fa-arrow-down"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="sitemap-action-stack">
+    <form id="run-sitemap-analysis-now-form" method="post" action="{{ run_sitemap_analysis_now_url }}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-success">
+        <i class="fa fa-play-circle"></i>
+        {% translate "Run Sitemap Analysis Now" %}
+      </button>
+    </form>
+    <div id="sitemap-task-status"
+         class="sitemap-task-status"
+         data-task-id="{{ sitemap_task_id }}"
+         data-status-url-template="{{ sitemap_task_status_url_template }}"
+         data-complete-text="{% translate 'Completed' %}"
+         data-failed-text="{% translate 'Failed' %}"
+         data-queued-text="{% translate 'Queued...' %}"
+         data-running-text="{% translate 'Running sitemap audit...' %}"
+         hidden>
+      <span class="sitemap-task-status__label">
+        <span class="sitemap-task-status__text" id="sitemap-task-status-label"></span>
+        <span class="sitemap-task-status__percent" id="sitemap-task-status-percent">0%</span>
+      </span>
+      <div class="sitemap-task-status__bar">
+        <div class="sitemap-task-status__bar-fill" id="sitemap-task-status-bar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+<script src="{% static 'monitoring/js/admin_monitoring_changelist.js' %}"></script>
+{% endblock %}

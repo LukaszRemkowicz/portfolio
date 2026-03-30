@@ -6,16 +6,33 @@ import pytest
 
 from django.test import override_settings
 
-from monitoring.models import LogAnalysis
+from common.llm.providers import MockLLMProvider
+from monitoring.models import LogAnalysis, SitemapAnalysis
+from monitoring.monitoring_agent_runner import MonitoringToolLoopRunner
 from monitoring.services import (
     DockerLogCollector,
     HistoricalContextBuilder,
     LogAnalysisOrchestrator,
     LogAnalyzer,
     LogCleanupService,
+    LogReportPreparationService,
     LogStorageService,
+    MonitoringAgentLogOrchestrator,
+    SitemapAnalysisOrchestrator,
+    SitemapAnalysisStorageService,
+    SitemapSummaryService,
 )
-from monitoring.tests.factories import LogAnalysisFactory
+from monitoring.sitemap_services import SitemapAuditService
+from monitoring.tests.factories import LogAnalysisFactory, SitemapAnalysisFactory
+from monitoring.types import (
+    LogReportResult,
+    MonitoringAgentEventType,
+    MonitoringAgentTraceEvent,
+    MonitoringToolLoopResult,
+    SitemapIssue,
+    SitemapIssueCategory,
+    SitemapReportResult,
+)
 
 
 @pytest.mark.django_db
@@ -125,6 +142,277 @@ class TestLogStorageService:
         assert LogAnalysis.objects.count() == 1  # Still only 1
         assert analysis.summary == "Second"
         assert analysis.severity == "WARNING"
+
+
+class TestLogReportPreparationService:
+    def test_prepare_report_from_files_returns_typed_result(self, mocker, mock_llm_response):
+        mock_agent = mocker.MagicMock()
+        mock_agent.analyze_logs_from_files.return_value = mock_llm_response
+        analyzer = LogAnalyzer(mock_agent)
+        service = LogReportPreparationService(analyzer)
+
+        report = service.prepare_report_from_files(
+            {"backend": "/tmp/backend.log"},
+            collected_at="2026-03-05T12:00:00Z",
+            historical_context="prior context",
+        )
+
+        assert report.summary == mock_llm_response["summary"]
+        assert report.severity == mock_llm_response["severity"]
+        assert report.gpt_tokens_used == mock_llm_response["gpt_tokens_used"]
+        assert report.gpt_cost_usd == mock_llm_response["gpt_cost_usd"]
+
+
+class TestMonitoringAgentLogOrchestrator:
+    def test_run_monitoring_agent_prefers_final_payload_over_deterministic_report(self, mocker):
+        mock_agent = mocker.MagicMock()
+        analyzer = LogAnalyzer(mock_agent)
+        runner = mocker.MagicMock(spec=MonitoringToolLoopRunner)
+        runner.run.return_value = MonitoringToolLoopResult(
+            summary="Agent summary",
+            findings=["Agent finding"],
+            trace=[
+                MonitoringAgentTraceEvent(
+                    event_type=MonitoringAgentEventType.START,
+                    message="starting job=log_report",
+                )
+            ],
+            final_payload={
+                "summary": "Agent summary",
+                "severity": "CRITICAL",
+                "key_findings": ["Agent finding"],
+                "recommendations": "Review nginx logs.",
+                "trend_summary": "New today.",
+            },
+            stop_reason="final_report",
+        )
+        orchestrator = MonitoringAgentLogOrchestrator(
+            collector=DockerLogCollector(),
+            analyzer=analyzer,
+            storage=LogStorageService(),
+            agent_runner=runner,
+        )
+
+        deterministic_report = LogReportResult(
+            summary="Deterministic summary",
+            severity="WARNING",
+            key_findings=["Deterministic finding"],
+            recommendations="Deterministic recommendation",
+            trend_summary="Stable.",
+            gpt_tokens_used=10,
+            gpt_cost_usd=0.001,
+        )
+
+        result = orchestrator._run_monitoring_agent(deterministic_report)
+
+        assert result.summary == "Agent summary"
+        assert result.severity == "CRITICAL"
+        assert result.key_findings == ["Agent finding"]
+
+    def test_run_monitoring_agent_falls_back_to_deterministic_report(self, mocker):
+        mock_agent = mocker.MagicMock()
+        analyzer = LogAnalyzer(mock_agent)
+        runner = mocker.MagicMock(spec=MonitoringToolLoopRunner)
+        runner.run.return_value = MonitoringToolLoopResult(
+            summary="Deterministic summary",
+            findings=["Deterministic finding"],
+            trace=[],
+            final_payload={"summary": "Deterministic summary"},
+            stop_reason="final_report",
+        )
+        orchestrator = MonitoringAgentLogOrchestrator(
+            collector=DockerLogCollector(),
+            analyzer=analyzer,
+            storage=LogStorageService(),
+            agent_runner=runner,
+        )
+
+        deterministic_report = LogReportResult(
+            summary="Deterministic summary",
+            severity="WARNING",
+            key_findings=["Deterministic finding"],
+            recommendations="Deterministic recommendation",
+            trend_summary="Stable.",
+            gpt_tokens_used=10,
+            gpt_cost_usd=0.001,
+        )
+
+        result = orchestrator._run_monitoring_agent(deterministic_report)
+
+        assert result.severity == "WARNING"
+        assert result.recommendations == "Deterministic recommendation"
+
+
+class TestSitemapSummaryService:
+    def test_summarize_skips_llm_when_report_is_clean(self, mocker):
+        provider = MockLLMProvider()
+        ask_question_mock = mocker.patch.object(provider, "ask_question_with_usage")
+        service = SitemapSummaryService(provider=provider)
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=1,
+            total_urls=3,
+            issues=[],
+        )
+
+        result = service.summarize(report)
+
+        ask_question_mock.assert_not_called()
+        assert result.severity == "INFO"
+        assert "no issues detected" in result.summary.lower()
+
+    def test_summarize_returns_llm_summary(self):
+        provider = MockLLMProvider()
+        provider.configure(
+            mock_response=(
+                '{"summary":"Sitemap has one broken URL.","severity":"WARNING",'
+                '"key_findings":["broken_url: 1"],'
+                '"recommendations":"Fix the broken URL.",'
+                '"trend_summary":"New issue detected."}'
+            ),
+            mock_usage={"total_tokens": 44, "cost_usd": 0.0012},
+        )
+        service = SitemapSummaryService(provider=provider)
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=1,
+            total_urls=3,
+            issues=[
+                SitemapIssue(
+                    url="https://portfolio.example/missing",
+                    category=SitemapIssueCategory.BROKEN_URL,
+                    message="URL returned an error status.",
+                    status_code=404,
+                )
+            ],
+        )
+
+        result = service.summarize(report)
+
+        assert result.summary == "Sitemap has one broken URL."
+        assert result.severity == "WARNING"
+        assert result.gpt_tokens_used == 44
+        assert result.gpt_cost_usd == 0.0012
+
+    def test_summarize_normalizes_list_recommendations_to_plain_text(self):
+        provider = MockLLMProvider()
+        provider.configure(
+            mock_response=(
+                '{"summary":"Sitemap has one broken URL.","severity":"WARNING",'
+                '"key_findings":["broken_url: 1"],'
+                '"recommendations":["Fix the broken URL.","Re-run the sitemap audit."],'
+                '"trend_summary":"New issue detected."}'
+            ),
+            mock_usage={"total_tokens": 44, "cost_usd": 0.0012},
+        )
+        service = SitemapSummaryService(provider=provider)
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=1,
+            total_urls=3,
+            issues=[
+                SitemapIssue(
+                    url="https://portfolio.example/missing",
+                    category=SitemapIssueCategory.BROKEN_URL,
+                    message="URL returned an error status.",
+                    status_code=404,
+                )
+            ],
+        )
+
+        result = service.summarize(report)
+
+        assert result.recommendations == "Fix the broken URL.\nRe-run the sitemap audit."
+
+
+@pytest.mark.django_db
+class TestSitemapAnalysisStorageService:
+    def test_create_or_replace_analysis_stores_sitemap_results(self):
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=2,
+            total_urls=20,
+            issues=[
+                SitemapIssue(
+                    url="https://portfolio.example/missing",
+                    category=SitemapIssueCategory.BROKEN_URL,
+                    message="URL returned an error status.",
+                    status_code=404,
+                )
+            ],
+        )
+        summary = SitemapSummaryService(provider=MockLLMProvider())._build_fallback_summary(report)
+
+        analysis = SitemapAnalysisStorageService.create_or_replace_analysis(
+            analysis_date=date.today(),
+            report=report,
+            summary=summary,
+            execution_time_seconds=4.0,
+        )
+
+        assert analysis.total_sitemaps == 2
+        assert analysis.issue_summary["broken_url"] == 1
+        assert analysis.key_findings
+
+    def test_create_or_replace_analysis_replaces_existing_same_day_record(self):
+        analysis_date = date.today()
+        existing = SitemapAnalysisFactory(
+            analysis_date=analysis_date,
+            summary="Old summary",
+            email_sent=True,
+            error_message="Old error",
+        )
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=3,
+            total_urls=42,
+            issues=[],
+        )
+        summary = SitemapSummaryService(provider=MockLLMProvider())._build_fallback_summary(report)
+
+        analysis = SitemapAnalysisStorageService.create_or_replace_analysis(
+            analysis_date=analysis_date,
+            report=report,
+            summary=summary,
+            execution_time_seconds=5.0,
+        )
+
+        assert SitemapAnalysis.objects.count() == 1
+        assert analysis.id != existing.id
+        assert analysis.total_sitemaps == 3
+        assert analysis.total_urls == 42
+        assert analysis.email_sent is False
+        assert analysis.error_message == ""
+
+
+class TestSitemapAnalysisOrchestrator:
+    @pytest.mark.django_db
+    def test_analyze_and_store_creates_sitemap_analysis(self, mocker):
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=1,
+            total_urls=2,
+            issues=[],
+        )
+        audit_service = mocker.MagicMock(spec=SitemapAuditService)
+        audit_service.audit.return_value = report
+        audit_service.get_default_sitemap_url.return_value = "https://portfolio.example/sitemap.xml"
+
+        summary_service = mocker.MagicMock(spec=SitemapSummaryService)
+        summary_service.summarize.return_value = SitemapSummaryService(
+            provider=MockLLMProvider()
+        )._build_fallback_summary(report)
+
+        orchestrator = SitemapAnalysisOrchestrator(
+            audit_service=audit_service,
+            summary_service=summary_service,
+            storage=SitemapAnalysisStorageService(),
+        )
+
+        analysis = orchestrator.analyze_and_store(date.today())
+
+        assert analysis.total_urls == 2
+        assert analysis.root_sitemap_url == "https://portfolio.example/sitemap.xml"
 
 
 @pytest.mark.django_db

@@ -9,7 +9,9 @@ from pytest_mock import MockerFixture
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
+from django.utils import timezone
 
+from common.tests.image_helpers import _jpeg_field, _png_field
 from common.utils.image import ImageSpec
 from users.models import Profile
 from users.tests.factories import ProgrammingProfileFactory, UserFactory
@@ -155,6 +157,17 @@ class TestUserDomainMethods:
         url = user.get_avatar_url()
         assert url == "/static/images/default-avatar.png"
 
+    def test_get_avatar_url_appends_version_for_admin_cache_busting(self):
+        """Jazzmin sidebar avatar should get a versioned URL after avatar updates."""
+        user = UserFactory.build(email="test@example.com")
+        user.avatar.name = "avatars/avatar.jpg"
+        user.updated_at = timezone.now()
+
+        url = user.get_avatar_url()
+
+        assert url.startswith("/media/avatars/avatar.jpg")
+        assert "?v=" in url
+
     def test_has_complete_profile_false_missing_fields(self):
         """Test has_complete_profile returns False when incomplete."""
         user = UserFactory.create_superuser(email="test@example.com", bio="")
@@ -173,3 +186,18 @@ class TestUserDomainMethods:
         spec = user.get_portrait_spec()
         assert isinstance(spec, ImageSpec)
         assert spec == settings.IMAGE_OPTIMIZATION_SPECS["PORTRAIT"]
+
+
+@pytest.mark.django_db
+def test_user_save_clears_stale_cropped_file_when_original_changes():
+    user = UserFactory.create_superuser()
+    user.avatar = _jpeg_field("avatar-original.jpg")
+    user.avatar_cropped = _png_field("avatar-cropped.png", size=(280, 280))
+    user.save()
+
+    user.avatar = _jpeg_field("avatar-replacement.jpg")
+    user.save()
+    user.refresh_from_db()
+
+    assert "avatar-replacement" in user.avatar.name
+    assert not user.avatar_cropped

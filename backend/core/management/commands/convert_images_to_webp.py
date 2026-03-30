@@ -4,7 +4,7 @@ Usage:
     python manage.py convert_images_to_webp          # Convert all images
     python manage.py convert_images_to_webp --dry-run # Preview without changes
 
-Safe to re-run: images that are already WebP or already have a original_image are skipped.
+Safe to re-run: images that are already WebP or already have a derived WebP field are skipped.
 After running, flip LandingPageSettings.serve_webp_images = True in Django Admin.
 """
 
@@ -21,7 +21,7 @@ from users.models import User
 class Command(BaseCommand):
     """Batch-convert stored images to WebP using each model's image settings."""
 
-    help = "Convert existing images to WebP and populate original_image for rollback."
+    help = "Convert existing images to WebP and populate derived WebP fields."
 
     def add_arguments(self, parser) -> None:
         parser.add_argument(
@@ -33,7 +33,7 @@ class Command(BaseCommand):
             "--force",
             action="store_true",
             help=(
-                "Re-convert already-converted images from their original_image (original) "
+                "Re-convert already-converted images from their original source field "
                 "using the model's current webp_quality. Use after changing quality settings."
             ),
         )
@@ -178,15 +178,15 @@ class Command(BaseCommand):
             return 0, 0, 0
 
         self.stdout.write("\nUser images:")
-        for field_name, legacy_field_name in [
-            ("avatar", "avatar_original_image"),
-            ("about_me_image", "about_me_image_original_image"),
-            ("about_me_image2", "about_me_image2_original_image"),
+        for field_name, webp_field_name in [
+            ("avatar", "avatar_webp"),
+            ("about_me_image", "about_me_image_webp"),
+            ("about_me_image2", "about_me_image2_webp"),
         ]:
             result = self._convert_user_field(
                 user,
                 field_name,
-                legacy_field_name,
+                webp_field_name,
                 dry_run,
                 force,
                 dimension_percentage,
@@ -266,7 +266,7 @@ class Command(BaseCommand):
         self,
         user: User,
         field_name: str,
-        legacy_field_name: str,
+        webp_field_name: str,
         dry_run: bool,
         force: bool = False,
         dimension_percentage: int | None = None,
@@ -282,14 +282,13 @@ class Command(BaseCommand):
             self.stdout.write(f"  [SKIP] {field_name} — already WebP")
             return "skipped"
 
-        legacy = getattr(user, legacy_field_name)
-        if legacy and not force:
-            self.stdout.write(f"  [SKIP] {field_name} — already has legacy")
+        webp_field = getattr(user, webp_field_name)
+        if webp_field and not force:
+            self.stdout.write(f"  [SKIP] {field_name} — already has derived WebP")
             return "skipped"
 
-        # In force mode, re-convert from original (legacy) if available
-        source = legacy if (force and legacy) else field
-        label = "RECONV" if (force and legacy) else "CONV"
+        source = field
+        label = "RECONV" if force else "CONV"
         self.stdout.write(f"  [{label}] {field_name} — {source.name}")
 
         if dry_run:
@@ -311,11 +310,9 @@ class Command(BaseCommand):
                     self.style.ERROR(f"  [ERR ] {field_name} — conversion returned None")
                 )
                 return "error"
-            original_name, webp_content = result
-            field.save(webp_content.name, webp_content, save=False)
-            update_kwargs: dict = {field_name: str(field.name) if field else None}
-            if not force:
-                update_kwargs[legacy_field_name] = original_name
+            _, webp_content = result
+            webp_field.save(webp_content.name, webp_content, save=False)
+            update_kwargs: dict = {webp_field_name: str(webp_field.name) if webp_field else None}
             User.objects.filter(pk=user.pk).update(**update_kwargs)
             return "converted"
         except Exception as exc:

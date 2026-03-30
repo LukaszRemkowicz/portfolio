@@ -47,7 +47,7 @@ Component docs:
 
 The project follows a modern, highly decoupled architecture for performance and security. It supports **Environment Isolation** (Production & Staging) on the server, with an identical stack for **Development** (Local):
 
-![Architecture Illustration](infra/docs/architecture.png)
+![Architecture Illustration](infra/docs/project/architecture.png)
 
 ### Key Components:
 - **Traefik (Edge Proxy)**: The central entry point for all subdomains. Handles SSL, HSTS, and routing.
@@ -533,10 +533,7 @@ On your production server, simply run:
 
 
 ### TODO:
-- add script for checking sitemap
 - Admin improve
-- add ci registry
 - Add email template
 - Fix issues with "go back" on the website (Fe)
 - fix small visual issues in django admin
-- Agent check structured data + move prompts to yaml or md add skills. Add function, which llm could use to get proper prompt? Make agent more agent, not like a function. Rebuild response with userID, ID session, speed reasoning.

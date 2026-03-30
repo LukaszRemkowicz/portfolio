@@ -126,10 +126,10 @@ Target Attribution Definitions:
 
 Current frontend/backend contract derived from:
 
-- [frontend/src/api/services.ts](../../../frontend/src/api/services.ts)
-- [frontend/src/api/imageUrlService.ts](../../../frontend/src/api/imageUrlService.ts)
-- [frontend/src/entry-server.tsx](../../../frontend/src/entry-server.tsx)
-- frontend hooks and component call sites under [frontend/src/hooks](../../../frontend/src/hooks) and [frontend/src/components](../../../frontend/src/components)
+- [frontend/src/api/services.ts](../../../../frontend/src/api/services.ts)
+- [frontend/src/api/imageUrlService.ts](../../../../frontend/src/api/imageUrlService.ts)
+- [frontend/src/entry-server.tsx](../../../../frontend/src/entry-server.tsx)
+- frontend hooks and component call sites under [frontend/src/hooks](../../../../frontend/src/hooks) and [frontend/src/components](../../../../frontend/src/components)
 
 | Backend endpoint | Current caller | Used on routes | SSR-prefetched | Browser calls today | Target owner |
 | --- | --- | --- | --- | --- | --- |
