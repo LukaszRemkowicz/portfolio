@@ -30,6 +30,7 @@ Use `infra/docs/project/` for system behavior, architecture, runbooks, and featu
 
 Use `infra/docs/agent/engineering_conventions.md` for repo coding conventions, Python/React guidance, and clean-code expectations.
 Use `infra/docs/agent/implementation_process.md` for larger changes, phased delivery, and implementation-documentation expectations.
+Use `.agent/skills/` for task-specific authoring guidance, especially for commit messages and pull request messages.
 
 
 ## Working Rule
@@ -95,6 +96,7 @@ Use this quick mapping when a task arrives:
 - If docs and code disagree, code is the current truth; update docs after confirming behavior.
 - If a proposed implementation seems risky, inconsistent, or likely incorrect, say so clearly and discuss it. Push back when needed; collaboration and correction are expected.
 - Avoid broad infra changes without checking the relevant runbook first.
+- For commit messages and pull request messages, check `.agent/skills/` first and follow the matching message-writing guidance.
 - For deploy/release work, be explicit about environment: `dev`, `stage`, or `production`.
 - For monitoring work, remember the hard boundary: deterministic code gathers facts; the LLM summarizes and interprets.
 - For cache-related work, think about both backend Redis invalidation and frontend SSR cache invalidation.
