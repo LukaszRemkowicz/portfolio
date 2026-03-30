@@ -12,6 +12,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 from django.utils.translation import gettext_lazy as _
 
 from common.utils.image import ImageSpec
+from users.types import CropperFieldConfig, CropperPreviewShape
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -163,6 +164,11 @@ INSTALLED_APPS = [
     "monitoring.apps.MonitoringConfig",
 ]
 
+# django-extensions shell_plus should default to IPython so interactive
+# sessions have proper readline/history behavior instead of plain
+# InteractiveConsole fallback.
+SHELL_PLUS = "ipython"
+
 # Security Settings (for Nginx SSL termination)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
@@ -214,6 +220,7 @@ OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 # Each service can use a different provider
 TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
 MONITORING_LLM_PROVIDER = env.str("MONITORING_LLM_PROVIDER", default="gpt")
+RUN_LEGACY_DAILY_TASK = env.bool("RUN_LEGACY_DAILY_TASK", default=False)
 DOCKER_LOGS_DIR = env.str("DOCKER_LOGS_DIR", default="/app/docker-logs")
 SSR_CACHE_INVALIDATION_URL = env.str(
     "SSR_CACHE_INVALIDATION_URL", default="http://fe:8080/internal/cache/invalidate"
@@ -356,6 +363,40 @@ IMAGE_OPTIMIZATION_SPECS = {
     "THUMBNAIL": ImageSpec(dimension=560, quality=100),
     "DEFAULT": ImageSpec(dimension=1200, quality=75),
 }
+
+# TODO: add it somewhere else
+USER_ADMIN_CROPPER_FIELD_CONFIGS = (
+    CropperFieldConfig(
+        field_name="avatar",
+        label=_("Avatar"),
+        input_id="id_avatar",
+        target_field_name="avatar_cropped",
+        target_input_id="id_avatar_cropped",
+        preview_shape=CropperPreviewShape.CIRCLE,
+        spec_method="get_avatar_spec",
+        crop_aspect_ratio=1.0,
+    ),
+    CropperFieldConfig(
+        field_name="about_me_image",
+        label=_("About me image"),
+        input_id="id_about_me_image",
+        target_field_name="about_me_image_cropped",
+        target_input_id="id_about_me_image_cropped",
+        preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
+        spec_method="get_portrait_spec",
+        crop_aspect_ratio=1.0,
+    ),
+    CropperFieldConfig(
+        field_name="about_me_image2",
+        label=_("About me image 2"),
+        input_id="id_about_me_image2",
+        target_field_name="about_me_image2_cropped",
+        target_input_id="id_about_me_image2_cropped",
+        preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
+        spec_method="get_portrait_spec",
+        crop_aspect_ratio=1.0,
+    ),
+)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -591,8 +632,8 @@ ADMIN_SITE_ORDERING = (
     },
     {
         "app": "monitoring",
-        "label": "Monitoring",
-        "models": ("monitoring.LogAnalysis",),
+        "label": _("Monitoring"),
+        "models": ("monitoring.LogAnalysis", "monitoring.SitemapAnalysis"),
     },
 )
 
@@ -602,13 +643,6 @@ ADMIN_SITE_ORDERING = (
 
 
 CELERY_BEAT_SCHEDULE = {
-    "daily-log-analysis": {
-        "task": "monitoring.tasks.daily_log_analysis_task",
-        "schedule": crontab(hour=2, minute=0),  # 2:00 AM UTC daily
-        "options": {
-            "expires": 3600,  # Task expires after 1 hour
-        },
-    },
     "weekly-log-cleanup": {
         "task": "monitoring.tasks.cleanup_old_logs_task",
         "schedule": crontab(hour=8, minute=0, day_of_week=0),  # 8:00 AM UTC every Sunday
@@ -618,6 +652,28 @@ CELERY_BEAT_SCHEDULE = {
         "options": {
             "expires": 1800,  # Task expires after 30 minutes
         },
+    },
+}
+
+DAILY_MONITORING_LOG_TASK_NAME = (
+    "monitoring.tasks.daily_log_analysis_task"
+    if RUN_LEGACY_DAILY_TASK
+    else "monitoring.tasks.daily_monitoring_agent_log_task"
+)
+
+CELERY_BEAT_SCHEDULE["daily-log-analysis"] = {
+    "task": DAILY_MONITORING_LOG_TASK_NAME,
+    "schedule": crontab(hour=2, minute=0),  # 2:00 AM UTC daily
+    "options": {
+        "expires": 3600,  # Task expires after 1 hour
+    },
+}
+
+CELERY_BEAT_SCHEDULE["sitemap-analysis"] = {
+    "task": "monitoring.tasks.daily_sitemap_analysis_task",
+    "schedule": crontab(hour=3, minute=0, day_of_month="1-31/5"),
+    "options": {
+        "expires": 3600,
     },
 }
 
@@ -643,6 +699,8 @@ CELERY_TIMEZONE = TIME_ZONE
 # ONLY by the host-based worker (which has access to docker CLI)
 CELERY_TASK_ROUTES = {
     "monitoring.tasks.daily_log_analysis_task": {"queue": "monitoring"},
+    "monitoring.tasks.daily_monitoring_agent_log_task": {"queue": "monitoring"},
+    "monitoring.tasks.daily_sitemap_analysis_task": {"queue": "monitoring"},
     "monitoring.tasks.cleanup_old_logs_task": {"queue": "monitoring"},
 }
 
@@ -706,6 +764,7 @@ JAZZMIN_SETTINGS = {
         "core.LandingPageSettings": "fas fa-sliders-h",
         "translation.TranslationTask": "fas fa-language",
         "monitoring.LogAnalysis": "fas fa-chart-line",
+        "monitoring.SitemapAnalysis": "fas fa-sitemap",
     },
     # Changing the order
     "order_with_respect_to": [

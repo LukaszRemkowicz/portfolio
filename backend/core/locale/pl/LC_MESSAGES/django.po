@@ -80,7 +80,7 @@ msgstr ""
 
 #: core/models.py:135 core/models.py:136 core/models.py:139
 msgid "Landing Page Settings"
-msgstr "Ustawienia Strony Lądowania"
+msgstr "Ustawienia Strony głównej"
 
 #: core/templates/admin/base_site.html:3
 msgid "Django site admin"
@@ -188,6 +188,18 @@ msgstr "Dzienniki bezpieczeństwa"
 msgid "Translations"
 msgstr "Tłumaczenia"
 
+msgid "Log Analysis"
+msgstr "Analiza logów"
+
+msgid "Log Analyses"
+msgstr "Analizy logów"
+
+msgid "Sitemap Analysis"
+msgstr "Analiza sitemap"
+
+msgid "Sitemap Analyses"
+msgstr "Analizy sitemap"
+
 #: translation/models.py:12
 msgid "Pending"
 msgstr "Oczekujące"
@@ -219,6 +231,42 @@ msgstr "Język docelowy"
 #: translation/models.py:27
 msgid "Translation Method"
 msgstr "Metoda tłumaczenia"
+
+msgid "Choose a target image field, adjust the crop here, then apply the cropped file back to that field before saving the form."
+msgstr "Wybierz docelowe pole obrazu, dopasuj tutaj kadr, a następnie zastosuj wykadrowany plik do tego pola przed zapisaniem formularza."
+
+msgid "Target field"
+msgstr "Pole docelowe"
+
+msgid "Image Cropper"
+msgstr "Kadrowanie obrazu"
+
+msgid "Apply"
+msgstr "Zastosuj"
+
+msgid "Current source"
+msgstr "Aktualne źródło"
+
+msgid "Ready"
+msgstr "Gotowe"
+
+msgid "Avatar WebP Path"
+msgstr "Ścieżka Avatar WebP"
+
+msgid "About me image"
+msgstr "Zdjęcie sekcji 'o mnie'."
+
+msgid "About Me Image WebP Path"
+msgstr "Ścieżka zdjęcia WebP 'o mnie'."
+
+msgid "About me image2"
+msgstr "Zdjecie sekcji 'o mnie'."
+
+msgid "About Me Image 2 WebP Path"
+msgstr "Ścieżka zdjęci WebP 'o mnie 2'."
+
+msgid "Access failures"
+msgstr "Nieudane próby dostępu"
 
 #: translation/models.py:33
 msgid "Task Status"
@@ -298,6 +346,60 @@ msgstr "Profile"
 #| msgid "Translations"
 msgid "Delete Translation"
 msgstr "Usuń tłumaczenie"
+
+msgid "Analysis date"
+msgstr "Data analizy"
+
+msgid "Severity"
+msgstr "Poziom"
+
+msgid "Issue Count"
+msgstr "Liczba problemów"
+
+msgid "Total sitemaps"
+msgstr "Łączna liczba sitemap"
+
+msgid "Total urls"
+msgstr "Łączna liczba adresów URL"
+
+msgid "Execution time seconds"
+msgstr "Czas wykonania w sekundach"
+
+msgid "Email sent"
+msgstr "E-mail wysłany"
+
+msgid "Created at"
+msgstr "Utworzono"
+
+msgid "Log Size"
+msgstr "Rozmiar logów"
+
+msgid "Gpt tokens used"
+msgstr "Zużyte tokeny GPT"
+
+msgid "Error message"
+msgstr "Komunikat błędu"
+
+msgid "Queued sitemap analysis run for today."
+msgstr "Dodano dzisiejszą analizę sitemap do kolejki."
+
+msgid "Run Sitemap Analysis Now"
+msgstr "Uruchom analizę sitemap teraz"
+
+msgid "Sort by date"
+msgstr "Sortuj po dacie"
+
+msgid "Queued log analysis run for today."
+msgstr "Dodano dzisiejszą analizę logów do kolejki."
+
+msgid "Run Log Analysis Now"
+msgstr "Uruchom analizę logów teraz"
+
+msgid "Running log analysis..."
+msgstr "Trwa analiza logów..."
+
+msgid "All"
+msgstr "Wszystkie"
 
 #~ msgid "Meteors Enabled"
 #~ msgstr "Formularz Kontaktowy Włączony"

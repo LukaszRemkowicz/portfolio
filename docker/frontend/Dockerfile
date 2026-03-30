@@ -18,7 +18,7 @@ CMD ["npm", "run", "dev"]
 # --- Production build ---
 FROM base AS build
 ARG SITE_DOMAIN
-ARG API_URL=https://api.portfolio.local
+ARG API_URL
 ARG GA_TRACKING_ID
 ARG SENTRY_DSN_FE
 ARG ENVIRONMENT=production

@@ -45,9 +45,7 @@ export default (env, argv) => {
   const isDev = argv.mode === 'development';
 
   const apiUrl =
-    env.API_URL ||
-    process.env.API_URL ||
-    (isDev ? 'https://api.portfolio.local' : '');
+    env.API_URL || process.env.API_URL || process.env.VITE_API_URL || '';
 
   const enableGA = env.ENABLE_GA || process.env.ENABLE_GA || 'false';
 

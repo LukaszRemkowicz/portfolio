@@ -1,0 +1,146 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'monitoring/css/admin_monitoring_changelist.css' %}">
+{% endblock %}
+
+{% block object-tools-items %}
+<div
+  id="monitoring-admin-changelist"
+  data-monitoring-config='{
+    "filterParamNames": ["severity__exact", "email_sent__exact", "analysis_date__gte"],
+    "preserveOrderingOnFilterChange": false,
+    "filters": [
+      {"id": "log-filter-severity", "param": "severity__exact"},
+      {"id": "log-filter-email-sent", "param": "email_sent__exact"},
+      {"id": "log-filter-analysis-date", "param": "analysis_date__gte"}
+    ],
+    "sortOldestId": "log-sort-oldest",
+    "sortNewestId": "log-sort-newest",
+    "statusRootId": "log-task-status",
+    "statusLabelId": "log-task-status-label",
+    "statusPercentId": "log-task-status-percent",
+    "statusBarId": "log-task-status-bar",
+    "statusButtonSelector": "#run-log-analysis-now-form button"
+  }'
+>
+<div class="monitoring-toolbar">
+  <div class="monitoring-filter-bar">
+    <div class="form-group monitoring-filter-field">
+      <label class="monitoring-filter-label" for="log-filter-severity">{% translate "Severity" %}</label>
+      <select id="log-filter-severity" class="form-control monitoring-filter-select">
+        <option value="">{% translate "All" %}</option>
+        <option value="INFO" {% if request.GET.severity__exact == "INFO" %}selected{% endif %}>
+          {% translate "Info" %}
+        </option>
+        <option value="WARNING" {% if request.GET.severity__exact == "WARNING" %}selected{% endif %}>
+          {% translate "Warning" %}
+        </option>
+        <option value="CRITICAL" {% if request.GET.severity__exact == "CRITICAL" %}selected{% endif %}>
+          {% translate "Critical" %}
+        </option>
+      </select>
+    </div>
+    <div class="form-group monitoring-filter-field">
+      <label class="monitoring-filter-label" for="log-filter-email-sent">{% translate "Email sent" %}</label>
+      <select id="log-filter-email-sent" class="form-control monitoring-filter-select">
+        <option value="">{% translate "All" %}</option>
+        <option value="1" {% if request.GET.email_sent__exact == "1" %}selected{% endif %}>
+          {% translate "Yes" %}
+        </option>
+        <option value="0" {% if request.GET.email_sent__exact == "0" %}selected{% endif %}>
+          {% translate "No" %}
+        </option>
+      </select>
+    </div>
+    <div class="form-group monitoring-filter-field">
+      <label class="monitoring-filter-label" for="log-filter-analysis-date">{% translate "Analysis date" %}</label>
+      <select id="log-filter-analysis-date" class="form-control monitoring-filter-select">
+        <option value="">{% translate "All" %}</option>
+        <option
+          value="{{ today|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == today|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "Today" %}
+        </option>
+        <option
+          value="{{ last_7_days|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == last_7_days|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "Past 7 days" %}
+        </option>
+        <option
+          value="{{ first_day_of_month|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == first_day_of_month|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "This month" %}
+        </option>
+        <option
+          value="{{ first_day_of_year|date:'Y-m-d' }}"
+          {% if request.GET.analysis_date__gte == first_day_of_year|date:'Y-m-d' %}selected{% endif %}
+        >
+          {% translate "This year" %}
+        </option>
+      </select>
+    </div>
+    <div class="form-group monitoring-sort-field">
+      <label class="monitoring-filter-label" for="log-sort-oldest">{% translate "Sort by date" %}</label>
+      <div class="monitoring-sort-controls">
+        <a
+          href="#"
+          id="log-sort-oldest"
+          class="monitoring-sort-btn {% if request.GET.o == '1' %}is-active{% endif %}"
+          title="{% translate 'Sort by oldest first' %}"
+          aria-label="{% translate 'Sort by oldest first' %}"
+        >
+          <i class="fa fa-arrow-up"></i>
+        </a>
+        <a
+          href="#"
+          id="log-sort-newest"
+          class="monitoring-sort-btn {% if request.GET.o != '1' %}is-active{% endif %}"
+          title="{% translate 'Sort by newest first' %}"
+          aria-label="{% translate 'Sort by newest first' %}"
+        >
+          <i class="fa fa-arrow-down"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="monitoring-action-stack">
+    <form id="run-log-analysis-now-form" method="post" action="{{ run_log_analysis_now_url }}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-success">
+        <i class="fa fa-play-circle"></i>
+        {% translate "Run Log Analysis Now" %}
+      </button>
+    </form>
+    <div id="log-task-status"
+         class="monitoring-task-status"
+         data-task-id="{{ log_task_id }}"
+         data-status-url-template="{{ log_task_status_url_template }}"
+         data-complete-text="{% translate 'Completed' %}"
+         data-failed-text="{% translate 'Failed' %}"
+         data-queued-text="{% translate 'Queued...' %}"
+         data-running-text="{% translate 'Running log analysis...' %}"
+         hidden>
+      <span class="monitoring-task-status__label">
+        <span class="monitoring-task-status__text" id="log-task-status-label"></span>
+        <span class="monitoring-task-status__percent" id="log-task-status-percent">0%</span>
+      </span>
+      <div class="monitoring-task-status__bar">
+        <div class="monitoring-task-status__bar-fill" id="log-task-status-bar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+<script src="{% static 'monitoring/js/admin_monitoring_changelist.js' %}"></script>
+{% endblock %}
