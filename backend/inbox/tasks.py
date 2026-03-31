@@ -5,7 +5,7 @@ from celery import shared_task
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.mail import EmailMessage, send_mail
+from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -43,24 +43,24 @@ class EmailHandler:
 
     @staticmethod
     def _send_owner_notification(contact_message: ContactMessage) -> None:
-        subject: str = f"New Contact Message: {contact_message.subject}"
-        message: str = f"""
-                New contact message received:
+        subject = f"New Contact Message: {contact_message.subject}"
+        html_content = render_to_string(
+            "inbox/email/contact_owner_notification.html",
+            EmailHandler._build_owner_notification_context(contact_message),
+        )
 
-                From: {contact_message.name} ({contact_message.email})
-                Subject: {contact_message.subject}
-                Message: {contact_message.message}
-
-                Received at: {contact_message.created_at}
-                Message ID: {contact_message.id}
-                """
-
-        send_mail(
+        email = EmailMessage(
             subject=subject,
-            message=message,
+            body=html_content,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[settings.CONTACT_EMAIL],
-            fail_silently=False,
+            to=[settings.CONTACT_EMAIL],
+        )
+        email.content_subtype = "html"
+        email.send(fail_silently=False)
+        logger.info(
+            "Owner notification email sent for message ID=%s to %s",
+            contact_message.id,
+            settings.CONTACT_EMAIL,
         )
 
     @staticmethod
@@ -78,6 +78,25 @@ class EmailHandler:
         )
         email.content_subtype = "html"
         email.send(fail_silently=False)
+        logger.info(
+            "Sender confirmation email sent for message ID=%s to %s",
+            contact_message.id,
+            contact_message.email,
+        )
+
+    @staticmethod
+    def _build_owner_notification_context(contact_message: ContactMessage) -> dict[str, str | int]:
+        return {
+            "portfolio_owner": settings.PROJECT_OWNER,
+            "subject": contact_message.subject,
+            "sender_name": contact_message.name,
+            "sender_email": contact_message.email,
+            "message": contact_message.message,
+            "received_at": timezone.localtime(contact_message.created_at).strftime(
+                "%Y-%m-%d %H:%M:%S %Z"
+            ),
+            "message_id": contact_message.id,
+        }
 
     @staticmethod
     def _build_sender_confirmation_context() -> dict[str, str | int]:
@@ -99,24 +118,18 @@ class EmailHandler:
 
     @staticmethod
     def _log_email_simulation(contact_message: ContactMessage) -> None:
-        owner_subject: str = f"New Contact Message: {contact_message.subject}"
-        owner_message: str = f"""
-                New contact message received:
-
-                From: {contact_message.name} ({contact_message.email})
-                Subject: {contact_message.subject}
-                Message: {contact_message.message}
-
-                Received at: {contact_message.created_at}
-                Message ID: {contact_message.id}
-                """
+        owner_subject = f"New Contact Message: {contact_message.subject}"
+        owner_html = render_to_string(
+            "inbox/email/contact_owner_notification.html",
+            EmailHandler._build_owner_notification_context(contact_message),
+        )
         sender_context = EmailHandler._build_sender_confirmation_context()
         sender_html = render_to_string("inbox/email/contact_auto_response.html", sender_context)
 
         logger.info("SIMULATE_CONTACT_EMAILS=True: Simulating contact email send.")
         logger.info(f"To: {[settings.CONTACT_EMAIL]}")
         logger.info(f"Subject: {owner_subject}")
-        logger.info(f"Body: {owner_message}")
+        logger.info(f"Body: {owner_html}")
         logger.info(f"To: {[contact_message.email]}")
         logger.info("Subject: Message Received - Astrophotography Portfolio")
         logger.info(f"Body: {sender_html}")

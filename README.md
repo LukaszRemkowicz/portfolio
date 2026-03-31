@@ -533,6 +533,5 @@ On your production server, simply run:
 
 
 ### TODO:
-- Add email template
 - Fix issues with "go back" on the website (Fe)
 - fix small visual issues in django admin
