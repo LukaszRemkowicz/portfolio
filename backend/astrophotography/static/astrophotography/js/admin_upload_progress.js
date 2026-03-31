@@ -83,9 +83,17 @@
             window.history.replaceState({}, "", responseUrl);
         }
 
-        document.open();
-        document.write(responseText);
-        document.close();
+        const parser = new DOMParser();
+        const parsedDocument = parser.parseFromString(responseText, "text/html");
+        const newDocumentElement = parsedDocument.documentElement;
+        const currentDocumentElement = document.documentElement;
+
+        if (!newDocumentElement || !currentDocumentElement || !currentDocumentElement.parentNode) {
+            window.location.assign(responseUrl);
+            return;
+        }
+
+        currentDocumentElement.parentNode.replaceChild(newDocumentElement, currentDocumentElement);
     }
 
     document.addEventListener("DOMContentLoaded", function () {
