@@ -9,7 +9,7 @@ Use it when a task is big enough to benefit from implementation planning, staged
 
 ## Large Changes
 
-- For a large feature or architectural change, prefer a short implementation doc placed directly in `infra/docs/project/` before coding.
+- For a large feature or architectural change, prefer a short implementation doc placed directly in `infra/docs/project/NEW/` before coding.
 - Break large changes into phases when that reduces risk.
 - When work is split into phases, start or update the matching documentation at the beginning of the phased work, not only at the end.
 - Each phase should extend the documentation with current scope, decisions, and status.
@@ -18,7 +18,7 @@ Use it when a task is big enough to benefit from implementation planning, staged
 
 ## Documentation Placement
 
-- Place implementation docs directly in `infra/docs/project/`.
+- Place implementation docs directly in `infra/docs/project/NEW`.
 - Do not create a separate `infra/docs/NEW/` area.
 - Name new docs clearly so they are easy to discover and route to later.
 

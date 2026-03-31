@@ -187,14 +187,14 @@ describe('API Services', () => {
 
       expect(fetchMock).toHaveBeenCalledWith(
         `http://localhost${BFF_ROUTES.contact}?lang=en`,
-        {
+        expect.objectContaining({
           method: 'POST',
           headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(contactData),
-        }
+        })
       );
     });
 

@@ -1,0 +1,84 @@
+.astro-upload-progress {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 1080;
+    width: min(360px, calc(100vw - 32px));
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: rgba(28, 33, 40, 0.96);
+    color: #f5f7fa;
+    box-shadow: 0 16px 40px rgba(9, 14, 20, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    opacity: 0;
+    transform: translateY(16px);
+    pointer-events: none;
+    transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.astro-upload-progress.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.astro-upload-progress.is-error {
+    background: rgba(121, 23, 23, 0.96);
+}
+
+.astro-upload-progress__title {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.astro-upload-progress__meta,
+.astro-upload-progress__status {
+    font-size: 12px;
+    line-height: 1.45;
+    color: rgba(245, 247, 250, 0.78);
+}
+
+.astro-upload-progress__meta {
+    margin-bottom: 10px;
+}
+
+.astro-upload-progress__track {
+    overflow: hidden;
+    height: 10px;
+    margin-bottom: 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.astro-upload-progress__bar {
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #67d6ff 0%, #5df2c8 100%);
+    transition: width 120ms ease;
+}
+
+.astro-upload-progress__bar.is-indeterminate {
+    width: 42%;
+    animation: astro-upload-progress-slide 1s ease-in-out infinite;
+}
+
+@keyframes astro-upload-progress-slide {
+    0% {
+        transform: translateX(-115%);
+    }
+    100% {
+        transform: translateX(260%);
+    }
+}
+
+@media (max-width: 640px) {
+    .astro-upload-progress {
+        right: 12px;
+        bottom: 12px;
+        width: calc(100vw - 24px);
+    }
+}

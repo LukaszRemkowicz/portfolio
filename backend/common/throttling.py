@@ -4,6 +4,7 @@ from typing import Any, Optional
 from rest_framework.request import Request
 from rest_framework.throttling import AnonRateThrottle, BaseThrottle
 
+from django.conf import settings
 from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
@@ -40,38 +41,41 @@ class ContactFormThrottle(BaseThrottle):
 
     def allow_request(self, request: Request, view: Any) -> bool:
         """Check if request should be allowed using multiple cache-based limits"""
-        ip: str = self.get_ident(request)
-        email: Optional[str] = self.get_email_from_request(request)
+        if settings.DEBUG:
+            return True
 
-        # Define specific limits for keys
-        limits = {
-            f"contact_throttle_ip:{ip}": 5,  # 5 requests per hour per IP
-        }
+        try:
+            ip: str = self.get_ident(request)
+            email: Optional[str] = self.get_email_from_request(request)
 
-        if email:
-            limits.update(
-                {
-                    f"contact_throttle_email:{email}": 3,  # 3 requests per hour per email
-                    f"contact_throttle_combined:{ip}:{email}": 2,  # 2 req/hr per IP+email
-                }
-            )
+            limits = {
+                f"contact_throttle_ip:{ip}": 5,
+            }
 
-        # 1. Check all triggers BEFORE incrementing any
-        for key, limit in limits.items():
-            count: int = cache.get(key, 0)
-            if count >= limit:
-                logger.warning(f"Contact form rate limit exceeded for key: {key}")
-                return False
+            if email:
+                limits.update(
+                    {
+                        f"contact_throttle_email:{email}": 3,
+                        f"contact_throttle_combined:{ip}:{email}": 2,
+                    }
+                )
 
-        # 2. If all checks pass, increment all counters safely
-        for key in limits:
-            try:
-                cache.incr(key)
-            except ValueError:
-                # Key doesn't exist in cache, initialize it
-                cache.set(key, 1, 3600)
+            for key, limit in limits.items():
+                count: int = cache.get(key, 0)
+                if count >= limit:
+                    logger.warning(f"Contact form rate limit exceeded for key: {key}")
+                    return False
 
-        return True
+            for key in limits:
+                try:
+                    cache.incr(key)
+                except ValueError:
+                    cache.set(key, 1, 3600)
+
+            return True
+        except Exception as exc:
+            logger.warning("Contact form throttle unavailable, allowing request: %s", exc)
+            return True
 
     def wait(self) -> int:
         """Return wait time in seconds before retry is allowed"""

@@ -23,6 +23,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml.template:ro
       - ./infra/traefik/dynamic_conf.yml:/etc/traefik/dynamic_conf.yml.template:ro
+      - ${TRAEFIK_LOG_DIR:-/var/log/portfolio/traefik}:/var/log/traefik
       - traefik_acme:/letsencrypt
     tmpfs:
       - /tmp
@@ -32,7 +33,7 @@ services:
         max-size: "10m"
         max-file: "3"
     environment:
-      - TZ=UTC
+      - TZ=Europe/Warsaw
       - CONTACT_EMAIL=${CONTACT_EMAIL}
       - SITE_DOMAIN=${SITE_DOMAIN}
       - TRAEFIK_USER=${TRAEFIK_USER}

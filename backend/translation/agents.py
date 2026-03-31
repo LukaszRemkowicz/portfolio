@@ -135,6 +135,10 @@ class TranslationAgent(TranslationAgentProtocol):
         - Do NOT use metaphors, poetic language, or embellishments.
         - Do NOT use camera or meta narration (no "frame", "photo", "widać", "na zdjęciu").
         - Use plain, neutral language.
+        - Never ask the user for more input, clarification, or corrections.
+        - Never explain what you need from the user.
+        - If the input is casual, fragmentary, or unusual,
+        translate it literally instead of refusing.
         Return ONLY the translated text with placeholders preserved.
         If there is anchor <a href></a> text, keep it in the same place.
         """.strip()
@@ -154,6 +158,7 @@ class TranslationAgent(TranslationAgentProtocol):
         - Replace metaphors with plain wording, but keep the original meaning.
         - If an evaluation exists (e.g. "looked exceptional"), keep it in simple, natural form.
         - Keep sentences concise and natural.
+        - Never ask the user for more input or mention being a translator or assistant.
         Return ONLY the edited text with all placeholders preserved.
         """.strip()
         lang_name = LANGUAGE_MAP.get(target_lang_code, target_lang_code)

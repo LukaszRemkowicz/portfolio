@@ -332,11 +332,19 @@ CACHES = {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": env.str("REDIS_URL", default=f"redis://{_redis_auth}redis:6379/1"),
         "TIMEOUT": 3600,
+        "OPTIONS": {
+            "socket_connect_timeout": 0.2,
+            "socket_timeout": 0.2,
+        },
     },
     "select2": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": env.str("REDIS_URL", default=f"redis://{_redis_auth}redis:6379/2"),
         "TIMEOUT": 3600,
+        "OPTIONS": {
+            "socket_connect_timeout": 0.2,
+            "socket_timeout": 0.2,
+        },
     },
 }
 
@@ -411,10 +419,12 @@ LOGGING = {
         "verbose": {
             "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
             "style": "{",
+            "datefmt": "%Y-%m-%d %H:%M:%S %z",
         },
         "simple": {
-            "format": "{levelname} {message}",
+            "format": "{asctime} {levelname} {message}",
             "style": "{",
+            "datefmt": "%Y-%m-%d %H:%M:%S %z",
         },
     },
     "handlers": {
@@ -501,6 +511,7 @@ EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default=cast(Any, ""))
 EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default=cast(Any, ""))
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="noreply@example.com")
 CONTACT_EMAIL = env.str("CONTACT_EMAIL", default="admin@example.com")
+SIMULATE_CONTACT_EMAILS = env.bool("SIMULATE_CONTACT_EMAILS", default=False)
 
 # CKEditor 5 Configuration
 CKEDITOR_5_CONFIGS = {
@@ -693,6 +704,18 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_PUBLISH_RETRY = True
+CELERY_TASK_PUBLISH_RETRY_POLICY = {
+    "max_retries": 1,
+    "interval_start": 0,
+    "interval_step": 0.2,
+    "interval_max": 0.2,
+}
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "socket_connect_timeout": 0.2,
+    "socket_timeout": 0.2,
+    "max_retries": 1,
+}
 
 # Task Routing
 # Route monitoring tasks to a specific queue so they can be picked up

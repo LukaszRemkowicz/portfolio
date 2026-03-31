@@ -81,12 +81,22 @@ class ContactSubmissionService:
         safe_ip = sanitize_for_logging(client_ip)
         safe_email = sanitize_for_logging(contact_message.email) if contact_message.email else ""
 
-        # 1. Send email notification via Celery task
-        send_notification_email_task.delay(contact_message.id)
+        ContactSubmissionService._enqueue_email_task(contact_message.id)
 
         logger.info(
             f"Contact message created: ID={contact_message.id}, Email={safe_email}, IP={safe_ip}"
         )
+
+    @staticmethod
+    def _enqueue_email_task(contact_message_id: int) -> None:
+        try:
+            send_notification_email_task.apply_async(args=[contact_message_id])
+        except Exception as exc:
+            logger.warning(
+                "Failed to enqueue contact email task for message ID=%s: %s",
+                contact_message_id,
+                exc,
+            )
 
     @staticmethod
     def log_incoming_data(data: Dict[str, Any], client_ip: str) -> None:
