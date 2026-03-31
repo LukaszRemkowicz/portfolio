@@ -411,10 +411,12 @@ LOGGING = {
         "verbose": {
             "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
             "style": "{",
+            "datefmt": "%Y-%m-%d %H:%M:%S %z",
         },
         "simple": {
-            "format": "{levelname} {message}",
+            "format": "{asctime} {levelname} {message}",
             "style": "{",
+            "datefmt": "%Y-%m-%d %H:%M:%S %z",
         },
     },
     "handlers": {

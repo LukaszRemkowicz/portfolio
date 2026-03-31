@@ -204,6 +204,8 @@ services:
   nginx:
     image: ${ENVIRONMENT}-nginx:${TAG}
     restart: always
+    environment:
+      TZ: "Europe/Warsaw"
     read_only: true
     security_opt:
       - no-new-privileges:true
