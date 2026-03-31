@@ -305,39 +305,68 @@ class TranslationService:
         "i am sorry",
         "i cannot",
         "i can't",
+        "i'm here to help",
+        "i am here to help",
+        "i'm here to assist",
+        "i am here to assist",
         "could you please",
         "it seems like",
         "there might be a mistake",
         "please provide",
+        "provide the text",
+        "provide the content",
+        "share the text",
+        "send the text",
         "i apologize",
         "as an ai",
     )
 
-    @staticmethod
-    def _is_valid_translation(source: str, translated: str) -> bool:
-        """
-        Returns False when the LLM response is a refusal or clearly not a translation.
+    REFUSAL_SUBSTRINGS: tuple[str, ...] = (
+        "please provide the text you'd like me to",
+        "please provide the text you would like me to",
+        "please provide the content you'd like me to",
+        "please provide the content you would like me to",
+        "you'd like me to edit",
+        "you would like me to edit",
+        "you'd like me to translate",
+        "you would like me to translate",
+        "your astrophotography entry translation",
+    )
 
-        Rejects output that:
-        - Starts with a known refusal phrase (LLM politely refusing the request)
-        - Is byte-for-byte identical to the source (no translation happened)
+    @classmethod
+    def _get_invalid_translation_reason(cls, source: str, translated: str) -> Optional[str]:
+        """
+        Returns a failure reason when the LLM response is clearly not a translation.
+
+        Rejects output that starts with or clearly contains assistant-style
+        refusal/help text instead of an actual translation.
         """
         if not translated:
-            return False
+            return "Empty Output"
+
         lower = translated.strip().lower()
-        for prefix in TranslationService.REFUSAL_PREFIXES:
+        for prefix in cls.REFUSAL_PREFIXES:
             if lower.startswith(prefix):
                 logger.warning(
                     f"[TRANSLATION REFUSED] LLM returned a refusal message. "
                     f"Source (truncated): '{source[:60]}...'"
                 )
-                return False
+                return f"LLM Refusal: {str(translated).strip()[:200]}"
+
+        for snippet in cls.REFUSAL_SUBSTRINGS:
+            if snippet in lower:
+                logger.warning(
+                    f"[TRANSLATION REFUSED] LLM returned assistant-style help text. "
+                    f"Source (truncated): '{source[:60]}...'"
+                )
+                return f"LLM Refusal: {str(translated).strip()[:200]}"
+
         if translated.strip() == source.strip():
             logger.warning(
                 f"[TRANSLATION NOOP] LLM returned identical text to source for: '{source[:60]}...'"
             )
-            return False
-        return True
+            return None
+        return None
 
     @classmethod
     def _run_parler_translation(
@@ -371,9 +400,7 @@ class TranslationService:
         translated = handler(source, language_code)
 
         reason = None
-        if not translated:
-            reason = "Empty Output"
-        elif translated.strip() == source.strip():
+        if translated and translated.strip() == source.strip():
             # Identity match: the LLM returned the same text as the source.
             # This is valid for proper nouns that don't change across languages
             # (e.g. "Lanzarote", "Maui", "Tenerife"). Accept the source value
@@ -384,12 +411,7 @@ class TranslationService:
                 f"source='{source[:80]}' — accepted as-is (proper noun / unchanged)."
             )
         else:
-            # Check for LLM Refusal messages
-            lower = translated.strip().lower()
-            for prefix in cls.REFUSAL_PREFIXES:
-                if lower.startswith(prefix):
-                    reason = f"LLM Refusal: {str(translated).strip()[:200]}"
-                    break
+            reason = cls._get_invalid_translation_reason(source, translated)
 
         if reason:
             logger.warning(
