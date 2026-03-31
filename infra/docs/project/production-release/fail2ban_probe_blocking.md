@@ -48,8 +48,8 @@ Current defaults:
 
 Jails:
 
-- `portfolio-nginx-sensitive-probes`
-- `portfolio-traefik-sensitive-probes`
+- `portfolio-nginx-probes`
+- `portfolio-traefik-probes`
 
 ## Host Prerequisites
 
@@ -64,7 +64,7 @@ Create the Traefik host log directory:
 
 ```bash
 sudo mkdir -p /var/log/portfolio/traefik
-sudo chown -R <user>:<user> /var/log/portfolio/traefik
+sudo touch /var/log/portfolio/traefik/access.log
 ```
 
 ## Deployment Steps
@@ -89,8 +89,9 @@ tail -f /var/log/portfolio/traefik/access.log
 Run:
 
 ```bash
-chmod +x /home/<user>/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
-sudo /home/<user>/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
+chmod +x /home/lukasz/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
+sudo /home/lukasz/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
+sudo systemctl enable --now fail2ban
 ```
 
 This copies the filters and jail file into:
@@ -105,19 +106,24 @@ and reloads or restarts `fail2ban`.
 What you still need to do on the server:
 
 ```bash
-sudo apt-get update && sudo apt-get install -y fail2ban
+sudo apt-get update
+sudo apt-get install -y fail2ban
 sudo mkdir -p /var/log/portfolio/traefik
-sudo chown -R <user>:<user> /var/log/portfolio/traefik
-chmod +x /home/<user>/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
-sudo /home/<user>/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
+sudo touch /var/log/portfolio/traefik/access.log
+chmod +x /home/lukasz/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
+sudo /home/lukasz/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
 TAG=v2.2.0 doppler run -- docker compose -f docker-compose.traefik.yml up -d traefik
+sudo systemctl enable --now fail2ban
+TAG=v2.2.0 doppler run -- docker compose -f docker-compose.traefik.yml up -d --force-recreate traefik
 ```
 
 Then verify:
 
 ```bash
-sudo fail2ban-client status portfolio-nginx-sensitive-probes
-sudo fail2ban-client status portfolio-traefik-sensitive-probes
+sudo systemctl status fail2ban --no-pager -l
+sudo fail2ban-client status
+sudo fail2ban-client status portfolio-nginx-probes
+sudo fail2ban-client status portfolio-traefik-probes
 ```
 
 ## Verification
@@ -126,15 +132,15 @@ Check the configured jails:
 
 ```bash
 sudo fail2ban-client status
-sudo fail2ban-client status portfolio-nginx-sensitive-probes
-sudo fail2ban-client status portfolio-traefik-sensitive-probes
+sudo fail2ban-client status portfolio-nginx-probes
+sudo fail2ban-client status portfolio-traefik-probes
 ```
 
 Check active bans:
 
 ```bash
-sudo fail2ban-client status portfolio-nginx-sensitive-probes
-sudo fail2ban-client status portfolio-traefik-sensitive-probes
+sudo fail2ban-client status portfolio-nginx-probes
+sudo fail2ban-client status portfolio-traefik-probes
 ```
 
 Look for the `Banned IP list` section.
@@ -144,7 +150,7 @@ Look for the `Banned IP list` section.
 Nginx jail log file:
 
 ```text
-/var/log/portfolio/nginx/prod/access.log
+/var/log/portfolio/nginx/prod/access.log or /etc/nginx/logs/access.log
 ```
 
 Traefik jail log file:
@@ -173,15 +179,16 @@ Check:
 
 1. Traefik was recreated after the access-log file mount was added.
 2. `/var/log/portfolio/traefik/access.log` exists and is non-empty.
-3. `portfolio-traefik-sensitive-probes` appears in `fail2ban-client status`.
+3. `portfolio-traefik-probes` appears in `fail2ban-client status`.
 
 ### Nginx jail never bans
 
 Check:
 
 1. Sensitive probe requests return `403` or `404`.
-2. `/var/log/portfolio/nginx/prod/access.log` contains those requests.
-3. `portfolio-nginx-sensitive-probes` appears in `fail2ban-client status`.
+2. `/etc/nginx/logs/access.log` contains those requests.
+3. `portfolio-nginx-probes` appears in `fail2ban-client status`.
+4. `/var/log/fail2ban.log` does not show an `iptables` chain-name-too-long error.
 
 ### A path is not triggering bans
 
@@ -191,3 +198,43 @@ Add or adjust the matching regex in:
 - `infra/scripts/security/fail2ban/filter.d/portfolio-traefik-sensitive-probes.conf`
 
 Then reinstall or reload `fail2ban`.
+
+## Operations
+
+Monitor service and bans:
+
+```bash
+sudo systemctl status fail2ban --no-pager -l
+sudo fail2ban-client status
+sudo fail2ban-client status portfolio-nginx-probes
+sudo fail2ban-client status portfolio-traefik-probes
+sudo tail -f /var/log/fail2ban.log
+sudo journalctl -u fail2ban -f
+```
+
+Check Traefik access-log health:
+
+```bash
+docker logs --tail 50 traefik
+docker exec traefik sh -lc 'ls -ld /var/log/traefik && ls -l /var/log/traefik'
+```
+
+Restart or reload:
+
+```bash
+sudo systemctl restart fail2ban
+sudo fail2ban-client reload
+```
+
+Remove bans:
+
+```bash
+sudo fail2ban-client set portfolio-nginx-probes unbanip <ip>
+sudo fail2ban-client set portfolio-traefik-probes unbanip <ip>
+```
+
+To clear all bans quickly, restart the service:
+
+```bash
+sudo systemctl restart fail2ban
+```

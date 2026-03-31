@@ -1,14 +1,14 @@
-[portfolio-nginx-sensitive-probes]
+[portfolio-nginx-probes]
 enabled = true
 filter = portfolio-nginx-sensitive-probes
 backend = auto
 port = http,https
-logpath = /var/log/portfolio/nginx/prod/access.log
+logpath = __NGINX_ACCESS_LOG__
 findtime = 10m
 maxretry = 3
 bantime = 24h
 
-[portfolio-traefik-sensitive-probes]
+[portfolio-traefik-probes]
 enabled = true
 filter = portfolio-traefik-sensitive-probes
 backend = auto

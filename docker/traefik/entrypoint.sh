@@ -6,6 +6,8 @@ TRAEFIK_TEMPLATE="/etc/traefik/traefik.yml.template"
 TRAEFIK_RENDERED="/tmp/traefik.yml"
 TRAEFIK_DYNAMIC_TEMPLATE="/etc/traefik/dynamic_conf.yml.template"
 TRAEFIK_DYNAMIC_RENDERED="/tmp/dynamic_conf.yml"
+TRAEFIK_LOG_DIR="/var/log/traefik"
+TRAEFIK_ACCESS_LOG="$TRAEFIK_LOG_DIR/access.log"
 ACME_DIR="/letsencrypt"
 ACME_FILE="$ACME_DIR/acme.json"
 
@@ -24,6 +26,19 @@ chmod 600 "$HTPASSWD_FILE"
 mkdir -p "$ACME_DIR"
 touch "$ACME_FILE"
 chmod 600 "$ACME_FILE"
+
+# Prepare the host-mounted access log before Traefik starts so file logging
+# works consistently for fail2ban-backed probe blocking.
+mkdir -p "$TRAEFIK_LOG_DIR"
+touch "$TRAEFIK_ACCESS_LOG"
+chmod 755 "$TRAEFIK_LOG_DIR" || true
+chmod 644 "$TRAEFIK_ACCESS_LOG" || true
+
+if [ ! -w "$TRAEFIK_ACCESS_LOG" ]; then
+    echo "Traefik access log is not writable: $TRAEFIK_ACCESS_LOG" >&2
+    echo "Check the host bind mount permissions for $TRAEFIK_LOG_DIR." >&2
+    exit 1
+fi
 
 if [ ! -f "$TRAEFIK_TEMPLATE" ]; then
     echo "Traefik config template not found: $TRAEFIK_TEMPLATE" >&2
