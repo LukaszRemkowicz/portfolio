@@ -39,7 +39,8 @@ log:
 
 accessLog:
   filePath: /var/log/traefik/access.log
-  bufferingSize: 100
+  # Flush each request immediately so host-side fail2ban can react in real time.
+  bufferingSize: 0
   format: json
   fields:
     defaultMode: keep
