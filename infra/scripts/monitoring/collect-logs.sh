@@ -11,6 +11,7 @@ DOCKER_LOGS_DIR="${DOCKER_LOGS_DIR:?ERROR: DOCKER_LOGS_DIR env var must be set}"
 COMPOSE_FILE="${COMPOSE_FILE:?ERROR: COMPOSE_FILE env var must be set}"
 LOG_TAIL="${LOG_TAIL:-5000}"
 LOG_SINCE="${LOG_SINCE:-24h}"
+ARCHIVE_RETENTION_DAYS="${ARCHIVE_RETENTION_DAYS:-30}"
 
 # Infer ENVIRONMENT from COMPOSE_FILE name (e.g., docker-compose.prod.yml -> prod)
 if [[ -z "${ENVIRONMENT:-}" ]]; then
@@ -33,9 +34,51 @@ else
 fi
 
 PROJECT_NAME=$(get_project_name)
+ARCHIVE_ROOT="${DOCKER_LOGS_DIR}/archive"
+CURRENT_SNAPSHOT_FILES=(
+    "backend.log"
+    "frontend.log"
+    "nginx.log"
+    "traefik.log"
+    "collected_at.txt"
+)
 
 log() {
     echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $*"
+}
+
+archive_existing_snapshots() {
+    local archive_timestamp archive_dir
+    local found_snapshot=0
+    archive_timestamp="$(date -u +"%Y-%m-%d_%H%M%S")"
+    archive_dir="${ARCHIVE_ROOT}/${archive_timestamp}"
+
+    for filename in "${CURRENT_SNAPSHOT_FILES[@]}"; do
+        if [[ -e "${DOCKER_LOGS_DIR}/${filename}" ]]; then
+            found_snapshot=1
+            break
+        fi
+    done
+
+    if [[ "${found_snapshot}" -eq 0 ]]; then
+        log "No existing snapshot set found to archive."
+        return 0
+    fi
+
+    mkdir -p "${archive_dir}"
+    log "Archiving current snapshot set to ${archive_dir}"
+
+    for filename in "${CURRENT_SNAPSHOT_FILES[@]}"; do
+        if [[ -e "${DOCKER_LOGS_DIR}/${filename}" ]]; then
+            mv "${DOCKER_LOGS_DIR}/${filename}" "${archive_dir}/${filename}"
+        fi
+    done
+}
+
+prune_old_archives() {
+    mkdir -p "${ARCHIVE_ROOT}"
+    log "Pruning archive snapshot directories older than ${ARCHIVE_RETENTION_DAYS} days..."
+    find "${ARCHIVE_ROOT}" -mindepth 1 -maxdepth 1 -type d -mtime +"${ARCHIVE_RETENTION_DAYS}" -exec rm -rf {} +
 }
 
 # ---------------------------------------------------------------------------
@@ -46,10 +89,10 @@ log "Resolved project name: ${PROJECT_NAME}"
 mkdir -p "${DOCKER_LOGS_DIR}"
 
 # ---------------------------------------------------------------------------
-# 2. Clear old logs (no stale data)
+# 2. Archive previous snapshot set and prune retention
 # ---------------------------------------------------------------------------
-log "Clearing existing logs..."
-rm -f "${DOCKER_LOGS_DIR}"/*.log "${DOCKER_LOGS_DIR}/collected_at.txt" 2>/dev/null || true
+archive_existing_snapshots
+prune_old_archives
 
 # ---------------------------------------------------------------------------
 # 3. Collection Function

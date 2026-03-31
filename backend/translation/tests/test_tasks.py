@@ -428,6 +428,23 @@ class TestTranslationServiceBusinessLogic:
         assert result["name"] == ""
         assert failures["name"].startswith("LLM Refusal")
 
+    def test_llm_assistant_style_reply_rejected(self, mocker, astro_image_factory):
+        """Assistant-style help text must not be saved as a translation."""
+        instance = astro_image_factory()
+        mock_agent = mocker.Mock()
+        mock_agent.translate.return_value = (
+            "I'm here to help with your astrophotography entry translation. "
+            "Please provide the text you'd like me to edit."
+        )
+        service = TranslationService(agent=mock_agent)
+
+        mocker.patch.object(service, "_save_translations")
+
+        result, failures = service.translate_astro_image(instance, "pl")
+
+        assert result["name"] == ""
+        assert failures["name"].startswith("LLM Refusal")
+
     def test_llm_identical_output_accepted_as_proper_noun(self, mocker, astro_image_factory):
         """LLM returning the exact source text is now treated
         as a valid translation (proper noun)."""

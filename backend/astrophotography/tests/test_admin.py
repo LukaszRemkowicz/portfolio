@@ -74,6 +74,14 @@ class TestAstroImageAdmin:
         content: str = response.content.decode("utf-8")
         assert image.name in content
 
+    def test_admin_add_page_includes_upload_progress_assets(self, admin_client: Client) -> None:
+        response: HttpResponse = admin_client.get(reverse("admin:astrophotography_astroimage_add"))
+
+        assert response.status_code == 200
+        content: str = response.content.decode("utf-8")
+        assert "/static/astrophotography/js/admin_upload_progress.js" in content
+        assert "/static/astrophotography/css/admin_upload_progress.css" in content
+
     def test_admin_change_page_filtering_pl(self, admin_client: Client) -> None:
         """
         Verify that non-translatable fields are hidden when editing 'pl' language.

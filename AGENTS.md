@@ -60,6 +60,8 @@ Use these documents as fast context before implementation.
   Use for homepage latest-image filters and `LandingPageSettings.latest_filters`. Describes how tags are curated, rendered, cached, and invalidated.
 - `infra/docs/project/monitoring_system_overview.md`
   Use for monitoring jobs, scheduling, queue routing, log analysis, sitemap analysis, and LLM boundaries. Describes the live monitoring architecture and hard invariants.
+- `infra/docs/project/translation_system_overview.md`
+  Use for translation lifecycle, `TranslationTask` debugging, translation admin behavior, serializer fallback behavior, and adding translation support to new models. Describes the async translation architecture and its operational boundaries.
 - `infra/docs/project/release_deploy_architecture.md`
   Use for release scripts, deploy logic, image naming, artifact flow, and rollback behavior. Describes the tag-based release/deploy model and script responsibilities.
 - `infra/docs/project/production-release/README.md`
@@ -84,6 +86,7 @@ Use this quick mapping when a task arrives:
 - Homepage latest-image filters/tags -> `infra/docs/project/latest_images_tags.md`
 - Django admin image cropping or preview/media bug -> `infra/docs/project/django_admin_image_cropper_mechanism.md`
 - Monitoring, Celery monitoring jobs, sitemap checks -> `infra/docs/project/monitoring_system_overview.md`
+- Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
 - Release/deploy script logic or image naming -> `infra/docs/project/release_deploy_architecture.md`
 - Production release procedure -> `infra/docs/project/production-release/README.md`
 - SSR architecture direction -> `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
