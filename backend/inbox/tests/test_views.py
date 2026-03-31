@@ -7,6 +7,7 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from django.test import override_settings
 from django.urls import reverse
 
 from core.tests.factories import LandingPageSettingsFactory
@@ -124,6 +125,51 @@ def test_contact_throttling_headers(mock_email_service: MagicMock, api_client: A
         # At least one throttling header should be present, or just check status code
         throttling_headers_found = any(header in response for header in possible_headers)
         assert throttling_headers_found or response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_contact_throttling_bypassed_in_debug(
+    mock_email_service: MagicMock, api_client: APIClient
+) -> None:
+    """Debug mode should bypass custom contact throttling entirely."""
+    LandingPageSettingsFactory(contact_form_enabled=True)
+
+    url = reverse("inbox:contact-message-list")
+
+    for request_number in range(6):
+        data = {
+            "name": f"Debug User {request_number}",
+            "email": f"debug{request_number}@example.com",
+            "subject": f"Debug Subject {request_number}",
+            "message": f"Debug message content {request_number}",
+        }
+
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+
+    assert mock_email_service.call_count == 6
+
+
+@pytest.mark.django_db
+def test_contact_throttling_fails_open_when_cache_unavailable(
+    mocker, mock_email_service: MagicMock, api_client: APIClient
+) -> None:
+    """Redis/cache failures should not block or reject contact submissions."""
+    LandingPageSettingsFactory(contact_form_enabled=True)
+    mocker.patch("common.throttling.cache.get", side_effect=Exception("Redis unavailable"))
+
+    url = reverse("inbox:contact-message-list")
+    data = {
+        "name": "Cache Failure User",
+        "email": "cache-failure@example.com",
+        "subject": "Cache failure subject",
+        "message": "Submission should still succeed when cache is down.",
+    }
+
+    response = api_client.post(url, data, format="json")
+    assert response.status_code == status.HTTP_201_CREATED
+    assert mock_email_service.call_count == 1
 
 
 @pytest.mark.django_db

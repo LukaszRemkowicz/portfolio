@@ -33,11 +33,13 @@ def mock_email_service(mocker: MockerFixture) -> MagicMock:
     Automatically mock email service for all tests.
     Prevents actual emails from being sent during tests.
     """
-    mock_async = mocker.patch("inbox.tasks.send_notification_email_task.delay")
+    mock_async = mocker.patch("inbox.services.send_notification_email_task.apply_async")
     mock_send_mail = mocker.patch("django.core.mail.send_mail")
+    mock_email_message = mocker.patch("inbox.tasks.EmailMessage")
 
     mock_async.return_value = None
     mock_send_mail.return_value = 1
+    mock_email_message.return_value.send.return_value = 1
     return mock_async
 
 
@@ -70,6 +72,12 @@ def valid_contact_serializer(valid_contact_data: dict[str, str]) -> ContactMessa
 def mock_inbox_send_mail(mocker: MockerFixture) -> MagicMock:
     """Fixture to mock send_mail in inbox.tasks."""
     return mocker.patch("inbox.tasks.send_mail")
+
+
+@pytest.fixture
+def mock_inbox_email_message(mocker: MockerFixture) -> MagicMock:
+    """Fixture to mock EmailMessage in inbox.tasks."""
+    return mocker.patch("inbox.tasks.EmailMessage")
 
 
 @pytest.fixture

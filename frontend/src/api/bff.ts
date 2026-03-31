@@ -90,7 +90,8 @@ export const fetchBffJson = async <TResponse>(
 /** Perform a browser-side POST against a frontend-owned JSON endpoint. */
 export const postBffJson = async <TResponse>(
   url: string,
-  body: unknown
+  body: unknown,
+  options: { timeoutMs?: number } = {}
 ): Promise<TResponse> => {
   const lang = (i18n.language || 'en').split('-')[0];
   const urlWithLang = new URL(
@@ -101,21 +102,38 @@ export const postBffJson = async <TResponse>(
   );
   urlWithLang.searchParams.set('lang', lang);
 
-  const response = await fetch(urlWithLang.toString(), {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeoutMs = options.timeoutMs ?? 1500;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  const payload = (await response.json().catch(() => null)) as TResponse &
-    BffErrorPayload;
+  try {
+    const response = await fetch(urlWithLang.toString(), {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
-    throwBffError(response.status, payload);
+    const payload = (await response.json().catch(() => null)) as TResponse &
+      BffErrorPayload;
+
+    if (!response.ok) {
+      throwBffError(response.status, payload);
+    }
+
+    return payload;
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new AppError(
+        'The request took too long. Please try again in a moment.',
+        408
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return payload;
 };
