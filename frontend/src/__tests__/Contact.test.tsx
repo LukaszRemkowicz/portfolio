@@ -104,7 +104,6 @@ describe('Contact Component', () => {
   it('displays server error message (e.g., 429 Throttling)', async () => {
     (useSettings as jest.Mock).mockReturnValue({ data: { contactForm: true } });
 
-    // Simulate a 429 Throttled error with a specific message
     const throttledError = new AppError('Too many requests. Wait 1 hour.', 429);
     mockFetchContact.mockRejectedValue(throttledError);
 
@@ -139,8 +138,6 @@ describe('Contact Component', () => {
   it('handles 400 validation errors from server', async () => {
     (useSettings as jest.Mock).mockReturnValue({ data: { contactForm: true } });
 
-    // We need to import the class or simulate the behavior
-    // Since we mock services, we can just throw what the interceptor would throw
     const { ValidationError } = require('../api/errors');
     mockFetchContact.mockRejectedValue(
       new ValidationError({ name: ['Server says name is too short.'] })
