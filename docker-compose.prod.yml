@@ -23,6 +23,7 @@ x-backend-defaults: &backend-defaults
     DB_PASSWORD: ${DB_PASSWORD}
     DB_HOST: ${DB_HOST:-db}
     DB_PORT: 5432
+    SITE_DOMAIN: ${SITE_DOMAIN}
     ADMIN_DOMAIN: ${ADMIN_DOMAIN}
     API_DOMAIN: ${API_DOMAIN}
     CSRF_COOKIE_DOMAIN: ${CSRF_COOKIE_DOMAIN}
@@ -203,6 +204,8 @@ services:
   nginx:
     image: ${ENVIRONMENT}-nginx:${TAG}
     restart: always
+    environment:
+      TZ: "Europe/Warsaw"
     read_only: true
     security_opt:
       - no-new-privileges:true
