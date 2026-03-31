@@ -23,6 +23,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml.template:ro
       - ./infra/traefik/dynamic_conf.yml:/etc/traefik/dynamic_conf.yml.template:ro
+      - ${TRAEFIK_LOG_DIR:-/var/log/portfolio/traefik}:/var/log/traefik
       - traefik_acme:/letsencrypt
     tmpfs:
       - /tmp

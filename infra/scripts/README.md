@@ -9,6 +9,7 @@ Primary script groups:
 - `release/` -> image build, release jobs, deployment switch, rollback flow
 - `db_backup/` -> backup, restore, restore validation
 - `monitoring/` -> host-side Docker log collection and monitoring helpers
+- `security/` -> host-side security helpers such as `fail2ban` probe blocking
 - `utils.sh` -> shared utility functions used across infra scripts
 
 ---
@@ -167,6 +168,50 @@ TAG=v1.2.0 doppler run -- ./infra/scripts/release/prepare_images.sh
 ```
 
 For staging, run `build.sh` first for the same `ENVIRONMENT` and `TAG`, then rerun `release.sh`.
+
+### 🚫 Probe IP blocking with fail2ban
+
+The repository includes a host-side `fail2ban` setup for repeated probes such as:
+
+- `/.env`
+- `/app/.env`
+- `/api/.env`
+- `/.git/config`
+- common CMS / exploit scans like `/wp-admin` and `/xmlrpc.php`
+
+Files:
+
+- `infra/scripts/security/fail2ban/filter.d/portfolio-nginx-sensitive-probes.conf`
+- `infra/scripts/security/fail2ban/filter.d/portfolio-traefik-sensitive-probes.conf`
+- `infra/scripts/security/fail2ban/jail.d/portfolio-probe-blocker.local`
+- `infra/scripts/security/install_fail2ban_probe_blocker.sh`
+
+The nginx jail covers probes that reach nginx on the public domain.
+The Traefik jail covers unmatched direct-IP and host-header probes before they reach nginx.
+
+Typical host setup:
+
+```bash
+sudo mkdir -p /var/log/portfolio/traefik
+sudo chown -R <user>:<user> /var/log/portfolio/traefik
+chmod +x /home/<user>/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
+sudo /home/<user>/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
+sudo systemctl restart fail2ban
+```
+
+After updating `docker-compose.traefik.yml` / `infra/traefik/traefik.yml`, recreate Traefik so the host access log file is mounted and written:
+
+```bash
+TAG=vX.Y.Z doppler run -- docker compose -f docker-compose.traefik.yml up -d traefik
+```
+
+Useful checks:
+
+```bash
+sudo fail2ban-client status portfolio-nginx-sensitive-probes
+sudo fail2ban-client status portfolio-traefik-sensitive-probes
+sudo fail2ban-client status
+```
 
 ### 💾 Backup scripts
 
