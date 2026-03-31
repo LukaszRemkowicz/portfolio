@@ -10,6 +10,11 @@ It covers:
 - what must be configured in Doppler on the production VPS
 - what remains local-only for staging
 - how to publish and deploy a production release
+- related production security runbooks
+
+Related production runbooks:
+
+- [Production Probe Blocking With Fail2ban](./fail2ban_probe_blocking.md)
 
 ## Current Model
 
@@ -171,6 +176,10 @@ Manual test pull example:
 ```bash
 doppler -c dev run -- sh -c 'printenv GHCR_TOKEN | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin && docker pull <registry url>'
 ```
+
+## Related Security Runbooks
+
+- [Production Probe Blocking With Fail2ban](./fail2ban_probe_blocking.md)
 
 ## Production Release Flow
 
