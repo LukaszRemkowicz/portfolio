@@ -169,9 +169,17 @@ export interface FilterParams {
   tag?: string;
   travel?: string;
   limit?: number;
+  page?: number;
 }
 
 export type FilterType = string;
+
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
 
 // API Types
 export interface ApiResponse<T = unknown> {

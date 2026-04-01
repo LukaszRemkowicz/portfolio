@@ -11,7 +11,12 @@ const mockFetchTravelHighlights: jest.Mock = jest.fn(async () => []);
 const mockFetchLatestAstroImages: jest.Mock = jest.fn(async () => []);
 const mockFetchCategories: jest.Mock = jest.fn(async () => []);
 const mockFetchTags: jest.Mock = jest.fn(async () => []);
-const mockFetchAstroImages: jest.Mock = jest.fn(async () => []);
+const mockFetchAstroImages: jest.Mock = jest.fn(async () => ({
+  count: 0,
+  next: null,
+  previous: null,
+  results: [],
+}));
 const mockFetchTravelHighlightDetail: jest.Mock = jest.fn(async () => ({
   title: 'Tatras',
 }));
@@ -200,6 +205,8 @@ describe('SSR entry server', () => {
       {
         filter: 'landscape',
         tag: 'moon',
+        page: 1,
+        limit: 24,
       },
       'mock-client'
     );

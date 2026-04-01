@@ -55,7 +55,9 @@ describe('media normalization', () => {
         },
         'astroimages'
       )
-    ).toEqual([{ url: '/media/test.webp' }]);
+    ).toEqual({
+      results: [{ url: '/media/test.webp' }],
+    });
   });
 
   it('normalizes object payload fields for image responses', () => {

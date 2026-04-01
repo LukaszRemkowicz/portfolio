@@ -9,6 +9,7 @@ __all__ = [  # noqa: F405
     "EMAIL_BACKEND",
     "PASSWORD_HASHERS",
     "LOGGING_CONFIG",
+    "SIMULATE_CONTACT_EMAILS",
 ]
 
 # Set required environment variables BEFORE importing settings
@@ -55,6 +56,7 @@ CACHES = {
 
 # Use console email backend for tests
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+SIMULATE_CONTACT_EMAILS = True
 
 # Faster test settings
 PASSWORD_HASHERS = [

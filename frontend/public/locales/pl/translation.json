@@ -23,6 +23,8 @@
     "tags": "Tagi",
     "allTags": "Wszystkie Tagi",
     "categories": "Kategorie",
+    "loadMoreGallery": "Załaduj więcej",
+    "loadingMore": "Ładowanie kolejnych...",
     "noImagesFound": "Nie znaleziono zdjęć dla tego filtra.",
     "noImagesHint": "Spróbuj wybrać inną kategorię lub tag, aby zobaczyć więcej zdjęć."
   },

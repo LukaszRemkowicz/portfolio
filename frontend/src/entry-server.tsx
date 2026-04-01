@@ -27,6 +27,7 @@ import {
   fetchTravelHighlights,
   fetchLatestAstroImages,
 } from './api/services';
+import { ASTRO_GALLERY_PAGE_SIZE } from './hooks/useAstroImages';
 import { fetchTravelHighlightDetail } from './hooks/useTravelHighlightDetail';
 import { APP_ROUTES } from './api/constants';
 
@@ -105,6 +106,20 @@ async function prefetchQuerySafely(
 ) {
   try {
     await queryClient.prefetchQuery(options);
+  } catch (error) {
+    console.warn('[frontend-ssr] prefetch failed', {
+      queryKey: options.queryKey,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+async function prefetchInfiniteQuerySafely(
+  queryClient: QueryClient,
+  options: Parameters<QueryClient['prefetchInfiniteQuery']>[0]
+) {
+  try {
+    await queryClient.prefetchInfiniteQuery(options);
   } catch (error) {
     console.warn('[frontend-ssr] prefetch failed', {
       queryKey: options.queryKey,
@@ -207,9 +222,18 @@ async function prefetchRouteQueries(
         queryKey: ['tags', language, selectedFilter],
         queryFn: () => fetchTags({ filter: selectedFilter }, client),
       }),
-      prefetchQuerySafely(queryClient, {
+      prefetchInfiniteQuerySafely(queryClient, {
         queryKey: ['astro-images', language, imageParams],
-        queryFn: () => fetchAstroImages(imageParams, client),
+        initialPageParam: 1,
+        queryFn: ({ pageParam }) =>
+          fetchAstroImages(
+            {
+              ...imageParams,
+              page: Number(pageParam),
+              limit: ASTRO_GALLERY_PAGE_SIZE,
+            },
+            client
+          ),
       }),
     ]);
     return;
