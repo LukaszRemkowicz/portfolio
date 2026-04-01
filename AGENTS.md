@@ -107,6 +107,14 @@ Use this quick mapping when a task arrives:
 - For cache-related work, think about both backend Redis invalidation and frontend SSR cache invalidation.
 
 
+## Testing
+
+Use these defaults when validating changes:
+
+- Backend: run `poetry run test`
+- Frontend: use the frontend Docker container for test commands rather than assuming the host machine is the correct runtime
+
+
 ## Keep This File Updated
 
 When adding a new important runbook or stable architecture doc under `infra/docs/project/` or `infra/docs/agent/`, add a short entry here with path, when to use it, and what it describes.
