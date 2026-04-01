@@ -24,6 +24,7 @@ from core.views import GenericAdminSecureMediaView, SecureMediaView
 
 from .constants import CELESTIAL_OBJECT_CHOICES
 from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Tag
+from .pagination import AstroImagePagination
 from .serializers import (
     AstroImageSerializer,
     AstroImageSerializerList,
@@ -48,6 +49,7 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
 
     throttle_classes = [GalleryRateThrottle, UserRateThrottle]
     lookup_field = "slug"
+    pagination_class = AstroImagePagination
 
     def get_queryset(self) -> QuerySet[AstroImage]:
         """Returns the filtered queryset of images."""

@@ -23,6 +23,8 @@
     "tags": "Tags",
     "allTags": "All Tags",
     "categories": "Categories",
+    "loadMoreGallery": "Load more",
+    "loadingMore": "Loading more...",
     "noImagesFound": "No images found for this filter.",
     "noImagesHint": "Try selecting a different category or tag to see more images."
   },

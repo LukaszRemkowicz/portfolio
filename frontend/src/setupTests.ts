@@ -96,6 +96,8 @@ jest.mock('react-i18next', () => ({
           'Filter by category or explore images using the tags below.',
         'common.exploreTags': 'Explore Tags',
         'common.categories': 'Categories',
+        'common.loadMoreGallery': 'Load more',
+        'common.loadingMore': 'Loading more...',
         'common.scanning': 'Scanning deep space sectors...',
         'common.syncCosmos': 'Synchronizing with the Cosmos',
         'common.compiling': 'Compiling projects...',
@@ -239,6 +241,15 @@ jest.mock('@tanstack/react-query', () => {
     useQueryClient: () => ({
       prefetchQuery: jest.fn(),
       invalidateQueries: jest.fn(),
+    }),
+    useInfiniteQuery: jest.fn().mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+      isFetching: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
     }),
     useQuery: jest.fn().mockReturnValue({
       data: undefined,

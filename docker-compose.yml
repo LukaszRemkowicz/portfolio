@@ -118,6 +118,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml.template:ro
       - ./infra/traefik/dynamic_conf.yml:/etc/traefik/dynamic_conf.yml.template:ro
+      - ${TRAEFIK_LOG_DIR:-./logs/traefik}:/var/log/traefik
       - ./infra/nginx/ssl/certs/portfolio.local.crt:/etc/letsencrypt/live/portfolio.local/fullchain.pem:ro
       - ./infra/nginx/ssl/certs/portfolio.local.key:/etc/letsencrypt/live/portfolio.local/privkey.pem:ro
       - traefik_acme:/letsencrypt
