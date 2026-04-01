@@ -23,6 +23,7 @@ import {
   UserProfile,
   BackgroundImage,
   AstroImage,
+  PaginatedResponse,
   ContactFormData,
   FilterParams,
   EnabledFeatures,
@@ -94,17 +95,35 @@ export const fetchBackground = async (
 export const fetchAstroImages = async (
   params: FilterParams = {},
   clientOrTransport: AxiosInstance | DataTransport = api
-): Promise<AstroImage[]> => {
+): Promise<PaginatedResponse<AstroImage>> => {
   const transport = resolveDataTransport(clientOrTransport);
-  const data = await transport.get<AstroImage[] | { results: AstroImage[] }>(
+  const data = await transport.get<
+    AstroImage[] | PaginatedResponse<AstroImage> | { results: AstroImage[] }
+  >(
     {
       browser: BFF_ROUTES.astroImages,
       server: API_ROUTES.astroImages,
     },
     params as QueryParams
   );
-  const items = Array.isArray(data) ? data : data?.results || [];
-  return normalizeAstroImages(items);
+
+  if (Array.isArray(data)) {
+    return {
+      count: data.length,
+      next: null,
+      previous: null,
+      results: normalizeAstroImages(data),
+    };
+  }
+
+  const items = data?.results || [];
+  const paginatedData = data as Partial<PaginatedResponse<AstroImage>>;
+  return {
+    count: paginatedData.count ?? items.length,
+    next: paginatedData.next ?? null,
+    previous: paginatedData.previous ?? null,
+    results: normalizeAstroImages(items),
+  };
 };
 
 /** Fetch the latest homepage astro images used in the shared shell. */

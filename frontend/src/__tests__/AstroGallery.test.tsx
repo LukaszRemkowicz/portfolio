@@ -75,6 +75,10 @@ describe('AstroGallery Component', () => {
     (useAstroImages as jest.Mock).mockReturnValue({
       data: [],
       isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      error: null,
     });
 
     (useCategories as jest.Mock).mockReturnValue({
@@ -108,6 +112,10 @@ describe('AstroGallery Component', () => {
     (useAstroImages as jest.Mock).mockReturnValue({
       data: undefined,
       isLoading: true,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      error: null,
     });
 
     render(
@@ -162,6 +170,10 @@ describe('AstroGallery Component', () => {
     (useAstroImages as jest.Mock).mockReturnValue({
       data: mockImages,
       isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      error: null,
     });
 
     await act(async () => {
@@ -198,6 +210,9 @@ describe('AstroGallery Component', () => {
     (useAstroImages as jest.Mock).mockReturnValue({
       data: undefined,
       isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
       error: new Error('API Error'),
     });
 
@@ -248,6 +263,10 @@ describe('AstroGallery Component', () => {
     (useAstroImages as jest.Mock).mockReturnValue({
       data: mockImages,
       isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      error: null,
     });
 
     await act(async () => {
@@ -295,6 +314,10 @@ describe('AstroGallery Component', () => {
     (useAstroImages as jest.Mock).mockReturnValue({
       data: mockImages,
       isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      error: null,
     });
 
     // Start with the slug already in the URL — this is what happens when
@@ -343,6 +366,10 @@ describe('AstroGallery Component', () => {
     (useAstroImages as jest.Mock).mockReturnValue({
       data: mockImages,
       isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      error: null,
     });
 
     await act(async () => {
@@ -430,5 +457,44 @@ describe('AstroGallery Component', () => {
     });
 
     // Verify interaction visually or through mock updates
+  });
+
+  it('keeps direct modal links working when the image is not in the loaded page', async () => {
+    (useAstroImages as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      error: null,
+    });
+
+    (useAstroImageDetail as jest.Mock).mockReturnValue({
+      data: {
+        pk: '99',
+        slug: 'remote-image',
+        thumbnail_url: '/remote-thumb.jpg',
+        name: 'Remote Image',
+        description: 'Loaded from detail endpoint',
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/astrophotography/remote-image']}>
+          <Routes>
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('image-modal')).toBeInTheDocument();
+    });
   });
 });

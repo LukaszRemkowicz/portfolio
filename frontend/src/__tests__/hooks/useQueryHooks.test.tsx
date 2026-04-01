@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useProfile } from '../../hooks/useProfile';
 import { useBackground } from '../../hooks/useBackground';
 import { useSettings } from '../../hooks/useSettings';
@@ -55,12 +55,14 @@ describe('TanStack Query Hooks', () => {
     );
   });
 
-  it('useAstroImages calls useQuery with correct options', () => {
+  it('useAstroImages calls useInfiniteQuery with correct options', () => {
     renderHook(() => useAstroImages({ filter: 'filter', tag: 'tag' }));
-    expect(useQuery).toHaveBeenCalledWith(
+    expect(useInfiniteQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['astro-images', 'en', { filter: 'filter', tag: 'tag' }],
         queryFn: expect.any(Function),
+        initialPageParam: 1,
+        getNextPageParam: expect.any(Function),
       })
     );
   });

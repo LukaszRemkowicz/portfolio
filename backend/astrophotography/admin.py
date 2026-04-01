@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from parler.admin import TranslatableAdmin
 from parler.forms import TranslatableModelForm
@@ -8,6 +8,8 @@ from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
 from django.db import models
+from django.db.models import F, Window
+from django.db.models.functions import RowNumber
 from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
@@ -224,13 +226,30 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
 
     change_form_template = "admin/astrophotography/secure_media_change_form.html"
     form = AstroImageForm
-    list_display = ("get_name", "capture_date", "place", "has_thumbnail", "tag_list")
+    list_display = (
+        "display_number",
+        "get_name",
+        "capture_date",
+        "place",
+        "has_thumbnail",
+        "tag_list",
+    )
     list_display_links = ("get_name",)
     list_filter = ("celestial_object", "tags")
 
-    def get_queryset(self, request: HttpRequest) -> QuerySet:
+    def get_queryset(self, request: HttpRequest) -> QuerySet[AstroImage]:
         qs = super().get_queryset(request)
-        return qs.select_related("place").prefetch_related("tags")  # type: ignore[no-any-return]
+        annotated_qs = (
+            qs.select_related("place")
+            .prefetch_related("tags")
+            .annotate(
+                admin_row_number=Window(
+                    expression=RowNumber(),
+                    order_by=(F("capture_date").desc(), F("created_at").desc()),
+                )
+            )
+        )
+        return cast(QuerySet[AstroImage], annotated_qs)
 
     @admin.display(description=_("Name"))
     def get_name(self, obj: AstroImage) -> str:
@@ -241,6 +260,10 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
                 if name:
                     break
         return str(name) if name else str(obj.id)
+
+    @admin.display(description="No.")
+    def display_number(self, obj: AstroImage) -> str:
+        return str(getattr(obj, "admin_row_number", ""))
 
     search_fields = (
         "translations__name",

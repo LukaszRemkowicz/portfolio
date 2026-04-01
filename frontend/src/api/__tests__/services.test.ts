@@ -147,7 +147,12 @@ describe('API Services', () => {
 
   describe('fetchAstroImages', () => {
     it('should fetch astro images with params', async () => {
-      const mockImages = [{ pk: 1, name: 'Galaxy', description: 'Cool' }];
+      const mockImages = {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [{ pk: 1, name: 'Galaxy', description: 'Cool' }],
+      };
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => mockImages,
@@ -164,8 +169,9 @@ describe('API Services', () => {
           },
         }
       );
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Galaxy');
+      expect(result.count).toBe(1);
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0].name).toBe('Galaxy');
     });
   });
 

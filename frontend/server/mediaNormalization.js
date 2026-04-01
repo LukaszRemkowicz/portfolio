@@ -58,12 +58,26 @@ export function normalizePublicMediaUrl(value) {
 export function normalizeBffPayload(payload, kind, requestOrigin) {
   if (!payload) return payload;
 
-  const data =
-    kind === 'astroimages' && payload.results ? payload.results : payload;
-
   if (kind !== 'images' && kind !== 'astroimages') {
-    return data;
+    return payload;
   }
+
+  if (
+    kind === 'astroimages' &&
+    payload.results &&
+    Array.isArray(payload.results)
+  ) {
+    return {
+      ...payload,
+      results: payload.results.map(item =>
+        typeof item === 'object' && item.url
+          ? { ...item, url: normalizePublicMediaUrl(item.url) }
+          : item
+      ),
+    };
+  }
+
+  const data = payload;
 
   if (Array.isArray(data)) {
     return data.map(item =>

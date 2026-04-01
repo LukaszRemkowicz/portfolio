@@ -51,8 +51,11 @@ class TestAstroImageViewSet:
         url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
         response: Response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
-        assert response.data[0]["pk"] == str(astro_image.pk)
+        assert response.data["count"] == 1
+        assert response.data["next"] is None
+        assert response.data["previous"] is None
+        assert len(response.data["results"]) == 1
+        assert response.data["results"][0]["pk"] == str(astro_image.pk)
         # After Phase 2: URL field removed, served via /v1/images/
 
     def test_retrieve_astro_image(self, api_client: APIClient, astro_image: AstroImage) -> None:
@@ -76,17 +79,20 @@ class TestAstroImageViewSet:
         # Filter matching "Deep Sky"
         response: Response = api_client.get(url, {"filter": "Deep Sky"})
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 2
+        assert response.data["count"] == 2
+        assert len(response.data["results"]) == 2
 
         # Filter matching "Landscape"
         response = api_client.get(url, {"filter": "Landscape"})
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
+        assert response.data["count"] == 1
+        assert len(response.data["results"]) == 1
 
         # Filter not matching
         response = api_client.get(url, {"filter": "Planetary"})
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 0
+        assert response.data["count"] == 0
+        assert len(response.data["results"]) == 0
 
     def test_filter_astro_images_by_translated_tag(self, api_client: APIClient) -> None:
         """Test filtering images by a tag slug that exists only in a non-default language."""
@@ -103,8 +109,49 @@ class TestAstroImageViewSet:
         # 1. Provide the Polish slug while querying the API in English (default language context)
         response: Response = api_client.get(url, {"tag": "polski-tytul"})
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
-        assert response.data[0]["pk"] == str(image.pk)
+        assert response.data["count"] == 1
+        assert len(response.data["results"]) == 1
+        assert response.data["results"][0]["pk"] == str(image.pk)
+
+    def test_list_astro_images_is_paginated(self, api_client: APIClient) -> None:
+        """The public gallery list should return paginated slices with navigation metadata."""
+        for _ in range(30):
+            AstroImageFactory()
+
+        url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["count"] == 30
+        assert len(response.data["results"]) == 24
+        assert response.data["previous"] is None
+        assert "page=2" in response.data["next"]
+
+    def test_list_astro_images_respects_limit_and_page(self, api_client: APIClient) -> None:
+        """Client-provided page and limit should control the returned gallery slice."""
+        for index in range(30):
+            AstroImageFactory(name=f"Image {index}")
+
+        url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url, {"page": 2, "limit": 10})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["count"] == 30
+        assert len(response.data["results"]) == 10
+        assert "page=3" in response.data["next"]
+        assert response.data["previous"] == "http://testserver/v1/astroimages/?limit=10"
+
+    def test_list_astro_images_caps_limit_to_max_page_size(self, api_client: APIClient) -> None:
+        """Excessive limits should be clamped to the gallery's max page size."""
+        for _ in range(60):
+            AstroImageFactory()
+
+        url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url, {"limit": 200})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["count"] == 60
+        assert len(response.data["results"]) == 48
 
     def test_latest_astro_images(self, api_client: APIClient) -> None:
         """Test the dedicated 'latest' endpoint returns exactly 9 images."""
@@ -531,7 +578,7 @@ class TestAstroImageViewSetCountryPlaceFiltering:
         response: Response = api_client.get(url, {"country": "US"})
 
         assert response.status_code == status.HTTP_200_OK
-        data: list[dict[str, Any]] = response.json()
+        data: list[dict[str, Any]] = response.json()["results"]
         assert len(data) == 1
         assert "United States" in data[0]["place"]["country"]
 
@@ -547,7 +594,7 @@ class TestAstroImageViewSetCountryPlaceFiltering:
         # Exact match
         response: Response = api_client.get(url, {"country": "US", "place": "Hawaii"})
         assert response.status_code == status.HTTP_200_OK
-        data: list[dict[str, Any]] = response.json()
+        data: list[dict[str, Any]] = response.json()["results"]
         assert len(data) == 1
         assert data[0]["name"] == image_h.name
 
@@ -560,7 +607,7 @@ class TestAstroImageViewSetCountryPlaceFiltering:
         response: Response = api_client.get(url, {"travel": "Poland"})
 
         assert response.status_code == status.HTTP_200_OK
-        data: list[dict[str, Any]] = response.json()
+        data: list[dict[str, Any]] = response.json()["results"]
         assert len(data) >= 1
         assert any("Poland" in img["place"]["country"] for img in data)
 

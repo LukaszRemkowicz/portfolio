@@ -92,7 +92,7 @@ class TestApiCaching:
         # 3. Request - should be MISS
         with patch("common.decorators.cache.logger.debug") as mock_logger:
             response = api_client.get(self.images_url)
-            assert any(img["name"] == "New Image" for img in response.data)
+            assert any(img["name"] == "New Image" for img in response.data["results"])
 
             # Verify MISS
             args = [call.args[0] for call in mock_logger.call_args_list]

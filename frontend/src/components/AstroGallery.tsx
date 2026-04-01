@@ -24,6 +24,29 @@ import { APP_ROUTES } from '../api/constants';
 import { useCategories } from '../hooks/useCategories';
 import { useBackground } from '../hooks/useBackground';
 import { useImageUrls } from '../hooks/useImageUrls';
+import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
+
+const getMinimumBatchForWidth = (width: number): number => {
+  if (width <= 480) {
+    return 1;
+  }
+
+  if (width <= 1100) {
+    return 2;
+  }
+
+  return 3;
+};
+
+const getBootstrapTargetForViewport = (
+  width: number,
+  height: number
+): number => {
+  const columns = getMinimumBatchForWidth(width);
+  const minimumRows = height >= 1000 ? 2 : 1;
+
+  return columns * minimumRows;
+};
 
 const AstroGallery: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -32,10 +55,24 @@ const AstroGallery: React.FC = () => {
   const location = useLocation();
   const [isTagsDrawerOpen, setIsTagsDrawerOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [minimumBatchSize, setMinimumBatchSize] = useState<number | null>(null);
+  const [bootstrapTarget, setBootstrapTarget] = useState<number | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const lastAutoLoadScrollYRef = useRef(Number.NEGATIVE_INFINITY);
 
   const selectedFilter = searchParams.get('filter') as FilterType | null;
   const selectedTag = searchParams.get('tag');
+  const selectedLimit = useMemo(() => {
+    const rawLimit = searchParams.get('limit');
+    if (!rawLimit) return undefined;
+
+    const parsedLimit = Number(rawLimit);
+    if (!Number.isFinite(parsedLimit) || parsedLimit <= 0) {
+      return undefined;
+    }
+
+    return parsedLimit;
+  }, [searchParams]);
 
   const { t } = useTranslation();
 
@@ -43,19 +80,53 @@ const AstroGallery: React.FC = () => {
   const { data: categories = [] } = useCategories();
   const { data: tags = [] } = useTags(selectedFilter || undefined);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const syncMinimumBatchSize = () => {
+      setMinimumBatchSize(getMinimumBatchForWidth(window.innerWidth));
+      setBootstrapTarget(
+        getBootstrapTargetForViewport(window.innerWidth, window.innerHeight)
+      );
+    };
+
+    syncMinimumBatchSize();
+    window.addEventListener('resize', syncMinimumBatchSize);
+
+    return () => {
+      window.removeEventListener('resize', syncMinimumBatchSize);
+    };
+  }, []);
+
+  const effectiveLimit = useMemo(() => {
+    if (selectedLimit === undefined || minimumBatchSize === null) {
+      return selectedLimit;
+    }
+
+    return Math.max(selectedLimit, minimumBatchSize);
+  }, [minimumBatchSize, selectedLimit]);
+
   const params = useMemo(
     () => ({
       ...(selectedFilter ? { filter: selectedFilter } : {}),
       ...(selectedTag ? { tag: selectedTag } : {}),
+      ...(effectiveLimit ? { limit: effectiveLimit } : {}),
     }),
-    [selectedFilter, selectedTag]
+    [effectiveLimit, selectedFilter, selectedTag]
   );
 
   const {
     data: images = [],
     isLoading: isImagesLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
     error: queryError,
   } = useAstroImages(params);
+  const { data: standaloneModalImage, isLoading: isModalImageLoading } =
+    useAstroImageDetail(imgSlug || null);
 
   // Pre-fetch all signed urls
   useImageUrls();
@@ -66,9 +137,69 @@ const AstroGallery: React.FC = () => {
   const modalImage = useMemo(() => {
     if (!imgSlug) return null;
     return (
-      images.find(i => i.slug === imgSlug || String(i.pk) === imgSlug) || null
+      images.find(i => i.slug === imgSlug || String(i.pk) === imgSlug) ||
+      standaloneModalImage ||
+      null
     );
-  }, [imgSlug, images]);
+  }, [imgSlug, images, standaloneModalImage]);
+
+  useEffect(() => {
+    lastAutoLoadScrollYRef.current = Number.NEGATIVE_INFINITY;
+  }, [selectedFilter, selectedTag, effectiveLimit]);
+
+  useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      bootstrapTarget === null ||
+      !hasNextPage ||
+      isFetchingNextPage ||
+      images.length === 0 ||
+      images.length >= bootstrapTarget
+    ) {
+      return;
+    }
+
+    void fetchNextPage();
+  }, [
+    bootstrapTarget,
+    fetchNextPage,
+    hasNextPage,
+    images.length,
+    isFetchingNextPage,
+  ]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !hasNextPage || isFetchingNextPage) {
+      return;
+    }
+
+    const handleScroll = () => {
+      const cards = document.querySelectorAll('[data-testid^="gallery-card-"]');
+      const lastCard = cards[cards.length - 1] as HTMLElement | undefined;
+
+      if (!lastCard) {
+        return;
+      }
+
+      const lastCardRect = lastCard.getBoundingClientRect();
+      const viewportBottom = window.innerHeight;
+      const minimumScrollDelta = 160;
+
+      if (
+        lastCardRect.bottom - viewportBottom <= 240 &&
+        window.scrollY - lastAutoLoadScrollYRef.current >= minimumScrollDelta
+      ) {
+        lastAutoLoadScrollYRef.current = window.scrollY;
+        void fetchNextPage();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [fetchNextPage, hasNextPage, images.length, isFetchingNextPage]);
   // Smooth scroll to results on filter/tag change (Mobile only)
   useEffect(() => {
     if (window.innerWidth <= 992 && resultsRef.current) {
@@ -84,7 +215,13 @@ const AstroGallery: React.FC = () => {
   }, [selectedFilter, selectedTag]);
 
   // Redirect if URL refers to a non-existent image slug
-  if (!isImagesLoading && imgSlug && !modalImage && images.length > 0) {
+  if (
+    !isImagesLoading &&
+    !isModalImageLoading &&
+    imgSlug &&
+    !modalImage &&
+    images.length > 0
+  ) {
     return <Navigate to={APP_ROUTES.ASTROPHOTOGRAPHY} replace />;
   }
 
@@ -101,6 +238,7 @@ const AstroGallery: React.FC = () => {
     // Keep active tag unless it was cleared
     if (selectedTag && selectedFilter !== filter)
       nextParams.set('tag', selectedTag);
+    if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
     navigate(`/astrophotography${qs}`);
   };
@@ -110,6 +248,7 @@ const AstroGallery: React.FC = () => {
     const nextParams = new URLSearchParams();
     if (tagSlug) nextParams.set('tag', tagSlug);
     if (selectedFilter) nextParams.set('filter', selectedFilter);
+    if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
     navigate(`/astrophotography${qs}`);
     setIsTagsDrawerOpen(false);
@@ -130,6 +269,7 @@ const AstroGallery: React.FC = () => {
     const nextParams = new URLSearchParams();
     if (selectedFilter) nextParams.set('filter', selectedFilter);
     if (selectedTag) nextParams.set('tag', selectedTag);
+    if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
     navigate(`/astrophotography/${image.slug}${qs}`);
   };
@@ -151,6 +291,7 @@ const AstroGallery: React.FC = () => {
     const nextParams = new URLSearchParams();
     if (selectedFilter) nextParams.set('filter', selectedFilter);
     if (selectedTag) nextParams.set('tag', selectedTag);
+    if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
     navigate(`/astrophotography${qs}`);
   };
@@ -241,13 +382,16 @@ const AstroGallery: React.FC = () => {
             {isImagesLoading ? (
               <GallerySkeleton count={9} />
             ) : images.length > 0 ? (
-              images.map((image: AstroImage) => (
-                <GalleryCard
-                  key={image.pk}
-                  item={image}
-                  onClick={handleImageClick}
-                />
-              ))
+              <>
+                {images.map((image: AstroImage) => (
+                  <GalleryCard
+                    key={image.pk}
+                    item={image}
+                    onClick={handleImageClick}
+                  />
+                ))}
+                {isFetchingNextPage ? <GallerySkeleton count={3} /> : null}
+              </>
             ) : (
               <div className={styles.noResults}>
                 <p>{t('common.noImagesFound')}</p>
