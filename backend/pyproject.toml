@@ -19,7 +19,7 @@ security = "scripts:security"
 
 [tool.poetry.dependencies]
 python = ">=3.13,<4.0"
-django = "6.0.2"
+django = "6.0.3"
 djangorestframework = "3.17.1"
 pillow = "12.1.1"
 django-environ = "0.13.0"
