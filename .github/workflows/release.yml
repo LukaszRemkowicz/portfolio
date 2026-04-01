@@ -156,7 +156,7 @@ jobs:
             type=raw,value=${{ steps.image_tag.outputs.value }}
 
       - name: Build and push production backend
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/backend/Dockerfile
@@ -179,7 +179,7 @@ jobs:
             type=raw,value=${{ steps.image_tag.outputs.value }}
 
       - name: Build and push production frontend
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/frontend/Dockerfile
@@ -210,7 +210,7 @@ jobs:
             type=raw,value=${{ steps.image_tag.outputs.value }}
 
       - name: Build and push production nginx
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/nginx/Dockerfile

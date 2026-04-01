@@ -242,7 +242,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Build production backend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/backend/Dockerfile
@@ -253,7 +253,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build production frontend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/frontend/Dockerfile
@@ -272,7 +272,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build frontend runtime smoke image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/frontend/Dockerfile
@@ -324,7 +324,7 @@ jobs:
           exit 1
 
       - name: Build production nginx image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/nginx/Dockerfile
