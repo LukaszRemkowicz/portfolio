@@ -55,7 +55,7 @@ jobs:
 
       - name: Upload coverage reports
         if: github.event_name == 'push'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           files: ./frontend/coverage/lcov.info
           flags: frontend
@@ -130,7 +130,7 @@ jobs:
 
       - name: Upload coverage reports
         if: github.event_name == 'push'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           files: ./backend/coverage.xml
           flags: backend
