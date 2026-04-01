@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
-    "@babel/preset-env": "^7.0.0",
+    "@babel/preset-env": "^7.29.2",
     "@babel/preset-react": "^7.0.0",
     "@babel/preset-typescript": "^7.0.0",
     "@eslint/js": "^9.39.2",
