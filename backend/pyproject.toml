@@ -36,7 +36,7 @@ django-extensions = "3.2.3"
 django-parler = "2.3"
 django-parler-rest = "2.2"
 beautifulsoup4 = "4.14.3"
-celery = {extras = ["redis"], version = "5.6.2"}
+celery = {extras = ["redis"], version = "5.6.3"}
 flower = "2.0.1"
 sentry-sdk = "2.52.0"
 requests = "2.32.5"
