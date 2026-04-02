@@ -1,6 +1,5 @@
 import logging
 import re
-from typing import List, Optional
 
 from bs4 import BeautifulSoup
 
@@ -36,7 +35,7 @@ class TranslationAgent(TranslationAgentProtocol):
         """
         self.provider = provider
 
-    def translate_place(self, text: str, target_lang_code: str, country_name: str) -> Optional[str]:
+    def translate_place(self, text: str, target_lang_code: str, country_name: str) -> str | None:
         """
         Translates a place name with country context.
         Uses specific rules for proper nouns and disambiguation.
@@ -45,7 +44,8 @@ class TranslationAgent(TranslationAgentProtocol):
             return ""
         logger.info(f"Translating place '{text}' to {target_lang_code} (Country: {country_name})")
         prompt = f"""
-        Translate single words or short phrases from English into {target_lang_code} using the rules below:  # noqa: E501
+        Translate single words or short phrases from English into
+        {target_lang_code} using the rules below:
 
         1. If the input is a proper noun (e.g. country, city, region, island):
         a) Use the official and commonly accepted {target_lang_code} name if one exists
@@ -61,7 +61,8 @@ class TranslationAgent(TranslationAgentProtocol):
         If a country ({country_name}) is provided:
         - Use it to disambiguate place names.
         - If the association is uncertain or conflicting, do not translate the name.
-        - If user made mistake in place name, correct it (for example, if user wrote "Big Hawai", it should be "Big Hawaii")  # noqa: E501
+        - If user made mistake in place name, correct it
+          (for example, if user wrote "Big Hawai", it should be "Big Hawaii")
         """
         result = self.provider.ask_question(
             system_prompt=prompt,
@@ -74,7 +75,7 @@ class TranslationAgent(TranslationAgentProtocol):
             logger.exception(f"LLM place translation failed for '{text}'")
         return result
 
-    def translate_tag(self, text: str, target_lang_code: str) -> Optional[str]:
+    def translate_tag(self, text: str, target_lang_code: str) -> str | None:
         """
         Translates a technical or descriptive tag into the target language.
         Optimized for brevity and technical accuracy (e.g. astronomy or programming).
@@ -102,7 +103,7 @@ class TranslationAgent(TranslationAgentProtocol):
             logger.exception(f"LLM tag translation failed for '{text}'")
         return result
 
-    def translate(self, text: str, target_lang_code: str, field_hint: str = "") -> Optional[str]:
+    def translate(self, text: str, target_lang_code: str, field_hint: str = "") -> str | None:
         """
         Translates plain text using a two-step process:
         1. Literal translation with strict rule adherence.
@@ -228,7 +229,8 @@ class TranslationAgent(TranslationAgentProtocol):
             result = result.replace(placeholder, tag)
         return result
 
-    def _extract_links(self, html_content: str) -> tuple[str, List[str]]:
+    @staticmethod
+    def _extract_links(html_content: str) -> tuple[str, list[str]]:
         """
         Extracts <a> tags from HTML and replaces them with placeholders [[L0]], [[L1]] etc.
         Returns a tuple of (html_with_placeholders, original_link_tags).
@@ -241,7 +243,8 @@ class TranslationAgent(TranslationAgentProtocol):
             a_tag.replace_with(placeholder)
         return str(soup), links
 
-    def _restore_links(self, translated_text: str, links: List[str]) -> str:
+    @staticmethod
+    def _restore_links(translated_text: str, links: list[str]) -> str:
         """Restores original <a> tags into text by replacing placeholders."""
         final_text = translated_text
         for i, original_html in enumerate(links):
@@ -249,9 +252,7 @@ class TranslationAgent(TranslationAgentProtocol):
             final_text = final_text.replace(placeholder, original_html)
         return final_text
 
-    def translate_html(
-        self, text: str, target_lang_code: str, field_hint: str = ""
-    ) -> Optional[str]:
+    def translate_html(self, text: str, target_lang_code: str, field_hint: str = "") -> str | None:
         """
         Orchestrates translation of HTML content.
         Preserves ALL HTML tags and attributes using placeholders to avoid GPT corruption.

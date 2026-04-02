@@ -2,8 +2,9 @@ import hashlib
 import json
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Type
+from typing import Any
 
 from django.conf import settings
 from django.core.cache import cache
@@ -63,7 +64,7 @@ class DefaultCacheStrategy(BaseCacheStrategy):
 def cache_response(
     timeout: int | None = None,
     key_prefix: str = "api_cache",
-    strategy_class: Type[BaseCacheStrategy] = DefaultCacheStrategy,
+    strategy_class: type[BaseCacheStrategy] = DefaultCacheStrategy,
 ):
     """
     Decorator for DRF view actions/methods to cache response data using a Strategy Pattern.

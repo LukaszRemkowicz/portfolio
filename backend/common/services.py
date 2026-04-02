@@ -60,17 +60,17 @@ class BaseEmailService(ABC):
     @abstractmethod
     def get_subject(self) -> str:
         """Generate email subject line."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_context(self) -> dict:
         """Generate template context dictionary."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_template_name(self) -> str:
         """Return path to email template."""
-        pass
+        raise NotImplementedError
 
     def render_template(self, context: dict) -> str:
         """Render email template with context."""

@@ -147,3 +147,81 @@ validate_tag() {
     exit 1
   fi
 }
+
+# ------------------------------------------------------------------
+# confirm_continue
+#   Prompts the operator before continuing to the next deployment phase.
+#   Skips the prompt when AUTO_APPROVE=true.
+# ------------------------------------------------------------------
+confirm_continue() {
+  local prompt="${1:-Continue?}"
+  local response
+
+  if [[ "${AUTO_APPROVE:-false}" == "true" ]]; then
+    echo "⏭️  AUTO_APPROVE=true, continuing without prompt."
+    return 0
+  fi
+
+  printf "%s [y/N]: " "${prompt}"
+  read -r response
+
+  case "${response}" in
+    y|Y|yes|YES)
+      return 0
+      ;;
+    *)
+      echo "🛑 Stopped by user."
+      return 1
+      ;;
+  esac
+}
+
+# ------------------------------------------------------------------
+# prune_local_images
+#   Removes older local image tags while protecting the prepared/current/prev
+#   tags and keeping the most recent N tags per repository.
+#   Usage: prune_local_images <environment_prefix> <keep_images> <prepared_tag> <current_tag> <prev_tag> <repo...>
+# ------------------------------------------------------------------
+prune_local_images() {
+  local env_prefix="$1"
+  local keep_images="$2"
+  local prepared_tag="$3"
+  local current_tag="$4"
+  local prev_tag="$5"
+  shift 5
+
+  local repo t
+
+  echo "🧹 Cleaning up local ${env_prefix} images..."
+  echo "📌 Keeping tags: prepared=${prepared_tag:-none} current=${current_tag:-none} prev=${prev_tag:-none}"
+
+  for repo in "$@"; do
+    local tags=()
+
+    echo "➡️ Repo: ${repo}"
+
+    while IFS=$'\t' read -r _ tag; do
+      if [[ -n "${tag}" && "${tag}" != "<none>" && "${tag}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+        tags+=("${tag}")
+      fi
+    done < <(
+      docker images "${repo}" --format '{{.CreatedAt}}\t{{.Tag}}' | sort -r
+    )
+
+    if (( ${#tags[@]} > keep_images )); then
+      for ((i=keep_images; i<${#tags[@]}; i++)); do
+        t="${tags[$i]}"
+
+        if [[ "${t}" == "${prepared_tag}" ]] || [[ -n "${current_tag}" && "${t}" == "${current_tag}" ]] || [[ -n "${prev_tag}" && "${t}" == "${prev_tag}" ]]; then
+          echo "📌 Skipping protective tag: ${repo}:${t}"
+          continue
+        fi
+
+        echo "🗑️ Removing old image: ${repo}:${t}"
+        docker image rm -f "${repo}:${t}" >/dev/null 2>&1 || true
+      done
+    else
+      echo "✔️ Nothing to clean for ${repo}"
+    fi
+  done
+}

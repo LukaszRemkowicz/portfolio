@@ -1,4 +1,4 @@
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -7,31 +7,29 @@ class TranslationAgentProtocol(Protocol):
     Protocol defining the interface for a translation agent.
     """
 
-    def translate_place(self, text: str, target_lang_code: str, country_name: str) -> Optional[str]:
+    def translate_place(self, text: str, target_lang_code: str, country_name: str) -> str | None:
         """
         Translates a place name with country context.
         """
-        pass
+        ...
 
-    def translate_tag(self, text: str, target_lang_code: str) -> Optional[str]:
+    def translate_tag(self, text: str, target_lang_code: str) -> str | None:
         """
         Translates a technical or descriptive tag.
         """
-        pass
+        ...
 
-    def translate(self, text: str, target_lang_code: str, field_hint: str = "") -> Optional[str]:
+    def translate(self, text: str, target_lang_code: str, field_hint: str = "") -> str | None:
         """
         Translates plain text.
         """
-        pass
+        ...
 
-    def translate_html(
-        self, text: str, target_lang_code: str, field_hint: str = ""
-    ) -> Optional[str]:
+    def translate_html(self, text: str, target_lang_code: str, field_hint: str = "") -> str | None:
         """
         Translates HTML content, preserving tags.
         """
-        pass
+        ...
 
 
 @runtime_checkable
@@ -43,7 +41,7 @@ class LLMProvider(Protocol):
         system_prompt: str,
         user_message: str,
         temperature: float = 0.0,
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Ask the LLM a question with system and user prompts.
 
@@ -55,18 +53,18 @@ class LLMProvider(Protocol):
         Returns:
             LLM's response text, or None on failure
         """
-        pass
+        ...
 
     def ask_question_with_usage(
         self,
         system_prompt: str,
         user_message: str,
         temperature: float = 0.0,
-    ) -> tuple[Optional[str], dict]:
+    ) -> tuple[str | None, dict]:
         """
         Ask the LLM a question and return response + usage stats.
 
         Returns:
             Tuple of (response_text, usage_dict)
         """
-        pass
+        ...

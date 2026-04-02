@@ -1,6 +1,3 @@
-# backend/astrophotography/constants.py
-from typing import List
-
 from django.utils.translation import gettext_lazy as _
 
 CELESTIAL_OBJECT_CHOICES = [
@@ -21,7 +18,7 @@ class MeteorDefaults:
     """
 
     @staticmethod
-    def star_path() -> List[int]:
+    def star_path() -> list[int]:
         """
         [min, max] list representing the travel distance of a regular star in pixels.
         Example: [50, 500]
@@ -29,7 +26,7 @@ class MeteorDefaults:
         return [50, 500]
 
     @staticmethod
-    def bolid_path() -> List[int]:
+    def bolid_path() -> list[int]:
         """
         [min, max] list representing the travel distance of a bolid in pixels.
         Example: [50, 500]
@@ -37,7 +34,7 @@ class MeteorDefaults:
         return [50, 500]
 
     @staticmethod
-    def star_streak() -> List[int]:
+    def star_streak() -> list[int]:
         """
         [min, max] list representing the visual length (streak) of a regular star in pixels.
         Example: [100, 200]
@@ -45,7 +42,7 @@ class MeteorDefaults:
         return [100, 200]
 
     @staticmethod
-    def bolid_streak() -> List[int]:
+    def bolid_streak() -> list[int]:
         """
         [min, max] list representing the visual length (streak) of a bolid in pixels.
         Example: [20, 100]
@@ -53,7 +50,7 @@ class MeteorDefaults:
         return [20, 100]
 
     @staticmethod
-    def star_opacity() -> List[float]:
+    def star_opacity() -> list[float]:
         """
         [min, max] list (0.0 to 1.0) for regular star brightness.
         Example: [0.4, 0.8]
@@ -61,7 +58,7 @@ class MeteorDefaults:
         return [0.4, 0.8]
 
     @staticmethod
-    def bolid_opacity() -> List[float]:
+    def bolid_opacity() -> list[float]:
         """
         [min, max] list (0.0 to 1.0) for bolid brightness.
         Example: [0.7, 1.0]
@@ -69,7 +66,7 @@ class MeteorDefaults:
         return [0.7, 1.0]
 
     @staticmethod
-    def smoke_opacity() -> List[float]:
+    def smoke_opacity() -> list[float]:
         """
         [min, max] list (0.0 to 1.0) for the smoke trail of a bolid.
         Example: [0.5, 0.8]
@@ -77,7 +74,7 @@ class MeteorDefaults:
         return [0.5, 0.8]
 
     @staticmethod
-    def star_duration() -> List[float]:
+    def star_duration() -> list[float]:
         """
         [min, max] list (seconds) representing the duration (speed) of a regular star.
         Example: [0.4, 1.2]
@@ -85,7 +82,7 @@ class MeteorDefaults:
         return [0.4, 1.2]
 
     @staticmethod
-    def bolid_duration() -> List[float]:
+    def bolid_duration() -> list[float]:
         """
         [min, max] list (seconds) representing the duration (speed) of a bolid.
         Example: [0.4, 0.9]

@@ -20,7 +20,6 @@ from users.tests.factories import ProfileFactory, UserFactory
 class TestEmailHandler:
     def test_send_email_success(
         self,
-        mock_inbox_send_mail: MagicMock,
         mock_inbox_email_message: MagicMock,
         mock_inbox_logger: MagicMock,
         contact_message: ContactMessage,
@@ -39,7 +38,6 @@ class TestEmailHandler:
             # Call the service method
             EmailHandler.send_email(contact_message)
 
-            mock_inbox_send_mail.assert_not_called()
             assert mock_inbox_email_message.call_count == 2
 
             owner_call = mock_inbox_email_message.call_args_list[0]
@@ -80,7 +78,6 @@ class TestEmailHandler:
 
     def test_send_notification_email_simulation(
         self,
-        mock_inbox_send_mail: MagicMock,
         mock_inbox_email_message: MagicMock,
         mock_inbox_logger: MagicMock,
         contact_message: ContactMessage,
@@ -91,8 +88,6 @@ class TestEmailHandler:
             # Call the handler method
             EmailHandler.send_email(contact_message)
 
-        # Verify mock_inbox_send_mail was NOT called
-        mock_inbox_send_mail.assert_not_called()
         mock_inbox_email_message.assert_not_called()
 
         # Verify logger.info was called with simulation messages
@@ -105,7 +100,6 @@ class TestEmailHandler:
 
     def test_send_email_failure(
         self,
-        mock_inbox_send_mail: MagicMock,
         mock_inbox_email_message: MagicMock,
         mock_inbox_logger: MagicMock,
         contact_message: ContactMessage,
@@ -135,7 +129,6 @@ class TestContactSubmissionService:
 
     def test_check_duplicate_raises_exception(
         self,
-        mock_inbox_service_logger: MagicMock,
         valid_contact_data: dict[str, str],
     ) -> None:
         """Test that check_duplicate raises DuplicateSubmission when a duplicate exists"""

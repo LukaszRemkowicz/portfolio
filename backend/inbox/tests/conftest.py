@@ -3,6 +3,8 @@ from unittest.mock import MagicMock
 import pytest
 from pytest_mock import MockerFixture
 
+from django.http import HttpRequest, HttpResponse
+
 from core.models import LandingPageSettings
 from core.tests.factories import LandingPageSettingsFactory
 from inbox.middleware import ContactFormKillSwitchMiddleware
@@ -24,7 +26,11 @@ def landing_page_settings() -> LandingPageSettings:
 @pytest.fixture
 def kill_switch_middleware() -> ContactFormKillSwitchMiddleware:
     """Create middleware instance for testing"""
-    return ContactFormKillSwitchMiddleware(lambda request: None)
+
+    def get_response(_request: HttpRequest) -> HttpResponse:
+        return HttpResponse()
+
+    return ContactFormKillSwitchMiddleware(get_response)
 
 
 @pytest.fixture
@@ -64,12 +70,6 @@ def valid_contact_serializer(valid_contact_data: dict[str, str]) -> ContactMessa
     serializer = ContactMessageSerializer(data=valid_contact_data)
     serializer.is_valid(raise_exception=True)
     return serializer
-
-
-@pytest.fixture
-def mock_inbox_send_mail(mocker: MockerFixture) -> MagicMock:
-    """Legacy fixture kept for compatibility; send_mail is no longer used."""
-    return mocker.MagicMock()
 
 
 @pytest.fixture

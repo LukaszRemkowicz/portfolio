@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from rest_framework import serializers
 
@@ -14,7 +14,7 @@ class SecureMediaURLMixin(serializers.Serializer):
     Mixin to standardize generating signed URLs for secure media fields.
     """
 
-    def get_secure_url(self, resource_id: str, url_name: str) -> Optional[str]:
+    def get_secure_url(self, resource_id: str, url_name: str) -> str | None:
         if not resource_id:
             return None
         request = self.context.get("request")
@@ -40,8 +40,8 @@ class TranslatedSerializerMixin(serializers.Serializer):
         return TranslationService.get_translation(instance, field_name, str(lang or ""))
 
     def translate_fields(
-        self, data: Dict[str, Any], instance: Any, fields: List[str]
-    ) -> Dict[str, Any]:
+        self, data: dict[str, Any], instance: Any, fields: list[str]
+    ) -> dict[str, Any]:
         """
         Updates the data dictionary with translations for the specified fields.
 

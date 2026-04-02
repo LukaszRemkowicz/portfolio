@@ -2,7 +2,7 @@ import calendar
 import logging
 import uuid
 from datetime import date as dt_date
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import sentry_sdk
 from django_ckeditor_5.fields import CKEditor5Field
@@ -687,7 +687,7 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
         return self.adventure_date.lower.isoformat()  # type: ignore[no-any-return]
 
     @staticmethod
-    def _parse_date_slug(date_slug: str) -> Optional[PG_DateRange]:
+    def _parse_date_slug(date_slug: str) -> PG_DateRange | None:
         """
         Parses a date slug like 'jan2026' into a psycopg2 DateRange.
         Returns None if parsing fails.

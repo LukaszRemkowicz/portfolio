@@ -9,7 +9,8 @@ This module keeps lightweight cross-cutting request behavior in one place:
 import logging
 import time
 import uuid
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from django.utils import translation
 

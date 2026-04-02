@@ -102,8 +102,7 @@ class TestAutomatedTranslationAdminMixin:
                 pass
 
         class MockAdmin(AutomatedTranslationAdminMixin, BaseAdmin):
-            def get_translation_kwargs(self, obj, form, change, should_trigger):
-                return {"force": True}
+            pass
 
         mock_get_available_languages.return_value = ["en", "pl", "es"]
 

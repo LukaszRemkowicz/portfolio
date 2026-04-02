@@ -313,9 +313,7 @@ class TestTranslationServiceBusinessLogic:
         assert mock_agent.translate in handlers_func
         assert mock_agent.translate_html in handlers_func
 
-    def test_translate_user_saves_translations(
-        self, mocker: MockerFixture, mock_task_infrastructure
-    ):
+    def test_translate_user_saves_translations(self, mocker: MockerFixture):
         """Test that translated fields are saved."""
         mock_agent = mocker.Mock()
         service = TranslationService(agent=mock_agent)
@@ -595,7 +593,7 @@ class TestTranslateInstanceTask:
         mock_service_instance = infra["service"].create_default.return_value
         mock_service_instance.translate_place = mocker.Mock(side_effect=RequestException("Error"))
 
-        with pytest.raises(Exception):
+        with pytest.raises(RequestException):
             translate_instance_task(
                 model_name="astrophotography.Place",
                 instance_pk=1,

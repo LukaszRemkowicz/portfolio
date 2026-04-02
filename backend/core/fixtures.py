@@ -1,4 +1,4 @@
-from typing import Generator
+from collections.abc import Generator
 
 import pytest
 from rest_framework.test import APIClient, APIRequestFactory
@@ -20,7 +20,7 @@ def client() -> Client:
 
 
 @pytest.fixture(autouse=True)
-def clear_django_cache() -> Generator[None, None, None]:
+def clear_django_cache() -> Generator[None]:
     """
     Automatically clear cache for all tests to ensure isolation.
     """

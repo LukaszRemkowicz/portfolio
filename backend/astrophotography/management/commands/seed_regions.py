@@ -4,7 +4,7 @@ The command creates region-level ``Place`` objects and links their known
 sub-places. It is designed to be idempotent and safe to re-run.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -13,7 +13,7 @@ from django.utils import translation
 from astrophotography.models import Place
 
 # Region entries with country=None span multiple countries.
-REGIONS: List[Dict[str, Any]] = [
+REGIONS: list[dict[str, Any]] = [
     {
         "name": "Scandinavia",
         "country": None,  # multi-country region

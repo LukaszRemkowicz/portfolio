@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Optional
 
 import openai as openai_module
 from openai import OpenAI
@@ -22,15 +21,15 @@ class MockLLMProvider(LLMProvider):
     """Mock provider for testing purposes."""
 
     def __init__(self) -> None:
-        self._mock_response: Optional[str] = None
-        self._mock_usage: Optional[dict] = None
-        self._mock_json_path: Optional[str] = None
+        self._mock_response: str | None = None
+        self._mock_usage: dict | None = None
+        self._mock_json_path: str | None = None
 
     def configure(
         self,
-        mock_response: Optional[str] = None,
-        mock_usage: Optional[dict] = None,
-        mock_json_path: Optional[str] = None,
+        mock_response: str | None = None,
+        mock_usage: dict | None = None,
+        mock_json_path: str | None = None,
     ) -> None:
         """Configure dynamic mock responses for tests."""
         self._mock_response = mock_response
@@ -42,9 +41,10 @@ class MockLLMProvider(LLMProvider):
         system_prompt: str,
         user_message: str,
         temperature: float = 0.0,
-    ) -> tuple[Optional[str], dict]:
+    ) -> tuple[str | None, dict]:
         """Mock LLM response for testing purposes."""
         logger.info("Using mock LLM response for testing purposes.")
+        del system_prompt, user_message, temperature
 
         if self._mock_response is not None:
             return self._mock_response, self._mock_usage or {}
@@ -62,7 +62,7 @@ class MockLLMProvider(LLMProvider):
         else:
             mock_path = Path(settings.BASE_DIR) / "monitoring/tests/llm_responses/default.json"
 
-        with open(mock_path, "r", encoding="utf-8") as f:
+        with open(mock_path, encoding="utf-8") as f:
             return f.read(), mock_usage
 
     def ask_question(
@@ -70,7 +70,7 @@ class MockLLMProvider(LLMProvider):
         system_prompt: str,
         user_message: str,
         temperature: float = 0.0,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Wrapper for backward compatibility."""
         content, _ = self.ask_question_with_usage(system_prompt, user_message, temperature)
         return content
@@ -88,7 +88,7 @@ class GPTProvider(LLMProvider):
         system_prompt: str,
         user_message: str,
         temperature: float = 0.0,
-    ) -> tuple[Optional[str], dict]:
+    ) -> tuple[str | None, dict]:
         """
         Ask GPT a question and return response + usage stats.
         """
@@ -134,7 +134,7 @@ class GPTProvider(LLMProvider):
         system_prompt: str,
         user_message: str,
         temperature: float = 0.0,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Wrapper for backward compatibility."""
         content, _ = self.ask_question_with_usage(system_prompt, user_message, temperature)
         return content

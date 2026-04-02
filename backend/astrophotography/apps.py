@@ -1,3 +1,5 @@
+from importlib import import_module
+
 from django.apps import AppConfig
 from django.utils.translation import gettext_lazy as _
 
@@ -8,4 +10,4 @@ class AstrophotographyConfig(AppConfig):
     verbose_name = _("Astrophotography")
 
     def ready(self):
-        import astrophotography.signals  # noqa
+        import_module("astrophotography.signals")

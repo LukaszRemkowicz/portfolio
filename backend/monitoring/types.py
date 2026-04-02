@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import TypeAlias, TypedDict
+from enum import StrEnum
+from typing import TypedDict
 
-MonitoringFindingsValue: TypeAlias = list[str] | str
-JSONValue: TypeAlias = "str | int | float | bool | None | JSONObject | JSONArray"
-JSONObject: TypeAlias = "dict[str, JSONValue]"
-JSONArray: TypeAlias = "list[JSONValue]"
-RawCollectedLogPaths: TypeAlias = dict[str, str | None] | tuple[str | None, ...]
+type MonitoringFindingsValue = list[str] | str
+type JSONValue = str | int | float | bool | None | JSONObject | JSONArray
+type JSONObject = dict[str, JSONValue]
+type JSONArray = list[JSONValue]
+type RawCollectedLogPaths = dict[str, str | None] | tuple[str | None, ...]
 
 
 class LogAnalysisPayload(TypedDict, total=False):
@@ -29,19 +29,19 @@ class HTTPResponseData:
     headers: dict[str, str]
 
 
-class MonitoringJobName(str, Enum):
+class MonitoringJobName(StrEnum):
     LOG_REPORT = "log_report"
     SITEMAP_REPORT = "sitemap_report"
 
 
-class MonitoringToolName(str, Enum):
+class MonitoringToolName(StrEnum):
     PREPARE_LOG_REPORT = "prepare_log_report"
     GET_SKILL_OWASP = "get_skill_owasp"
     GET_SKILL_RESPONSE_FORMAT = "get_skill_response_format"
     GET_SKILL_BOT_DETECTION = "get_skill_bot_detection"
 
 
-class ReasoningEffort(str, Enum):
+class ReasoningEffort(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -146,12 +146,12 @@ class LLMRunRecord:
             raise ValueError("metadata must be a dict")
 
 
-class MonitoringToolDecisionAction(str, Enum):
+class MonitoringToolDecisionAction(StrEnum):
     CALL_TOOLS = "call_tools"
     FINAL_REPORT = "final_report"
 
 
-class MonitoringAgentEventType(str, Enum):
+class MonitoringAgentEventType(StrEnum):
     START = "start"
     ITERATION = "iteration"
     ASKING_LLM = "asking_llm"
@@ -286,7 +286,7 @@ class LogReportResult:
         }
 
 
-class SitemapIssueCategory(str, Enum):
+class SitemapIssueCategory(StrEnum):
     BROKEN_URL = "broken_url"
     REDIRECT_IN_SITEMAP = "redirect_in_sitemap"
     FINAL_URL_MISMATCH = "final_url_mismatch"

@@ -3,7 +3,7 @@ import logging
 import os
 import re
 from collections.abc import Mapping
-from typing import Optional, cast
+from typing import cast
 
 from common.llm.protocols import LLMProvider
 from monitoring.agent.skills import build_monitoring_system_prompt_with_owasp as build_prompt
@@ -26,10 +26,10 @@ class LogAnalysisAgent:
 
     def analyze_logs_from_files(
         self,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
         collected_at: str = "",
         historical_context: str = "",
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Analyzes logs from file paths to minimize memory usage.
         Reads only the tail of the files (defined by MAX_CHARS_PER_LOG) to:
@@ -59,7 +59,7 @@ class LogAnalysisAgent:
         """Reads the last max_chars from a file efficiently."""
         try:
             file_size = os.path.getsize(file_path)
-            with open(file_path, "r", errors="replace") as f:
+            with open(file_path, encoding="utf-8", errors="replace") as f:
                 if file_size > max_chars:
                     f.seek(file_size - max_chars)
                 return f.read()
@@ -73,7 +73,7 @@ class LogAnalysisAgent:
         collected_at: str = "",
         historical_context: str = "",
         *legacy_logs: str,
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Analyzes logs and returns structured insights.
 
@@ -140,7 +140,7 @@ class LogAnalysisAgent:
 
         legacy_values = (logs_by_key, collected_at, historical_context, *legacy_logs)
         normalized: dict[str, str] = {}
-        for key, value in zip(LEGACY_LOG_KEYS, legacy_values):
+        for key, value in zip(LEGACY_LOG_KEYS, legacy_values, strict=False):
             if value:
                 normalized[key] = value
         return normalized

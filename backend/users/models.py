@@ -39,7 +39,7 @@ USER_IMAGE_FIELD_MAPPINGS: dict[str, dict[str, str]] = {
 # We MUST override create_superuser to accept 'email' for createsuperuser command to work.
 class UserManager(TranslatableManager, BaseUserManager):
     def create_superuser(
-        self, email: str, password: Optional[str] = None, **extra_fields: Any
+        self, email: str, password: str | None = None, **extra_fields: Any
     ) -> "User":
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
@@ -268,7 +268,7 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
         """Get full name or email."""
         if self.first_name and self.last_name:
             return f"{self.first_name} {self.last_name}"
-        elif self.first_name:
+        if self.first_name:
             return self.first_name
         return self.email
 

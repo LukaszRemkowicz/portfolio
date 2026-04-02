@@ -77,7 +77,7 @@ def daily_log_analysis_task(self, analysis_date: str | None = None):
 
     except Exception as exc:
         logger.exception("Daily log analysis failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc)  # noqa: B904
 
 
 @shared_task(  # type: ignore
@@ -115,7 +115,7 @@ def daily_monitoring_agent_log_task(self, analysis_date: str | None = None):
 
     except Exception as exc:
         logger.exception("Monitoring agent log analysis failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc)  # noqa: B904
 
 
 @shared_task(  # type: ignore
@@ -153,7 +153,7 @@ def daily_sitemap_analysis_task(self, analysis_date: str | None = None):
 
     except Exception as exc:
         logger.exception("Sitemap analysis failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc)  # noqa: B904
 
 
 @shared_task(  # type: ignore
@@ -180,4 +180,4 @@ def cleanup_old_logs_task(self, days_to_keep: int = 30):
 
     except Exception as exc:
         logger.exception("Log cleanup failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc)  # noqa: B904
