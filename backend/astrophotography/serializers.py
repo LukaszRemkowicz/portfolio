@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from typing import Any, Dict, Optional
+from typing import Any
 
 from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
@@ -42,7 +42,7 @@ class TagSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
 class PlaceSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
     country = serializers.CharField(source="country.name", read_only=True)
 
-    def to_representation(self, instance: Place) -> Dict[str, Any]:
+    def to_representation(self, instance: Place) -> dict[str, Any]:
         data = super().to_representation(instance)
 
         # Helper from mixin
@@ -80,7 +80,7 @@ class AstroImageBaseSerializer(TranslatedSerializerMixin, TranslatableModelSeria
         # Return full Tag objects (name, slug) using TagSerializer
         return TagSerializer(obj.tags.all(), many=True, context=self.context).data
 
-    def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
+    def to_representation(self, instance: AstroImage) -> dict[str, Any]:
         data = super().to_representation(instance)
         return self.translate_fields(
             data=data,
@@ -114,7 +114,7 @@ class AstroImageSerializerList(AstroImageBaseSerializer):
     def get_thumbnail_url(self, obj: AstroImage) -> str:
         return obj.get_thumbnail_url()
 
-    def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
+    def to_representation(self, instance: AstroImage) -> dict[str, Any]:
         data = super().to_representation(instance)
         return self.translate_fields(
             data=data,
@@ -169,7 +169,7 @@ class AstroImageThumbnailSerializer(AstroImageBaseSerializer):
     def get_thumbnail_url(self, obj: AstroImage) -> str:
         return obj.get_thumbnail_url()
 
-    def to_representation(self, instance: AstroImage) -> Dict[str, Any]:
+    def to_representation(self, instance: AstroImage) -> dict[str, Any]:
         data = super().to_representation(instance)
         return self.translate_fields(
             data=data,
@@ -230,7 +230,7 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
             return ""
         return val
 
-    def get_adventure_date(self, obj: MainPageLocation) -> Optional[str]:
+    def get_adventure_date(self, obj: MainPageLocation) -> str | None:
         if not (date_range := obj.adventure_date):
             return None
 
@@ -253,14 +253,14 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
             if lower.month == display_upper.month:
                 # 20 - 25 Jan 2026
                 return f"{lower.day} - {display_upper.day} {lower.strftime('%b %Y')}"
-            else:
-                # 20 Jan - 05 Feb 2026
-                return f"{lower.strftime('%-d %b')} - {display_upper.strftime('%-d %b %Y')}"
+
+            # 20 Jan - 05 Feb 2026
+            return f"{lower.strftime('%-d %b')} - {display_upper.strftime('%-d %b %Y')}"
 
         # 20 Jan 2025 - 05 Jan 2026
         return f"{self.format_date(lower)} - {self.format_date(display_upper)}"
 
-    def to_representation(self, instance: MainPageLocation) -> Dict[str, Any]:
+    def to_representation(self, instance: MainPageLocation) -> dict[str, Any]:
 
         data = super().to_representation(instance)
         data = self.translate_fields(

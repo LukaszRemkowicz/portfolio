@@ -89,7 +89,7 @@ class TestAxesLockout:
     def test_non_existent_user_is_also_tracked(self, client):
         """Test that attempts for non-existent users are also tracked."""
         fake_email = "nonexistent@example.com"
-        for i in range(2):
+        for _ in range(2):
             client.post(
                 self.login_url,
                 {
@@ -99,4 +99,4 @@ class TestAxesLockout:
             )
 
         attempt = AccessAttempt.objects.get(username=fake_email)
-        assert attempt.failures_since_start == i + 1
+        assert attempt.failures_since_start == 2

@@ -153,4 +153,4 @@ def send_notification_email_task(self, contact_message_id: int) -> None:
         logger.error(f"Message {contact_message_id} not found. Skipping email.")
     except Exception as exc:
         logger.exception(f"Error sending email for message {contact_message_id}")
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc

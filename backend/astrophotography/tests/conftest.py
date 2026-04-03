@@ -5,6 +5,6 @@ from astrophotography.tests.factories import AstroImageFactory
 
 
 @pytest.fixture
-def astro_image(db) -> AstroImage:
+def astro_image(db) -> AstroImage:  # noqa: ARG001
     """Create a sample AstroImage for testing"""
     return AstroImageFactory()

@@ -4,8 +4,7 @@ import os
 import re
 import time
 from collections.abc import Mapping
-from datetime import date, datetime, timezone
-from typing import Optional
+from datetime import UTC, date, datetime
 
 from django.conf import settings
 from django.core.files import File
@@ -34,7 +33,7 @@ from .types import (
 )
 
 logger = logging.getLogger(__name__)
-LogPathMap = dict[str, Optional[str]]
+LogPathMap = dict[str, str | None]
 
 
 def normalize_text_value(value: JSONValue, default: str = "") -> str:
@@ -68,12 +67,10 @@ class DockerLogCollector:
                 logs_dir,
             )
             return
-        with open(collected_at_path) as f:
+        with open(collected_at_path, encoding="utf-8") as f:
             collected_at_raw: str = f.read().strip()
-        collected_at: datetime = datetime.fromisoformat(collected_at_raw).replace(
-            tzinfo=timezone.utc
-        )
-        age_hours: float = (datetime.now(timezone.utc) - collected_at).total_seconds() / 3600
+        collected_at: datetime = datetime.fromisoformat(collected_at_raw).replace(tzinfo=UTC)
+        age_hours: float = (datetime.now(UTC) - collected_at).total_seconds() / 3600
         if age_hours > cls.MAX_STALENESS_HOURS:
             logger.warning(
                 "Docker logs are %.1f hours old (expected <%d h) — cron job may have missed a run",
@@ -86,7 +83,7 @@ class DockerLogCollector:
         """Return the raw ISO timestamp from collected_at.txt, or empty string if missing."""
         path: str = os.path.join(settings.DOCKER_LOGS_DIR, "collected_at.txt")
         if os.path.exists(path):
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return f.read().strip()
         return ""
 
@@ -146,7 +143,7 @@ class LogAnalyzer:
 
     def analyze_logs_from_files(
         self,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
         collected_at: str = "",
         historical_context: str = "",
     ) -> LogAnalysisPayload:
@@ -201,7 +198,7 @@ class LogReportPreparationService:
 
     def prepare_report_from_files(
         self,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
         collected_at: str = "",
         historical_context: str = "",
     ) -> LogReportResult:
@@ -263,7 +260,7 @@ class LogStorageService:
         cls,
         log_analysis: LogAnalysis,
         analysis_date: date,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
     ) -> None:
         """
         Attach log files to the analysis record.
@@ -271,6 +268,7 @@ class LogStorageService:
         Args:
             log_analysis: LogAnalysis instance to attach files to
             analysis_date: Date for filename generation
+            log_paths: Mapping of log source keys to filesystem paths for collected logs
         """
         for source in LOG_SOURCES:
             log_path: str | None = log_paths.get(source.key)
@@ -350,7 +348,7 @@ class LogAnalysisOrchestrator:
         self.report_preparer: LogReportPreparationService = LogReportPreparationService(analyzer)
         self.storage: LogStorageService = storage
 
-    def analyze_and_store(self, analysis_date: Optional[date] = None) -> LogAnalysis:
+    def analyze_and_store(self, analysis_date: date | None = None) -> LogAnalysis:
         """
         Main workflow: collect logs, analyze, and store results.
 
@@ -418,7 +416,7 @@ class LogAnalysisOrchestrator:
 
         if isinstance(raw_log_paths, tuple):
             normalized: LogPathMap = {}
-            for source, path_value in zip(LOG_SOURCES, raw_log_paths):
+            for source, path_value in zip(LOG_SOURCES, raw_log_paths, strict=False):
                 normalized[source.key] = path_value if isinstance(path_value, str) else None
             for source in LOG_SOURCES:
                 normalized.setdefault(source.key, None)
@@ -440,7 +438,7 @@ class LogAnalysisOrchestrator:
 
     def _run_analysis(
         self,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
         historical_context: str,
     ) -> LogReportResult:
         """Run LLM analysis and return the typed log report result."""
@@ -457,7 +455,7 @@ class LogAnalysisOrchestrator:
         log_size: int,
         analysis_result: LogReportResult,
         start_time: float,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
     ) -> LogAnalysis:
         """Persist analysis results and attach log files."""
         execution_time_seconds: float = time.time() - start_time
@@ -481,7 +479,7 @@ class LogAnalysisOrchestrator:
         analysis_date: date,
         error: Exception,
         start_time: float,
-        log_paths: Mapping[str, Optional[str]] | None = None,
+        log_paths: Mapping[str, str | None] | None = None,
     ) -> None:
         """Persist a CRITICAL error record so the failure is visible in the admin."""
         execution_time_seconds: float = time.time() - start_time
@@ -678,27 +676,33 @@ class SitemapSummaryService:
             trend_summary="Trend summary unavailable because the sitemap LLM summary was skipped.",
         )
 
-    def _parse_response(self, response_text: str) -> JSONObject:
+    @staticmethod
+    def _load_json_object(raw_text: str, error_message: str) -> JSONObject:
         try:
-            payload: JSONValue = json.loads(response_text)
-            if not isinstance(payload, dict):
-                raise ValueError("Sitemap summary response must be a JSON object")
-            return payload
-        except json.JSONDecodeError:
+            payload: JSONValue = json.loads(raw_text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(error_message) from exc
+
+        if not isinstance(payload, dict):
+            raise ValueError(error_message)
+        return payload
+
+    def _parse_response(self, response_text: str) -> JSONObject:
+        error_message = "Sitemap summary response must be a JSON object"
+        try:
+            return self._load_json_object(response_text, error_message)
+        except json.JSONDecodeError as exc:
             match = re.search(r"```json\s*(\{.*?\})\s*```", response_text, re.DOTALL)
             if match:
-                payload = json.loads(match.group(1))
-                if not isinstance(payload, dict):
-                    raise ValueError("Sitemap summary response must be a JSON object")
-                return payload
+                return self._load_json_object(match.group(1), error_message)
             start_index: int = response_text.find("{")
             end_index: int = response_text.rfind("}")
             if start_index != -1 and end_index != -1:
-                payload = json.loads(response_text[start_index : end_index + 1])
-                if not isinstance(payload, dict):
-                    raise ValueError("Sitemap summary response must be a JSON object")
-                return payload
-            raise
+                return self._load_json_object(
+                    response_text[start_index : end_index + 1],
+                    error_message,
+                )
+            raise ValueError(error_message) from exc
 
 
 class SitemapAnalysisStorageService:
@@ -869,7 +873,7 @@ class MonitoringAgentLogOrchestrator:
         self.storage: LogStorageService = storage
         self.agent_runner: MonitoringToolLoopRunner = agent_runner
 
-    def analyze_and_store(self, analysis_date: Optional[date] = None) -> LogAnalysis:
+    def analyze_and_store(self, analysis_date: date | None = None) -> LogAnalysis:
         """Collect logs, run the bounded monitoring agent, and persist results."""
         if analysis_date is None:
             analysis_date = date.today()
@@ -932,7 +936,7 @@ class MonitoringAgentLogOrchestrator:
 
     def _prepare_report(
         self,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
         historical_context: str,
     ) -> LogReportResult:
         """Prepare the deterministic log report that seeds the agent runtime."""
@@ -989,7 +993,7 @@ class MonitoringAgentLogOrchestrator:
         log_size: int,
         analysis_result: LogReportResult,
         start_time: float,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
     ) -> LogAnalysis:
         """Persist the final monitoring-agent report through the existing model path."""
         execution_time_seconds: float = time.time() - start_time
@@ -1013,7 +1017,7 @@ class MonitoringAgentLogOrchestrator:
         analysis_date: date,
         error: Exception,
         start_time: float,
-        log_paths: Mapping[str, Optional[str]] | None = None,
+        log_paths: Mapping[str, str | None] | None = None,
     ) -> None:
         """Persist a CRITICAL record when the agent-driven flow fails."""
         execution_time_seconds: float = time.time() - start_time
@@ -1037,7 +1041,7 @@ class MonitoringAgentLogOrchestrator:
 
         if isinstance(raw_log_paths, tuple):
             normalized: LogPathMap = {}
-            for source, path_value in zip(LOG_SOURCES, raw_log_paths):
+            for source, path_value in zip(LOG_SOURCES, raw_log_paths, strict=False):
                 normalized[source.key] = path_value if isinstance(path_value, str) else None
             for source in LOG_SOURCES:
                 normalized.setdefault(source.key, None)

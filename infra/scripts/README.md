@@ -19,9 +19,11 @@ Primary script groups:
 Release scripts manage **Staging** and **Production** deployments on a single VPS.
 
 - `release/build.sh` -> **builds Docker images** with environment prefixes and service suffixes (e.g. `production-be:v1.0.0`)
-- `release/prepare_images.sh` -> pulls production images from GHCR and tags them locally to the names already expected by production compose
+- `release/prepare_images.sh` -> pulls production images from GHCR, retags them to the local runtime names, and removes the GHCR tag from the VPS
 - `release/release.sh` -> runs **one-shot release tasks** (migrations, collectstatic, etc.) targeting the correct environment services
-- `release/deploy.sh` -> performs the **deployment switch** and updates environment-specific rollback state
+- `release/deploy.sh` -> performs the **deployment switch only** and updates environment-specific rollback state
+- `release/deploy_staging.sh` -> guided staging workflow with approval prompts between build, release, and deploy
+- `release/deploy_production.sh` -> guided production workflow with approval prompts between image preparation, release, and deploy
 
 ## 🔐 Environment Variables
 
@@ -64,6 +66,14 @@ EMERGENCY=1 doppler run -- ./infra/scripts/release/build.sh
 
 ## 🧪 Staging Workflow
 
+Guided flow:
+
+```bash
+doppler run -- ./infra/scripts/release/deploy_staging.sh
+```
+
+Manual flow:
+
 ```bash
 TAG=v1.0.0-test ENVIRONMENT=staging doppler run -- ./infra/scripts/release/build.sh
 TAG=v1.0.0-test ENVIRONMENT=staging COMPOSE_FILE=docker-compose.stage.yml doppler run -- ./infra/scripts/release/release.sh
@@ -79,6 +89,14 @@ sudo mkdir -p /var/backups/portfolio/pre_release/prod
 sudo chown -R <user>:<user> /var/backups/portfolio
 sudo chmod -R u+rwX /var/backups/portfolio
 ```
+
+Guided flow:
+
+```bash
+TAG=v1.2.0 doppler run -- ./infra/scripts/release/deploy_production.sh
+```
+
+Manual flow:
 
 ```bash
 TAG=v1.2.0 doppler run -- ./infra/scripts/release/prepare_images.sh
@@ -114,12 +132,13 @@ TAG=v1.1.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.
 
 ### 📥 Artifact Source
 - Staging uses locally built images from `build.sh`
-- Production uses `prepare_images.sh` to pull GHCR images and tag them locally to the same names compose already expects
+- Production uses `prepare_images.sh` to pull GHCR images, retag them locally, and remove the GHCR tag so only the local runtime names remain
 
 ### 🧾 Compose File Overrides
 - `build.sh` auto-detects the environment compose file
 - `release.sh` and `deploy.sh` default to production unless `COMPOSE_FILE` is overridden
 - `release.sh` and `deploy.sh` both load `docker-compose.common.yml` in addition to the target environment compose file
+- `deploy_staging.sh` and `deploy_production.sh` pause for operator approval before each phase unless `--yes` is passed
 
 ### 🔒 Locking
 - These scripts use `flock` to prevent concurrent deployments
@@ -129,6 +148,7 @@ TAG=v1.1.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.
 
 - `release.sh --dry-run` validates inputs and dependency state without executing the release job
 - `deploy.sh --dry-run` shows the deployment flow without switching running containers
+- `deploy_staging.sh --dry-run` and `deploy_production.sh --dry-run` pass dry-run through to release/deploy steps
 
 ---
 

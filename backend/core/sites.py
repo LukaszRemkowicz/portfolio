@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from django.conf import settings
 from django.contrib.admin import AdminSite
@@ -20,7 +20,7 @@ class PortfolioAdminSite(AdminSite):
 
     def get_app_list(
         self, request: HttpRequest, app_label: str | None = None
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Return a comprehensive list of all installed apps that have been
         registered in this site.
@@ -36,7 +36,7 @@ class PortfolioAdminSite(AdminSite):
             return app_list
 
         app_lookup = self._build_app_lookup(app_list)
-        new_app_list: List[Dict[str, Any]] = []
+        new_app_list: list[dict[str, Any]] = []
 
         # Build new list based on configuration
         for section in config:
@@ -47,9 +47,10 @@ class PortfolioAdminSite(AdminSite):
 
         return new_app_list
 
-    def _build_app_lookup(self, app_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    @staticmethod
+    def _build_app_lookup(app_list: list[dict[str, Any]]) -> dict[str, Any]:
         """Creates a lookup for existing apps and models for O(1) access."""
-        app_lookup: Dict[str, Any] = {}
+        app_lookup: dict[str, Any] = {}
         for app in app_list:
             label = app["app_label"]
             models_lookup = {model["object_name"]: model for model in app.get("models", [])}
@@ -60,8 +61,8 @@ class PortfolioAdminSite(AdminSite):
         return app_lookup
 
     def _process_section(
-        self, section: Dict[str, Any], app_lookup: Dict[str, Any]
-    ) -> Dict[str, Any] | None:
+        self, section: dict[str, Any], app_lookup: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """Processes an ADMIN_SITE_ORDERING section and returns a modified app dict."""
         target_app_label = section["app"]
 
@@ -70,7 +71,7 @@ class PortfolioAdminSite(AdminSite):
             return None
 
         original_app_data = app_lookup[target_app_label]
-        new_app: Dict[str, Any] = original_app_data["app"].copy()
+        new_app: dict[str, Any] = original_app_data["app"].copy()
 
         # Override Label
         if "label" in section:
@@ -87,9 +88,10 @@ class PortfolioAdminSite(AdminSite):
 
         return new_app
 
+    @staticmethod
     def _get_ordered_models(
-        self, target_models: List[str], target_app_label: str, app_lookup: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+        target_models: list[str], target_app_label: str, app_lookup: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Returns a list of model dicts based on section['models'] configuration."""
         ordered_models = []
 

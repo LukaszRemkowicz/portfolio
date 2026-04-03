@@ -13,8 +13,11 @@ def mock_translate_task(mocker: MockerFixture) -> MagicMock:
         def __init__(self, task_id):
             self.id = task_id
 
+    def mock_task_result(*args, **kwargs):  # noqa: ARG001
+        return MockTaskResult(str(uuid.uuid4()))
+
     mock = mocker.patch("translation.mixins.translate_instance_task")
-    mock.delay.side_effect = lambda *args, **kwargs: MockTaskResult(str(uuid.uuid4()))
+    mock.delay.side_effect = mock_task_result
     return mock
 
 

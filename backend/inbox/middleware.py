@@ -1,6 +1,5 @@
 # backend/inbox/middleware.py
 import logging
-from typing import Optional
 
 from django.http import HttpRequest, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
@@ -21,7 +20,7 @@ class ContactFormKillSwitchMiddleware(MiddlewareMixin):
     # DRF DefaultRouter always creates URLs with trailing slashes: /api/v1/contact/
     CONTACT_PATH = "/api/v1/contact/"
 
-    def process_request(self, request: HttpRequest) -> Optional[JsonResponse]:
+    def process_request(self, request: HttpRequest) -> JsonResponse | None:
         """
         Check if request is to contact form endpoint and if form is enabled.
         Returns JsonResponse if form is disabled, None to continue processing.

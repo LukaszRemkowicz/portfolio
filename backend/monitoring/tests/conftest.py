@@ -26,7 +26,7 @@ def mock_llm_response():
     """Load mock response from JSON file."""
 
     json_path = Path(__file__).parent / "llm_responses" / "default.json"
-    with open(json_path, "r") as f:
+    with open(json_path) as f:
         data = json.load(f)
         data["gpt_tokens_used"] = 150
         data["gpt_cost_usd"] = 0.0075

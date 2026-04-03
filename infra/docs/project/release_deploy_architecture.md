@@ -111,6 +111,7 @@ On the production VPS, `infra/scripts/release/prepare_images.sh`:
   - `production-be:${TAG}`
   - `production-fe:${TAG}`
   - `production-nginx:${TAG}`
+- removes the GHCR tag locally after retagging so the VPS keeps only the runtime-local names
 - records pulled image digests under the production state directory
 
 So production runtime still uses local Docker image names.
@@ -212,6 +213,7 @@ It does:
 
 - pull production images from GHCR
 - tag them locally to the names already expected by compose
+- remove the GHCR tag locally after retagging
 - record digests for verification/audit
 
 It does not:
@@ -261,22 +263,27 @@ Primary role:
 
 It does:
 
-- enforce deploy lock
-- verify required local images exist
-- run `release.sh`
-- run `docker compose up -d`
-- reload nginx
-- run frontend and backend health checks
-- update rollback state files
-
-It expects:
-
-- the correct local images for `TAG` already exist
+- verify the requested images already exist locally
+- switch long-running services to the specified tag
+- run post-switch health checks
+- update rollback state
 
 It does not:
 
 - build images
-- pull from GHCR
+- pull production images from GHCR
+- run one-shot release tasks
+
+### Guided wrappers
+
+Operator-facing wrappers coordinate the full flow with approval prompts between phases:
+
+- `infra/scripts/release/deploy_staging.sh`
+  - default `TAG=v0.0.0-STG`
+  - runs `build.sh` -> `release.sh` -> `deploy.sh`
+- `infra/scripts/release/deploy_production.sh`
+  - requires `TAG`
+  - runs `prepare_images.sh` -> `release.sh` -> `deploy.sh`
 
 Runbook:
 

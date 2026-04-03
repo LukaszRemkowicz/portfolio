@@ -72,7 +72,7 @@ class TestMonitoringTasks:
         # 1. Configure the LLM mock to return the attack sequence
         # We read the file FIRST before we mock `builtins.open` below to prevent I/O conflicts.
         attack_json_path = settings.BASE_DIR / "monitoring/tests/llm_responses/attack.json"
-        with open(attack_json_path, "r", encoding="utf-8") as f:
+        with open(attack_json_path, encoding="utf-8") as f:
             attack_json = f.read()
 
         provider = MockLLMProvider()

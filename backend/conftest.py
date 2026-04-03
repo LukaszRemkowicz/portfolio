@@ -1,16 +1,32 @@
 import uuid
-from typing import Generator
+from collections.abc import Generator
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 
-# Import all fixtures from core.fixtures to make them available globally
-from core.fixtures import *  # noqa: F401,F403
-from translation.fixtures import *  # noqa: F401,F403
+from core.fixtures import (
+    api_client,
+    api_request_factory,
+    clear_django_cache,
+    client,
+    request_factory,
+)
+from translation.fixtures import mock_get_available_languages, mock_translate_task
+
+__all__ = [
+    "api_client",
+    "api_request_factory",
+    "clear_django_cache",
+    "client",
+    "request_factory",
+    "mock_get_available_languages",
+    "mock_translate_task",
+]
 
 
 @pytest.fixture(autouse=True)
-def execute_on_commit() -> Generator[None, None, None]:
+def execute_on_commit() -> Generator[None]:
     """
     Ensure transaction.on_commit hooks execute immediately in tests.
     By default, they don't run in standard TestCase/TestCase-like tests.
@@ -27,11 +43,11 @@ def global_translation_mock():
     This prevents IntegrityErrors and slow tests on the host.
     """
 
-    class MockTaskResult:
-        def __init__(self, task_id):
-            self.id = task_id
-
     with patch("translation.mixins.translate_instance_task.delay") as mock_delay:
+
+        def mock_task_result(*args, **kwargs):  # noqa: ARG001
+            return SimpleNamespace(id=str(uuid.uuid4()))
+
         # Generate a unique ID for every call to delay()
-        mock_delay.side_effect = lambda *args, **kwargs: MockTaskResult(str(uuid.uuid4()))
+        mock_delay.side_effect = mock_task_result
         yield mock_delay

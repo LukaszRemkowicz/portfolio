@@ -252,59 +252,6 @@ echo "📌 Keeping tags: build=$TAG current=${CURRENT_TAG:-none} prev=${PREV_TAG
 KEEP_IMAGES=5
 REPOS=("${ENVIRONMENT}-be" "${ENVIRONMENT}-fe" "${ENVIRONMENT}-worker" "${ENVIRONMENT}-nginx")
 
-echo "🧹 Cleaning up images (keeping last $KEEP_IMAGES versions)..."
-
-
-# ------------------------------------------------------------------
-# Tag Discovery Optimization
-# ------------------------------------------------------------------
-# Implementation note: We use a 'while read' loop for universal compatibility.
-# This works on both macOS (Bash 3.2) and Linux (Bash 4.0+).
-#
-# PERFORMANCE TIP (PRODUCTION ONLY on Ubuntu):
-# If you have thousands of images, you can replace the entire 'while' loop block
-# (the 6 lines from 'tags=()' down to ') ') with this one-liner:
-#
-#   mapfile -t tags < <(docker images "$repo" --format '{{.Tag}}' | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+" | sort -V)
-#
-# ------------------------------------------------------------------
-for repo in "${REPOS[@]}"; do
-  echo "➡️ Repo: $repo"
-
-  # --- Universal Tag Discovery (macOS + Linux) ---
-  # Sort by CreatedAt (newest first) to accurately identify "last versions"
-  tags=()
-  while IFS=$'\t' read -r _ tag; do
-    if [[ -n "$tag" && "$tag" != "<none>" ]]; then
-      # Only include tags matching our SemVer pattern
-      if [[ "$tag" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-        tags+=("$tag")
-      fi
-    fi
-  done < <(
-    docker images "$repo" --format '{{.CreatedAt}}\t{{.Tag}}' | sort -r
-  )
-  # -----------------------------------------------
-
-  # Check if we have more tags than our retention window allows.
-  if (( ${#tags[@]} > KEEP_IMAGES )); then
-    # Since tags are sorted newest-first, we keep the first KEEP_IMAGES (0..4)
-    # and remove everything from index 5 onwards.
-    for ((i=KEEP_IMAGES; i<${#tags[@]}; i++)); do
-      t="${tags[$i]}"
-
-      # NEVER remove the tag we just built, or the ones currently/previously live.
-      if [[ "$t" == "$TAG" ]] || [[ -n "$CURRENT_TAG" && "$t" == "$CURRENT_TAG" ]] || [[ -n "$PREV_TAG" && "$t" == "$PREV_TAG" ]]; then
-        echo "📌 Skipping protective tag: $repo:$t"
-        continue
-      fi
-
-      echo "🗑️ Removing old image: $repo:$t"
-      docker image rm -f "$repo:$t" >/dev/null 2>&1 || true
-    done
-  else
-    echo "✔️ Nothing to clean for $repo"
-  fi
-done
+prune_local_images "${ENVIRONMENT}" "${KEEP_IMAGES}" "${TAG}" "${CURRENT_TAG}" "${PREV_TAG}" "${REPOS[@]}"
 
 echo "🎉 Build completed successfully for tag: $TAG"

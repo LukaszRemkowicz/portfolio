@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 from datetime import date
-from typing import Optional
 
 import factory
 from factory.django import DjangoModelFactory
@@ -45,7 +44,7 @@ class AstroImageFactory(DjangoModelFactory):
     astrobin_url = factory.Faker("url")
 
     @factory.post_generation
-    def camera(self, create: bool, extracted: Optional[Iterable[Camera]], **kwargs: dict) -> None:
+    def camera(self, create: bool, extracted: Iterable[Camera] | None, **_kwargs: dict) -> None:
         if not create:
             return
         if extracted:
@@ -53,7 +52,7 @@ class AstroImageFactory(DjangoModelFactory):
                 self.camera.add(cam)
 
     @factory.post_generation
-    def lens(self, create: bool, extracted: Optional[Iterable[Lens]], **kwargs: dict) -> None:
+    def lens(self, create: bool, extracted: Iterable[Lens] | None, **_kwargs: dict) -> None:
         if not create:
             return
         if extracted:
@@ -62,7 +61,7 @@ class AstroImageFactory(DjangoModelFactory):
 
     @factory.post_generation
     def telescope(
-        self, create: bool, extracted: Optional[Iterable[Telescope]], **kwargs: dict
+        self, create: bool, extracted: Iterable[Telescope] | None, **_kwargs: dict
     ) -> None:
         if not create:
             return
@@ -71,7 +70,7 @@ class AstroImageFactory(DjangoModelFactory):
                 self.telescope.add(tele)
 
     @factory.post_generation
-    def tracker(self, create: bool, extracted: Optional[Iterable[Tracker]], **kwargs: dict) -> None:
+    def tracker(self, create: bool, extracted: Iterable[Tracker] | None, **_kwargs: dict) -> None:
         if not create:
             return
         if extracted:
@@ -79,7 +78,7 @@ class AstroImageFactory(DjangoModelFactory):
                 self.tracker.add(track)
 
     @factory.post_generation
-    def tripod(self, create: bool, extracted: Optional[Iterable[Tripod]], **kwargs: dict) -> None:
+    def tripod(self, create: bool, extracted: Iterable[Tripod] | None, **_kwargs: dict) -> None:
         if not create:
             return
         if extracted:
@@ -87,7 +86,7 @@ class AstroImageFactory(DjangoModelFactory):
                 self.tripod.add(tri)
 
     @factory.post_generation
-    def tags(self, create: bool, extracted: Optional[Iterable[Tag]], **kwargs: dict) -> None:
+    def tags(self, create: bool, extracted: Iterable[Tag] | None, **_kwargs: dict) -> None:
         if not create:
             return
         if extracted:
@@ -149,9 +148,7 @@ class MainPageLocationFactory(DjangoModelFactory):
     adventure_date = factory.LazyFunction(lambda: DateRange(date(2025, 1, 1), date(2025, 1, 31)))
 
     @factory.post_generation
-    def images(
-        self, create: bool, extracted: Optional[Iterable[AstroImage]], **kwargs: dict
-    ) -> None:
+    def images(self, create: bool, extracted: Iterable[AstroImage] | None, **_kwargs: dict) -> None:
         if not create:
             return
         if extracted:

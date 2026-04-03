@@ -1,5 +1,4 @@
-# backend/inbox/serializers.py
-from typing import Any, Dict, Optional
+from typing import Any
 
 from rest_framework import serializers
 
@@ -26,13 +25,13 @@ class ContactMessageSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id"]
 
-    def validate_website(self, value: Optional[str]) -> str:
+    def validate_website(self, value: str | None) -> str:
         """Honeypot validation - if filled, it's a bot"""
         if value:
             raise serializers.ValidationError("Bot detected.")
         return value or ""
 
-    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         """Additional validation for contact message"""
         attrs.pop("website", None)
         return attrs

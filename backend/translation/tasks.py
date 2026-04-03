@@ -96,7 +96,7 @@ def translate_instance_task(
 
     except RequestException as exc:
         logger.warning("Transient error: %s. Retrying...", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc)  # noqa: B904
 
     except Exception as exc:
         logger.exception("Task failed: %s(pk=%s, lang=%s)", method_name, instance_pk, language_code)

@@ -4,7 +4,9 @@ import sys
 
 def run_in_docker(command):
     """Run a command inside the backend test container."""
-    full_cmd = ["docker", "compose", "run", "--rm", "--remove-orphans", "test"]
+    # -T disables TTY allocation. Pre-commit hooks run in a non-interactive pipe,
+    # so docker compose run fails if it tries to allocate a TTY.
+    full_cmd = ["docker", "compose", "run", "--rm", "--remove-orphans", "-T", "test"]
     full_cmd.extend(command)
 
     result = subprocess.run(full_cmd)

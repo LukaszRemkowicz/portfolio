@@ -39,7 +39,7 @@ beautifulsoup4 = "4.14.3"
 celery = {version = "5.6.3", extras = ["redis"]}
 flower = "2.0.1"
 sentry-sdk = "2.57.0"
-requests = "2.32.5"
+requests = "2.33.1"
 django-model-utils = "5.0.0"
 django-jazzmin = "3.0.3"
 ipython = "9.12.0"
@@ -63,6 +63,7 @@ Faker = "37.12.0"
 types-requests = "2.32.4.20260107"
 watchdog = "6.0.0"
 pytest-mock = "3.15.1"
+ruff = "^0.15.9"
 
 [build-system]
 requires = ["poetry-core"]
@@ -230,3 +231,24 @@ per-file-ignores = [
     "settings/tests.py:E402"
 ]
 max-complexity = 10
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "ARG", "UP", "PT"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*.py" = ["ARG"]
+"**/tests/conftest.py" = ["ARG"]
+"**/signals.py" = ["ARG"]
+"**/management/commands/*.py" = ["ARG"]
+"**/admin.py" = ["ARG"]
+"**/views.py" = ["ARG"]
+"common/throttling.py" = ["ARG"]
+"backend/common/throttling.py" = ["ARG"]
+"core/models.py" = ["ARG"]
+"backend/core/models.py" = ["ARG"]
+"settings/tests.py" = ["F403", "F405"]

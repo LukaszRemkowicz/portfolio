@@ -45,9 +45,7 @@ def test_contact_throttling_success(mock_email_service: MagicMock, api_client: A
 
 
 @pytest.mark.django_db
-def test_contact_throttling_limit_exceeded(
-    mock_email_service: MagicMock, api_client: APIClient
-) -> None:
+def test_contact_throttling_limit_exceeded(api_client: APIClient) -> None:
     """Test that contact form submission is throttled after limit"""
     LandingPageSettingsFactory(contact_form_enabled=True)
 
@@ -90,7 +88,7 @@ def test_contact_throttling_limit_exceeded(
 
 
 @pytest.mark.django_db
-def test_contact_throttling_headers(mock_email_service: MagicMock, api_client: APIClient) -> None:
+def test_contact_throttling_headers(api_client: APIClient) -> None:
     """Test that throttling response includes proper headers"""
     LandingPageSettingsFactory(contact_form_enabled=True)
 

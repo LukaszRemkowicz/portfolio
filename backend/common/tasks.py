@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 import sentry_sdk
 from celery import shared_task
@@ -41,7 +41,7 @@ def send_email_task(self, html_content: str, subject: str) -> None:
     except Exception as exc:
         logger.exception("Failed to send email: %s", subject)
         sentry_sdk.capture_exception(exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @shared_task(  # type: ignore[untyped-decorator]
