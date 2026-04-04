@@ -12,10 +12,13 @@ class LogSource:
     service_default: str
     model_field: str
     prompt_section: str
+    source_type: str = "docker"
     compose_project_env: str | None = None
     compose_project_default: str | None = None
     container_name_env: str | None = None
     container_name_default: str | None = None
+    file_path_env: str | None = None
+    file_path_default: str | None = None
 
 
 def _load_log_sources() -> tuple[LogSource, ...]:

@@ -702,7 +702,7 @@ class MonitoringToolLoopRunner:
         error_message = "response must be a JSON object"
         try:
             return MonitoringToolLoopRunner._parse_json_object(response_text, error_message)
-        except json.JSONDecodeError as exc:
+        except ValueError as exc:
             match = re.search(r"```json\s*(\{.*?\})\s*```", response_text, re.DOTALL)
             if match:
                 return MonitoringToolLoopRunner._parse_json_object(match.group(1), error_message)

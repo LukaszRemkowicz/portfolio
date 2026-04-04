@@ -14,3 +14,5 @@ When not to use:
 Output shape:
 - structured log report payload for the current job
 - includes severity, summary, findings, recommendations, and trend data when available
+- may include deterministic `probe_blocking_context` data describing suspicious
+  probe IPs, fail2ban policy thresholds, and observed ban activity

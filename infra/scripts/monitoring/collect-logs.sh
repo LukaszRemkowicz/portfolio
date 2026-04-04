@@ -38,8 +38,10 @@ ARCHIVE_ROOT="${DOCKER_LOGS_DIR}/archive"
 CURRENT_SNAPSHOT_FILES=(
     "backend.log"
     "frontend.log"
-    "nginx.log"
-    "traefik.log"
+    "nginx_access.log"
+    "nginx_runtime.log"
+    "traefik_access.log"
+    "traefik_runtime.log"
     "collected_at.txt"
 )
 
@@ -179,6 +181,30 @@ collect_service_logs() {
     TOTAL_BYTES=$((TOTAL_BYTES + size))
 }
 
+collect_file_logs() {
+    local source_key="$1"
+    local source_path="$2"
+    local output_file="$3"
+
+    log "Collecting ${source_key} file logs from ${source_path} (tail=${LOG_TAIL} lines)..."
+
+    if [[ ! -f "${source_path}" ]]; then
+        log "⚠️ WARNING: Log file not found for source=${source_key}: ${source_path}. Skipping."
+        : > "${output_file}"
+        return 0
+    fi
+
+    if ! tail -n "${LOG_TAIL}" "${source_path}" > "${output_file}"; then
+        log "⚠️ WARNING: Failed to read file logs for source=${source_key}."
+        : > "${output_file}"
+        return 0
+    fi
+
+    local size=$(wc -c < "${output_file}" 2>/dev/null || echo 0)
+    log "${source_key} log: ${size} bytes"
+    TOTAL_BYTES=$((TOTAL_BYTES + size))
+}
+
 iterate_log_sources() {
     python3 -c '
 import json
@@ -192,12 +218,15 @@ for source in sources:
     print("\t".join([
         source["key"],
         source["filename"],
+        source.get("source_type", "docker"),
         source["service_env"],
         source["service_default"],
         source.get("compose_project_env", ""),
         source.get("compose_project_default", ""),
         source.get("container_name_env", ""),
         source.get("container_name_default", ""),
+        source.get("file_path_env", ""),
+        source.get("file_path_default", ""),
     ]))
 ' "${LOG_SOURCES_MANIFEST}"
 }
@@ -205,7 +234,7 @@ for source in sources:
 # ---------------------------------------------------------------------------
 # 4. Collect logs for each service
 # ---------------------------------------------------------------------------
-while IFS=$'\t' read -r source_key filename service_env service_default compose_project_env compose_project_default container_env container_default; do
+while IFS=$'\t' read -r source_key filename source_type service_env service_default compose_project_env compose_project_default container_env container_default file_path_env file_path_default; do
     service_name="${!service_env:-${service_default}}"
     compose_project="${PROJECT_NAME}"
     if [[ -n "${compose_project_env}" ]]; then
@@ -216,12 +245,20 @@ while IFS=$'\t' read -r source_key filename service_env service_default compose_
         explicit_container_name="${!container_env:-${container_default}}"
     fi
 
-    collect_service_logs \
-        "${source_key}" \
-        "${service_name}" \
-        "${DOCKER_LOGS_DIR}/${filename}" \
-        "${compose_project}" \
-        "${explicit_container_name}"
+    if [[ "${source_type}" == "file" ]]; then
+        source_path="${!file_path_env:-${file_path_default}}"
+        collect_file_logs \
+            "${source_key}" \
+            "${source_path}" \
+            "${DOCKER_LOGS_DIR}/${filename}"
+    else
+        collect_service_logs \
+            "${source_key}" \
+            "${service_name}" \
+            "${DOCKER_LOGS_DIR}/${filename}" \
+            "${compose_project}" \
+            "${explicit_container_name}"
+    fi
 done < <(iterate_log_sources)
 
 # ---------------------------------------------------------------------------

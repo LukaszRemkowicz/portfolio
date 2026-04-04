@@ -6,7 +6,7 @@ port = http,https
 logpath = __NGINX_ACCESS_LOG__
 findtime = 10m
 maxretry = 3
-bantime = 24h
+bantime = 7d
 
 [portfolio-traefik-probes]
 enabled = true
@@ -16,4 +16,4 @@ port = http,https
 logpath = /var/log/portfolio/traefik/access.log
 findtime = 10m
 maxretry = 3
-bantime = 24h
+bantime = 7d

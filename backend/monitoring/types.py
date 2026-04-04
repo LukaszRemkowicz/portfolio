@@ -19,6 +19,7 @@ class LogAnalysisPayload(TypedDict, total=False):
     trend_summary: str
     gpt_tokens_used: int
     gpt_cost_usd: float
+    probe_blocking_context: JSONObject
 
 
 @dataclass(frozen=True)
@@ -266,6 +267,7 @@ class LogReportResult:
     trend_summary: str = ""
     gpt_tokens_used: int = 0
     gpt_cost_usd: float = 0.0
+    probe_blocking_context: JSONObject = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         validate_non_empty_text(self.summary, "summary")
@@ -273,6 +275,8 @@ class LogReportResult:
         validate_string_list(self.key_findings, "key_findings")
         validate_non_negative_int(self.gpt_tokens_used, "gpt_tokens_used")
         validate_non_negative_float(self.gpt_cost_usd, "gpt_cost_usd")
+        if not isinstance(self.probe_blocking_context, dict):
+            raise ValueError("probe_blocking_context must be a dict")
 
     def to_payload(self) -> JSONObject:
         return {
@@ -283,6 +287,7 @@ class LogReportResult:
             "trend_summary": self.trend_summary,
             "gpt_tokens_used": self.gpt_tokens_used,
             "gpt_cost_usd": self.gpt_cost_usd,
+            "probe_blocking_context": dict(self.probe_blocking_context),
         }
 
 
