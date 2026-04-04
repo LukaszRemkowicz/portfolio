@@ -45,7 +45,7 @@ class TestLogAnalysisAgent:
         """Test handling of empty response from LLM."""
         mock_llm_provider.ask_question_with_usage.return_value = (None, {})
 
-        result = agent.analyze_logs({"backend": "logs", "nginx": "logs"})
+        result = agent.analyze_logs({"backend": "logs", "nginx_access": "logs"})
 
         assert result is None
 
@@ -58,7 +58,7 @@ class TestLogAnalysisAgent:
         mock_usage = {"total_tokens": 50, "cost_usd": 0.002}
         mock_llm_provider.ask_question_with_usage.return_value = (mock_response, mock_usage)
 
-        result = agent.analyze_logs({"backend": "logs", "nginx": "logs"})
+        result = agent.analyze_logs({"backend": "logs", "nginx_access": "logs"})
 
         assert result is not None
         assert result["summary"] == "Markdown summary"
@@ -70,7 +70,7 @@ class TestLogAnalysisAgent:
         mock_llm_provider.ask_question_with_usage.return_value = (mock_response, mock_usage)
 
         # Should return fallback structure
-        result = agent.analyze_logs({"backend": "logs", "nginx": "logs"})
+        result = agent.analyze_logs({"backend": "logs", "nginx_access": "logs"})
 
         assert result is not None
         assert result["severity"] == "WARNING"
@@ -84,7 +84,7 @@ class TestLogAnalysisAgent:
         provider.configure(mock_json_path="monitoring/tests/llm_responses/attack.json")
 
         agent = LogAnalysisAgent(provider=provider)
-        result = agent.analyze_logs({"backend": "dummy logs", "nginx": "dummy logs"})
+        result = agent.analyze_logs({"backend": "dummy logs", "nginx_access": "dummy logs"})
 
         assert result is not None
         assert result["severity"] == "CRITICAL"

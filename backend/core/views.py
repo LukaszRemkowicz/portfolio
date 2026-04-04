@@ -3,7 +3,7 @@ Shared views and utility endpoints for the core application.
 """
 
 import logging
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from rest_framework import generics, permissions, renderers, status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
@@ -126,14 +126,14 @@ class SecureMediaView(APIView):
         """Return the unique ID string used to validate the signature."""
         return str(self.kwargs.get("slug", "") or self.kwargs.get("pk", ""))
 
-    def _validate_signature(self, request: Request, identifier: str) -> Optional[HttpResponse]:
+    def _validate_signature(self, request: Request, identifier: str) -> HttpResponse | None:
         """
         Validates the request signature and returns an error response if invalid,
         or None if valid.
         """
         safe_identifier: str = sanitize_for_logging(identifier)
-        signature: Optional[str] = request.query_params.get("s")
-        expiration: Optional[str] = request.query_params.get("e")
+        signature: str | None = request.query_params.get("s")
+        expiration: str | None = request.query_params.get("e")
 
         safe_signature: str = sanitize_for_logging(signature) if signature else "None"
         safe_expiration: str = sanitize_for_logging(expiration) if expiration else "None"

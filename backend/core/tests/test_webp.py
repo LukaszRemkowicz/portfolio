@@ -40,7 +40,7 @@ class TestLandingPageSettingsGetCurrent:
 
 @pytest.mark.django_db
 class TestBaseImageConvertToWebp:
-    def test_converts_jpeg_to_webp(self, tmp_path):
+    def test_converts_jpeg_to_webp(self):
         """Saving a JPEG image triggers WebP conversion; original_image is populated."""
         img = MainPageBackgroundImageFactory()
 

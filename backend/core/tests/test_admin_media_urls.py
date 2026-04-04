@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+import pytest
+
 from django.http import Http404, HttpResponse
 from django.test import RequestFactory, SimpleTestCase
 
@@ -13,13 +15,13 @@ class SafeServeTests(SimpleTestCase):
     def test_blocks_logs_directory(self):
         request = self.factory.get("/media/logs/example.txt")
 
-        with self.assertRaises(Http404):
+        with pytest.raises(Http404):
             safe_serve(request, "logs/example.txt", document_root="/tmp")
 
     def test_blocks_images_directory(self):
         request = self.factory.get("/media/images/example.jpg")
 
-        with self.assertRaises(Http404):
+        with pytest.raises(Http404):
             safe_serve(request, "images/example.jpg", document_root="/tmp")
 
     @patch("settings.urls.serve", return_value=HttpResponse("ok"))
@@ -28,7 +30,7 @@ class SafeServeTests(SimpleTestCase):
 
         response = safe_serve(request, "about_me_images/example.jpg", document_root="/tmp")
 
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         mock_serve.assert_called_once_with(
             request,
             "about_me_images/example.jpg",

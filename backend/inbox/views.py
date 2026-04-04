@@ -1,6 +1,6 @@
 # backend/inbox/views.py
 import logging
-from typing import Any, NoReturn, Optional
+from typing import Any, NoReturn
 
 from rest_framework import status, viewsets
 from rest_framework.exceptions import Throttled
@@ -14,6 +14,12 @@ from .serializers import ContactMessageSerializer
 from .services import ContactSubmissionService, PayloadTooLarge
 
 logger = logging.getLogger(__name__)
+
+
+class ContactFormThrottled(Throttled):
+    """Typed throttling exception used to preserve Retry-After without altering detail text."""
+
+    wait: float | None
 
 
 class ContactMessageViewSet(viewsets.ViewSet):
@@ -34,23 +40,22 @@ class ContactMessageViewSet(viewsets.ViewSet):
         """Custom throttled response with user-friendly message"""
         # Create exception without 'wait' arg to prevent DRF from appending
         # "Expected available in..." to the details.
-        exc = Throttled(
-            detail="You've submitted too many messages. Please wait 1 hour to send another one."
+        exc = ContactFormThrottled(
+            detail="You've submitted too many messages. Please wait 1 hour to send another one.",
         )
-        # Manually set wait so Retry-After header is still populated by handler
-        setattr(exc, "wait", wait)
+        exc.wait = wait
         raise exc
 
     def get_client_ip(self, request: Request) -> str:
         """Extract client IP address from request"""
-        x_forwarded_for: Optional[str] = request.META.get("HTTP_X_FORWARDED_FOR")
+        x_forwarded_for: str | None = request.META.get("HTTP_X_FORWARDED_FOR")
         if x_forwarded_for:
             return x_forwarded_for.split(",")[0].strip()
         return str(request.META.get("REMOTE_ADDR", "unknown"))
 
     def _check_payload_size(self, request: Request, client_ip: str) -> None:
         """Check if request payload size exceeds limit"""
-        content_length: Optional[str] = request.META.get("CONTENT_LENGTH")
+        content_length: str | None = request.META.get("CONTENT_LENGTH")
         if content_length:
             try:
                 content_length_int: int = int(content_length)

@@ -1,5 +1,4 @@
-# backend/astrophotography/admin_mixins.py
-from typing import Any, Dict, Optional
+from typing import Any
 from urllib.parse import urlencode
 
 from django.db.models import Model
@@ -19,7 +18,7 @@ class SecureAdminSidebarPreviewMixin:
     secure_preview_fields = ["path", "thumbnail"]
     secure_preview_url_name = "admin-generic-secure-media"  # Default to generic view
 
-    def _add_secure_sidebar_previews(self, obj: Model, context: Dict[str, Any]) -> None:
+    def _add_secure_sidebar_previews(self, obj: Model, context: dict[str, Any]) -> None:
         """Centralized logic to generate signed URLs and update context."""
         for field_name in self.secure_preview_fields:
             field = getattr(obj, field_name, None)
@@ -59,9 +58,9 @@ class SecureAdminSidebarPreviewMixin:
     def changeform_view(
         self,
         request: HttpRequest,
-        object_id: Optional[str] = None,
+        object_id: str | None = None,
         form_url: str = "",
-        extra_context: Optional[Dict[str, Any]] = None,
+        extra_context: dict[str, Any] | None = None,
     ) -> HttpResponse:
         """Inject secure previews into context if an object is being edited."""
         extra_context = extra_context or {}

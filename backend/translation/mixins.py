@@ -1,11 +1,10 @@
 import logging
-from typing import Any, Optional
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.forms import Media
+from django.forms import BaseModelForm, Media
 from django.http import HttpRequest
 from django.utils.safestring import mark_safe
 
@@ -39,20 +38,24 @@ class AutomatedTranslationModelMixin:
     Requires 'translation_service_method' to be defined.
     """
 
-    translation_service_method: Optional[str] = None
+    translation_service_method: str | None = None
     translation_trigger_fields: list[str] = ["name"]
 
-    def trigger_translations(self, **kwargs: Any) -> list[str]:
+    def trigger_translations(self, **kwargs: object) -> list[str]:
         """
         Loops through supported languages and triggers translations if needed.
         Returns a list of language codes that are now in PENDING/RUNNING state.
         """
+        if not isinstance(self, models.Model):
+            raise TypeError("AutomatedTranslationModelMixin must be used with a Django model")
+        model_instance: models.Model = self
+
         if not self.translation_service_method:
             return []
 
         default_lang = settings.DEFAULT_APP_LANGUAGE
         supported_languages = TranslationService.get_available_languages()
-        content_type = ContentType.objects.get_for_model(self)  # type: ignore[arg-type]
+        content_type = ContentType.objects.get_for_model(model_instance)
         active_languages = []
 
         for lang_code in supported_languages:
@@ -72,28 +75,34 @@ class AutomatedTranslationModelMixin:
                 continue
 
             # Need to trigger?
-            if self._needs_translation(self, lang_code, default_lang):
+            if self._needs_translation(model_instance, lang_code, default_lang):
                 self._trigger_translation(
-                    self, lang_code, content_type, self.translation_service_method, **kwargs
+                    model_instance,
+                    lang_code,
+                    content_type,
+                    self.translation_service_method,
+                    **kwargs,
                 )
                 active_languages.append(lang_code)
 
         return active_languages
 
-    def _needs_translation(self, obj: Any, lang_code: str, default_lang: str) -> bool:
+    def _needs_translation(
+        self,
+        obj: models.Model,
+        lang_code: str,
+        default_lang: str,
+    ) -> bool:
         """
         Determines if the target language needs a translation.
         Triggers if ANY of the trigger fields are effectively empty in the target
         language, provided the source language (English) has content for that field.
         """
-        if not hasattr(obj, "get_translation"):
-            return False
-
         # 0. Skip if a task is already PENDING or RUNNING for this object/language
-        content_type = ContentType.objects.get_for_model(obj)
+        content_type = ContentType.objects.get_for_model(obj)  # type: ignore[arg-type]
         if TranslationTask.objects.filter(
             content_type=content_type,
-            object_id=str(obj.pk),
+            object_id=str(obj.pk),  # type: ignore[attr-defined]
             language=lang_code,
             status__in=[TranslationTask.Status.PENDING, TranslationTask.Status.RUNNING],
         ).exists():
@@ -105,17 +114,17 @@ class AutomatedTranslationModelMixin:
         for field in self.translation_trigger_fields:
             # 1. Get Target Value (strictly for lang_code, no fallback)
             try:
-                target_trans = obj.get_translation(lang_code)
+                target_trans = obj.get_translation(lang_code)  # type: ignore[attr-defined]
                 target_val = getattr(target_trans, field, None)
-            except obj.translations.model.DoesNotExist:
+            except obj.translations.model.DoesNotExist:  # type: ignore[attr-defined]
                 target_val = None
 
             if TranslationService.is_empty_text(target_val):
                 # 2. Target is empty. Check if Source has something to translate FROM.
                 try:
-                    source_trans = obj.get_translation(default_lang)
+                    source_trans = obj.get_translation(default_lang)  # type: ignore[attr-defined]
                     source_val = getattr(source_trans, field, None)
-                except obj.translations.model.DoesNotExist:
+                except obj.translations.model.DoesNotExist:  # type: ignore[attr-defined]
                     source_val = None
 
                 if not TranslationService.is_empty_text(source_val):
@@ -130,14 +139,14 @@ class AutomatedTranslationModelMixin:
 
     def _trigger_translation(
         self,
-        obj: Any,
+        obj: models.Model,
         lang_code: str,
         content_type: ContentType,
         method_name: str,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> str:
         """Dispatches an async translation task and tracks it."""
-        object_id = str(obj.pk)
+        object_id = str(obj.pk)  # type: ignore[attr-defined]
 
         # Clean up old completed/failed tasks
         TranslationTask.objects.filter(
@@ -149,8 +158,8 @@ class AutomatedTranslationModelMixin:
 
         # Dispatch async task
         task = translate_instance_task.delay(
-            model_name=obj._meta.label,
-            instance_pk=obj.pk,
+            model_name=obj._meta.label,  # type: ignore[attr-defined]
+            instance_pk=obj.pk,  # type: ignore[attr-defined]
             language_code=lang_code,
             method_name=method_name,
             **kwargs,
@@ -177,34 +186,28 @@ class AutomatedTranslationAdminMixin:
     to provide Admin-specific messaging.
     """
 
-    def save_model(self, request: HttpRequest, obj: models.Model, form: Any, change: bool) -> None:
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: models.Model,
+        form: BaseModelForm,
+        change: bool,
+    ) -> None:
         """
         Overrides save_model to trigger translations and show messages.
         """
         # Ensure model is saved first
         super().save_model(request, obj, form, change)  # type: ignore[misc]
 
-        # Trigger via model logic if available, otherwise do nothing (or fallback)
-        if hasattr(obj, "trigger_translations"):
-            kwargs = self.get_translation_kwargs(obj, form, change, True)
-            triggered_languages = obj.trigger_translations(**kwargs)
+        triggered_languages = obj.trigger_translations()  # type: ignore[attr-defined]
 
-            if triggered_languages:
-                lang_list = ", ".join(triggered_languages)
-                self.message_user(
-                    request,
-                    f"Translations queued for {len(triggered_languages)} "
-                    f"languages ({lang_list})",
-                    level=messages.SUCCESS,
-                )
-
-    def get_translation_kwargs(
-        self, obj: Any, form: Any, change: bool, should_trigger: bool
-    ) -> dict[str, Any]:
-        """
-        Hook to provide extra arguments to the translation service method.
-        """
-        return {}
+        if triggered_languages:
+            lang_list = ", ".join(triggered_languages)
+            self.message_user(
+                request,
+                f"Translations queued for {len(triggered_languages)} " f"languages ({lang_list})",
+                level=messages.SUCCESS,
+            )
 
 
 class TranslationStatusMixin:
@@ -242,12 +245,12 @@ class TranslationStatusMixin:
                 f'<span style="color:red" title="{failed_count} failed">'
                 f"❌ Failed ({failed_count})</span>"
             )
-        elif pending_running > 0:
+        if pending_running > 0:
             return mark_safe(
                 f'<span style="color:orange" title="{pending_running} in progress">'
                 f"⏳ In Progress ({pending_running})</span>"
             )
-        elif all(s == TranslationTask.Status.COMPLETED for s in statuses):
+        if all(s == TranslationTask.Status.COMPLETED for s in statuses):
             return mark_safe(
                 f'<span style="color:green" title="{len(statuses)} completed">'
                 f"✅ Complete</span>"

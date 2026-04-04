@@ -20,12 +20,8 @@ Hard rules:
 - valid top-level actions are only:
   - `call_tools`
   - `final_report`
-- do not wrap the final answer inside objects like:
+- do not wrap the response inside objects like:
   - `{"final_report": {...}}`
   - `{"call_tools": {...}}`
-- for a final answer, return the fields at the top level:
-  - `action`
-  - `summary`
-  - `findings`
-  - and any additional final report fields such as `severity`,
-    `key_findings`, `recommendations`, `trend_summary`
+- when returning `final_report`, follow the dedicated final response format
+  instead of inventing your own field names

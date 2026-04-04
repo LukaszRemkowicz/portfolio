@@ -1,7 +1,6 @@
-# backend/inbox/services.py
 import logging
 from datetime import timedelta
-from typing import Any, Dict, Optional
+from typing import Any
 
 from rest_framework.exceptions import APIException
 
@@ -34,7 +33,7 @@ class ContactSubmissionService:
     """
 
     @staticmethod
-    def check_duplicate(validated_data: Dict[str, Any], client_ip: str) -> None:
+    def check_duplicate(validated_data: dict[str, Any], client_ip: str) -> None:
         """
         Check for duplicate messages within a short timeframe.
 
@@ -49,8 +48,8 @@ class ContactSubmissionService:
         safe_ip = sanitize_for_logging(client_ip)
         logger.info(f"Contact form submission attempt from IP: {safe_ip}")
 
-        email: Optional[str] = validated_data.get("email")
-        subject: Optional[str] = validated_data.get("subject")
+        email: str | None = validated_data.get("email")
+        subject: str | None = validated_data.get("subject")
 
         # Sanitize email and subject for logging
         safe_email = sanitize_for_logging(email) if email else ""
@@ -99,9 +98,9 @@ class ContactSubmissionService:
             )
 
     @staticmethod
-    def log_incoming_data(data: Dict[str, Any], client_ip: str) -> None:
+    def log_incoming_data(data: dict[str, Any], client_ip: str) -> None:
         """Helper to log sanitized incoming data"""
-        sanitized_data: Dict[str, Any] = {}
+        sanitized_data: dict[str, Any] = {}
         for key, value in data.items():
             if key == "message":
                 sanitized_data[key] = f"<{len(str(value))} chars>"

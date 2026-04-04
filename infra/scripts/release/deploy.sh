@@ -3,12 +3,11 @@
 # deploy.sh
 #
 # Purpose:
-#   Deploy a tagged release to production on the VPS in a safe, repeatable way.
+#   Switch running services to a prepared tagged release in a safe, repeatable way.
 #
 # High-level behavior:
 #   - Refuses to deploy untagged commits (tag == release)
 #   - Ensures the tagged Docker images exist locally (never builds)
-#   - Runs release tasks (migrations/collectstatic/etc) via release.sh
 #   - Switches running services to the new TAG using docker compose up -d
 #   - Performs a basic post-deploy health check (frontend + backend)
 #   - Updates /var/lib/portfolio/{current_tag,prev_tag} for rollback tracking
@@ -23,7 +22,8 @@
 #       /var/lib/portfolio/prev_tag
 #
 # What this script DOES NOT DO:
-#   - Does not build images (build.sh does that)
+#   - Does not build images (build.sh or prepare_images.sh does that)
+#   - Does not run release tasks (release.sh does that)
 #   - Does not tag git commits (CI does that)
 #   - Does not implement automatic rollback (manual rollback uses prev_tag)
 #
@@ -226,22 +226,10 @@ done
 
 echo "✅ Images found. Proceeding with deployment."
 
-echo "🧪 [DEPLOY] [2/6] Running release tasks (migrate/compilemessages/collectstatic/seeds)"
-
-# ------------------------------------------------------------------
-# Release tasks
-# ------------------------------------------------------------------
-echo "🧪 Running release tasks via release.sh..."
-if [[ "${DRY_RUN}" == true ]]; then
-  echo "🧾 DRY RUN: would execute: TAG=${TAG} ENVIRONMENT=${ENVIRONMENT} $SCRIPT_DIR/release.sh"
-else
-  ENVIRONMENT="${ENVIRONMENT}" TAG="${TAG}" COMPOSE_FILE="${COMPOSE_FILE}" "$SCRIPT_DIR/release.sh"
-fi
-
 # ------------------------------------------------------------------
 # Switch running services to the new TAG
 # ------------------------------------------------------------------
-echo "🚀 [DEPLOY] [3/6] Switching containers to new images (TAG=$TAG)"
+echo "🚀 [DEPLOY] [2/5] Switching containers to new images (TAG=$TAG)"
 if [[ "${DRY_RUN}" == true ]]; then
   echo "🧾 DRY RUN: would execute: ${COMPOSE[*]} up -d --remove-orphans"
 else
@@ -255,7 +243,7 @@ fi
 if [[ "${DRY_RUN}" == true ]]; then
   echo "🧾 DRY RUN: would reload Nginx config"
 else
-  echo "🔄 [DEPLOY] [4/6] Reloading Nginx configuration..."
+  echo "🔄 [DEPLOY] [3/5] Reloading Nginx configuration..."
   RELOAD_SUCCESS=false
   MAX_RELOAD_RETRIES=5
   for ((i=1; i<=MAX_RELOAD_RETRIES; i++)); do
@@ -288,7 +276,7 @@ if [[ "${DRY_RUN}" == true ]]; then
 else
   CURL_OPTS="-fsSk -o /dev/null"
 
-  echo "🩺 [DEPLOY] [5/6] Health check (Frontend)..."
+  echo "🩺 [DEPLOY] [4/5] Health check (Frontend)..."
 
   # Determine health check target based on ENVIRONMENT
   HEALTH_SITE_DOMAIN="${SITE_DOMAIN}"
@@ -344,10 +332,10 @@ else
     fi
   done
 
-  # [DEPLOY] [6/6] Health check (Backend)
+  # [DEPLOY] [5/5] Health check (Backend)
   # ------------------------------------------------------------------
   run_backend_health_checks() {
-    echo "🩺 [DEPLOY] [6/6] Health check (Backend)..."
+    echo "🩺 [DEPLOY] [5/5] Health check (Backend)..."
     # Implementation note: We use label-based resolution to find all active backend
     # containers. We iterate over each to ensure the whole cluster is healthy.
     # Progressive backoff sleep reduces log noise during slow warmups.

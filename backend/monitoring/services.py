@@ -4,8 +4,9 @@ import os
 import re
 import time
 from collections.abc import Mapping
-from datetime import date, datetime, timezone
-from typing import Optional
+from configparser import ConfigParser
+from datetime import UTC, date, datetime
+from pathlib import Path
 
 from django.conf import settings
 from django.core.files import File
@@ -21,6 +22,7 @@ from .monitoring_agent_runner import MonitoringToolLoopRunner
 from .prompt_assets import PromptAssetLoader
 from .sitemap_services import SitemapAuditService, SitemapHTTPClient
 from .types import (
+    JSONArray,
     JSONObject,
     JSONValue,
     LogAnalysisPayload,
@@ -34,7 +36,330 @@ from .types import (
 )
 
 logger = logging.getLogger(__name__)
-LogPathMap = dict[str, Optional[str]]
+LogPathMap = dict[str, str | None]
+
+
+def _json_int(value: JSONValue, default: int = 0) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return default
+    return default
+
+
+def _json_str(value: JSONValue, default: str = "") -> str:
+    if isinstance(value, str):
+        return value
+    if value is None:
+        return default
+    return str(value)
+
+
+def _json_str_list(value: JSONValue) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    items: list[str] = []
+    for item in value:
+        if isinstance(item, str):
+            items.append(item)
+        elif item is not None:
+            items.append(str(item))
+    return items
+
+
+class ProbeBlockingContextBuilder:
+    """Build deterministic probe and fail2ban correlation facts for the LLM."""
+
+    JAIL_CONFIG_PATH = (
+        Path(__file__).resolve().parents[2]
+        / "infra/scripts/security/fail2ban/jail.d/portfolio-probe-blocker.local"
+    )
+    ACCESS_SOURCE_TO_JAIL = {
+        "nginx_access": "portfolio-nginx-probes",
+        "traefik_access": "portfolio-traefik-probes",
+    }
+    SUSPICIOUS_PATH_PATTERNS = (
+        re.compile(r"^/(?:[^/]+/)*\.env[^ ]*$"),
+        re.compile(r"^/(?:[^/]+/)*\.git/config[^ ]*$"),
+        re.compile(
+            r"^/(?:wp-admin|wp-login|wp-content|xmlrpc\.php|phpMyAdmin|phpmyadmin|"
+            r"setup\.php|config\.php|eval-stdin\.php)(?:[/?].*)?$"
+        ),
+    )
+    FAIL2BAN_ACTION_PATTERN = re.compile(
+        r"^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d+\s+\S+\s+\[\d+\]:"
+        r"\s+\w+\s+\[(?P<jail>[^\]]+)\]\s+(?P<action>Ban|Unban)\s+(?P<ip>\S+)$"
+    )
+    FAIL2BAN_ALREADY_BANNED_PATTERN = re.compile(
+        r"^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d+\s+\S+\s+\[\d+\]:"
+        r"\s+\w+\s+\[(?P<jail>[^\]]+)\]\s+(?P<ip>\S+)\s+already banned$"
+    )
+    MAX_IPS_IN_CONTEXT = 20
+
+    @classmethod
+    def build(cls, log_paths: Mapping[str, str | None]) -> JSONObject:
+        policy = cls._load_fail2ban_policy()
+        suspicious_ip_records = cls._collect_suspicious_ip_records(log_paths, policy)
+        fail2ban_events = cls._collect_fail2ban_events(log_paths.get("fail2ban"))
+        correlated_ips = cls._correlate_probe_and_ban_records(
+            suspicious_ip_records=suspicious_ip_records,
+            fail2ban_events=fail2ban_events,
+            policy=policy,
+        )
+
+        suspicious_count = len(correlated_ips)
+        expected_bans = [record for record in correlated_ips if record["expected_ban"]]
+        observed_bans = [record for record in correlated_ips if record["observed_ban"]]
+        expected_but_not_observed: JSONArray = [
+            _json_str(record.get("ip"))
+            for record in correlated_ips
+            if record["expected_ban"] and not record["observed_ban"]
+        ]
+        suspicious_ips: JSONArray = [
+            dict(record) for record in correlated_ips[: cls.MAX_IPS_IN_CONTEXT]
+        ]
+
+        return {
+            "policy": policy,
+            "suspicious_ip_count": suspicious_count,
+            "suspicious_request_count": sum(
+                _json_int(record.get("request_count")) for record in correlated_ips
+            ),
+            "expected_ban_ip_count": len(expected_bans),
+            "observed_ban_ip_count": len(observed_bans),
+            "expected_but_not_observed": expected_but_not_observed,
+            "suspicious_ips": suspicious_ips,
+        }
+
+    @classmethod
+    def _load_fail2ban_policy(cls) -> JSONObject:
+        default_policy: JSONObject = {
+            "portfolio-nginx-probes": {
+                "findtime": "10m",
+                "maxretry": 3,
+                "bantime": "7d",
+            },
+            "portfolio-traefik-probes": {
+                "findtime": "10m",
+                "maxretry": 3,
+                "bantime": "7d",
+            },
+        }
+        if not cls.JAIL_CONFIG_PATH.exists():
+            return default_policy
+
+        parser = ConfigParser()
+        parser.read(cls.JAIL_CONFIG_PATH, encoding="utf-8")
+        policy: JSONObject = {}
+        for jail_name in cls.ACCESS_SOURCE_TO_JAIL.values():
+            if not parser.has_section(jail_name):
+                policy[jail_name] = default_policy.get(jail_name, {})
+                continue
+            maxretry = _json_int(parser.get(jail_name, "maxretry", fallback="3"), default=3)
+            policy[jail_name] = {
+                "findtime": parser.get(jail_name, "findtime", fallback="10m"),
+                "maxretry": maxretry,
+                "bantime": parser.get(jail_name, "bantime", fallback="7d"),
+            }
+        return policy
+
+    @classmethod
+    def _collect_suspicious_ip_records(
+        cls,
+        log_paths: Mapping[str, str | None],
+        policy: JSONObject,
+    ) -> list[JSONObject]:
+        records: dict[tuple[str, str], JSONObject] = {}
+        for source_key, jail_name in cls.ACCESS_SOURCE_TO_JAIL.items():
+            log_path = log_paths.get(source_key)
+            if not log_path or not os.path.exists(log_path):
+                continue
+            with open(log_path, encoding="utf-8", errors="replace") as handle:
+                for line in handle:
+                    event = cls._parse_access_log_event(
+                        line=line, source_key=source_key, jail_name=jail_name
+                    )
+                    if event is None:
+                        continue
+                    ip = str(event["ip"])
+                    record_key = (ip, jail_name)
+                    record = records.get(record_key)
+                    if record is None:
+                        record = {
+                            "ip": ip,
+                            "jail": jail_name,
+                            "sources": [source_key],
+                            "request_count": 0,
+                            "paths": [],
+                            "last_seen": "",
+                        }
+                        records[record_key] = record
+                    record["request_count"] = _json_int(record.get("request_count")) + 1
+                    paths = set(_json_str_list(record.get("paths")))
+                    paths.add(str(event["path"]))
+                    record["paths"] = list(sorted(paths))
+                    last_seen = str(event["timestamp"])
+                    if last_seen:
+                        record["last_seen"] = last_seen
+
+        sorted_records = sorted(
+            records.values(),
+            key=lambda item: (-_json_int(item.get("request_count")), _json_str(item.get("ip"))),
+        )
+        for record in sorted_records:
+            jail_policy = policy.get(str(record["jail"]), {})
+            maxretry_raw = jail_policy.get("maxretry", 3) if isinstance(jail_policy, dict) else 3
+            maxretry = _json_int(maxretry_raw, default=3)
+            record["expected_ban"] = _json_int(record.get("request_count")) >= maxretry
+        return sorted_records
+
+    @classmethod
+    def _parse_access_log_event(
+        cls,
+        *,
+        line: str,
+        source_key: str,
+        jail_name: str,
+    ) -> JSONObject | None:
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            return None
+        if not isinstance(payload, dict):
+            return None
+
+        if source_key == "traefik_access":
+            path = str(payload.get("RequestPath", ""))
+            ip = str(payload.get("ClientHost", ""))
+            status_raw = payload.get("DownstreamStatus", "")
+            timestamp = str(payload.get("StartLocal") or payload.get("time") or "")
+        else:
+            request_line = str(payload.get("request", ""))
+            path_match = re.match(r"^[A-Z]+\s+([^ ]+)\s+HTTP/[0-9.]+$", request_line)
+            path = path_match.group(1) if path_match else ""
+            ip = str(payload.get("remote_addr", ""))
+            status_raw = payload.get("status", "")
+            timestamp = str(payload.get("time_local", ""))
+
+        try:
+            status = int(status_raw)
+        except (TypeError, ValueError):
+            return None
+
+        if status not in {403, 404}:
+            return None
+        if (
+            not ip
+            or not path
+            or not any(pattern.match(path) for pattern in cls.SUSPICIOUS_PATH_PATTERNS)
+        ):
+            return None
+        return {
+            "ip": ip,
+            "path": path,
+            "status": status,
+            "timestamp": timestamp,
+            "jail": jail_name,
+        }
+
+    @classmethod
+    def _collect_fail2ban_events(
+        cls, fail2ban_log_path: str | None
+    ) -> dict[tuple[str, str], JSONObject]:
+        events: dict[tuple[str, str], JSONObject] = {}
+        if not fail2ban_log_path or not os.path.exists(fail2ban_log_path):
+            return events
+
+        with open(fail2ban_log_path, encoding="utf-8", errors="replace") as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                action_match = cls.FAIL2BAN_ACTION_PATTERN.match(line)
+                if action_match:
+                    jail = action_match.group("jail")
+                    ip = action_match.group("ip")
+                    record = events.setdefault(
+                        (ip, jail),
+                        {
+                            "ban_count": 0,
+                            "unban_count": 0,
+                            "already_banned_count": 0,
+                            "last_ban_at": "",
+                            "last_unban_at": "",
+                        },
+                    )
+                    timestamp = action_match.group("timestamp")
+                    if action_match.group("action") == "Ban":
+                        record["ban_count"] = _json_int(record.get("ban_count")) + 1
+                        record["last_ban_at"] = timestamp
+                    else:
+                        record["unban_count"] = _json_int(record.get("unban_count")) + 1
+                        record["last_unban_at"] = timestamp
+                    continue
+
+                already_match = cls.FAIL2BAN_ALREADY_BANNED_PATTERN.match(line)
+                if already_match:
+                    jail = already_match.group("jail")
+                    ip = already_match.group("ip")
+                    record = events.setdefault(
+                        (ip, jail),
+                        {
+                            "ban_count": 0,
+                            "unban_count": 0,
+                            "already_banned_count": 0,
+                            "last_ban_at": "",
+                            "last_unban_at": "",
+                        },
+                    )
+                    record["already_banned_count"] = (
+                        _json_int(record.get("already_banned_count")) + 1
+                    )
+        return events
+
+    @classmethod
+    def _correlate_probe_and_ban_records(
+        cls,
+        *,
+        suspicious_ip_records: list[JSONObject],
+        fail2ban_events: dict[tuple[str, str], JSONObject],
+        policy: JSONObject,
+    ) -> list[JSONObject]:
+        correlated: list[JSONObject] = []
+        for record in suspicious_ip_records:
+            ip = str(record["ip"])
+            jail = str(record["jail"])
+            event_record = fail2ban_events.get((ip, jail), {})
+            policy_record = policy.get(jail, {})
+            maxretry_raw = (
+                policy_record.get("maxretry", 3) if isinstance(policy_record, dict) else 3
+            )
+            maxretry = _json_int(maxretry_raw, default=3)
+            paths: JSONArray = list(_json_str_list(record.get("paths")))
+            correlated.append(
+                {
+                    "ip": ip,
+                    "jail": jail,
+                    "request_count": _json_int(record.get("request_count")),
+                    "paths": paths,
+                    "last_seen": _json_str(record.get("last_seen")),
+                    "maxretry": maxretry,
+                    "expected_ban": _json_int(record.get("request_count")) >= maxretry,
+                    "observed_ban": _json_int(event_record.get("ban_count", 0)) > 0
+                    or _json_int(event_record.get("already_banned_count", 0)) > 0,
+                    "ban_count": _json_int(event_record.get("ban_count", 0)),
+                    "unban_count": _json_int(event_record.get("unban_count", 0)),
+                    "already_banned_count": _json_int(event_record.get("already_banned_count", 0)),
+                    "last_ban_at": _json_str(event_record.get("last_ban_at", "")),
+                    "last_unban_at": _json_str(event_record.get("last_unban_at", "")),
+                }
+            )
+        return correlated
 
 
 def normalize_text_value(value: JSONValue, default: str = "") -> str:
@@ -52,8 +377,8 @@ def normalize_text_value(value: JSONValue, default: str = "") -> str:
 class DockerLogCollector:
     """Reads pre-collected logs from a volume-mounted directory.
 
-    Logs are collected daily by `infra/scripts/monitoring/collect-logs.sh` (host cron job)
-    and written to DOCKER_LOGS_DIR, which is mounted read-only into this container.
+    Logs are collected by the dedicated collector runtime and written to
+    DOCKER_LOGS_DIR, which is mounted read-only into this container.
     """
 
     MAX_STALENESS_HOURS = 25
@@ -68,12 +393,10 @@ class DockerLogCollector:
                 logs_dir,
             )
             return
-        with open(collected_at_path) as f:
+        with open(collected_at_path, encoding="utf-8") as f:
             collected_at_raw: str = f.read().strip()
-        collected_at: datetime = datetime.fromisoformat(collected_at_raw).replace(
-            tzinfo=timezone.utc
-        )
-        age_hours: float = (datetime.now(timezone.utc) - collected_at).total_seconds() / 3600
+        collected_at: datetime = datetime.fromisoformat(collected_at_raw).replace(tzinfo=UTC)
+        age_hours: float = (datetime.now(UTC) - collected_at).total_seconds() / 3600
         if age_hours > cls.MAX_STALENESS_HOURS:
             logger.warning(
                 "Docker logs are %.1f hours old (expected <%d h) — cron job may have missed a run",
@@ -86,7 +409,7 @@ class DockerLogCollector:
         """Return the raw ISO timestamp from collected_at.txt, or empty string if missing."""
         path: str = os.path.join(settings.DOCKER_LOGS_DIR, "collected_at.txt")
         if os.path.exists(path):
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return f.read().strip()
         return ""
 
@@ -105,7 +428,7 @@ class DockerLogCollector:
                 if source.required:
                     raise FileNotFoundError(
                         f"Log file not found: {log_path}. "
-                        "Ensure the collect-logs.sh cron job has run successfully."
+                        "Ensure the collector runtime has produced the latest snapshot files."
                     )
                 logger.warning(
                     "%s not found in %s — %s logs will be skipped.",
@@ -146,7 +469,7 @@ class LogAnalyzer:
 
     def analyze_logs_from_files(
         self,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
         collected_at: str = "",
         historical_context: str = "",
     ) -> LogAnalysisPayload:
@@ -201,7 +524,7 @@ class LogReportPreparationService:
 
     def prepare_report_from_files(
         self,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
         collected_at: str = "",
         historical_context: str = "",
     ) -> LogReportResult:
@@ -227,6 +550,7 @@ class LogReportPreparationService:
             trend_summary=str(raw_result.get("trend_summary", "")),
             gpt_tokens_used=int(raw_result.get("gpt_tokens_used", 0)),
             gpt_cost_usd=float(raw_result.get("gpt_cost_usd", 0.0)),
+            probe_blocking_context=ProbeBlockingContextBuilder.build(log_paths),
         )
 
 
@@ -263,7 +587,7 @@ class LogStorageService:
         cls,
         log_analysis: LogAnalysis,
         analysis_date: date,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
     ) -> None:
         """
         Attach log files to the analysis record.
@@ -271,6 +595,7 @@ class LogStorageService:
         Args:
             log_analysis: LogAnalysis instance to attach files to
             analysis_date: Date for filename generation
+            log_paths: Mapping of log source keys to filesystem paths for collected logs
         """
         for source in LOG_SOURCES:
             log_path: str | None = log_paths.get(source.key)
@@ -350,7 +675,7 @@ class LogAnalysisOrchestrator:
         self.report_preparer: LogReportPreparationService = LogReportPreparationService(analyzer)
         self.storage: LogStorageService = storage
 
-    def analyze_and_store(self, analysis_date: Optional[date] = None) -> LogAnalysis:
+    def analyze_and_store(self, analysis_date: date | None = None) -> LogAnalysis:
         """
         Main workflow: collect logs, analyze, and store results.
 
@@ -418,7 +743,7 @@ class LogAnalysisOrchestrator:
 
         if isinstance(raw_log_paths, tuple):
             normalized: LogPathMap = {}
-            for source, path_value in zip(LOG_SOURCES, raw_log_paths):
+            for source, path_value in zip(LOG_SOURCES, raw_log_paths, strict=False):
                 normalized[source.key] = path_value if isinstance(path_value, str) else None
             for source in LOG_SOURCES:
                 normalized.setdefault(source.key, None)
@@ -440,7 +765,7 @@ class LogAnalysisOrchestrator:
 
     def _run_analysis(
         self,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
         historical_context: str,
     ) -> LogReportResult:
         """Run LLM analysis and return the typed log report result."""
@@ -457,7 +782,7 @@ class LogAnalysisOrchestrator:
         log_size: int,
         analysis_result: LogReportResult,
         start_time: float,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
     ) -> LogAnalysis:
         """Persist analysis results and attach log files."""
         execution_time_seconds: float = time.time() - start_time
@@ -481,7 +806,7 @@ class LogAnalysisOrchestrator:
         analysis_date: date,
         error: Exception,
         start_time: float,
-        log_paths: Mapping[str, Optional[str]] | None = None,
+        log_paths: Mapping[str, str | None] | None = None,
     ) -> None:
         """Persist a CRITICAL error record so the failure is visible in the admin."""
         execution_time_seconds: float = time.time() - start_time
@@ -678,27 +1003,33 @@ class SitemapSummaryService:
             trend_summary="Trend summary unavailable because the sitemap LLM summary was skipped.",
         )
 
-    def _parse_response(self, response_text: str) -> JSONObject:
+    @staticmethod
+    def _load_json_object(raw_text: str, error_message: str) -> JSONObject:
         try:
-            payload: JSONValue = json.loads(response_text)
-            if not isinstance(payload, dict):
-                raise ValueError("Sitemap summary response must be a JSON object")
-            return payload
-        except json.JSONDecodeError:
+            payload: JSONValue = json.loads(raw_text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(error_message) from exc
+
+        if not isinstance(payload, dict):
+            raise ValueError(error_message)
+        return payload
+
+    def _parse_response(self, response_text: str) -> JSONObject:
+        error_message = "Sitemap summary response must be a JSON object"
+        try:
+            return self._load_json_object(response_text, error_message)
+        except json.JSONDecodeError as exc:
             match = re.search(r"```json\s*(\{.*?\})\s*```", response_text, re.DOTALL)
             if match:
-                payload = json.loads(match.group(1))
-                if not isinstance(payload, dict):
-                    raise ValueError("Sitemap summary response must be a JSON object")
-                return payload
+                return self._load_json_object(match.group(1), error_message)
             start_index: int = response_text.find("{")
             end_index: int = response_text.rfind("}")
             if start_index != -1 and end_index != -1:
-                payload = json.loads(response_text[start_index : end_index + 1])
-                if not isinstance(payload, dict):
-                    raise ValueError("Sitemap summary response must be a JSON object")
-                return payload
-            raise
+                return self._load_json_object(
+                    response_text[start_index : end_index + 1],
+                    error_message,
+                )
+            raise ValueError(error_message) from exc
 
 
 class SitemapAnalysisStorageService:
@@ -869,7 +1200,7 @@ class MonitoringAgentLogOrchestrator:
         self.storage: LogStorageService = storage
         self.agent_runner: MonitoringToolLoopRunner = agent_runner
 
-    def analyze_and_store(self, analysis_date: Optional[date] = None) -> LogAnalysis:
+    def analyze_and_store(self, analysis_date: date | None = None) -> LogAnalysis:
         """Collect logs, run the bounded monitoring agent, and persist results."""
         if analysis_date is None:
             analysis_date = date.today()
@@ -932,7 +1263,7 @@ class MonitoringAgentLogOrchestrator:
 
     def _prepare_report(
         self,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
         historical_context: str,
     ) -> LogReportResult:
         """Prepare the deterministic log report that seeds the agent runtime."""
@@ -989,7 +1320,7 @@ class MonitoringAgentLogOrchestrator:
         log_size: int,
         analysis_result: LogReportResult,
         start_time: float,
-        log_paths: Mapping[str, Optional[str]],
+        log_paths: Mapping[str, str | None],
     ) -> LogAnalysis:
         """Persist the final monitoring-agent report through the existing model path."""
         execution_time_seconds: float = time.time() - start_time
@@ -1013,7 +1344,7 @@ class MonitoringAgentLogOrchestrator:
         analysis_date: date,
         error: Exception,
         start_time: float,
-        log_paths: Mapping[str, Optional[str]] | None = None,
+        log_paths: Mapping[str, str | None] | None = None,
     ) -> None:
         """Persist a CRITICAL record when the agent-driven flow fails."""
         execution_time_seconds: float = time.time() - start_time
@@ -1037,7 +1368,7 @@ class MonitoringAgentLogOrchestrator:
 
         if isinstance(raw_log_paths, tuple):
             normalized: LogPathMap = {}
-            for source, path_value in zip(LOG_SOURCES, raw_log_paths):
+            for source, path_value in zip(LOG_SOURCES, raw_log_paths, strict=False):
                 normalized[source.key] = path_value if isinstance(path_value, str) else None
             for source in LOG_SOURCES:
                 normalized.setdefault(source.key, None)

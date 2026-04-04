@@ -119,7 +119,7 @@ class TestTranslationLogic:
         assert mixin._needs_translation(img, "pl", "en") is True
 
     @pytest.mark.django_db
-    def test_overwriting_issue_regression(self, mocker):
+    def test_overwriting_issue_regression(self):
         """
         Verify that if one field is empty it triggers, BUT manually populated fields
         are not 'lost' (handled by TranslationService.force=False).

@@ -157,6 +157,29 @@ class TestMonitoringToolLoopRunner:
         assert result.findings == ["Wrapped finding"]
         assert result.final_payload["severity"] == "CRITICAL"
 
+    def test_run_accepts_fenced_json_response(self):
+        provider = StubProvider(
+            [
+                (
+                    "Here is the monitoring result:\n"
+                    "```json\n"
+                    '{"action":"final_report","summary":"Fenced summary",'
+                    '"findings":["Fenced finding"]}'
+                    "\n```"
+                )
+            ]
+        )
+        runner = MonitoringToolLoopRunner(provider=provider, max_iterations=10)
+
+        result = runner.run(
+            job_name=MonitoringJobName.LOG_REPORT,
+            job_context={"log_report": {"summary": "Warning", "severity": "WARNING"}},
+        )
+
+        assert result.stop_reason == "final_report"
+        assert result.summary == "Fenced summary"
+        assert result.findings == ["Fenced finding"]
+
     def test_run_blocks_duplicate_tool_calls(self):
         provider = StubProvider(
             [

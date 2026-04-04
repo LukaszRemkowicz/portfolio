@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from rest_framework.request import Request
 from rest_framework.throttling import AnonRateThrottle, BaseThrottle
@@ -32,7 +32,7 @@ class ContactFormThrottle(BaseThrottle):
     Applied by DRF BEFORE validation (better for bot filtering).
     """
 
-    def get_email_from_request(self, request: Request) -> Optional[str]:
+    def get_email_from_request(self, request: Request) -> str | None:
         """Extract email from request data"""
         if hasattr(request, "data") and request.data:
             email: str = str(request.data.get("email", "")).lower().strip()
@@ -46,7 +46,7 @@ class ContactFormThrottle(BaseThrottle):
 
         try:
             ip: str = self.get_ident(request)
-            email: Optional[str] = self.get_email_from_request(request)
+            email: str | None = self.get_email_from_request(request)
 
             limits = {
                 f"contact_throttle_ip:{ip}": 5,

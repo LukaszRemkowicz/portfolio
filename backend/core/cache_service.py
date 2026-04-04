@@ -41,6 +41,7 @@ class CacheService:
             warnings.warn(
                 "Cache backend does not support delete_pattern. Global clear might be slow.",
                 UserWarning,
+                stacklevel=2,
             )
             cache.clear()
 

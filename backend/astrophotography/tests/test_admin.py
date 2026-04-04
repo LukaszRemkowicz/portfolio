@@ -38,6 +38,7 @@ from astrophotography.tests.factories import (
     PlaceFactory,
 )
 from core.widgets import ThemedRangeWidget
+from users.models import User
 
 
 @pytest.mark.django_db
@@ -68,6 +69,23 @@ class TestAstroImageAdmin:
         assert response.status_code == 200
         admin_instance = AstroImageAdmin(AstroImage, site)
         assert "display_number" in admin_instance.get_list_display(None)
+
+    def test_admin_list_numbers_are_reversed_while_order_stays_newest_first(
+        self, admin_user: User
+    ) -> None:
+        older_image = AstroImageFactory(capture_date=date(2024, 1, 1))
+        newer_image = AstroImageFactory(capture_date=date(2024, 1, 2))
+
+        factory = RequestFactory()
+        request = factory.get(self.CHANGELIST_URL)
+        request.user = admin_user
+
+        admin_instance = AstroImageAdmin(AstroImage, site)
+        queryset = list(admin_instance.get_queryset(request))
+
+        assert [image.pk for image in queryset[:2]] == [newer_image.pk, older_image.pk]
+        assert admin_instance.display_number(queryset[0]) == "2"
+        assert admin_instance.display_number(queryset[1]) == "1"
 
     def test_admin_change_page_displays_fields(self, admin_client: Client) -> None:
         """
@@ -158,7 +176,7 @@ class TestAstroImageAdmin:
 @pytest.mark.django_db
 class TestEquipmentAdmin:
     @pytest.mark.parametrize(
-        "url_name, model_class, model_value",
+        ("url_name", "model_class", "model_value"),
         [
             ("admin:astrophotography_camera_add", Camera, "Sony A7S III"),
             ("admin:astrophotography_lens_add", Lens, "Sony FE 35mm f/1.4"),
@@ -168,7 +186,11 @@ class TestEquipmentAdmin:
         ],
     )
     def test_equipment_admin_add(
-        self, admin_client: Client, url_name: str, model_class, model_value: str
+        self,
+        admin_client: Client,
+        url_name: str,
+        model_class: type[Camera | Lens | Telescope | Tracker | Tripod],
+        model_value: str,
     ) -> None:
         url: str = reverse(url_name)
         data = {"model": model_value}
@@ -278,7 +300,7 @@ class TestPlaceAdmin:
         with override_settings(DEFAULT_APP_LANGUAGE="en"):
 
             # Use mocker.MagicMock instead of importing MagicMock
-            mock_translate_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
+            mock_translate_task.delay.side_effect = lambda *_args, **_kwargs: mocker.MagicMock(
                 id=str(uuid.uuid4())
             )
 
@@ -339,7 +361,7 @@ class TestPlaceAdmin:
         assert kwargs["method_name"] == "translate_place"
 
     def test_save_model_does_not_trigger_translation_if_no_name_change(
-        self, admin_client: Client, mocker: MockerFixture, mock_translate_task: MagicMock
+        self, admin_client: Client, mock_translate_task: MagicMock
     ) -> None:
         """Test that translation is triggered when target language differs from BASE."""
 
@@ -479,7 +501,7 @@ class TestMainPageBackgroundImageAdminActions:
         assert kwargs["method_name"] == "translate_main_page_background_image"
 
     def test_save_model_does_not_trigger_translation_if_no_name_change(
-        self, admin_client: Client, mocker: MockerFixture, mock_translate_task: MagicMock
+        self, admin_client: Client, mock_translate_task: MagicMock
     ) -> None:
         """Test that translation is NOT triggered when the name doesn't change."""
 
@@ -592,7 +614,7 @@ class TestMainPageLocationAdmin:
         # 3. Verify Parler integration (tabs)
         assert '<div class="parler-language-tabs">' in content
 
-    def test_adventure_date_uses_themed_range_widget(self, admin_user):
+    def test_adventure_date_uses_themed_range_widget(self, admin_user: User) -> None:
         """
         Verify that the adventure_date field in the MainPageLocationAdmin form
         uses the ThemedRangeWidget correctly.
@@ -618,10 +640,9 @@ class TestMainPageLocationAdmin:
     def test_save_model_triggers_translation_for_highlight_title(
         self,
         admin_client: Client,
-        mocker,
-        mock_translate_task,
-        mock_get_available_languages,
-    ):
+        mock_translate_task: MagicMock,
+        mock_get_available_languages: MagicMock,
+    ) -> None:
         """
         Verify that saving a MainPageLocation with a highlight_title triggers the translation task.
         """

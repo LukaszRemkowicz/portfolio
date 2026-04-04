@@ -686,25 +686,31 @@ class MonitoringToolLoopRunner:
         return [str(item) for item in value]
 
     @staticmethod
+    def _parse_json_object(raw_text: str, error_message: str) -> JSONObject:
+        try:
+            payload: JSONValue = json.loads(raw_text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(error_message) from exc
+
+        if not isinstance(payload, dict):
+            raise ValueError(error_message)
+        return payload
+
+    @staticmethod
     def _load_json_object(response_text: str) -> JSONObject:
         """Load a JSON object from plain text, fenced JSON, or embedded JSON text."""
+        error_message = "response must be a JSON object"
         try:
-            payload: JSONValue = json.loads(response_text)
-            if not isinstance(payload, dict):
-                raise ValueError("response must be a JSON object")
-            return payload
-        except json.JSONDecodeError:
+            return MonitoringToolLoopRunner._parse_json_object(response_text, error_message)
+        except ValueError as exc:
             match = re.search(r"```json\s*(\{.*?\})\s*```", response_text, re.DOTALL)
             if match:
-                payload = json.loads(match.group(1))
-                if not isinstance(payload, dict):
-                    raise ValueError("response must be a JSON object")
-                return payload
+                return MonitoringToolLoopRunner._parse_json_object(match.group(1), error_message)
             start_index: int = response_text.find("{")
             end_index: int = response_text.rfind("}")
             if start_index != -1 and end_index != -1:
-                payload = json.loads(response_text[start_index : end_index + 1])
-                if not isinstance(payload, dict):
-                    raise ValueError("response must be a JSON object")
-                return payload
-            raise
+                return MonitoringToolLoopRunner._parse_json_object(
+                    response_text[start_index : end_index + 1],
+                    error_message,
+                )
+            raise ValueError(error_message) from exc

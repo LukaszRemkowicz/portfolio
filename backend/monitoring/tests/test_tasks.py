@@ -72,7 +72,7 @@ class TestMonitoringTasks:
         # 1. Configure the LLM mock to return the attack sequence
         # We read the file FIRST before we mock `builtins.open` below to prevent I/O conflicts.
         attack_json_path = settings.BASE_DIR / "monitoring/tests/llm_responses/attack.json"
-        with open(attack_json_path, "r", encoding="utf-8") as f:
+        with open(attack_json_path, encoding="utf-8") as f:
             attack_json = f.read()
 
         provider = MockLLMProvider()
@@ -93,8 +93,10 @@ class TestMonitoringTasks:
         collector_instance.collect_logs.return_value = {
             "backend": "/tmp/be.log",
             "frontend": "/tmp/fe.log",
-            "nginx": "/tmp/nx.log",
-            "traefik": "/tmp/traefik.log",
+            "nginx_access": "/tmp/nginx_access.log",
+            "nginx_runtime": "/tmp/nginx_runtime.log",
+            "traefik_access": "/tmp/traefik_access.log",
+            "traefik_runtime": "/tmp/traefik_runtime.log",
         }
         collector_instance.get_collected_at.return_value = "2026-03-05T12:00:00Z"
 

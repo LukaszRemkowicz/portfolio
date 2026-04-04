@@ -1,3 +1,5 @@
+from importlib import import_module
+
 from django.apps import AppConfig
 from django.utils.translation import gettext_lazy as _
 
@@ -8,4 +10,4 @@ class CoreConfig(AppConfig):
     verbose_name = _("Core Settings")
 
     def ready(self):
-        import core.signals  # noqa
+        import_module("core.signals")

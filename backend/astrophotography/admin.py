@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, cast
 
 from parler.admin import TranslatableAdmin
 from parler.forms import TranslatableModelForm
@@ -8,7 +8,7 @@ from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
 from django.db import models
-from django.db.models import F, Window
+from django.db.models import Count, F, Window
 from django.db.models.functions import RowNumber
 from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
@@ -100,8 +100,6 @@ class BaseTranslatableAdmin(
     - Translation status tracking and verification (via TranslationStatusMixin)
     """
 
-    pass
-
 
 @admin.register(Place)
 class PlaceAdmin(BaseTranslatableAdmin):
@@ -138,9 +136,9 @@ class PlaceAdmin(BaseTranslatableAdmin):
     def changeform_view(
         self,
         request: HttpRequest,
-        object_id: Optional[str] = None,
+        object_id: str | None = None,
         form_url: str = "",
-        extra_context: Optional[Dict[str, Any]] = None,
+        extra_context: dict[str, Any] | None = None,
     ) -> HttpResponse:
         """
         Switch active language to the one currently being edited (via Parler tab)
@@ -246,8 +244,10 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
                 admin_row_number=Window(
                     expression=RowNumber(),
                     order_by=(F("capture_date").desc(), F("created_at").desc()),
-                )
+                ),
+                admin_total_rows=Window(expression=Count("pk")),
             )
+            .annotate(admin_display_number=F("admin_total_rows") - F("admin_row_number") + 1)
         )
         return cast(QuerySet[AstroImage], annotated_qs)
 
@@ -263,7 +263,7 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
 
     @admin.display(description="No.")
     def display_number(self, obj: AstroImage) -> str:
-        return str(getattr(obj, "admin_row_number", ""))
+        return str(getattr(obj, "admin_display_number", ""))
 
     search_fields = (
         "translations__name",
@@ -336,7 +336,7 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
     )
 
     def save_model(
-        self, request: HttpRequest, obj: models.Model, form: forms.ModelForm, change: bool
+        self, request: HttpRequest, obj: models.Model, form: forms.BaseModelForm, change: bool
     ) -> None:
         astro_obj = obj if isinstance(obj, AstroImage) else None
         uploaded_file = request.FILES.get("path")
@@ -370,8 +370,8 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
         )
 
     def get_fieldsets(
-        self, request: HttpRequest, obj: Optional[AstroImage] = None
-    ) -> List[Union[Tuple[Optional[str], Dict[str, Any]], Any]]:
+        self, request: HttpRequest, obj: AstroImage | None = None
+    ) -> list[tuple[str | None, dict[str, Any]] | Any]:
         """
         Dynamically hide non-translatable fields when editing a secondary language.
         """
@@ -615,9 +615,9 @@ class MainPageLocationAdmin(BaseTranslatableAdmin):
     def changeform_view(
         self,
         request: HttpRequest,
-        object_id: Optional[str] = None,
+        object_id: str | None = None,
         form_url: str = "",
-        extra_context: Optional[Dict[str, Any]] = None,
+        extra_context: dict[str, Any] | None = None,
     ) -> HttpResponse:
         extra_context = extra_context or {}
         # Hide "Save and add another" button when editing (only show when adding)
@@ -696,7 +696,7 @@ class MeteorsMainPageConfigAdmin(admin.ModelAdmin):
         return super().has_add_permission(request)
 
     def has_delete_permission(
-        self, request: HttpRequest, obj: Optional[MeteorsMainPageConfig] = None
+        self, request: HttpRequest, obj: MeteorsMainPageConfig | None = None
     ) -> bool:
         # Prevent deletion of the last configuration
         if self.model.objects.count() <= 1:
@@ -706,9 +706,9 @@ class MeteorsMainPageConfigAdmin(admin.ModelAdmin):
     def changeform_view(
         self,
         request: HttpRequest,
-        object_id: Optional[str] = None,
+        object_id: str | None = None,
         form_url: str = "",
-        extra_context: Optional[Dict[str, Any]] = None,
+        extra_context: dict[str, Any] | None = None,
     ) -> HttpResponse:
         extra_context = extra_context or {}
         extra_context["show_save_and_add_another"] = False
@@ -730,7 +730,7 @@ class MeteorsMainPageConfigAdmin(admin.ModelAdmin):
         self,
         request: HttpRequest,
         obj: MeteorsMainPageConfig,
-        post_url_continue: Optional[str] = None,
+        post_url_continue: str | None = None,
     ) -> HttpResponse:
         opts = self.model._meta
         msg = _('The %(name)s "%(obj)s" was added successfully.') % {
@@ -743,7 +743,7 @@ class MeteorsMainPageConfigAdmin(admin.ModelAdmin):
         )
 
     def changelist_view(
-        self, request: HttpRequest, extra_context: Optional[Dict[str, Any]] = None
+        self, request: HttpRequest, extra_context: dict[str, Any] | None = None
     ) -> HttpResponse:
         """
         Redirects the changelist view directly to the singleton instance's change view

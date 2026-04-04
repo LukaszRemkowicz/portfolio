@@ -102,10 +102,31 @@ class LogAnalysis(models.Model):
         null=True,
         blank=True,
     )
+    nginx_runtime_logs = models.FileField(
+        _("Nginx runtime logs"),
+        upload_to="logs/%Y/%m/%d/",
+        help_text="Raw nginx runtime logs",
+        null=True,
+        blank=True,
+    )
     traefik_logs = models.FileField(
         _("Traefik logs"),
         upload_to="logs/%Y/%m/%d/",
         help_text="Raw traefik logs",
+        null=True,
+        blank=True,
+    )
+    traefik_runtime_logs = models.FileField(
+        _("Traefik runtime logs"),
+        upload_to="logs/%Y/%m/%d/",
+        help_text="Raw traefik runtime logs",
+        null=True,
+        blank=True,
+    )
+    fail2ban_logs = models.FileField(
+        _("Fail2ban logs"),
+        upload_to="logs/%Y/%m/%d/",
+        help_text="Raw fail2ban logs",
         null=True,
         blank=True,
     )

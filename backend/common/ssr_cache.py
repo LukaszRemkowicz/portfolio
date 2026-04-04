@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Iterable, cast
+from collections.abc import Iterable
+from typing import cast
 from urllib import error, request
 
 from django.conf import settings

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List, Optional
+from typing import Any
 
 from rest_framework import status
 from rest_framework.decorators import action
@@ -162,12 +162,9 @@ class TagsView(ViewSet):
         Returns tag statistics, optionally filtered by category
         or limited to 'latest' filters.
         """
-        category_filter: Optional[str] = request.query_params.get("filter")
-        lang: Optional[str] = request.query_params.get("lang")
+        category_filter: str | None = request.query_params.get("filter")
         latest: bool = request.query_params.get("latest", "false").lower() == "true"
-        tags: QuerySet[Tag] = GalleryQueryService.get_tag_stats(
-            category_filter, language_code=lang, latest=latest
-        )
+        tags: QuerySet[Tag] = GalleryQueryService.get_tag_stats(category_filter, latest=latest)
 
         serializer: TagSerializer = self.serializer_class(
             tags, many=True, context={"request": request}
@@ -186,7 +183,7 @@ class CelestialObjectCategoriesView(APIView):
     @method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT))
     def get(self, request: Request) -> Response:
         """Returns the list of available categories."""
-        categories: List[str] = [choice[0] for choice in CELESTIAL_OBJECT_CHOICES]
+        categories: list[str] = [choice[0] for choice in CELESTIAL_OBJECT_CHOICES]
         return Response(categories)
 
 
@@ -243,10 +240,10 @@ class ImageURLViewSet(ViewSet):
         queryset: QuerySet[AstroImage] = self.queryset.all()
 
         # Filter by IDs if provided
-        ids_param: Optional[str] = request.query_params.get("ids")
+        ids_param: str | None = request.query_params.get("ids")
         if ids_param:
             # Split comma-separated UUIDs
-            ids: List[str] = [x.strip() for x in ids_param.split(",") if x.strip()]
+            ids: list[str] = [x.strip() for x in ids_param.split(",") if x.strip()]
             if ids:
                 queryset = queryset.filter(pk__in=ids)
 
@@ -265,11 +262,11 @@ class ImageURLViewSet(ViewSet):
 
         return Response(url_mapping)
 
-    def retrieve(self, request: Request, pk: Optional[str] = None) -> Response:
+    def retrieve(self, request: Request, pk: str | None = None) -> Response:
         """
         Returns signed URL for a single image.
         """
-        slug: Optional[str] = pk
+        slug: str | None = pk
         image: AstroImage = get_object_or_404(AstroImage, slug=slug)
         url_path: str = reverse("secure-image-file", kwargs={"slug": image.slug})
         params: dict[str, Any] = generate_signed_url_params(

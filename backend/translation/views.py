@@ -25,7 +25,8 @@ def admin_dynamic_parler_css_view(request: Request) -> HttpResponse:
 
     /*
        RULE 1: Inactive Tab
-       Structure: <span class="available"><a href="?language={default_lang}">...</a> <a class="deletelink"></a></span>  # noqa: E501
+       Structure: <span class="available"><a href="?language={default_lang}">...</a>
+       <a class="deletelink"></a></span>
        Target: .deletelink that is a sibling of the language link
     */
     .parler-language-tabs span a[href*="language={default_lang}"] ~ .deletelink,
@@ -35,7 +36,8 @@ def admin_dynamic_parler_css_view(request: Request) -> HttpResponse:
 
     /*
        RULE 2: Active Tab
-       Structure: <input name="{default_lang}" ...> <span class="current">... <a class="deletelink"></a></span>  # noqa: E501
+       Structure: <input name="{default_lang}" ...> <span class="current">...
+       <a class="deletelink"></a></span>
        Target: .deletelink inside the span that follows the input
     */
     .parler-language-tabs input[name="{default_lang}"] + span .deletelink,

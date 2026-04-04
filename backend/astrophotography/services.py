@@ -1,6 +1,5 @@
-# backend/astrophotography/services.py
 from functools import lru_cache
-from typing import Any, Dict, Optional, cast
+from typing import Any, cast
 
 from django_countries import countries
 
@@ -17,7 +16,7 @@ class GalleryQueryService:
 
     @staticmethod
     @lru_cache(maxsize=1)
-    def _get_country_maps() -> Dict[str, Dict[str, str]]:
+    def _get_country_maps() -> dict[str, dict[str, str]]:
         """Returns cached country and code maps."""
         return {
             "country_map": {name.lower(): code for code, name in dict(countries).items()},
@@ -25,7 +24,7 @@ class GalleryQueryService:
         }
 
     @staticmethod
-    def get_filtered_images(params: Dict[str, Any]) -> QuerySet[AstroImage]:
+    def get_filtered_images(params: dict[str, Any]) -> QuerySet[AstroImage]:
         """
         Apply filters to the AstroImage queryset based on provided parameters.
         Optimized with prefetch_related and select_related to avoid N+1 queries.
@@ -165,8 +164,7 @@ class GalleryQueryService:
 
     @staticmethod
     def get_tag_stats(
-        category_filter: Optional[str] = None,
-        language_code: Optional[str] = None,
+        category_filter: str | None = None,
         latest: bool = False,
     ) -> QuerySet[Tag]:
         """

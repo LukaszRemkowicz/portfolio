@@ -42,16 +42,22 @@ class TestDockerLogCollector:
         settings.DOCKER_LOGS_DIR = str(tmp_path)
         (tmp_path / "backend.log").write_text("backend log content")
         (tmp_path / "frontend.log").write_text("frontend log content")
-        (tmp_path / "nginx.log").write_text("nginx log content")
-        (tmp_path / "traefik.log").write_text("traefik log content")
+        (tmp_path / "nginx_access.log").write_text("nginx access log content")
+        (tmp_path / "nginx_runtime.log").write_text("nginx runtime log content")
+        (tmp_path / "traefik_access.log").write_text("traefik access log content")
+        (tmp_path / "traefik_runtime.log").write_text("traefik runtime log content")
+        (tmp_path / "fail2ban.log").write_text("fail2ban log content")
         (tmp_path / "collected_at.txt").write_text("2026-03-01T00:00:00Z")
 
         log_paths = DockerLogCollector.collect_logs()
 
         assert log_paths["backend"] == str(tmp_path / "backend.log")
         assert log_paths["frontend"] == str(tmp_path / "frontend.log")
-        assert log_paths["nginx"] == str(tmp_path / "nginx.log")
-        assert log_paths["traefik"] == str(tmp_path / "traefik.log")
+        assert log_paths["nginx_access"] == str(tmp_path / "nginx_access.log")
+        assert log_paths["nginx_runtime"] == str(tmp_path / "nginx_runtime.log")
+        assert log_paths["traefik_access"] == str(tmp_path / "traefik_access.log")
+        assert log_paths["traefik_runtime"] == str(tmp_path / "traefik_runtime.log")
+        assert log_paths["fail2ban"] == str(tmp_path / "fail2ban.log")
 
     def test_collect_logs_missing_backend_raises(self, tmp_path, settings):
         """FileNotFoundError when backend.log is missing."""
@@ -60,25 +66,31 @@ class TestDockerLogCollector:
         with pytest.raises(FileNotFoundError, match="backend.log"):
             DockerLogCollector.collect_logs()
 
-    def test_collect_logs_missing_nginx_warns_but_succeeds(self, tmp_path, settings, caplog):
-        """nginx.log missing -> warns and returns None for nginx_path, does NOT raise."""
+    def test_collect_logs_missing_optional_logs_warns_but_succeeds(
+        self, tmp_path, settings, caplog
+    ):
+        """Optional log files missing -> warns and returns None, does NOT raise."""
 
         settings.DOCKER_LOGS_DIR = str(tmp_path)
         (tmp_path / "backend.log").write_text("backend log content")
         (tmp_path / "collected_at.txt").write_text("2026-03-01T00:00:00Z")
-        # nginx.log intentionally NOT created
+        # Optional snapshot files intentionally NOT created
 
         with caplog.at_level(logging.WARNING, logger="monitoring.services"):
             log_paths = DockerLogCollector.collect_logs()
 
         assert log_paths["backend"] == str(tmp_path / "backend.log")
         assert log_paths["frontend"] is None
-        assert log_paths["nginx"] is None
-        assert log_paths["traefik"] is None
+        assert log_paths["nginx_access"] is None
+        assert log_paths["nginx_runtime"] is None
+        assert log_paths["traefik_access"] is None
+        assert log_paths["traefik_runtime"] is None
+        assert log_paths["fail2ban"] is None
         assert any(
             "nginx" in record.message.lower()
             or "frontend" in record.message.lower()
             or "traefik" in record.message.lower()
+            or "fail2ban" in record.message.lower()
             for record in caplog.records
         )
 
@@ -161,6 +173,79 @@ class TestLogReportPreparationService:
         assert report.severity == mock_llm_response["severity"]
         assert report.gpt_tokens_used == mock_llm_response["gpt_tokens_used"]
         assert report.gpt_cost_usd == mock_llm_response["gpt_cost_usd"]
+
+    def test_prepare_report_from_files_includes_probe_blocking_context(self, tmp_path, mocker):
+        mock_agent = mocker.MagicMock()
+        mock_agent.analyze_logs_from_files.return_value = {
+            "summary": "Probe activity detected.",
+            "severity": "WARNING",
+            "key_findings": ["Suspicious traffic seen."],
+            "recommendations": "Review firewall behavior.",
+            "trend_summary": "New today.",
+            "gpt_tokens_used": 1,
+            "gpt_cost_usd": 0.0,
+        }
+        analyzer = LogAnalyzer(mock_agent)
+        service = LogReportPreparationService(analyzer)
+
+        traefik_access_path = tmp_path / "traefik_access.log"
+        traefik_access_path.write_text(
+            "\n".join(
+                [
+                    (
+                        '{"ClientHost":"185.177.72.205","DownstreamStatus":404,'
+                        '"RequestPath":"/.env","StartLocal":"2026-04-04T18:08:14+02:00"}'
+                    ),
+                    (
+                        '{"ClientHost":"185.177.72.205","DownstreamStatus":404,'
+                        '"RequestPath":"/api/.env","StartLocal":"2026-04-04T18:08:15+02:00"}'
+                    ),
+                    (
+                        '{"ClientHost":"185.177.72.205","DownstreamStatus":404,'
+                        '"RequestPath":"/prod/.env","StartLocal":"2026-04-04T18:08:16+02:00"}'
+                    ),
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        fail2ban_path = tmp_path / "fail2ban.log"
+        fail2ban_path.write_text(
+            "\n".join(
+                [
+                    (
+                        "2026-04-04 18:08:14,928 fail2ban.actions        [2109350]: "
+                        "NOTICE  [portfolio-traefik-probes] 185.177.72.205 already banned"
+                    ),
+                    (
+                        "2026-04-04 18:29:27,206 fail2ban.actions        [2109350]: "
+                        "NOTICE  [portfolio-traefik-probes] Ban 185.177.72.205"
+                    ),
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        report = service.prepare_report_from_files(
+            {
+                "backend": "/tmp/backend.log",
+                "traefik_access": str(traefik_access_path),
+                "fail2ban": str(fail2ban_path),
+            },
+            collected_at="2026-04-04T18:30:00Z",
+            historical_context="",
+        )
+
+        context = report.probe_blocking_context
+        assert context["expected_ban_ip_count"] == 1
+        assert context["observed_ban_ip_count"] == 1
+        suspicious_ips = context["suspicious_ips"]
+        assert isinstance(suspicious_ips, list)
+        assert suspicious_ips[0]["ip"] == "185.177.72.205"
+        assert suspicious_ips[0]["request_count"] == 3
+        assert suspicious_ips[0]["expected_ban"] is True
+        assert suspicious_ips[0]["observed_ban"] is True
 
 
 class TestMonitoringAgentLogOrchestrator:
@@ -423,13 +508,16 @@ class TestLogAnalysisOrchestrator:
         with override_settings(ENVIRONMENT="test"):
             # Mocks
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mocker.patch("monitoring.services.ProbeBlockingContextBuilder.build", return_value={})
             mock_agent = mocker.MagicMock()
 
             mock_collector.return_value = {
                 "backend": "/tmp/backend.log",
                 "frontend": "/tmp/frontend.log",
-                "nginx": None,
-                "traefik": "/tmp/traefik.log",
+                "nginx_access": None,
+                "nginx_runtime": None,
+                "traefik_access": "/tmp/traefik_access.log",
+                "traefik_runtime": "/tmp/traefik_runtime.log",
             }
             mock_agent.analyze_logs_from_files.return_value = mock_llm_response
 
@@ -462,13 +550,16 @@ class TestLogAnalysisOrchestrator:
         with override_settings(ENVIRONMENT="test"):
             # Mocks
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mocker.patch("monitoring.services.ProbeBlockingContextBuilder.build", return_value={})
             mock_agent = mocker.MagicMock()
 
             mock_collector.return_value = {
                 "backend": "/tmp/backend.log",
                 "frontend": "/tmp/frontend.log",
-                "nginx": None,
-                "traefik": "/tmp/traefik.log",
+                "nginx_access": None,
+                "nginx_runtime": None,
+                "traefik_access": "/tmp/traefik_access.log",
+                "traefik_runtime": "/tmp/traefik_runtime.log",
             }
             mock_agent.analyze_logs_from_files.return_value = mock_llm_response
 
@@ -558,8 +649,17 @@ class TestOrchestratorHistoricalContextWiring:
                 "monitoring.services.HistoricalContextBuilder.build",
                 return_value="## 2026-03-08 — Severity: INFO\nSummary: All calm",
             )
+            mocker.patch("monitoring.services.ProbeBlockingContextBuilder.build", return_value={})
 
-            mock_collector.return_value = ("/tmp/backend.log", "/tmp/frontend.log", None)
+            mock_collector.return_value = {
+                "backend": "/tmp/backend.log",
+                "frontend": "/tmp/frontend.log",
+                "nginx_access": None,
+                "nginx_runtime": None,
+                "traefik_access": "/tmp/traefik_access.log",
+                "traefik_runtime": "/tmp/traefik_runtime.log",
+                "fail2ban": None,
+            }
             mock_agent.analyze_logs_from_files.return_value = mock_llm_response
 
             mocker.patch("builtins.open", mock_open(read_data="Mock logs"))

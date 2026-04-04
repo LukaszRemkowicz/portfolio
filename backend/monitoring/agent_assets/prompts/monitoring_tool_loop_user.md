@@ -30,14 +30,12 @@ For final report:
 ```json
 {
   "action": "final_report",
-  "summary": "Short overall summary",
-  "findings": ["Finding 1", "Finding 2"],
-  "severity": "INFO|WARNING|CRITICAL",
-  "key_findings": ["Specific finding 1", "Specific finding 2"],
-  "recommendations": "Concrete next steps",
-  "trend_summary": "Short change summary"
+  "summary": "Short overall summary"
 }
 ```
+
+When `action` is `final_report`, use the exact field contract from
+`monitoring_log_response_format.md`.
 
 Do not return:
 ```json

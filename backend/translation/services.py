@@ -5,8 +5,9 @@ Services for managing translations and global state in the core application.
 import functools
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any
 
 from parler.models import TranslatableModel
 
@@ -28,7 +29,7 @@ class FieldTranslationConfig:
 
     name: str
     is_html: bool = False
-    custom_handler: Optional[Callable[[str, str], str]] = None
+    custom_handler: Callable[[str, str], str] | None = None
 
 
 class TranslationService:
@@ -270,9 +271,7 @@ class TranslationService:
         4. Updates instance and handles language context.
         """
         # 1. Check existence
-        has_translation, current_val = cls._has_translation(
-            instance, field_name, language_code, force=force
-        )
+        has_translation, _ = cls._has_translation(instance, field_name, language_code, force=force)
         if has_translation:
             yield None  # Signal that we should skip
             return
@@ -334,7 +333,7 @@ class TranslationService:
     )
 
     @classmethod
-    def _get_invalid_translation_reason(cls, source: str, translated: str) -> Optional[str]:
+    def _get_invalid_translation_reason(cls, source: str, translated: str) -> str | None:
         """
         Returns a failure reason when the LLM response is clearly not a translation.
 
@@ -376,7 +375,7 @@ class TranslationService:
         language_code: str,
         handler: Any,
         force: bool = False,
-    ) -> tuple[str, Optional[str]]:
+    ) -> tuple[str, str | None]:
         """
         Helper that runs the ceremony for a single field using a provided handler.
         Returns (translated_text, failure_reason_or_None).
@@ -545,7 +544,7 @@ class TranslationService:
         failures = {}
 
         # We define a local handler that includes the country context
-        def place_handler(text: str, lang: str, field_hint: str = "") -> str:
+        def place_handler(text: str, lang: str) -> str:
             return self.agent.translate_place(text, lang, country_name) or ""
 
         translated, reason = self._run_parler_translation(

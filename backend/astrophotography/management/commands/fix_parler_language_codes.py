@@ -32,7 +32,8 @@ class Command(BaseCommand):
 
             # Parler creates a separate model for translations.
             # We access it via the 'translations' related name on the master model.
-            # However, for batch updates, it's more efficient to query the translation model directly.  # noqa: E501
+            # However, for batch updates, it's more efficient to query
+            # the translation model directly.
             translation_model = model._parler_meta.root_model
 
             count = translation_model.objects.filter(language_code="en-us").update(

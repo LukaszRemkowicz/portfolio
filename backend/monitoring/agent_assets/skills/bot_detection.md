@@ -1,5 +1,9 @@
 ## BOT / ATTACK DETECTION — treat as CRITICAL
 
+Use this skill to detect suspicious traffic patterns in the logs and describe
+what happened. Focus on scanner behavior, repeated probing, clustering, and
+timestamp extraction rather than OWASP categorization.
+
 Logs include per-line timestamps (ISO 8601 format, added by `docker compose logs --timestamps`).
 When you detect scanning or probing, always extract and report the timestamp of the LAST
 suspicious request from the log line.

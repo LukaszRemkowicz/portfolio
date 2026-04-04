@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List
+from typing import Any
 
 from celery import shared_task
 
@@ -34,7 +34,7 @@ def _get_image_spec(user: Any, field_name: str):
     name="users.process_user_images",
     base=CommitAwareTask,
 )
-def process_user_images_task(user_id: int, changed_field_names: List[str]) -> None:
+def process_user_images_task(user_id: int, changed_field_names: list[str]) -> None:
     """
     Background task to convert User source images to derived WebP fields.
     Handles specialized shrinkage (264px for avatars).
