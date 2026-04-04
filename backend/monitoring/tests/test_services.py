@@ -508,6 +508,7 @@ class TestLogAnalysisOrchestrator:
         with override_settings(ENVIRONMENT="test"):
             # Mocks
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mocker.patch("monitoring.services.ProbeBlockingContextBuilder.build", return_value={})
             mock_agent = mocker.MagicMock()
 
             mock_collector.return_value = {
@@ -549,6 +550,7 @@ class TestLogAnalysisOrchestrator:
         with override_settings(ENVIRONMENT="test"):
             # Mocks
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mocker.patch("monitoring.services.ProbeBlockingContextBuilder.build", return_value={})
             mock_agent = mocker.MagicMock()
 
             mock_collector.return_value = {
@@ -647,8 +649,17 @@ class TestOrchestratorHistoricalContextWiring:
                 "monitoring.services.HistoricalContextBuilder.build",
                 return_value="## 2026-03-08 — Severity: INFO\nSummary: All calm",
             )
+            mocker.patch("monitoring.services.ProbeBlockingContextBuilder.build", return_value={})
 
-            mock_collector.return_value = ("/tmp/backend.log", "/tmp/frontend.log", None)
+            mock_collector.return_value = {
+                "backend": "/tmp/backend.log",
+                "frontend": "/tmp/frontend.log",
+                "nginx_access": None,
+                "nginx_runtime": None,
+                "traefik_access": "/tmp/traefik_access.log",
+                "traefik_runtime": "/tmp/traefik_runtime.log",
+                "fail2ban": None,
+            }
             mock_agent.analyze_logs_from_files.return_value = mock_llm_response
 
             mocker.patch("builtins.open", mock_open(read_data="Mock logs"))
