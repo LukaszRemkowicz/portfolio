@@ -41,7 +41,7 @@ These rules should be treated as hard constraints.
 - `daily_log_analysis_task` is legacy rollback only
 - sitemap monitoring is deterministic-first and does not use the bounded tool loop
 - admin actions queue real Celery tasks and do not create monitoring rows directly
-- log collection is handled by the host scheduler, not by Celery
+- log collection is handled outside the backend/Celery monitoring flow
 - monitoring jobs are consumed from the `monitoring` queue
 
 
@@ -100,8 +100,8 @@ If it does not, monitoring jobs may be created but never consumed.
 
 The daily log flow is:
 
-1. A host-level scheduler runs `infra/scripts/monitoring/collect-logs.sh`.
-2. Logs are written into `DOCKER_LOGS_DIR`.
+1. A trusted log collector runtime gathers runtime logs and access/error log files.
+2. The collector writes snapshot files into `DOCKER_LOGS_DIR`.
 3. `daily_monitoring_agent_log_task` starts orchestration.
 4. `DockerLogCollector` reads the collected files.
 5. `HistoricalContextBuilder` loads recent monitoring history.
@@ -112,8 +112,10 @@ The daily log flow is:
 
 Important operational detail:
 - Celery does not collect Docker logs directly
-- the backend environment does not have Docker CLI access
-- log collection is handled outside the app by the host scheduler
+- the backend environment does not have Docker daemon access
+- log collection is handled by a separate collector path
+- the collector may need both Docker daemon access and direct access to
+  host-mounted log files, depending on the configured source type
 
 
 ## Sitemap Monitoring Flow

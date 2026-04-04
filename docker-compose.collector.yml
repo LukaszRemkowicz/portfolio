@@ -1,0 +1,18 @@
+services:
+  log-collector:
+    build:
+      context: .
+      dockerfile: docker/collector/Dockerfile
+    image: portfolio-log-collector:dev
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+      DOCKER_LOGS_DIR: ${DOCKER_LOGS_DIR:-/app/docker-logs}
+      ENVIRONMENT: ${ENVIRONMENT:-prod}
+      COMPOSE_PROJECT_NAME: ${COLLECTOR_COMPOSE_PROJECT_NAME:-portfolio-prod}
+      TZ: ${TZ:-Europe/Warsaw}
+    volumes:
+      - ${LOG_SNAPSHOT_HOST_DIR:-/var/log/portfolio/docker-logs}:${DOCKER_LOGS_DIR:-/app/docker-logs}
+      - ${NGINX_LOG_DIR:-/var/log/portfolio/nginx/prod}:/var/log/nginx:ro
+      - ${TRAEFIK_LOG_DIR:-/var/log/portfolio/traefik}:/var/log/traefik:ro
+      - ${FAIL2BAN_LOG_SOURCE:-/var/log/fail2ban.log}:/var/log/fail2ban.log:ro
+      - /var/run/docker.sock:/var/run/docker.sock

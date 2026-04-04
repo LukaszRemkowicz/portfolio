@@ -1,0 +1,8 @@
+# /etc/cron.d/portfolio-log-collector
+# Daily Python collector run for the monitoring snapshot pipeline.
+# Runs at midnight UTC as the lukasz user.
+# Output is appended to /var/log/portfolio/log-collector.log for debugging.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+0 0 * * * lukasz /bin/bash -lc 'cd /home/lukasz/portfolio && doppler run -- docker compose -f docker-compose.collector.yml run --rm -e COLLECTOR_COMPOSE_PROJECT_NAME=portfolio-prod log-collector' >> /var/log/portfolio/log-collector.log 2>&1

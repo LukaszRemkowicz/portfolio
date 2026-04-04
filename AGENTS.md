@@ -14,6 +14,7 @@ For general project context, architecture, and repository structure, read:
 - `README.md`
 - `frontend/README.md`
 - `backend/README.md`
+- `collector/README.md`
 - `infra/scripts/README.md`
 
 Use this file mainly as a routing guide for task-specific documentation in `infra/docs/project/` and `infra/docs/agent/`.
@@ -60,13 +61,13 @@ Use these documents as fast context before implementation.
   Use for homepage latest-image filters and `LandingPageSettings.latest_filters`. Describes how tags are curated, rendered, cached, and invalidated.
 - `infra/docs/project/monitoring_system_overview.md`
   Use for monitoring jobs, scheduling, queue routing, log analysis, sitemap analysis, and LLM boundaries. Describes the live monitoring architecture and hard invariants.
+- `collector/README.md`
+  Use for the dedicated Python log collector, Docker collector image, manifest-driven source resolution, runtime contract, manual runs, cron installation, and rollout checks. Describes the standalone collector app and its operational boundary.
 - `infra/docs/project/translation_system_overview.md`
   Use for translation lifecycle, `TranslationTask` debugging, translation admin behavior, serializer fallback behavior, and adding translation support to new models. Describes the async translation architecture and its operational boundaries.
 - `infra/docs/project/release_deploy_architecture.md`
   Use for release scripts, deploy logic, image naming, artifact flow, and rollback behavior. Describes the tag-based release/deploy model and script responsibilities.
-- `infra/docs/project/production-release/README.md`
-  Use for production release preparation, GHCR/GitHub Actions/Doppler setup, and rollback procedure. Describes the production release runbook end to end.
-- `infra/docs/project/production-release/fail2ban_probe_blocking.md`
+- `infra/docs/prod/fail2ban_probe_blocker_playbook.md`
   Use for production probe blocking, repeated `.env` scans, and host-level IP banning. Describes the `fail2ban` setup for nginx and Traefik logs.
 - `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
   Use for SSR architecture decisions and initial migration direction. Describes the preferred incremental SSR strategy and early-phase non-goals.
@@ -88,9 +89,10 @@ Use this quick mapping when a task arrives:
 - Homepage latest-image filters/tags -> `infra/docs/project/latest_images_tags.md`
 - Django admin image cropping or preview/media bug -> `infra/docs/project/django_admin_image_cropper_mechanism.md`
 - Monitoring, Celery monitoring jobs, sitemap checks -> `infra/docs/project/monitoring_system_overview.md`
+- Collector app architecture, manifest contract, rebuild/run path, or cron rollout work -> `collector/README.md`
 - Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
 - Release/deploy script logic or image naming -> `infra/docs/project/release_deploy_architecture.md`
-- Production release procedure -> `infra/docs/project/production-release/README.md`
+- Production release procedure -> `infra/scripts/README.md`
 - SSR architecture direction -> `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
 - BFF route ownership or `/app/...` migration -> `infra/docs/project/SSR Migration/STAGE-2_full_ssr_bff_migration_plan.md`
 

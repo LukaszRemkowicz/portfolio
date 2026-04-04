@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "portfolio-log-collector"
+version = "0.1.0"
+description = "Dedicated Docker log snapshot collector for portfolio monitoring."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "docker>=7,<8",
+    "pydantic>=2.11,<3",
+    "pydantic-settings>=2.11,<3",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=9,<10",
+]
+
+[project.scripts]
+portfolio-log-collector = "log_collector.main:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+log_collector = ["log_sources.json"]

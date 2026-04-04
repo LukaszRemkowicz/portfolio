@@ -138,8 +138,10 @@ Collected log groups:
 
 - `backend.log`
 - `frontend.log`
-- `nginx.log`
-- `traefik.log`
+- `nginx_access.log`
+- `nginx_runtime.log`
+- `traefik_access.log`
+- `traefik_runtime.log`
 
 ## 🛠️ Development
 

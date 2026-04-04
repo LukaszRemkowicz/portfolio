@@ -1,6 +1,6 @@
 # 🧰 Infrastructure Scripts Runbook
 
-This repository uses shell scripts to manage deployments, backups, monitoring, and related operational tasks.
+This repository uses shell scripts to manage deployments, backups, security, and related operational tasks.
 
 ## 🗂️ Script Groups
 
@@ -8,7 +8,6 @@ Primary script groups:
 
 - `release/` -> image build, release jobs, deployment switch, rollback flow
 - `db_backup/` -> backup, restore, restore validation
-- `monitoring/` -> host-side Docker log collection and monitoring helpers
 - `security/` -> host-side security helpers such as `fail2ban` probe blocking
 - `utils.sh` -> shared utility functions used across infra scripts
 

@@ -93,8 +93,10 @@ class TestMonitoringTasks:
         collector_instance.collect_logs.return_value = {
             "backend": "/tmp/be.log",
             "frontend": "/tmp/fe.log",
-            "nginx": "/tmp/nx.log",
-            "traefik": "/tmp/traefik.log",
+            "nginx_access": "/tmp/nginx_access.log",
+            "nginx_runtime": "/tmp/nginx_runtime.log",
+            "traefik_access": "/tmp/traefik_access.log",
+            "traefik_runtime": "/tmp/traefik_runtime.log",
         }
         collector_instance.get_collected_at.return_value = "2026-03-05T12:00:00Z"
 
