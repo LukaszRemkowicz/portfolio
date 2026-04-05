@@ -4,11 +4,15 @@ import { Camera } from 'lucide-react';
 import { AboutProps } from '../types';
 import { sanitizeHtml } from '../utils/html';
 import ImageWithFallback from './common/ImageWithFallback';
+import Tooltip from './common/Tooltip';
+import { useSettings } from '../hooks/useSettings';
 
 import { useTranslation } from 'react-i18next';
 
 const About: React.FC<AboutProps> = ({ profile }) => {
   const { t } = useTranslation();
+  const { data: settings } = useSettings();
+  const totalTimeSpent = settings?.total_time_spent;
   // Gracefull degradation: If profile is missing, render with defaults instead of returning null
   // if (!profile) return null;
 
@@ -38,6 +42,19 @@ const About: React.FC<AboutProps> = ({ profile }) => {
               <p className={styles.statValue}>430mm</p>
               <p className={styles.statLabel}>{t('about.primaryOptics')}</p>
             </div>
+            {typeof totalTimeSpent === 'number' && totalTimeSpent > 0 ? (
+              <div className={styles.statItem}>
+                <Tooltip
+                  content={t('about.totalTimeSpentTooltip')}
+                  className={styles.tooltipTrigger}
+                >
+                  <p className={styles.statValue} tabIndex={0}>
+                    {`${totalTimeSpent}h +`}
+                  </p>
+                </Tooltip>
+                <p className={styles.statLabel}>{t('about.totalTimeSpent')}</p>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className={styles.visual}>

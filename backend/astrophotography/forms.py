@@ -86,7 +86,7 @@ class AstroImageForm(TranslatableModelForm):
 
     class Meta:
         model = AstroImage
-        fields = "__all__"
+        exclude = ("calculated_exposure_hours",)
         widgets = {
             "location": ThemedSelect2Widget(),
             "place": ThemedSelect2Widget(

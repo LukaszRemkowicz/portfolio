@@ -78,6 +78,10 @@
   font-family: var(--font-family-heading);
 }
 
+.tooltipTrigger {
+  cursor: help;
+}
+
 .statLabel {
   font-size: 0.625rem;
   /* 10px */

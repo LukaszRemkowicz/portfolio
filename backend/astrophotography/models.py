@@ -330,6 +330,11 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
         verbose_name=_("Zoom"),
         help_text=_("Allow users to zoom this image in detail mode."),
     )
+    calculated_exposure_hours = models.FloatField(
+        default=0,
+        verbose_name=_("Calculated Exposure Hours"),
+        help_text=_("Internal LLM-derived exposure duration stored in hours."),
+    )
 
     class Meta:
         verbose_name = _("Astrophotography Image")

@@ -417,6 +417,14 @@ class TestImageUpdateLogic:
         assert image.thumbnail.name != old_thumb_name
         assert image.name == "Updated Name"
 
+    def test_form_hides_internal_calculated_exposure_hours_field(self) -> None:
+        """Admin form should not expose internal derived exposure-hour storage."""
+        image: AstroImage = AstroImageFactory(name="Hidden Internal Field Test")
+
+        form = AstroImageForm(instance=image)
+
+        assert "calculated_exposure_hours" not in form.fields
+
     def test_replacing_existing_image_keeps_new_file_and_removes_old_file(self) -> None:
         """
         Replacing an existing image must not delete the freshly uploaded file.

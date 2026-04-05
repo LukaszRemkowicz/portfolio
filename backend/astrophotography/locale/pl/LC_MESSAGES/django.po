@@ -173,6 +173,14 @@ msgstr "Kraj"
 msgid "Required for regular places. Leave blank for multi-country regions."
 msgstr "Wymagane dla zwykłych miejsc. Pozostaw puste dla regionów wielonarodowych."
 
+#: astrophotography/models.py:335
+msgid "Calculated Exposure Hours"
+msgstr "Obliczone godziny ekspozycji"
+
+#: astrophotography/models.py:336
+msgid "Internal LLM-derived exposure duration stored in hours."
+msgstr "Wewnętrzny czas ekspozycji wyliczony przez LLM, przechowywany w godzinach."
+
 #: astrophotography/forms.py:36
 msgid "Select sub-places for this region..."
 msgstr "Wybierz konkretne miejsca dla tego regionu..."

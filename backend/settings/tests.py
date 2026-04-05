@@ -79,5 +79,6 @@ SECURE_SSL_REDIRECT = False
 # Use mock LLM provider for all services in tests
 TRANSLATION_LLM_PROVIDER = "mock"
 MONITORING_LLM_PROVIDER = "mock"
+LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER = "mock"
 
 PROJECT_OWNER = "owner"

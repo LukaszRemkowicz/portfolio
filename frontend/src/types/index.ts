@@ -204,6 +204,7 @@ export interface EnabledFeatures {
   lastimages?: boolean;
   travelHighlights?: boolean;
   meteors?: MeteorConfig | null;
+  total_time_spent?: number;
 }
 
 export interface ApiRoutes {

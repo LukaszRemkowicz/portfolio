@@ -232,6 +232,7 @@ describe('API Services', () => {
       const mockSettings = {
         contactForm: true,
         programming: false,
+        total_time_spent: 12,
         meteors: { randomShootingStars: true },
       };
       fetchMock.mockResolvedValueOnce({
@@ -250,6 +251,7 @@ describe('API Services', () => {
         }
       );
       expect(result.contactForm).toBe(true);
+      expect(result.total_time_spent).toBe(12);
       expect(result.meteors?.randomShootingStars).toBe(true);
     });
 

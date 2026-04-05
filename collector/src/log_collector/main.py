@@ -52,10 +52,17 @@ def main() -> int:
     )
     for source_result in result.source_results:
         container_display = source_result.container_name or "none"
+        output_display = source_result.output_file.resolve()
+        source_display = (
+            f" source={source_result.source_path.resolve()}"
+            if source_result.source_path is not None
+            else ""
+        )
         warning_suffix = f" warning={source_result.warning}" if source_result.warning else ""
         logger.info(
             f"- {source_result.source_key}: {source_result.bytes_written} bytes "
-            f"container={container_display}{warning_suffix}"
+            f"container={container_display} output={output_display}"
+            f"{source_display}{warning_suffix}"
         )
     return 0
 
