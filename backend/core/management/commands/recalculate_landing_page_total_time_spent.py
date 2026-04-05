@@ -1,16 +1,16 @@
 """Recalculate the persisted landing page astrophotography total time spent."""
 
 from django.core.management.base import BaseCommand
+from django.db.models import Sum
 
 from astrophotography.models import AstroImage
-from core.tasks import (
-    calculate_astroimage_exposure_hours_task,
-    recalculate_landing_page_total_time_spent_task,
-)
+from astrophotography.tasks import calculate_astroimage_exposure_hours_task
+from common.tasks import invalidate_frontend_ssr_cache_task
+from core.cache_service import CacheService
 
 
 class Command(BaseCommand):
-    help = "Calculate per-image exposure hours and recalculate the landing page total."
+    help = "Calculate per-image exposure hours for the landing-page total."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -37,11 +37,13 @@ class Command(BaseCommand):
             calculate_astroimage_exposure_hours_task(str(image.pk))
             processed_images += 1
 
-        total_result = recalculate_landing_page_total_time_spent_task()
+        CacheService.invalidate_landing_page_cache()
+        invalidate_frontend_ssr_cache_task.delay(["settings"])
+        aggregate = AstroImage.objects.aggregate(total=Sum("calculated_exposure_hours"))
+        total_hours = float(aggregate["total"] or 0)
         action = "Rebuilt" if recalculate else "Calculated"
         self.stdout.write(
             self.style.SUCCESS(
-                f"{action} total time spent: {total_result['total_time_spent']}h "
-                f"from {processed_images} image(s)."
+                f"{action} total time spent: {total_hours}h " f"from {processed_images} image(s)."
             )
         )

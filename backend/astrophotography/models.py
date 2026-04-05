@@ -28,6 +28,7 @@ from translation.mixins import AutomatedTranslationModelMixin
 from translation.services import TranslationService
 
 from .constants import CELESTIAL_OBJECT_CHOICES, MeteorDefaults
+from .tasks import calculate_astroimage_exposure_hours_task
 
 logger = logging.getLogger(__name__)
 
@@ -362,7 +363,23 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
         if not name:
             raise ValidationError({"name": _("This field is required for the default language.")})
 
+    def _get_saved_default_exposure_details(self) -> str:
+        """Return the persisted default-language exposure details for change detection."""
+        if not self.pk:
+            return ""
+
+        return (
+            self.translations.model.objects.filter(
+                master_id=self.pk,
+                language_code=settings.DEFAULT_APP_LANGUAGE,
+            )
+            .values_list("exposure_details", flat=True)
+            .first()
+            or ""
+        )
+
     def save(self, *args: Any, **kwargs: Any) -> None:
+        previous_default_exposure_details = self._get_saved_default_exposure_details()
         if not self.slug:
             # We use the English name (master/fallback) for slug generation
             base_slug = slugify(self.safe_translation_getter("name", any_language=True))
@@ -375,6 +392,20 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
                 self.slug = f"{base_slug}-{str(uuid.uuid4())[:8]}"
         super().save(*args, **kwargs)
         self.trigger_translations()
+        current_default_exposure_details = (
+            self.safe_translation_getter(
+                "exposure_details",
+                language_code=settings.DEFAULT_APP_LANGUAGE,
+                any_language=False,
+            )
+            or ""
+        )
+        if (
+            current_default_exposure_details
+            and current_default_exposure_details != previous_default_exposure_details
+            and self.pk
+        ):
+            calculate_astroimage_exposure_hours_task.delay_on_commit(str(self.pk))
 
 
 class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):

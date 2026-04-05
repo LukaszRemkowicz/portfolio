@@ -70,26 +70,27 @@ Important distinction:
 ### Per-image calculation
 
 Main task:
-- `core.calculate_astroimage_exposure_hours`
+- `astrophotography.calculate_astroimage_exposure_hours`
 
 Flow:
-1. Read one image's `exposure_details`
-2. Normalize HTML-rich text into plain text
-3. Send the normalized text to the LLM
-4. Parse the returned float hour value
-5. Save it into `AstroImage.calculated_exposure_hours`
-6. Recompute the landing-page total
+1. `AstroImage.save()` queues the task when the default-language
+   `exposure_details` changed and is non-empty
+2. Read one image's `exposure_details`
+3. Normalize HTML-rich text into plain text
+4. Send the normalized text to the LLM
+5. Parse the returned float hour value
+6. Save it into `AstroImage.calculated_exposure_hours`
+7. Invalidate the settings/landing-page cache so the total is recalculated on demand
 
-### Global total recomputation
+### Global total rendering
 
-Main task:
-- `core.recalculate_landing_page_total_time_spent`
+The portfolio total is not persisted or asynchronously recomputed anymore.
 
 Flow:
-1. Aggregate `Sum("calculated_exposure_hours")`
-2. Treat that sum as the raw portfolio total
-3. Invalidate landing-page/settings cache
-4. Invalidate frontend SSR `settings` cache tag
+1. `AstroImage.calculated_exposure_hours` is kept current per image
+2. The settings serializer aggregates `Sum("calculated_exposure_hours")` on demand
+3. The serializer adds the presentation safety buffer
+4. The API returns the rounded value to the frontend
 
 
 ## Rebuild Command
@@ -104,6 +105,7 @@ Modes:
 Operational use:
 - use `--recalculate` after prompt changes
 - use the default mode for backfilling newly added images
+- the command recalculates each image directly in a loop; it does not dispatch Celery tasks
 
 
 ## Save/Signal Behavior
@@ -112,10 +114,13 @@ Relevant signals live in:
 - `backend/astrophotography/signals.py`
 
 Current behavior:
-- changing default-language `exposure_details` queues per-image recalculation
-- deleting an `AstroImage` queues total recomputation
+- `AstroImage.save()` queues per-image recalculation when the default-language
+  `exposure_details` changed and is non-empty
+- deleting an `AstroImage` invalidates settings/landing-page cache
 - changing `calculated_exposure_hours` invalidates landing-page/settings cache
   and frontend SSR `settings`
+- translation-model signals still invalidate astrophotography/latest/travel cache,
+  but they do not queue exposure-hour recalculation anymore
 
 Important rule:
 - bulk `QuerySet.update(...)` does not call `save()` and does not trigger model
@@ -150,8 +155,8 @@ If higher confidence is required:
 This feature touches both backend and frontend cache behavior.
 
 Current invalidation points:
-- total recomputation invalidates landing-page backend cache
-- total recomputation invalidates frontend SSR `settings`
+- per-image exposure-hour recalculation invalidates landing-page backend cache
+- per-image exposure-hour recalculation invalidates frontend SSR `settings`
 - `AstroImage.calculated_exposure_hours` changes invalidate the same settings
   cache path
 
@@ -179,7 +184,7 @@ When changing this feature, cover both backend behavior and frontend rendering.
 Minimum backend coverage:
 - service parsing and prompt loading
 - per-image task behavior
-- total recomputation behavior
+- serializer aggregation behavior
 - signal behavior for `exposure_details`
 - signal behavior for `calculated_exposure_hours`
 - command behavior
@@ -196,8 +201,9 @@ Minimum frontend coverage:
 The system currently works in this form:
 
 - per-image derived hours stored on `AstroImage`
-- total derived from the sum of image values
+- `AstroImage.save()` is the trigger point for per-image recalculation
+- total derived on the fly from the sum of image values
 - integer public display value produced in the settings serializer
 - cache invalidation wired to settings-dependent paths
-- rebuild command for backfill and full recalculation
+- rebuild command for backfill and full recalculation without task fan-out
 - prompt-driven LLM extraction with worked arithmetic examples
