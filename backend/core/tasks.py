@@ -10,8 +10,14 @@ from django.db.models import Sum
 from common.celery import CommitAwareTask
 from common.tasks import invalidate_frontend_ssr_cache_task
 from core.cache_service import CacheService
+from core.services import LandingPageTotalTimeSpentService
 
 logger = logging.getLogger(__name__)
+
+
+def _get_astro_image_model():
+    """Resolve AstroImage lazily without a module-level import cycle."""
+    return apps.get_model("astrophotography", "AstroImage")
 
 
 @shared_task(  # type: ignore[untyped-decorator]
@@ -73,8 +79,7 @@ def recalculate_landing_page_total_time_spent_task(
 ) -> dict[str, int | str | float]:
     """Return the current total time spent derived from stored AstroImage values."""
     try:
-        from astrophotography.models import AstroImage
-
+        AstroImage = _get_astro_image_model()
         aggregate = AstroImage.objects.aggregate(total=Sum("calculated_exposure_hours"))
         total_hours = float(aggregate["total"] or 0)
 
@@ -111,9 +116,7 @@ def calculate_astroimage_exposure_hours_task(
 ) -> dict[str, int | str | float]:
     """Parse and persist one AstroImage exposure duration, then refresh the global total."""
     try:
-        from astrophotography.models import AstroImage
-        from core.services import LandingPageTotalTimeSpentService
-
+        AstroImage = _get_astro_image_model()
         astro_image = AstroImage.objects.get(pk=astro_image_id)
         exposure_details = (
             astro_image.safe_translation_getter(
