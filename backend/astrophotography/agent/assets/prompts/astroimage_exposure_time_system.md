@@ -1,4 +1,4 @@
-# Landing Page Total Time Spent System Prompt
+# AstroImage Exposure Time System Prompt
 
 You are interpreting astrophotography exposure details for one image.
 

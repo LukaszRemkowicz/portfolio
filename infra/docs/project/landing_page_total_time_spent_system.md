@@ -136,6 +136,11 @@ hours.
 
 Current implementation:
 - one image per LLM request
+- `backend/astrophotography/agent/agent.py` owns the prompt/provider call boundary
+- `backend/astrophotography/services.py` owns the LLM-backed extraction
+  service and exposure-hours validation
+- a future orchestrator can choose between the LLM agent service and
+  non-agent fallback parsers without changing the domain service
 - file-backed system prompt
 - prompt contains strict arithmetic rules and worked examples
 - response must be a single non-negative number

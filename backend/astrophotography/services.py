@@ -1,244 +1,103 @@
-from functools import lru_cache
-from typing import Any, cast
+from __future__ import annotations
 
-from django_countries import countries
+import re
+from typing import TYPE_CHECKING
 
-from django.db.models import Count, Q, QuerySet
+from bs4 import BeautifulSoup
 
-from .models import AstroImage, MainPageLocation, Tag
+from django.conf import settings
+
+from common.llm.protocols import LLMProvider
+from common.llm.providers import MockLLMProvider
+from common.llm.registry import LLMProviderRegistry
+
+from .agent import AstroImageExposureTimeAgent
+from .protocols import AstroImageExposureTimeExtractor
+
+if TYPE_CHECKING:
+    from .models import AstroImage
 
 
-class GalleryQueryService:
-    """
-    Service for handling complex filtering logic for the Astro Gallery.
-    Encapsulates QuerySet construction to adhere to SRP.
-    """
+class AstroImageExposureTimeService:
+    """Parse one AstroImage exposure-details string into decimal hours."""
 
-    @staticmethod
-    @lru_cache(maxsize=1)
-    def _get_country_maps() -> dict[str, dict[str, str]]:
-        """Returns cached country and code maps."""
-        return {
-            "country_map": {name.lower(): code for code, name in dict(countries).items()},
-            "code_map": {code.lower(): code for code in dict(countries).keys()},
-        }
-
-    @staticmethod
-    def get_filtered_images(params: dict[str, Any]) -> QuerySet[AstroImage]:
-        """
-        Apply filters to the AstroImage queryset based on provided parameters.
-        Optimized with prefetch_related and select_related to avoid N+1 queries.
-        """
-        queryset = (
-            AstroImage.objects.select_related("place")
-            .prefetch_related(
-                "translations",
-                "place__translations",
-                "tags",
-                "tags__translations",
-                "camera",
-                "lens",
-                "telescope",
-                "tracker",
-                "tripod",
-            )
-            .all()
-            .order_by("-created_at")
-        )
-
-        # 1. Filter by Celestial Object (Category)
-        category = params.get("filter")
-        if category:
-            queryset = queryset.filter(celestial_object=category)
-
-        # 2. Filter by Tags
-        tag_slug = params.get("tag")
-        if tag_slug:
-            # Find the tag ID in ANY language first to bypass relation language context limits
-            tag_ids = Tag.objects.filter(translations__slug=tag_slug).values_list("id", flat=True)
-            if tag_ids:
-                queryset = queryset.filter(tags__in=tag_ids)
-            else:
-                queryset = queryset.none()
-
-        # 3. Filter by Travel (Fuzzy country/place match)
-        travel = params.get("travel")
-        if travel:
-            queryset = GalleryQueryService._apply_travel_filter(queryset, travel)
-
-        # 4. Filter by Country and Place (Explicit)
-        country = params.get("country")
-        place = params.get("place")
-        if country:
-            queryset = queryset.filter(place__country=country)
-            if place:
-                queryset = queryset.filter(
-                    Q(place__translations__name__iexact=place) | Q(place__isnull=True)
-                )
-
-        return cast(QuerySet[AstroImage], queryset.order_by("-capture_date"))
-
-    @staticmethod
-    def get_travel_highlight_images(slider: MainPageLocation) -> QuerySet[AstroImage]:
-        """
-        Retrieve images for a specific travel highlight slider.
-        Optimized with prefetch_related and select_related.
-        """
-        queryset = AstroImage.objects.select_related("place").prefetch_related(
-            "translations",
-            "place__translations",
-            "tags",
-            "tags__translations",
-            "camera",
-            "lens",
-            "telescope",
-            "tracker",
-            "tripod",
-        )
-
-        # If the user explicitly assigned images in the admin, we want to include them
-        explicit_image_ids = list(slider.images.values_list("id", flat=True))
-
-        # If the highlight has a specific place, filter by that place
-        # (or its sub-places if it's a region)
-        if slider.place:
-            if slider.place.is_region:
-                sub_place_ids = list(slider.place.sub_places.values_list("id", flat=True))
-                # For regions, we also require the date range to match so we don't pull
-                # images from an Iceland trip in 2022 when querying for an Iceland trip in 2025.
-                if slider.adventure_date:
-                    queryset = queryset.filter(
-                        Q(
-                            place_id__in=sub_place_ids,
-                            capture_date__range=(
-                                slider.adventure_date.lower,
-                                slider.adventure_date.upper,
-                            ),
-                        )
-                        | Q(id__in=explicit_image_ids)
-                    )
-                else:
-                    queryset = queryset.filter(
-                        Q(place_id__in=sub_place_ids) | Q(id__in=explicit_image_ids)
-                    )
-            else:
-                queryset = queryset.filter(Q(place=slider.place) | Q(id__in=explicit_image_ids))
-        # If it's a country-wide tour (place is null), filter by the slider's country_slug
-        else:
-            # We must map the slider's country_slug string back to a 2-letter iso code
-            # using the GalleryQueryService maps to compare against AstroImage.place.country
-            maps = GalleryQueryService._get_country_maps()
-            code_map = maps["code_map"]
-            country_map = maps["country_map"]
-
-            # Find the 2 letter ISO code based on the slug
-            iso_code = code_map.get(slider.country_slug) or country_map.get(slider.country_slug)
-
-            if iso_code:
-                queryset = queryset.filter(
-                    Q(place__country=iso_code) | Q(id__in=explicit_image_ids)
-                )
-            else:
-                # Fallback if slug formatting is weird
-                queryset = queryset.filter(
-                    Q(place__country__icontains=slider.country_slug) | Q(id__in=explicit_image_ids)
-                )
-
-            # A country tour should show all images taken in that country, even if the
-            # individual image has a more specific place assigned to it.
-
-            # We also need to restrict by the slider's date range to only show images
-            # taken during this specific adventure.
-            if slider.adventure_date:
-                queryset = queryset.filter(
-                    Q(
-                        capture_date__range=(
-                            slider.adventure_date.lower,
-                            slider.adventure_date.upper,
-                        )
-                    )
-                    | Q(id__in=explicit_image_ids)
-                )
-
-        return cast(QuerySet[AstroImage], queryset.order_by("-created_at"))
-
-    @staticmethod
-    def get_tag_stats(
-        category_filter: str | None = None,
-        latest: bool = False,
-    ) -> QuerySet[Tag]:
-        """
-        Aggregate tag counts, optionally filtered by gallery category
-        or limited to 'latest' filters.
-        Returns unique tag instances that have at least one associated image.
-        """
-        if latest:
-            queryset = Tag.objects.latest_tags()
-        else:
-            queryset = Tag.objects.all()
-
-        annotation_filter = Q(images__isnull=False)
-        if category_filter:
-            annotation_filter &= Q(images__celestial_object=category_filter)
-
-        return cast(
-            QuerySet[Tag],
-            queryset.prefetch_related("translations")
-            .filter(images__isnull=False)
-            .annotate(num_times=Count("images", filter=annotation_filter, distinct=True))
-            .filter(num_times__gt=0)
-            .order_by("-num_times", "id")
-            .distinct(),
-        )
-
-    @staticmethod
-    def get_active_locations() -> QuerySet[MainPageLocation]:
-        """
-        Retrieve active MainPageLocation instances with optimized prefetching.
-        Prevents N+1 queries for associated place, background image, and slider images.
-        """
-        return (  # type: ignore[no-any-return]
-            MainPageLocation.objects.active()
-            .with_place()
-            .select_related("background_image")
-            .prefetch_related(
-                "translations",
-                "place__translations",
-                "background_image__translations",
-            )
-            .with_images()
-            .prefetch_related("images__translations")
-            .order_by("-adventure_date")
-        )
+    def __init__(self, extractor: AstroImageExposureTimeExtractor) -> None:
+        self.extractor: AstroImageExposureTimeExtractor = extractor
 
     @classmethod
-    def _apply_travel_filter(
-        cls, queryset: QuerySet[AstroImage], search_term: str
-    ) -> QuerySet[AstroImage]:
-        """
-        Applies a smart fuzzy filter to images based on location and place.
-        Optimized with cached dictionary lookup for country mapping.
-        """
-        search_term_lower = search_term.lower()
-        maps = cls._get_country_maps()
-        country_map = maps["country_map"]
-        code_map = maps["code_map"]
+    def create_default(cls) -> AstroImageExposureTimeService:
+        """Build the service with the default extraction strategy."""
+        extractor: AstroImageExposureTimeExtractor = (
+            AstroImageExposureTimeAgentService.create_default()
+        )
+        return cls(extractor=extractor)
 
-        found_code = code_map.get(search_term_lower) or country_map.get(search_term_lower)
+    def parse_extracted_total_hours(self, raw_value: str | None) -> float:
+        """Validate a raw extracted hours value and return the stored float."""
+        if not raw_value:
+            raise ValueError("Landing page total time spent response was empty.")
 
-        # Partial name match fallback (if exact match fails)
-        if not found_code:
-            for name_lower, code in country_map.items():
-                if search_term_lower in name_lower:
-                    found_code = code
-                    break
+        return self._parse_response_value(raw_value)
 
-        filter_q = Q(place__translations__name__icontains=search_term)
-        if found_code:
-            filter_q |= Q(place__country=found_code)
+    def get_exposure_details(self, astro_image: AstroImage) -> str:
+        """Read the default-language exposure details for one AstroImage."""
+        exposure_details: str = str(
+            astro_image.safe_translation_getter(
+                "exposure_details",
+                language_code=settings.DEFAULT_APP_LANGUAGE,
+                any_language=False,
+            )
+            or astro_image.safe_translation_getter("exposure_details", any_language=True)
+            or ""
+        )
+        return exposure_details
 
-        # Fallback for manual code entry that might not be in official list
-        if not found_code:
-            filter_q |= Q(place__country__icontains=search_term)
+    def parse_total_hours(self, exposure_details: str) -> float:
+        """Normalize exposure text, run the configured extractor, and validate the response."""
+        normalized_value: str = self.normalize_exposure_details(exposure_details)
+        if not normalized_value:
+            return 0.0
 
-        return queryset.filter(filter_q)
+        raw_value: str | None = self.extractor.extract_total_hours(normalized_value)
+        return self.parse_extracted_total_hours(raw_value)
+
+    @staticmethod
+    def normalize_exposure_details(raw_value: str) -> str:
+        """Convert HTML-rich exposure text into a compact plain-text string."""
+        soup: BeautifulSoup = BeautifulSoup(raw_value, "html.parser")
+        text: str = soup.get_text(separator=" ", strip=True)
+        return re.sub(r"\s+", " ", text).strip()
+
+    @staticmethod
+    def _parse_response_value(raw_text: str) -> float:
+        """Validate the LLM output as a non-negative float rounded to two decimals."""
+        value: str = raw_text.strip()
+        try:
+            parsed: float = float(value)
+        except ValueError as exc:
+            raise ValueError(
+                "Landing page total time spent response must be a single number."
+            ) from exc
+        if parsed < 0:
+            raise ValueError("Landing page total time spent response cannot be negative.")
+        return round(parsed, 2)
+
+
+class AstroImageExposureTimeAgentService:
+    """LLM-backed service for extracting one image's exposure time in hours."""
+
+    def __init__(self, agent: AstroImageExposureTimeAgent) -> None:
+        self.agent: AstroImageExposureTimeAgent = agent
+
+    @classmethod
+    def create_default(cls) -> AstroImageExposureTimeAgentService:
+        """Build the default agent-backed extraction service."""
+        provider_name: str = settings.LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER
+        provider: LLMProvider = LLMProviderRegistry.get(provider_name)
+        if isinstance(provider, MockLLMProvider):
+            provider.configure(mock_response="0.00")
+        return cls(agent=AstroImageExposureTimeAgent(provider=provider))
+
+    def extract_total_hours(self, normalized_exposure_details: str) -> str | None:
+        """Delegate exposure-hours extraction to the configured agent."""
+        return self.agent.extract_total_hours(normalized_exposure_details)

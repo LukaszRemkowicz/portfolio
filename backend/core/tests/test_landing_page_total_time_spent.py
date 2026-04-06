@@ -5,56 +5,69 @@ import pytest
 from django.core.management import call_command
 from django.test import override_settings
 
+from astrophotography.agent import AstroImageExposureTimeAgent
+from astrophotography.services import (
+    AstroImageExposureTimeAgentService,
+    AstroImageExposureTimeService,
+)
 from astrophotography.tasks import (
     calculate_astroimage_exposure_hours_task,
 )
 from astrophotography.tests.factories import AstroImageFactory
 from common.llm.providers import MockLLMProvider
-from core.services import LandingPageTotalTimeSpentService
 from core.tests.factories import LandingPageSettingsFactory
 
 
-class TestLandingPageTotalTimeSpentService:
+class TestAstroImageExposureTimeService:
+    class DummyExtractor:
+        def extract_total_hours(self, normalized_exposure_details: str) -> str | None:
+            return normalized_exposure_details
+
     @override_settings(LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER="mock")
-    def test_create_default_uses_numeric_mock_response(self) -> None:
-        service = LandingPageTotalTimeSpentService.create_default()
+    def test_default_agent_uses_numeric_mock_response(self) -> None:
+        service = AstroImageExposureTimeService.create_default()
 
         result = service.parse_total_hours("<p>60x300s</p>")
 
         assert result == 0.0
 
-    def test_parse_total_hours_returns_float(self) -> None:
-        provider = MockLLMProvider()
-        provider.configure(mock_response="1.5")
+    def test_parse_extracted_total_hours_returns_float(self) -> None:
+        service = AstroImageExposureTimeService(extractor=self.DummyExtractor())
 
-        service = LandingPageTotalTimeSpentService(provider=provider)
-
-        result = service.parse_total_hours("<p>60x300s</p>")
+        result = service.parse_extracted_total_hours(raw_value="1.5")
 
         assert result == 1.5
 
-    def test_parse_total_hours_returns_zero_for_empty_input(self) -> None:
-        provider = MockLLMProvider()
-        service = LandingPageTotalTimeSpentService(provider=provider)
+    def test_parse_total_hours_with_agent_returns_zero_for_empty_input(self) -> None:
+        class FakeExtractor:
+            def extract_total_hours(self, normalized_exposure_details: str) -> str | None:
+                raise AssertionError(
+                    f"Extractor should not be called for empty input: {normalized_exposure_details}"
+                )
+
+        service = AstroImageExposureTimeService(extractor=FakeExtractor())
 
         result = service.parse_total_hours("")
 
         assert result == 0.0
 
-    def test_parse_total_hours_rejects_non_numeric_response(self) -> None:
-        provider = MockLLMProvider()
-        provider.configure(mock_response="one point five")
+    def test_parse_extracted_total_hours_rejects_empty_response(self) -> None:
+        service = AstroImageExposureTimeService(extractor=self.DummyExtractor())
 
-        service = LandingPageTotalTimeSpentService(provider=provider)
+        with pytest.raises(ValueError, match="response was empty"):
+            service.parse_extracted_total_hours(raw_value=None)
+
+    def test_parse_extracted_total_hours_rejects_non_numeric_response(self) -> None:
+        service = AstroImageExposureTimeService(extractor=self.DummyExtractor())
 
         with pytest.raises(ValueError, match="single number"):
-            service.parse_total_hours("2h 30m")
+            service.parse_extracted_total_hours(raw_value="one point five")
 
     def test_prompt_instructs_llm_to_return_decimal_hours(self) -> None:
         provider = MockLLMProvider()
-        service = LandingPageTotalTimeSpentService(provider=provider)
+        agent = AstroImageExposureTimeAgent(provider=provider)
 
-        prompt = service._build_system_prompt()
+        prompt = agent.build_system_prompt()
 
         assert "exact total in hours as a number" in prompt
         assert "exactly 2 digits after the decimal point" in prompt
@@ -69,15 +82,54 @@ class TestLandingPageTotalTimeSpentService:
         assert "do not multiply `35 x 120s` by `10 panels`" in prompt
         assert "1.50" in prompt
 
-    def test_parse_total_hours_rounds_to_two_decimals(self) -> None:
-        provider = MockLLMProvider()
-        provider.configure(mock_response="4.368888888888888")
+    def test_parse_extracted_total_hours_rounds_to_two_decimals(self) -> None:
+        service = AstroImageExposureTimeService(extractor=self.DummyExtractor())
 
-        service = LandingPageTotalTimeSpentService(provider=provider)
-
-        result = service.parse_total_hours("47x300s, 16x60s")
+        result = service.parse_extracted_total_hours(raw_value="4.368888888888888")
 
         assert result == 4.37
+
+    def test_parse_total_hours_returns_float(self) -> None:
+        provider = MockLLMProvider()
+        provider.configure(mock_response="1.5")
+        service = AstroImageExposureTimeService(
+            extractor=AstroImageExposureTimeAgentService(
+                agent=AstroImageExposureTimeAgent(provider=provider)
+            )
+        )
+
+        result = service.parse_total_hours("<p>60x300s</p>")
+
+        assert result == 1.5
+
+    @pytest.mark.django_db
+    def test_get_exposure_details_prefers_default_language(self) -> None:
+        image = AstroImageFactory(exposure_details="English details")
+        image.set_current_language("pl")
+        image.exposure_details = "Polish details"
+        image.save()
+
+        service = AstroImageExposureTimeService(extractor=self.DummyExtractor())
+
+        result = service.get_exposure_details(image)
+
+        assert result == "English details"
+
+    @pytest.mark.django_db
+    def test_get_exposure_details_and_parse_total_hours_return_float(self) -> None:
+        image = AstroImageFactory(exposure_details="60x300s")
+        provider = MockLLMProvider()
+        provider.configure(mock_response="1.5")
+        service = AstroImageExposureTimeService(
+            extractor=AstroImageExposureTimeAgentService(
+                agent=AstroImageExposureTimeAgent(provider=provider)
+            )
+        )
+
+        exposure_details = service.get_exposure_details(image)
+        result = service.parse_total_hours(exposure_details)
+
+        assert result == 1.5
 
 
 @pytest.mark.django_db
@@ -96,9 +148,12 @@ class TestLandingPageTotalTimeSpentTask:
         image = AstroImageFactory(exposure_details="60x300s", calculated_exposure_hours=0.0)
         mock_invalidate_cache.reset_mock()
         mock_invalidate_ssr.reset_mock()
+        service_mock = mocker.Mock()
+        service_mock.get_exposure_details.return_value = "60x300s"
+        service_mock.parse_total_hours.return_value = 1.5
         mocker.patch(
-            "core.services.LandingPageTotalTimeSpentService.create_default",
-            return_value=mocker.Mock(parse_total_hours=mocker.Mock(return_value=1.5)),
+            "astrophotography.tasks.AstroImageExposureTimeService.create_default",
+            return_value=service_mock,
         )
 
         result = calculate_astroimage_exposure_hours_task(str(image.pk))
@@ -118,9 +173,12 @@ class TestLandingPageTotalTimeSpentTask:
             "astrophotography.models.calculate_astroimage_exposure_hours_task.delay_on_commit"
         )
         image = AstroImageFactory(exposure_details="2h total", calculated_exposure_hours=0.0)
+        service_mock = mocker.Mock()
+        service_mock.get_exposure_details.return_value = "2h total"
+        service_mock.parse_total_hours.return_value = 1.5
         mocker.patch(
-            "core.services.LandingPageTotalTimeSpentService.create_default",
-            return_value=mocker.Mock(parse_total_hours=mocker.Mock(return_value=1.5)),
+            "astrophotography.tasks.AstroImageExposureTimeService.create_default",
+            return_value=service_mock,
         )
 
         result = calculate_astroimage_exposure_hours_task(str(image.pk))
