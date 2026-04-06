@@ -2,9 +2,72 @@
   "nav": {
     "home": "Start",
     "astrophotography": "Astrofotografia",
+    "shop": "Sklep",
     "programming": "Programowanie",
     "about": "O mnie",
     "contact": "Kontakt"
+  },
+  "shop": {
+    "metaTitle": "Sklep",
+    "metaDescription": "Podgląd przyszłego sklepu z kolekcjami, formatami wydruków i limitowanymi wydaniami astrofotografii.",
+    "kicker": "Wersja poglądowa",
+    "title": "Zabierz nocne niebo na swoją ścianę.",
+    "subtitle": "Ta statyczna podstrona pokazuje kierunek dla przyszłego sklepu: limitowane edycje, formaty wydruków i materiały edukacyjne, jeszcze bez integracji e-commerce.",
+    "primaryCta": "Przeglądaj makiety",
+    "secondaryCta": "Zapytaj o wydruk",
+    "collectionsLabel": "Kolekcje",
+    "collectionsTitle": "Struktura sklepu gotowa na prawdziwy katalog.",
+    "catalogLabel": "Przykładowe produkty",
+    "catalogTitle": "Statyczne placeholdery do budowy układu.",
+    "catalogHint": "Każda karta poniżej jest celowo statyczna, żeby najpierw dopracować doświadczenie przed podłączeniem koszyka i stanów magazynowych.",
+    "placeholderBadge": "Placeholder",
+    "placeholderAction": "Wkrótce",
+    "panel": {
+      "eyebrow": "Notatki startowe",
+      "title": "Przygotowane pod limitowane serie.",
+      "body": "To miejsce można później wykorzystać na terminy wysyłek, wielkość edycji, informacje o oprawie albo skrót dostępności.",
+      "statOneValue": "3",
+      "statOneLabel": "kolekcje startowe",
+      "statTwoValue": "Statyczne",
+      "statTwoLabel": "treści"
+    },
+    "collections": {
+      "deepSky": {
+        "name": "Edycje głębokiego nieba",
+        "description": "Wielkoformatowe wydruki klasy museum dla mgławic, galaktyk i kadrów z długą integracją sygnału.",
+        "badge": "Fine art"
+      },
+      "landscape": {
+        "name": "Panoramy nocnych krajobrazów",
+        "description": "Szerokie kadry łączące teren, pogodę i strukturę nieba w prace stworzone na większe przestrzenie.",
+        "badge": "Canvas"
+      },
+      "education": {
+        "name": "Przewodniki i zestawy edukacyjne",
+        "description": "Mniejsze formaty edukacyjne, materiały z opisami i przyszłe pakiety warsztatowe oparte o te same zdjęcia.",
+        "badge": "Edukacja"
+      }
+    },
+    "products": {
+      "orion": {
+        "name": "Studium Mgławicy Oriona",
+        "format": "Wydruk archiwalny",
+        "price": "od 95 USD",
+        "description": "Placeholder dla głównego wydania deep-sky z miejscem na informacje o edycji, papierze i sygnowanych wariantach."
+      },
+      "alps": {
+        "name": "Panorama galaktycznego grzbietu",
+        "format": "Makieta canvasu",
+        "price": "od 140 USD",
+        "description": "Placeholder dla panoramicznego produktu krajobrazowego z miejscem na wybór rozmiaru i oprawy."
+      },
+      "guide": {
+        "name": "Zestaw atlasu nieba dla początkujących",
+        "format": "Materiały dodatkowe",
+        "price": "od 32 USD",
+        "description": "Placeholder dla przyszłego produktu edukacyjnego, na przykład drukowanego przewodnika lub pakietu notatek obserwacyjnych."
+      }
+    }
   },
   "common": {
     "en": "EN",

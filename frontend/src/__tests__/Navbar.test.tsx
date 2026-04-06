@@ -44,6 +44,7 @@ describe('Navbar Component', () => {
     expect(screen.getByText(PROJECT_OWNER)).toBeInTheDocument();
     expect(screen.getAllByText('Home')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Astrophotography')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Shop')[0]).toBeInTheDocument();
     expect(screen.getByText('About')).toBeInTheDocument();
 
     await waitFor(() => {
@@ -60,6 +61,7 @@ describe('Navbar Component', () => {
 
     expect(screen.getByText(PROJECT_OWNER)).toBeInTheDocument();
     expect(screen.getAllByText('Astrophotography')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Shop')[0]).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.queryByText('Programming')).not.toBeInTheDocument();
