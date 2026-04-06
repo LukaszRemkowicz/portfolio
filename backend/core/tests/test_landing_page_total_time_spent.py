@@ -188,12 +188,14 @@ class TestLandingPageTotalTimeSpentTask:
 
 @pytest.mark.django_db
 class TestLandingPageTotalTimeSpentSignals:
+    RAW_EXPOSURE_DETAILS = "<p>30x180s + 15x300s</p>"
+
     def test_astroimage_save_queues_task_with_exposure_details(self, mocker) -> None:
         mock_delay = mocker.patch(
             "astrophotography.models.calculate_astroimage_exposure_hours_task.delay_on_commit"
         )
 
-        image = AstroImageFactory(exposure_details="2h total")
+        image = AstroImageFactory(exposure_details=self.RAW_EXPOSURE_DETAILS)
 
         mock_delay.assert_called_with(str(image.pk))
 
@@ -238,11 +240,11 @@ class TestLandingPageTotalTimeSpentSignals:
         mock_delay = mocker.patch(
             "astrophotography.models.calculate_astroimage_exposure_hours_task.delay_on_commit"
         )
-        image = AstroImageFactory(exposure_details="2h total")
+        image = AstroImageFactory(exposure_details=self.RAW_EXPOSURE_DETAILS)
         mock_delay.reset_mock()
 
         image.set_current_language("en")
-        image.exposure_details = "3h total"
+        image.exposure_details = "<p>12x600s</p>"
         image.save()
 
         mock_delay.assert_called_once_with(str(image.pk))
@@ -322,6 +324,66 @@ class TestLandingPageTotalTimeSpentSignals:
 
         mock_invalidate_cache.assert_not_called()
         assert mocker.call(["settings"]) not in mock_invalidate_ssr.call_args_list
+
+    def test_astroimage_create_invalidates_gallery_and_ssr_cache(self, mocker) -> None:
+        mocker.patch(
+            "astrophotography.models.calculate_astroimage_exposure_hours_task.delay_on_commit"
+        )
+        mock_invalidate_cache = mocker.patch(
+            "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
+        )
+        mock_invalidate_ssr = mocker.patch(
+            "astrophotography.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
+        )
+
+        AstroImageFactory(exposure_details=self.RAW_EXPOSURE_DETAILS)
+
+        mock_invalidate_cache.assert_called()
+        assert mocker.call(["latest-astro-images", "travel-highlights"]) in (
+            mock_invalidate_ssr.call_args_list
+        )
+
+    def test_astroimage_update_exposure_details_invalidates_gallery_and_ssr_cache(
+        self, mocker
+    ) -> None:
+        mocker.patch(
+            "astrophotography.models.calculate_astroimage_exposure_hours_task.delay_on_commit"
+        )
+        image = AstroImageFactory(exposure_details=self.RAW_EXPOSURE_DETAILS)
+        mock_invalidate_cache = mocker.patch(
+            "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
+        )
+        mock_invalidate_ssr = mocker.patch(
+            "astrophotography.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
+        )
+
+        image.set_current_language("en")
+        image.exposure_details = "<p>10x120s + 20x300s</p>"
+        image.save()
+
+        mock_invalidate_cache.assert_called()
+        assert mocker.call(["latest-astro-images", "travel-highlights"]) in (
+            mock_invalidate_ssr.call_args_list
+        )
+
+    def test_astroimage_delete_invalidates_gallery_and_ssr_cache(self, mocker) -> None:
+        mocker.patch(
+            "astrophotography.models.calculate_astroimage_exposure_hours_task.delay_on_commit"
+        )
+        image = AstroImageFactory(exposure_details=self.RAW_EXPOSURE_DETAILS)
+        mock_invalidate_cache = mocker.patch(
+            "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
+        )
+        mock_invalidate_ssr = mocker.patch(
+            "astrophotography.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
+        )
+
+        image.delete()
+
+        mock_invalidate_cache.assert_called()
+        assert mocker.call(["latest-astro-images", "travel-highlights"]) in (
+            mock_invalidate_ssr.call_args_list
+        )
 
 
 @pytest.mark.django_db
