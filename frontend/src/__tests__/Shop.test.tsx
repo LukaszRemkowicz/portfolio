@@ -2,21 +2,94 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { MemoryRouter } from 'react-router-dom';
 import Shop from '../components/Shop';
+import { useShopProducts } from '../hooks/useShopProducts';
+
+jest.mock('../hooks/useShopProducts', () => ({
+  useShopProducts: jest.fn(),
+}));
 
 describe('Shop Component', () => {
-  it('renders the static shop placeholder page', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const renderWithRouter = () => {
     render(
       <MemoryRouter>
         <Shop />
       </MemoryRouter>
     );
+  };
 
+  it('renders loading state correctly', () => {
+    (useShopProducts as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    });
+
+    renderWithRouter();
+    expect(screen.getByText('Loading catalog...')).toBeInTheDocument();
+  });
+
+  it('renders error state correctly', () => {
+    (useShopProducts as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    });
+
+    renderWithRouter();
+    expect(
+      screen.getByText('Catalog is temporarily out of orbit.')
+    ).toBeInTheDocument();
+  });
+
+  it('renders empty state correctly', () => {
+    (useShopProducts as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    });
+
+    renderWithRouter();
+    expect(
+      screen.getByText('No releases are available yet.')
+    ).toBeInTheDocument();
+  });
+
+  it('renders shop cards correctly without outdated headers/buttons', () => {
+    (useShopProducts as jest.Mock).mockReturnValue({
+      data: [
+        {
+          id: 'dragons',
+          title: 'Fighting Dragons with the Egg',
+          description: 'Mock description for the dragons.',
+          thumbnail_url: 'https://example.com/dragons.webp',
+          url: 'https://example.com/products/dragons',
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+
+    renderWithRouter();
+
+    // Check main title
     expect(
       screen.getByRole('heading', { name: 'Collect the night sky in print.' })
     ).toBeInTheDocument();
+
+    // Check product specific info
     expect(
-      screen.getByRole('link', { name: 'Browse placeholders' })
+      screen.getByRole('heading', { name: 'Fighting Dragons with the Egg' })
     ).toBeInTheDocument();
-    expect(screen.getAllByText('Coming soon')).toHaveLength(3);
+    expect(
+      screen.getByText('Mock description for the dragons.')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View product' })).toHaveAttribute(
+      'href',
+      'https://example.com/products/dragons'
+    );
   });
 });

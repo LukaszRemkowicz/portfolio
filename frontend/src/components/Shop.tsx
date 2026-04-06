@@ -1,47 +1,19 @@
 import { type FC } from 'react';
-import { ArrowRight, ShoppingBag, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { APP_ROUTES } from '../api/constants';
+import { useShopProducts } from '../hooks/useShopProducts';
 import SEO from './common/SEO';
 import StarBackground from './StarBackground';
+import ShootingStars from './ShootingStars';
+import ClientOnly from './common/ClientOnly';
 import styles from '../styles/components/Shop.module.css';
 import appStyles from '../styles/components/App.module.css';
 
-interface ShopProduct {
-  nameKey: string;
-  formatKey: string;
-  priceKey: string;
-  descriptionKey: string;
-  accentClassName: string;
-}
-
-const PRODUCTS: ShopProduct[] = [
-  {
-    nameKey: 'shop.products.orion.name',
-    formatKey: 'shop.products.orion.format',
-    priceKey: 'shop.products.orion.price',
-    descriptionKey: 'shop.products.orion.description',
-    accentClassName: 'accentNebula',
-  },
-  {
-    nameKey: 'shop.products.alps.name',
-    formatKey: 'shop.products.alps.format',
-    priceKey: 'shop.products.alps.price',
-    descriptionKey: 'shop.products.alps.description',
-    accentClassName: 'accentHorizon',
-  },
-  {
-    nameKey: 'shop.products.guide.name',
-    formatKey: 'shop.products.guide.format',
-    priceKey: 'shop.products.guide.price',
-    descriptionKey: 'shop.products.guide.description',
-    accentClassName: 'accentSignal',
-  },
-];
-
 const Shop: FC = () => {
   const { t } = useTranslation();
+  const { data: products = [], isLoading, isError } = useShopProducts();
 
   return (
     <>
@@ -51,52 +23,84 @@ const Shop: FC = () => {
         url={APP_ROUTES.SHOP}
       />
       <StarBackground />
-      <section className={styles.section}>
-        <span className={styles.kicker}>
-          <Sparkles size={14} />
-          {t('shop.kicker')}
-        </span>
-        <h1 className={appStyles.heroTitle}>{t('shop.title')}</h1>
-        <p className={styles.subtitle}>{t('shop.subtitle')}</p>
-
-        <div className={styles.heroActions}>
-          <a href='#catalog' className={styles.primaryAction}>
-            <ShoppingBag size={16} />
-            {t('shop.primaryCta')}
-          </a>
-          <Link
-            to={`${APP_ROUTES.HOME}#contact`}
-            className={styles.secondaryAction}
-          >
-            {t('shop.secondaryCta')}
-            <ArrowRight size={16} />
-          </Link>
+      <div className={styles.shopContainer}>
+        <div className={styles.zodiacalBackground} aria-hidden='true' />
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        >
+          <ClientOnly>
+            <ShootingStars />
+          </ClientOnly>
         </div>
+        <section className={styles.section}>
+          <span className={styles.kicker}>
+            <Sparkles size={14} />
+            {t('shop.kicker')}
+          </span>
+          <h1 className={appStyles.heroTitle}>{t('shop.title')}</h1>
+          <p className={styles.subtitle}>{t('shop.subtitle')}</p>
 
-        <div className={styles.productGrid}>
-          {PRODUCTS.map(product => (
-            <article key={product.nameKey} className={styles.productCard}>
-              <div
-                className={`${styles.productImage} ${styles[product.accentClassName]}`}
-                aria-hidden='true'
-              >
-                <span>{t('shop.placeholderBadge')}</span>
-              </div>
-              <div className={styles.productBody}>
-                <div className={styles.productMeta}>
-                  <p>{t(product.formatKey)}</p>
-                  <strong>{t(product.priceKey)}</strong>
-                </div>
-                <h3>{t(product.nameKey)}</h3>
-                <p>{t(product.descriptionKey)}</p>
-                <button type='button' className={styles.productAction}>
-                  {t('shop.placeholderAction')}
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+          <div className={styles.heroActions}>
+            <Link
+              to={`${APP_ROUTES.HOME}#contact`}
+              className={styles.secondaryAction}
+            >
+              {t('shop.secondaryCta')}
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+
+          {isLoading ? (
+            <p className={styles.statusMessage}>{t('shop.loading')}</p>
+          ) : null}
+
+          {isError ? (
+            <p className={styles.statusMessage}>{t('shop.error')}</p>
+          ) : null}
+
+          {!isLoading && !isError && products.length === 0 ? (
+            <p className={styles.statusMessage}>{t('shop.empty')}</p>
+          ) : null}
+
+          {!isLoading && !isError && products.length > 0 ? (
+            <div id='catalog' className={styles.productGrid}>
+              {products.map(product => (
+                <article key={product.id} className={styles.productCard}>
+                  <div className={styles.productImage}>
+                    {product.thumbnail_url ? (
+                      <img
+                        src={product.thumbnail_url}
+                        alt=''
+                        className={styles.productArtwork}
+                        loading='lazy'
+                        aria-hidden='true'
+                      />
+                    ) : null}
+                  </div>
+                  <div className={styles.productBody}>
+                    <h3>{product.title}</h3>
+                    <p>{product.description}</p>
+                    <a
+                      href={product.url}
+                      target='_blank'
+                      rel='noreferrer'
+                      className={styles.productAction}
+                    >
+                      {t('shop.viewProduct')}
+                      <ArrowRight size={16} />
+                    </a>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      </div>
     </>
   );
 };

@@ -30,6 +30,7 @@ import {
   Project,
   MainPageLocation,
   Tag,
+  ShopProduct,
 } from '../types';
 import { NotFoundError } from './errors';
 import { DataTransport, QueryParams, resolveDataTransport } from './transport';
@@ -227,6 +228,22 @@ export const fetchProjects = async (): Promise<Project[]> => {
   // }
   // return data;
   return [];
+};
+
+/** Fetch placeholder shop products through the frontend-owned mock BFF route. */
+export const fetchShopProducts = async (
+  clientOrTransport: AxiosInstance | DataTransport = api
+): Promise<ShopProduct[]> => {
+  const transport = resolveDataTransport(clientOrTransport);
+
+  if (transport.kind === 'server') {
+    return [];
+  }
+
+  return transport.get<ShopProduct[]>({
+    browser: BFF_ROUTES.shop,
+    server: API_ROUTES.shop,
+  });
 };
 
 /** Fetch and normalize the travel highlights shown on the homepage. */

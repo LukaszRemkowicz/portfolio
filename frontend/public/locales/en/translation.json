@@ -15,59 +15,12 @@
     "subtitle": "This static preview page maps out how the future shop can present limited editions, print formats, and educational releases without needing live commerce data yet.",
     "primaryCta": "Browse placeholders",
     "secondaryCta": "Request a custom print",
-    "collectionsLabel": "Collections",
-    "collectionsTitle": "A storefront structure ready for real inventory.",
-    "catalogLabel": "Featured mockups",
-    "catalogTitle": "Placeholder products for layout and pacing.",
-    "catalogHint": "Every card below is intentionally static for now, so we can shape the experience before wiring in a cart or backend inventory.",
     "placeholderBadge": "Placeholder",
-    "placeholderAction": "Coming soon",
-    "panel": {
-      "eyebrow": "Launch notes",
-      "title": "Prepared for limited releases.",
-      "body": "Use this area later for shipping windows, edition sizes, framing notes, or a compact availability summary.",
-      "statOneValue": "3",
-      "statOneLabel": "starter collections",
-      "statTwoValue": "Static",
-      "statTwoLabel": "content only"
-    },
-    "collections": {
-      "deepSky": {
-        "name": "Deep sky editions",
-        "description": "Large-format museum prints for nebulae, galaxies, and long-integration signal-rich compositions.",
-        "badge": "Fine art"
-      },
-      "landscape": {
-        "name": "Nightscape panoramas",
-        "description": "Wide scenic works that blend terrain, weather, and celestial structure into statement pieces for larger walls.",
-        "badge": "Canvas-ready"
-      },
-      "education": {
-        "name": "Field guides and study sets",
-        "description": "Smaller educational formats, annotated references, and future workshop bundles built around the same imagery.",
-        "badge": "Learning"
-      }
-    },
-    "products": {
-      "orion": {
-        "name": "Orion Nebula study",
-        "format": "Archival print",
-        "price": "from $95",
-        "description": "Placeholder copy for a hero deep-sky release with edition notes, paper options, and signed variant details."
-      },
-      "alps": {
-        "name": "Galactic ridge panorama",
-        "format": "Canvas mockup",
-        "price": "from $140",
-        "description": "Placeholder copy for a panoramic landscape product with room for framing and size-selection controls."
-      },
-      "guide": {
-        "name": "Beginner sky atlas set",
-        "format": "Companion booklet",
-        "price": "from $32",
-        "description": "Placeholder copy for a future educational item, such as a printed guide or bundled observing notes."
-      }
-    }
+    "productEyebrow": "Curated release",
+    "viewProduct": "View product",
+    "loading": "Loading catalog...",
+    "error": "Catalog is temporarily out of orbit.",
+    "empty": "No releases are available yet."
   },
   "common": {
     "en": "EN",

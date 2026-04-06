@@ -13,6 +13,7 @@ export const BFF_ROUTES = {
   profile: '/app/profile/',
   background: '/app/background/',
   astroImages: '/app/astroimages/',
+  shop: '/app/shop/',
   settings: '/app/settings/',
   travelHighlights: '/app/travel-highlights/',
   tags: '/app/tags/',
@@ -146,6 +147,11 @@ function getReadBackendRoute(pathname, method) {
       pathname: BFF_ROUTES.settings,
       backendPath: '/v1/settings/',
       kind: 'settings',
+    },
+    {
+      pathname: BFF_ROUTES.shop,
+      backendPath: '/v1/shop/',
+      kind: 'shop',
     },
     {
       pathname: BFF_ROUTES.travelHighlights,
