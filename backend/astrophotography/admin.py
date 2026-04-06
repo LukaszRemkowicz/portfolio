@@ -16,7 +16,6 @@ from django.urls import reverse
 from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 
-from astrophotography.services import GalleryQueryService
 from core.widgets import (
     ReadOnlyMessageWidget,
     ThemedRangeWidget,
@@ -50,6 +49,7 @@ from .models import (
     Tracker,
     Tripod,
 )
+from .types import CountryMaps
 
 logger = logging.getLogger(__name__)
 
@@ -479,7 +479,7 @@ class MainPageLocationForm(TranslatableModelForm):
                 # Fallback for country-wide tours: find the ISO code and show all images
                 # from that country.
 
-                maps = GalleryQueryService._get_country_maps()
+                maps: CountryMaps = AstroImage.objects.get_country_maps()
                 iso_code = maps["code_map"].get(self.instance.country_slug) or maps[
                     "country_map"
                 ].get(self.instance.country_slug)

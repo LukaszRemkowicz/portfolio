@@ -1,11 +1,14 @@
 import calendar
 import logging
 import uuid
+from collections.abc import Mapping
 from datetime import date as dt_date
-from typing import Any, cast
+from functools import lru_cache
+from typing import Any, Self, cast
 
 import sentry_sdk
 from django_ckeditor_5.fields import CKEditor5Field
+from django_countries import countries
 from django_countries.fields import CountryField
 from model_utils import FieldTracker
 from parler.managers import TranslatableManager, TranslatableQuerySet
@@ -17,6 +20,7 @@ from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import DateRangeField
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Count, Q, QuerySet
 from django.utils import translation
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
@@ -28,6 +32,8 @@ from translation.mixins import AutomatedTranslationModelMixin
 from translation.services import TranslationService
 
 from .constants import CELESTIAL_OBJECT_CHOICES, MeteorDefaults
+from .tasks import calculate_astroimage_exposure_hours_task
+from .types import CountryMaps
 
 logger = logging.getLogger(__name__)
 
@@ -113,14 +119,39 @@ class Place(AutomatedTranslationModelMixin, TranslatableModel):
 
 
 class TagQuerySet(TranslatableQuerySet):
-    def latest_tags(self) -> "TagQuerySet":
+    def latest_tags(self) -> QuerySet:
         """
         Returns tags selected in LandingPageSettings for the home page gallery.
         """
-        settings = LandingPageSettings.get_current()
+        settings: LandingPageSettings = LandingPageSettings.get_current()
         if settings:
-            return cast("TagQuerySet", settings.latest_filters.all())
-        return cast("TagQuerySet", self.none())
+            return cast(QuerySet, settings.latest_filters.all())
+        return cast(QuerySet, self.none())
+
+    def with_stats(
+        self,
+        category_filter: str | None = None,
+        latest: bool = False,
+    ) -> QuerySet:
+        """
+        Annotate tags with image counts, optionally filtered by gallery category
+        or limited to the latest-image tag selection.
+        """
+        queryset: QuerySet = self.latest_tags() if latest else self.all()
+
+        annotation_filter: Q = Q(images__isnull=False)
+        if category_filter:
+            annotation_filter &= Q(images__celestial_object=category_filter)
+
+        return cast(
+            QuerySet,
+            queryset.prefetch_related("translations")
+            .filter(images__isnull=False)
+            .annotate(num_times=Count("images", filter=annotation_filter, distinct=True))
+            .filter(num_times__gt=0)
+            .order_by("-num_times", "id")
+            .distinct(),
+        )
 
 
 class Tag(AutomatedTranslationModelMixin, TranslatableModel, models.Model):
@@ -221,9 +252,168 @@ class Tripod(AbstractEquipmentModel):
 class AstroImageQuerySet(TranslatableQuerySet):
     """Custom queryset for AstroImage model."""
 
-    def latest(self):
+    def latest(self) -> QuerySet:
         """Returns the 9 most recent images."""
-        return self.order_by("-created_at", "-capture_date")[:9]
+        return cast(QuerySet, self.order_by("-created_at", "-capture_date")[:9])
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def get_country_maps() -> CountryMaps:
+        """Return cached country/code maps used by travel filters."""
+        return {
+            "country_map": {name.lower(): code for code, name in dict(countries).items()},
+            "code_map": {code.lower(): code for code in dict(countries).keys()},
+        }
+
+    @staticmethod
+    def _get_string_param(params: Mapping[str, object], key: str) -> str | None:
+        """Return a query parameter only when it is a non-empty string."""
+        value = params.get(key)
+        if isinstance(value, str) and value:
+            return value
+        return None
+
+    def for_gallery(self, params: Mapping[str, object]) -> QuerySet:
+        """
+        Apply gallery filters with the same optimization profile used by public views.
+        """
+        queryset: QuerySet = (
+            self.select_related("place")
+            .prefetch_related(
+                "translations",
+                "place__translations",
+                "tags",
+                "tags__translations",
+                "camera",
+                "lens",
+                "telescope",
+                "tracker",
+                "tripod",
+            )
+            .all()
+            .order_by("-created_at")
+        )
+
+        category: str | None = self._get_string_param(params, "filter")
+        if category:
+            queryset = queryset.filter(celestial_object=category)
+
+        tag_slug: str | None = self._get_string_param(params, "tag")
+        if tag_slug:
+            tag_ids = Tag.objects.filter(translations__slug=tag_slug).values_list("id", flat=True)
+            if tag_ids:
+                queryset = queryset.filter(tags__in=tag_ids)
+            else:
+                queryset = queryset.none()
+
+        travel: str | None = self._get_string_param(params, "travel")
+        if travel:
+            queryset = self._apply_travel_filter(queryset, travel)
+
+        country: str | None = self._get_string_param(params, "country")
+        place: str | None = self._get_string_param(params, "place")
+        if country:
+            queryset = queryset.filter(place__country=country)
+            if place:
+                queryset = queryset.filter(
+                    Q(place__translations__name__iexact=place) | Q(place__isnull=True)
+                )
+
+        return queryset.order_by("-capture_date")
+
+    def for_travel_highlight(self, slider: "MainPageLocation") -> QuerySet:
+        """Return images selected for a given travel highlight slider."""
+        queryset: QuerySet = self.select_related("place").prefetch_related(
+            "translations",
+            "place__translations",
+            "tags",
+            "tags__translations",
+            "camera",
+            "lens",
+            "telescope",
+            "tracker",
+            "tripod",
+        )
+
+        explicit_image_ids: list[int] = list(slider.images.values_list("id", flat=True))
+
+        if slider.place:
+            if slider.place.is_region:
+                sub_place_ids: list[int] = list(
+                    slider.place.sub_places.values_list("id", flat=True)
+                )
+                if slider.adventure_date:
+                    queryset = queryset.filter(
+                        Q(
+                            place_id__in=sub_place_ids,
+                            capture_date__range=(
+                                slider.adventure_date.lower,
+                                slider.adventure_date.upper,
+                            ),
+                        )
+                        | Q(id__in=explicit_image_ids)
+                    )
+                else:
+                    queryset = queryset.filter(
+                        Q(place_id__in=sub_place_ids) | Q(id__in=explicit_image_ids)
+                    )
+            else:
+                queryset = queryset.filter(Q(place=slider.place) | Q(id__in=explicit_image_ids))
+        else:
+            maps: CountryMaps = self.get_country_maps()
+            code_map: dict[str, str] = maps["code_map"]
+            country_map: dict[str, str] = maps["country_map"]
+            iso_code: str | None = code_map.get(slider.country_slug) or country_map.get(
+                slider.country_slug
+            )
+
+            if iso_code:
+                queryset = queryset.filter(
+                    Q(place__country=iso_code) | Q(id__in=explicit_image_ids)
+                )
+            else:
+                queryset = queryset.filter(
+                    Q(place__country__icontains=slider.country_slug) | Q(id__in=explicit_image_ids)
+                )
+
+            if slider.adventure_date:
+                queryset = queryset.filter(
+                    Q(
+                        capture_date__range=(
+                            slider.adventure_date.lower,
+                            slider.adventure_date.upper,
+                        )
+                    )
+                    | Q(id__in=explicit_image_ids)
+                )
+
+        return queryset.order_by("-created_at")
+
+    def _apply_travel_filter(self, queryset: QuerySet, search_term: str) -> QuerySet:
+        """Apply fuzzy country/place matching for gallery travel filters."""
+        search_term_lower: str = search_term.lower()
+        maps: CountryMaps = self.get_country_maps()
+        country_map: dict[str, str] = maps["country_map"]
+        code_map: dict[str, str] = maps["code_map"]
+
+        found_code: str | None = code_map.get(search_term_lower) or country_map.get(
+            search_term_lower
+        )
+
+        if not found_code:
+            for name_lower, code in country_map.items():
+                if search_term_lower in name_lower:
+                    found_code = code
+                    break
+
+        filter_q: Q = Q(place__translations__name__icontains=search_term)
+        if found_code:
+            filter_q |= Q(place__country=found_code)
+
+        if not found_code:
+            filter_q |= Q(place__country__icontains=search_term)
+
+        return queryset.filter(filter_q)
 
 
 class AstroImage(AutomatedTranslationModelMixin, BaseImage):
@@ -330,6 +520,11 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
         verbose_name=_("Zoom"),
         help_text=_("Allow users to zoom this image in detail mode."),
     )
+    calculated_exposure_hours = models.FloatField(
+        default=0,
+        verbose_name=_("Calculated Exposure Hours"),
+        help_text=_("Internal LLM-derived exposure duration stored in hours."),
+    )
 
     class Meta:
         verbose_name = _("Astrophotography Image")
@@ -357,7 +552,23 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
         if not name:
             raise ValidationError({"name": _("This field is required for the default language.")})
 
+    def _get_saved_default_exposure_details(self) -> str:
+        """Return the persisted default-language exposure details for change detection."""
+        if not self.pk:
+            return ""
+
+        return (
+            self.translations.model.objects.filter(
+                master_id=self.pk,
+                language_code=settings.DEFAULT_APP_LANGUAGE,
+            )
+            .values_list("exposure_details", flat=True)
+            .first()
+            or ""
+        )
+
     def save(self, *args: Any, **kwargs: Any) -> None:
+        previous_default_exposure_details = self._get_saved_default_exposure_details()
         if not self.slug:
             # We use the English name (master/fallback) for slug generation
             base_slug = slugify(self.safe_translation_getter("name", any_language=True))
@@ -370,6 +581,20 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
                 self.slug = f"{base_slug}-{str(uuid.uuid4())[:8]}"
         super().save(*args, **kwargs)
         self.trigger_translations()
+        current_default_exposure_details = (
+            self.safe_translation_getter(
+                "exposure_details",
+                language_code=settings.DEFAULT_APP_LANGUAGE,
+                any_language=False,
+            )
+            or ""
+        )
+        if (
+            current_default_exposure_details
+            and current_default_exposure_details != previous_default_exposure_details
+            and self.pk
+        ):
+            calculate_astroimage_exposure_hours_task.delay_on_commit(str(self.pk))
 
 
 class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
@@ -435,25 +660,40 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
 class MainPageLocationQuerySet(TranslatableQuerySet):
     """Custom queryset for MainPageLocation model."""
 
-    def active(self) -> "MainPageLocationQuerySet":
+    def active(self) -> Self:
         """Return only active locations."""
-        return self.filter(is_active=True)  # type: ignore[no-any-return]
+        return cast(Self, self.filter(is_active=True))
 
-    def with_images(self) -> "MainPageLocationQuerySet":
+    def with_images(self) -> Self:
         """Prefetch related images for efficiency."""
-        return self.prefetch_related("images")  # type: ignore[no-any-return]
+        return cast(Self, self.prefetch_related("images"))
 
-    def with_place(self) -> "MainPageLocationQuerySet":
+    def with_place(self) -> Self:
         """Select related place for efficiency."""
-        return self.select_related("place")  # type: ignore[no-any-return]
+        return cast(Self, self.select_related("place"))
 
-    def by_slugs(
-        self, country_slug: str, place_slug: str, date_slug: str
-    ) -> "MainPageLocationQuerySet":
+    def ready_for_main_page(self) -> Self:
+        """Return active locations with the relations needed by public serializers."""
+        return cast(
+            Self,
+            self.active()
+            .with_place()
+            .with_images()
+            .select_related("background_image")
+            .prefetch_related(
+                "translations",
+                "place__translations",
+                "background_image__translations",
+            )
+            .prefetch_related("images__translations")
+            .order_by("-adventure_date"),
+        )
+
+    def by_slugs(self, country_slug: str, place_slug: str, date_slug: str) -> QuerySet:
         """
         Filter locations by country, place, and date slugs.
         """
-        qs = self.all()
+        qs: QuerySet = self.all()
 
         # 1. Country filter
         if country_slug != FALLBACK_URL_SLUG:
@@ -473,9 +713,9 @@ class MainPageLocationQuerySet(TranslatableQuerySet):
             if date_range:
                 qs = qs.filter(adventure_date__overlap=date_range)
             else:
-                return self.none()  # type: ignore[no-any-return]
+                return qs.none()
 
-        return qs  # type: ignore[no-any-return]
+        return qs
 
 
 class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):

@@ -44,6 +44,7 @@ class SourceCollectionResult:
     source_key: str
     output_file: Path
     bytes_written: int
+    source_path: Path | None = None
     container_name: str | None = None
     warning: str = ""
 

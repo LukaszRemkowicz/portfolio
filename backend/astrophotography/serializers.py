@@ -20,7 +20,6 @@ from .models import (
     Place,
     Tag,
 )
-from .services import GalleryQueryService
 
 
 class TagSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
@@ -300,8 +299,8 @@ class TravelHighlightDetailSerializer(MainPageLocationSerializer):
     images = serializers.SerializerMethodField()
 
     def get_images(self, obj: MainPageLocation) -> list:
-        queryset = GalleryQueryService.get_travel_highlight_images(obj)
-        # Cast ReturnList to list to satisfy MyPy
+        queryset = AstroImage.objects.for_travel_highlight(obj)
+        # Cast ReturnList to list to satisfy IDE
         return list(AstroImageSerializerList(queryset, many=True, context=self.context).data)
 
     class Meta(MainPageLocationSerializer.Meta):

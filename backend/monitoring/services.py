@@ -18,7 +18,6 @@ from common.services import BaseEmailService
 from .agents import LogAnalysisAgent
 from .log_sources import LOG_SOURCES, REQUIRED_LOG_SOURCE
 from .models import LogAnalysis, SitemapAnalysis
-from .monitoring_agent_runner import MonitoringToolLoopRunner
 from .prompt_assets import PromptAssetLoader
 from .sitemap_services import SitemapAuditService, SitemapHTTPClient
 from .types import (
@@ -28,7 +27,6 @@ from .types import (
     LogAnalysisPayload,
     LogReportResult,
     MonitoringFindingsValue,
-    MonitoringJobName,
     RawCollectedLogPaths,
     SitemapIssue,
     SitemapReportResult,
@@ -1178,13 +1176,13 @@ class SitemapAnalysisOrchestrator:
 
 
 class MonitoringAgentLogOrchestrator:
-    """Run the bounded monitoring-agent flow for daily log analysis.
+    """Run the live single-LLM log-analysis flow for daily monitoring.
 
-    This orchestrator preserves the current compatibility boundary:
-    - deterministic log collection still happens first
-    - the existing typed log report is still prepared first
-    - the bounded monitoring agent runs on top of that prepared report
-    - persistence and email rendering still reuse the existing LogAnalysis path
+    The current live path is:
+    - deterministic log collection
+    - historical context assembly
+    - single analyzed report preparation
+    - persistence and email rendering
     """
 
     def __init__(
@@ -1192,16 +1190,14 @@ class MonitoringAgentLogOrchestrator:
         collector: DockerLogCollector,
         analyzer: LogAnalyzer,
         storage: LogStorageService,
-        agent_runner: MonitoringToolLoopRunner,
     ) -> None:
         self.collector: DockerLogCollector = collector
         self.analyzer: LogAnalyzer = analyzer
         self.report_preparer: LogReportPreparationService = LogReportPreparationService(analyzer)
         self.storage: LogStorageService = storage
-        self.agent_runner: MonitoringToolLoopRunner = agent_runner
 
     def analyze_and_store(self, analysis_date: date | None = None) -> LogAnalysis:
-        """Collect logs, run the bounded monitoring agent, and persist results."""
+        """Collect logs, prepare the analyzed report, and persist results."""
         if analysis_date is None:
             analysis_date = date.today()
 
@@ -1211,15 +1207,14 @@ class MonitoringAgentLogOrchestrator:
         try:
             log_paths, log_size = self._collect_logs()
             historical_context: str = self._build_historical_context(analysis_date)
-            deterministic_report: LogReportResult = self._prepare_report(
+            analysis_result: LogReportResult = self._prepare_report(
                 log_paths,
                 historical_context,
             )
-            final_report: LogReportResult = self._run_monitoring_agent(deterministic_report)
             log_analysis: LogAnalysis = self._store_results(
                 analysis_date,
                 log_size,
-                final_report,
+                analysis_result,
                 start_time,
                 log_paths,
             )
@@ -1266,52 +1261,12 @@ class MonitoringAgentLogOrchestrator:
         log_paths: Mapping[str, str | None],
         historical_context: str,
     ) -> LogReportResult:
-        """Prepare the deterministic log report that seeds the agent runtime."""
+        """Prepare the analyzed report used by the live monitoring path."""
         collected_at: str = self.collector.get_collected_at()
         return self.report_preparer.prepare_report_from_files(
             log_paths,
             collected_at,
             historical_context=historical_context,
-        )
-
-    def _run_monitoring_agent(self, deterministic_report: LogReportResult) -> LogReportResult:
-        """Run the bounded monitoring agent and normalize its final structured output."""
-        loop_result = self.agent_runner.run(
-            job_name=self._get_job_name(),
-            job_context={
-                "log_report": deterministic_report.to_payload(),
-            },
-        )
-        final_payload = loop_result.final_payload
-
-        findings_default: JSONValue = [finding for finding in loop_result.findings]
-        findings_raw: JSONValue = final_payload.get(
-            "key_findings",
-            findings_default,
-        )
-        key_findings: list[str]
-        if isinstance(findings_raw, list):
-            key_findings = [str(item) for item in findings_raw]
-        elif isinstance(findings_raw, str):
-            key_findings = [findings_raw]
-        else:
-            key_findings = deterministic_report.key_findings
-
-        return LogReportResult(
-            summary=str(
-                final_payload.get("summary", loop_result.summary or deterministic_report.summary)
-            ),
-            severity=str(final_payload.get("severity", deterministic_report.severity)),
-            key_findings=key_findings or deterministic_report.key_findings,
-            recommendations=normalize_text_value(
-                final_payload.get("recommendations", deterministic_report.recommendations),
-                deterministic_report.recommendations,
-            ),
-            trend_summary=str(
-                final_payload.get("trend_summary", deterministic_report.trend_summary)
-            ),
-            gpt_tokens_used=deterministic_report.gpt_tokens_used,
-            gpt_cost_usd=deterministic_report.gpt_cost_usd,
         )
 
     def _store_results(
@@ -1322,7 +1277,7 @@ class MonitoringAgentLogOrchestrator:
         start_time: float,
         log_paths: Mapping[str, str | None],
     ) -> LogAnalysis:
-        """Persist the final monitoring-agent report through the existing model path."""
+        """Persist the analyzed report through the existing model path."""
         execution_time_seconds: float = time.time() - start_time
         log_analysis: LogAnalysis = self.storage.create_or_replace_analysis(
             analysis_date=analysis_date,
@@ -1379,21 +1334,14 @@ class MonitoringAgentLogOrchestrator:
             f"or a legacy tuple, got {type(raw_log_paths).__name__}"
         )
 
-    @staticmethod
-    def _get_job_name() -> MonitoringJobName:
-        """Return the monitoring job name used by the bounded agent runner."""
-        return MonitoringJobName.LOG_REPORT
-
     @classmethod
     def create_default(cls) -> "MonitoringAgentLogOrchestrator":
-        """Create the default monitoring-agent log orchestrator with real provider wiring."""
+        """Create the default live log orchestrator with real provider wiring."""
         provider_name: str = settings.MONITORING_LLM_PROVIDER
         provider = LLMProviderRegistry.get(provider_name)
         agent: LogAnalysisAgent = LogAnalysisAgent(provider)
-        agent_runner: MonitoringToolLoopRunner = MonitoringToolLoopRunner(provider=provider)
         return cls(
             collector=DockerLogCollector(),
             analyzer=LogAnalyzer(agent),
             storage=LogStorageService(),
-            agent_runner=agent_runner,
         )

@@ -105,10 +105,14 @@ The daily log flow is:
 3. `daily_monitoring_agent_log_task` starts orchestration.
 4. `DockerLogCollector` reads the collected files.
 5. `HistoricalContextBuilder` loads recent monitoring history.
-6. `LogReportPreparationService` builds a typed deterministic report.
-7. `MonitoringToolLoopRunner` runs the bounded LLM analysis loop.
-8. `LogStorageService` stores the final `LogAnalysis`.
-9. `LogAnalysisEmailService` sends the email.
+6. `LogReportPreparationService` builds the typed report that is stored and emailed.
+7. `LogStorageService` stores the final `LogAnalysis`.
+8. `LogAnalysisEmailService` sends the email.
+
+Current implementation detail:
+- the bounded monitoring-agent loop remains in the codebase as an experimental
+  path, but the live daily log flow currently uses the single analyzed report
+  from `LogReportPreparationService` as the final source of truth
 
 Important operational detail:
 - Celery does not collect Docker logs directly
@@ -169,8 +173,7 @@ Important behavior:
 ## LLM Entry Points And Main Modules
 
 Where the LLM enters:
-- logs: `MonitoringToolLoopRunner` in
-  `backend/monitoring/monitoring_agent_runner.py`
+- logs: `LogAnalyzer` in `backend/monitoring/services.py`
 - sitemap: only after deterministic audit, and only when issues exist
 
 Important rule:
@@ -185,7 +188,7 @@ Main files:
 - `backend/monitoring/sitemap_services.py`
   - deterministic sitemap audit
 - `backend/monitoring/monitoring_agent_runner.py`
-  - bounded tool loop for log monitoring
+  - bounded tool loop kept for future monitoring-agent work
 - `backend/monitoring/prompt_assets.py`
   - loader for file-backed prompt assets
 - `backend/monitoring/agent_assets/`
@@ -198,6 +201,7 @@ Main files:
 The system currently works in this form:
 
 - daily monitoring-agent log analysis at `02:00` UTC
+- live daily log analysis currently stores the first analyzed report directly
 - legacy log task kept only as rollback
 - sitemap monitoring at `03:00` UTC every 5 days
 - separate log and sitemap emails

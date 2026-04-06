@@ -42,7 +42,9 @@
     "title": "Beyond the Atmosphere.",
     "defaultBio": "Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye.",
     "siteQuality": "Site Quality",
-    "primaryOptics": "Primary Optics"
+    "primaryOptics": "Primary Optics",
+    "totalTimeSpent": "Total time spent",
+    "totalTimeSpentTooltip": "This is the total integration time of the images on this website"
   },
   "cookie": {
     "title": "Cookie Consent",

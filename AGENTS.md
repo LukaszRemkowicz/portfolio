@@ -59,6 +59,8 @@ Use these documents as fast context before implementation.
   Use for Django admin image cropper changes, preview/media bugs, or extending cropper behavior. Describes the cropper contract, browser flow, media serving rules, and derived image pipeline.
 - `infra/docs/project/latest_images_tags.md`
   Use for homepage latest-image filters and `LandingPageSettings.latest_filters`. Describes how tags are curated, rendered, cached, and invalidated.
+- `infra/docs/project/landing_page_total_time_spent_system.md`
+  Use for landing-page total-time calculation, `AstroImage.calculated_exposure_hours`, rebuild flow, serializer rounding, and cache invalidation. Describes the current derived-stat architecture and operational caveats.
 - `infra/docs/project/monitoring_system_overview.md`
   Use for monitoring jobs, scheduling, queue routing, log analysis, sitemap analysis, and LLM boundaries. Describes the live monitoring architecture and hard invariants.
 - `collector/README.md`
@@ -87,6 +89,7 @@ Use this quick mapping when a task arrives:
 
 - Cache bug or stale homepage content -> `infra/docs/project/cache_invalidation.md`
 - Homepage latest-image filters/tags -> `infra/docs/project/latest_images_tags.md`
+- Landing page total-time stat or exposure-hours rebuilds -> `infra/docs/project/landing_page_total_time_spent_system.md`
 - Django admin image cropping or preview/media bug -> `infra/docs/project/django_admin_image_cropper_mechanism.md`
 - Monitoring, Celery monitoring jobs, sitemap checks -> `infra/docs/project/monitoring_system_overview.md`
 - Collector app architecture, manifest contract, rebuild/run path, or cron rollout work -> `collector/README.md`
