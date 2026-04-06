@@ -42,7 +42,9 @@
     "title": "Ponad Atmosferą.",
     "defaultBio": "Astrofotografia to techniczny taniec z fizyką. Moja podróż składa się z tysięcy klatek, godzin integracji i poświęcenia w odkrywaniu tego, co pozostaje niewidoczne dla gołego oka.",
     "siteQuality": "Jakość Nieba",
-    "primaryOptics": "Główna Optyka"
+    "primaryOptics": "Główna Optyka",
+    "totalTimeSpent": "Łączny czas ekspozycji",
+    "totalTimeSpentTooltip": "To jest łączny czas integracji zdjęć na tej stronie"
   },
   "cookie": {
     "title": "Zgoda na Cookies",

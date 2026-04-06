@@ -220,6 +220,9 @@ OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 # Each service can use a different provider
 TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
 MONITORING_LLM_PROVIDER = env.str("MONITORING_LLM_PROVIDER", default="gpt")
+LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER = env.str(
+    "LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER", default="gpt"
+)
 RUN_LEGACY_DAILY_TASK = env.bool("RUN_LEGACY_DAILY_TASK", default=False)
 DOCKER_LOGS_DIR = env.str("DOCKER_LOGS_DIR", default="/app/docker-logs")
 SSR_CACHE_INVALIDATION_URL = env.str(

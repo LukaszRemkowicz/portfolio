@@ -154,6 +154,7 @@ class CollectorApplicationService:
                 source_key=source.key,
                 output_file=output_path,
                 bytes_written=0,
+                source_path=source_path,
                 warning=f"Log file not found for {source.key}: {source_path}",
             )
 
@@ -163,6 +164,7 @@ class CollectorApplicationService:
             source_key=source.key,
             output_file=output_path,
             bytes_written=output_path.stat().st_size,
+            source_path=source_path,
         )
 
     def _read_last_lines(self, source_path: Path, limit: int) -> str:

@@ -8,7 +8,6 @@ from django.test import override_settings
 
 from common.llm.providers import MockLLMProvider
 from monitoring.models import LogAnalysis, SitemapAnalysis
-from monitoring.monitoring_agent_runner import MonitoringToolLoopRunner
 from monitoring.services import (
     DockerLogCollector,
     HistoricalContextBuilder,
@@ -26,9 +25,6 @@ from monitoring.sitemap_services import SitemapAuditService
 from monitoring.tests.factories import LogAnalysisFactory, SitemapAnalysisFactory
 from monitoring.types import (
     LogReportResult,
-    MonitoringAgentEventType,
-    MonitoringAgentTraceEvent,
-    MonitoringToolLoopResult,
     SitemapIssue,
     SitemapIssueCategory,
     SitemapReportResult,
@@ -248,37 +244,31 @@ class TestLogReportPreparationService:
         assert suspicious_ips[0]["observed_ban"] is True
 
 
+@pytest.mark.django_db
 class TestMonitoringAgentLogOrchestrator:
-    def test_run_monitoring_agent_prefers_final_payload_over_deterministic_report(self, mocker):
+    def test_analyze_and_store_uses_prepared_report_directly(self, mocker):
         mock_agent = mocker.MagicMock()
         analyzer = LogAnalyzer(mock_agent)
-        runner = mocker.MagicMock(spec=MonitoringToolLoopRunner)
-        runner.run.return_value = MonitoringToolLoopResult(
-            summary="Agent summary",
-            findings=["Agent finding"],
-            trace=[
-                MonitoringAgentTraceEvent(
-                    event_type=MonitoringAgentEventType.START,
-                    message="starting job=log_report",
-                )
-            ],
-            final_payload={
-                "summary": "Agent summary",
-                "severity": "CRITICAL",
-                "key_findings": ["Agent finding"],
-                "recommendations": "Review nginx logs.",
-                "trend_summary": "New today.",
-            },
-            stop_reason="final_report",
-        )
+        collector = mocker.MagicMock(spec=DockerLogCollector)
+        collector.collect_logs.return_value = {
+            "backend": "/tmp/backend.log",
+            "frontend": None,
+            "nginx_access": None,
+            "nginx_runtime": None,
+            "traefik_access": None,
+            "traefik_runtime": None,
+            "fail2ban": None,
+        }
+        collector.get_collected_at.return_value = "2026-04-05T10:00:00Z"
+        mocker.patch("monitoring.services.os.path.getsize", return_value=100)
+        attach_logs = mocker.patch.object(LogStorageService, "attach_log_files")
         orchestrator = MonitoringAgentLogOrchestrator(
-            collector=DockerLogCollector(),
+            collector=collector,
             analyzer=analyzer,
             storage=LogStorageService(),
-            agent_runner=runner,
         )
 
-        deterministic_report = LogReportResult(
+        prepared_report = LogReportResult(
             summary="Deterministic summary",
             severity="WARNING",
             key_findings=["Deterministic finding"],
@@ -287,45 +277,16 @@ class TestMonitoringAgentLogOrchestrator:
             gpt_tokens_used=10,
             gpt_cost_usd=0.001,
         )
+        mocker.patch.object(orchestrator, "_build_historical_context", return_value="")
+        mocker.patch.object(orchestrator, "_prepare_report", return_value=prepared_report)
 
-        result = orchestrator._run_monitoring_agent(deterministic_report)
+        result = orchestrator.analyze_and_store(date.today())
 
-        assert result.summary == "Agent summary"
-        assert result.severity == "CRITICAL"
-        assert result.key_findings == ["Agent finding"]
-
-    def test_run_monitoring_agent_falls_back_to_deterministic_report(self, mocker):
-        mock_agent = mocker.MagicMock()
-        analyzer = LogAnalyzer(mock_agent)
-        runner = mocker.MagicMock(spec=MonitoringToolLoopRunner)
-        runner.run.return_value = MonitoringToolLoopResult(
-            summary="Deterministic summary",
-            findings=["Deterministic finding"],
-            trace=[],
-            final_payload={"summary": "Deterministic summary"},
-            stop_reason="final_report",
-        )
-        orchestrator = MonitoringAgentLogOrchestrator(
-            collector=DockerLogCollector(),
-            analyzer=analyzer,
-            storage=LogStorageService(),
-            agent_runner=runner,
-        )
-
-        deterministic_report = LogReportResult(
-            summary="Deterministic summary",
-            severity="WARNING",
-            key_findings=["Deterministic finding"],
-            recommendations="Deterministic recommendation",
-            trend_summary="Stable.",
-            gpt_tokens_used=10,
-            gpt_cost_usd=0.001,
-        )
-
-        result = orchestrator._run_monitoring_agent(deterministic_report)
-
+        assert result.summary == "Deterministic summary"
         assert result.severity == "WARNING"
+        assert result.key_findings == ["Deterministic finding"]
         assert result.recommendations == "Deterministic recommendation"
+        attach_logs.assert_called_once()
 
 
 class TestSitemapSummaryService:

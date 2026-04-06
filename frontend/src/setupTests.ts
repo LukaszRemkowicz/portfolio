@@ -110,6 +110,9 @@ jest.mock('react-i18next', () => ({
           'Astrophotography is a technical dance with physics. My journey involves thousands of light frames, hours of integration, and a dedication to revealing what remains invisible to the naked eye.',
         'about.siteQuality': 'Site Quality',
         'about.primaryOptics': 'Primary Optics',
+        'about.totalTimeSpent': 'Total time spent',
+        'about.totalTimeSpentTooltip':
+          'This is the total integration time of the images on this website',
         'cookie.title': 'Cookie Consent',
         'cookie.description':
           'We use cookies to enhance your experience, analyze traffic, and personalize your journey through the cosmos. By using our site, you agree to our',

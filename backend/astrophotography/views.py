@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 from rest_framework import status
 from rest_framework.decorators import action
@@ -33,7 +33,6 @@ from .serializers import (
     TagSerializer,
     TravelHighlightDetailSerializer,
 )
-from .services import GalleryQueryService
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -53,7 +52,7 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
 
     def get_queryset(self) -> QuerySet[AstroImage]:
         """Returns the filtered queryset of images."""
-        return GalleryQueryService.get_filtered_images(self.request.query_params)
+        return cast(QuerySet[AstroImage], AstroImage.objects.for_gallery(self.request.query_params))
 
     def get_serializer_class(self) -> type[AstroImageSerializerList] | type[AstroImageSerializer]:
         """Determines which serializer to use based on the action."""
@@ -102,7 +101,7 @@ class MainPageLocationViewSet(ReadOnlyModelViewSet):
 
     def get_queryset(self) -> QuerySet[MainPageLocation]:
         """Returns the optimized queryset for active locations."""
-        return GalleryQueryService.get_active_locations()
+        return cast(QuerySet[MainPageLocation], MainPageLocation.objects.ready_for_main_page())
 
 
 class TravelHighlightsBySlugView(APIView):
@@ -164,7 +163,7 @@ class TagsView(ViewSet):
         """
         category_filter: str | None = request.query_params.get("filter")
         latest: bool = request.query_params.get("latest", "false").lower() == "true"
-        tags: QuerySet[Tag] = GalleryQueryService.get_tag_stats(category_filter, latest=latest)
+        tags: QuerySet[Tag] = Tag.objects.with_stats(category_filter, latest=latest)
 
         serializer: TagSerializer = self.serializer_class(
             tags, many=True, context={"request": request}
