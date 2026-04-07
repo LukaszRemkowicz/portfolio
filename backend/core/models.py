@@ -356,6 +356,7 @@ class LandingPageSettings(SingletonModel):
     lastimages_enabled = models.BooleanField(
         default=True, verbose_name=_("Last Images Section Enabled")
     )
+    shop_enabled = models.BooleanField(default=False, verbose_name=_("Shop Section Enabled"))
     serve_webp_images = models.BooleanField(
         default=False,
         verbose_name=_("Serve WebP Images"),

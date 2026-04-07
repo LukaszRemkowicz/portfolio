@@ -64,6 +64,10 @@ class TranslationService:
             FieldTranslationConfig("highlight_title"),
             FieldTranslationConfig("story", is_html=True),
         ],
+        "ShopProduct": [
+            FieldTranslationConfig("title"),
+            FieldTranslationConfig("description", is_html=True),
+        ],
     }
 
     def __init__(self, agent: TranslationAgentProtocol):
@@ -476,6 +480,12 @@ class TranslationService:
         self, instance: Any, language_code: str, force: bool = False
     ) -> tuple[dict[str, str], dict[str, str]]:
         """Translate ProjectImage (name, description)."""
+        return self.translate_model(instance, language_code, force)
+
+    def translate_shop_product(
+        self, instance: Any, language_code: str, force: bool = False
+    ) -> tuple[dict[str, str], dict[str, str]]:
+        """Translate ShopProduct (title, description)."""
         return self.translate_model(instance, language_code, force)
 
     def translate_parler_tag(

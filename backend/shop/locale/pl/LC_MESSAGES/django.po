@@ -1,0 +1,59 @@
+# Polish translations for shop app
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-07 11:37+0200\n"
+"PO-Revision-Date: 2026-04-07 11:37+0200\n"
+"Last-Translator: Antigravity\n"
+"Language-Team: Polish\n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
+
+msgid "Title"
+msgstr "Tytuł"
+
+msgid "Description"
+msgstr "Opis"
+
+msgid "Price"
+msgstr "Cena"
+
+msgid "Currency"
+msgstr "Waluta"
+
+msgid "External URL"
+msgstr "Link zewnętrzny"
+
+msgid "Active"
+msgstr "Aktywny"
+
+msgid "Display order"
+msgstr "Kolejność wyświetlania"
+
+msgid "Product Image"
+msgstr "Zdjęcie produktu"
+
+msgid "Product Image Cropped"
+msgstr "Zdjęcie produktu (wykadrowane)"
+
+msgid "Shop Product"
+msgstr "Produkt w sklepie"
+
+msgid "Shop Products"
+msgstr "Produkty w sklepie"
+
+msgid "Product Details"
+msgstr "Szczegóły produktu"
+
+msgid "Image Management"
+msgstr "Zarządzanie zdjęciem"
+
+msgid "Image Cropper"
+msgstr "Kadrowanie obrazu"
+
+msgid "Shop"
+msgstr "Sklep"

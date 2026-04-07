@@ -1,0 +1,63 @@
+{% extends "admin/change_form.html" %}
+{% load i18n jazzmin static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'users/css/admin_image_cropper.css' %}?v=20260330-1">
+<style>
+  .field-avatar_cropped,
+  .field-about_me_image_cropped,
+  .field-about_me_image2_cropped {
+    display: none !important;
+  }
+</style>
+{% endblock %}
+
+{% block field_sets %}
+<div class="col-12 col-lg-9">
+    <div class="card">
+        <div class="card-body">
+            {% if language_tabs %}
+            <div class="parler-language-tabs{% if language_tabs.css_class %} {{ language_tabs.css_class }}{% endif %}">
+                {% for url, name, code, status in language_tabs %}
+                {% if status == "current" %}
+                <input type="hidden" class="language_button selected" name="{{ code }}" />
+                <span class="current">
+                    {{ name }}
+                    {% if language_tabs.current_is_translated and language_tabs.allow_deletion %}
+                    <a class="deletelink" href="./delete-translation/{{ code }}/"
+                        title="{% trans 'Delete Translation' %}">&nbsp;</a>
+                    {% endif %}
+                </span>
+                {% else %}
+                <span class="{{ status }}">
+                    <a href="{{ url }}">{{ name }}</a>
+                    {% if status == "available" and language_tabs.allow_deletion %}
+                    <a class="deletelink" href="./delete-translation/{{ code }}/"
+                        title="{% trans 'Delete Translation' %}">&nbsp;</a>
+                    {% endif %}
+                </span>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% include "jazzmin/includes/horizontal_tabs.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block submit_buttons_bottom %}
+{{ block.super }}
+{% if admin_image_cropper %}
+<div class="mt-3">
+    {% include "admin/users/widgets/admin_image_cropper.html" with cropper=admin_image_cropper %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script src="{% static 'users/js/admin_image_cropper.js' %}?v=20260330-1"></script>
+{% endblock %}

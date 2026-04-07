@@ -69,6 +69,10 @@ msgstr "Sekcja Programowania Włączona"
 msgid "Last Images Section Enabled"
 msgstr "Sekcja ostatnich zdjęć włączona"
 
+#: core/models.py:125
+msgid "Shop Section Enabled"
+msgstr "Sekcja Sklepu Włączona"
+
 #: core/models.py:130
 msgid "Meteors Configuration"
 msgstr "Konfiguracja meteorów"
@@ -171,6 +175,10 @@ msgstr "Polski"
 #: settings/base.py:510
 msgid "Astrophotography"
 msgstr "Astrofotografia"
+
+#: settings/base.py:512
+msgid "Shop"
+msgstr "Sklep"
 
 #: settings/base.py:522
 msgid "Equipment"

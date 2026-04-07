@@ -14,6 +14,7 @@ class LandingPageSettingsSerializer(serializers.ModelSerializer):
     contactForm = serializers.BooleanField(source="contact_form_enabled", read_only=True)
     travelHighlights = serializers.BooleanField(source="travel_highlights_enabled", read_only=True)
     lastimages = serializers.BooleanField(source="lastimages_enabled", read_only=True)
+    shop = serializers.BooleanField(source="shop_enabled", read_only=True)
     total_time_spent = serializers.SerializerMethodField()
     meteors = MeteorsMainPageConfigSerializer(read_only=True)
 
@@ -33,6 +34,7 @@ class LandingPageSettingsSerializer(serializers.ModelSerializer):
             "contactForm",
             "travelHighlights",
             "lastimages",
+            "shop",
             "total_time_spent",
             "meteors",
         ]

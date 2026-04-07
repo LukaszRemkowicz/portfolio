@@ -162,6 +162,7 @@ INSTALLED_APPS = [
     "django_ckeditor_5",
     "translation.apps.TranslationConfig",
     "monitoring.apps.MonitoringConfig",
+    "shop.apps.ShopConfig",
 ]
 
 # django-extensions shell_plus should default to IPython so interactive
@@ -409,6 +410,20 @@ USER_ADMIN_CROPPER_FIELD_CONFIGS = (
     ),
 )
 
+# Shop product admin image cropper configuration
+SHOP_PRODUCT_ADMIN_CROPPER_FIELD_CONFIGS = (
+    CropperFieldConfig(
+        field_name="path",
+        label=_("Product Image"),
+        input_id="id_path",
+        target_field_name="path_cropped",
+        target_input_id="id_path_cropped",
+        preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
+        spec_method="get_path_spec",
+        crop_aspect_ratio=1.0,
+    ),
+)
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -608,6 +623,11 @@ ADMIN_SITE_ORDERING = (
         ),
     },
     {
+        "app": "shop",
+        "label": _("Shop"),
+        "models": ("shop.ShopProduct",),
+    },
+    {
         "app": "astrophotography",
         "label": _("Equipment"),
         "models": (
@@ -785,6 +805,7 @@ JAZZMIN_SETTINGS = {
         "inbox.ContactMessage": "fas fa-envelope",
         "programming.Project": "fas fa-code",
         "programming.ProjectImage": "fas fa-images",
+        "shop.ShopProduct": "fas fa-shopping-cart",
         "axes.AccessAttempt": "fas fa-user-lock",
         "axes.AccessLog": "fas fa-list-alt",
         "core.LandingPageSettings": "fas fa-sliders-h",
@@ -795,6 +816,7 @@ JAZZMIN_SETTINGS = {
     # Changing the order
     "order_with_respect_to": [
         "astrophotography",
+        "shop",
         "inbox",
         "users",
         "auth",
