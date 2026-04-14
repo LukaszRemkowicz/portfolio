@@ -1,9 +1,6 @@
 import json
 import os
 
-import requests
-
-from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
@@ -19,6 +16,11 @@ class Command(BaseCommand):
             "--delete-existing",
             action="store_true",
             help="Delete all existing shop products before import",
+        )
+        parser.add_argument(
+            "--update",
+            action="store_true",
+            help="Update existing products instead of skipping them",
         )
 
     def handle(self, *args, **options):
@@ -40,23 +42,26 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("Deleting all existing shop products..."))
             ShopProduct.objects.all().delete()
 
-        created_count, skipped_count = self._import_products(data)
+        do_update = options.get("update", False)
+        created_count, updated_count, skipped_count = self._import_products(data, do_update)
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Import finished. Created: {created_count}, Skipped: {skipped_count}"
+                f"Import finished. Created: {created_count}, "
+                f"Updated: {updated_count}, Skipped: {skipped_count}"
             )
         )
 
-    def _import_products(self, data):
+    def _import_products(self, data, do_update: bool):
         created_count = 0
+        updated_count = 0
         skipped_count = 0
 
         with transaction.atomic():
             for index, item in enumerate(data):
                 title = item.get("title")
                 description = item.get("description", "")
-                thumbnail_url = item.get("thumbnail_url")
+                thumbnail_url = item.get("thumbnail_url", "")
                 external_url = item.get("url", "")
 
                 if not title:
@@ -66,42 +71,49 @@ class Command(BaseCommand):
                     skipped_count += 1
                     continue
 
-                if ShopProduct.objects.filter(translations__title=title).exists():
-                    self.stdout.write(
-                        self.style.NOTICE(f'Product "{title}" already exists. Skipping.')
-                    )
-                    skipped_count += 1
+                existing_qs = ShopProduct.objects.filter(translations__title=title)
+
+                if existing_qs.exists():
+                    if not do_update:
+                        self.stdout.write(
+                            self.style.NOTICE(f'Product "{title}" already exists. Skipping.')
+                        )
+                        skipped_count += 1
+                        continue
+
+                    # --update: refresh metadata fields, keep local images untouched
+                    product = existing_qs.first()
+                    self._apply_fields(product, description, thumbnail_url, external_url)
+                    product.save(update_fields=["thumbnail_url", "external_url", "is_active"])
+
+                    # Update translations separately
+                    product.set_current_language("en")
+                    product.description = description
+                    product.save_translations()
+
+                    self.stdout.write(self.style.SUCCESS(f'Updated product: "{title}"'))
+                    updated_count += 1
                     continue
 
+                # Create new product — no image download, just save the CDN URL
                 product = ShopProduct(external_url=external_url, is_active=True)
+                self._apply_fields(product, description, thumbnail_url, external_url)
 
-                # set translatable fields
                 product.set_current_language("en")
                 product.title = title
                 product.description = description
 
-                if thumbnail_url:
-                    self._download_product_image(product, title, thumbnail_url)
-
                 product.save()
+                self.stdout.write(self.style.SUCCESS(f'Created product: "{title}"'))
                 created_count += 1
-                self.stdout.write(self.style.SUCCESS(f"Successfully created product: {title}"))
 
-        return created_count, skipped_count
+        return created_count, updated_count, skipped_count
 
-    def _download_product_image(self, product, title, thumbnail_url):
-        try:
-            self.stdout.write(f'Downloading image for "{title}"...')
-            response = requests.get(thumbnail_url, timeout=30)
-            response.raise_for_status()
-
-            # Use filename from URL or title
-            filename = os.path.basename(thumbnail_url.split("?")[0])
-            if not filename or "." not in filename:
-                filename = f"{title.lower().replace(' ', '_')[:50]}.webp"
-
-            product.path.save(filename, ContentFile(response.content), save=False)
-        except Exception as e:
-            self.stdout.write(
-                self.style.ERROR(f"Failed to download image from {thumbnail_url}: {e}")
-            )
+    @staticmethod
+    def _apply_fields(
+        product: ShopProduct, description: str, thumbnail_url: str, external_url: str
+    ) -> None:
+        """Apply common scalar fields to a product instance (no image downloading)."""
+        product.thumbnail_url = thumbnail_url
+        product.external_url = external_url
+        product.is_active = True

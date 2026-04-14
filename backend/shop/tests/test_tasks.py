@@ -1,53 +1,43 @@
-# backend/shop/tests/test_tasks.py
-"""
-Integration tests for ShopProduct image processing.
-
-Validates that the universal `core.process_image_task` correctly handles
-ShopProduct instances, including resolving WebP from path_cropped.
-"""
-
 import pytest
+from pytest_mock import MockerFixture
 
 from common.tests.image_helpers import _jpeg_field, _png_field
-from core.tasks import process_image_task
-from shop.tests.factories import ShopProductFactory
+from shop.models import ShopSettings
+from shop.tasks import process_shop_settings_images_task
 
 
 @pytest.mark.django_db
-class TestShopProductImageProcessing:
-    """Verifies the BaseImage Celery pipeline works for ShopProduct."""
+class TestShopSettingsImageProcessing:
+    def test_process_task_uses_cropped_image_when_present(self, mocker: MockerFixture) -> None:
+        settings_obj = ShopSettings.objects.create(
+            image=_jpeg_field("background-source.jpg"),
+            image_cropped=_png_field("background-crop.png", size=(1920, 1080)),
+            title="Shop",
+        )
 
-    def test_process_image_task_optimizes_product_image(self):
-        """
-        GIVEN a product with a JPEG source image
-        WHEN process_image_task is called (which BaseImage triggers)
-        THEN the source should be converted to WebP
-        """
-        product = ShopProductFactory()
-        product.path = _jpeg_field("product-source.jpg")
-        product.save()
+        convert_mock = mocker.patch(
+            "shop.tasks.convert_to_webp", return_value=("ignored", _png_field("background.webp"))
+        )
+        save_mock = mocker.patch.object(ShopSettings, "save")
+        logger_mock = mocker.patch("shop.tasks.logger")
 
-        process_image_task("shop", "ShopProduct", str(product.pk))
+        process_shop_settings_images_task(settings_obj.pk)
 
-        product.refresh_from_db()
-        assert product.path.name.endswith(".jpg")
+        convert_mock.assert_called_once()
+        assert convert_mock.call_args.args[0] == settings_obj.image_cropped
+        save_mock.assert_called_once()
+        assert logger_mock.info.called
 
-        # Check that original_image was used to preserve the original file
-        assert product.original_image.name.endswith(".jpg")
+    def test_process_task_clears_webp_when_no_source_image(self, mocker: MockerFixture) -> None:
+        settings_obj = ShopSettings.objects.create(
+            image=_jpeg_field("background-source.jpg"),
+            title="Shop",
+        )
+        settings_obj.image = None
+        settings_obj.image_cropped = None
 
-    def test_process_image_task_prefers_cropped_image(self):
-        """
-        GIVEN a product with both a source image and a cropped image
-        WHEN process_image_task is called
-        THEN the WebP conversion should use the cropped image as its source
-        """
-        product = ShopProductFactory()
-        product.path = _jpeg_field("original_source.jpg")
-        product.path_cropped = _png_field("cropped_version.png", size=(560, 560))
-        product.save()
+        save_mock = mocker.patch.object(ShopSettings, "save")
 
-        process_image_task("shop", "ShopProduct", str(product.pk))
+        process_shop_settings_images_task(settings_obj.pk)
 
-        product.refresh_from_db()
-        assert "original_source" in product.path.name
-        assert "cropped_version" in product.path_cropped.name
+        save_mock.assert_called_once()

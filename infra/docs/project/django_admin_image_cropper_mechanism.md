@@ -9,13 +9,16 @@ It is intended as:
 - a technical reference for extending the cropper to new model fields.
 
 ## Scope
-Current implementation covers the `users.User` admin and these source image fields:
+Current implementation covers two admin integrations:
 
-- `avatar`
-- `about_me_image`
-- `about_me_image2`
+- `users.User`
+  - source-field cropper for `avatar`, `about_me_image`, and `about_me_image2`
+- `shop.ShopProduct`
+  - foreign-key-driven cropper for `image -> thumbnail_cropped`
 
-The cropper is a single reusable sidebar widget that can switch between those fields.
+The user cropper is a single reusable sidebar widget that can switch between multiple source fields.
+
+The shop cropper is a related reusable widget that loads an image through a lookup endpoint and writes the cropped result into a dedicated target upload field.
 
 ## High-Level Contract
 
@@ -24,7 +27,7 @@ The system does not persist crop coordinates in the database.
 
 Instead:
 - the cropper works entirely in the browser,
-- the cropped result is written back into the selected source file input,
+- the cropped result is written back into a Django file input,
 - the normal Django form submission persists that source image field.
 
 For `users.User`:
@@ -35,13 +38,17 @@ For `users.User`:
 - `about_me_image2` is the source field
 - `about_me_image2_webp` is the derived optimized field
 
+For `shop.ShopProduct`:
+- `image` is the selected `AstroImage` foreign key source
+- `thumbnail_cropped` is the persisted cropped upload used as the product thumbnail source of truth
+
 ### Derived image generation
 After save, the existing async image pipeline still runs:
 
 1. Django admin saves the selected source field.
-2. `User.save()` detects changed image fields.
-3. `process_user_images_task.delay_on_commit(...)` is scheduled.
-4. Celery regenerates the derived WebP field for the changed source field.
+2. model save logic detects changed image fields.
+3. the matching async image task is scheduled.
+4. Celery regenerates the derived file for the changed source field.
 5. cache invalidation runs after image processing.
 
 This means the cropper does not replace the existing backend image-processing architecture. It only changes what source file is submitted.
@@ -57,11 +64,17 @@ This means the cropper does not replace the existing backend image-processing ar
 
 ### Admin integration
 - [backend/users/admin.py](../../../backend/users/admin.py)
-  - injects cropper context into the change view
+  - injects source-field cropper context into the change view
 - [backend/users/templates/admin/users/user/robust_change_form.html](../../../backend/users/templates/admin/users/user/robust_change_form.html)
-  - mounts the widget in the sidebar
+  - mounts the user cropper in the sidebar
 - [backend/users/templates/admin/users/widgets/admin_image_cropper.html](../../../backend/users/templates/admin/users/widgets/admin_image_cropper.html)
-  - widget markup and JSON payload
+  - user cropper markup and JSON payload
+- [backend/shop/admin.py](../../../backend/shop/admin.py)
+  - injects foreign-key cropper context into the change view
+- [backend/shop/templates/admin/shop/shopproduct/robust_change_form.html](../../../backend/shop/templates/admin/shop/shopproduct/robust_change_form.html)
+  - mounts the shop cropper on the product change form
+- [backend/shop/templates/admin/shop/widgets/admin_fk_image_cropper.html](../../../backend/shop/templates/admin/shop/widgets/admin_fk_image_cropper.html)
+  - shop cropper markup and JSON payload
 
 ### Frontend behavior
 - [backend/users/static/users/js/admin_image_cropper.js](../../../backend/users/static/users/js/admin_image_cropper.js)
@@ -74,6 +87,10 @@ This means the cropper does not replace the existing backend image-processing ar
   - widget styling
   - viewport ratio
   - preview overlay shape
+- [backend/shop/static/shop/js/admin_fk_image_cropper.js](../../../backend/shop/static/shop/js/admin_fk_image_cropper.js)
+  - foreign-key selection
+  - remote image lookup
+  - crop export into target upload field
 
 ### Media serving and tests
 - [backend/settings/urls.py](../../../backend/settings/urls.py)
@@ -82,14 +99,18 @@ This means the cropper does not replace the existing backend image-processing ar
 - [backend/core/tests/test_admin_media_urls.py](../../../backend/core/tests/test_admin_media_urls.py)
   - regression coverage for admin media URL behavior
 - [backend/users/tests/test_admin.py](../../../backend/users/tests/test_admin.py)
-  - cropper admin integration coverage
+  - user cropper admin integration coverage
 - [backend/users/tests/test_tasks.py](../../../backend/users/tests/test_tasks.py)
   - backend regeneration coverage
+- [backend/shop/tests/test_admin.py](../../../backend/shop/tests/test_admin.py)
+  - shop cropper admin integration coverage
+- [backend/shop/tests/test_tasks.py](../../../backend/shop/tests/test_tasks.py)
+  - shop image processing coverage
 
 ## Settings-Backed Field Configuration
 
 ### Why config lives in settings
-The cropper field instances are defined in Django settings so admin does not own the configuration itself.
+The user cropper field instances are defined in Django settings so admin does not own the configuration itself.
 
 Current setting:
 - `USER_ADMIN_CROPPER_FIELD_CONFIGS`
@@ -101,6 +122,8 @@ Each entry is a `CropperFieldConfig` with:
 - `spec_method`
 - `preview_shape`
 - `crop_aspect_ratio`
+
+The shop cropper reuses the same `CropperFieldConfig` type, but its configuration currently lives directly in `ShopProductAdmin.fk_cropper_field_configs` because it targets a foreign key source and a separate upload field.
 
 ### Shape typing
 `preview_shape` is not a free string.
@@ -140,6 +163,15 @@ The admin template then renders:
 - widget markup,
 - JSON config payload via `json_script`,
 - JS and CSS assets.
+
+`ShopProductAdmin.change_view()` follows the same pattern, but the payload includes:
+
+- `lookup_url`
+- `source_image_url`
+- `target_field_name`
+- `target_input_id`
+
+That lets the browser widget resolve the currently selected `AstroImage` and write the cropped result into `thumbnail_cropped`.
 
 ### Sidebar placement
 The widget is mounted in the right sidebar under the standard admin submit/history block.
@@ -274,7 +306,7 @@ Do not reintroduce:
 - old Django admin inline JS patterns tied to jQuery helpers
 
 ### Portable component
-The current first mount point is the user admin sidebar, but the cropper is designed as a reusable component.
+The current mount points are the user admin sidebar and the shop product admin form, but the cropper is designed as a reusable component family.
 
 Portability assumptions:
 - backend passes field config
@@ -301,11 +333,13 @@ Likely causes:
 - media URL returns `404`
 - wrong `input_id`
 - field has no file persisted and no unsaved file selected
+- foreign-key lookup endpoint returned no URL for the selected object
 
 Check:
 - browser console network tab
 - model field `.name` and `.url`
 - `safe_serve()` behavior on admin domain
+- lookup endpoint response for shop foreign-key crops
 
 ### 3. Backend appears broken after frontend work
 Common cause seen during development:
@@ -328,6 +362,14 @@ If a new model field should use the cropper:
 5. verify the existing async derivative pipeline supports the field, or extend it
 6. add admin and backend regression coverage
 
+If a new foreign-key-backed field should use the shop-style cropper:
+
+1. define a `CropperFieldConfig` with both source and target field ids
+2. expose a lookup endpoint that returns the serving URL for the selected object
+3. decide whether the crop source should use a thumbnail or an original file
+4. make sure save logic clears stale cropped outputs when the FK source changes
+5. add admin, model, view, and task coverage
+
 If a field needs a non-square crop:
 
 1. set a different `crop_aspect_ratio`
@@ -347,11 +389,13 @@ Minimum verification for cropper changes:
 6. save model and confirm derived WebP regeneration still works
 
 ## Current Status
-As of March 29, 2026:
+As of April 8, 2026:
 
-- reusable multi-field cropper exists
+- reusable source-field cropper exists for `users.User`
+- reusable foreign-key cropper exists for `shop.ShopProduct`
 - field config type is centralized in `users/types.py`
 - cropper field instances are centralized in Django settings
+- shop cropper currently keeps its field config in admin
 - shape is typed with `CropperPreviewShape`
 - admin-domain media serving bug for `about_me_images` is fixed
 - backend test suite is green

@@ -21,6 +21,7 @@ from django.views.static import serve
 from astrophotography.views import AstroImageSecureView, ImageURLViewSet
 from core.sitemaps import AstroImageSitemap, StaticViewSitemap, TravelHighlightsSitemap
 from core.views import health_check_view, root_view
+from shop.views import ShopAstroImageLookupView
 
 from .api_urls import (
     admin_secure_media_urlpatterns,
@@ -58,6 +59,11 @@ urlpatterns = [
     *api_v1_base_urlpatterns,
     path("select2/", include("django_select2.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),
+    path(
+        "api/v1/shop/image-lookup/",
+        ShopAstroImageLookupView.as_view(),
+        name="shop-image-lookup",
+    ),
     path("", include("translation.urls")),
     path("admin/", admin.site.urls),
     # Sitemap at root so Google finds it at /sitemap.xml (cached 24 h)
@@ -72,7 +78,7 @@ urlpatterns = [
 
 
 def safe_serve(request, path, document_root=None, show_indexes=False):
-    if path.startswith("logs/") or path.startswith("images/"):
+    if path.startswith("logs/"):
         raise Http404()
     return serve(
         request,

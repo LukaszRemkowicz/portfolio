@@ -150,7 +150,7 @@ function getReadBackendRoute(pathname, method) {
     },
     {
       pathname: BFF_ROUTES.shop,
-      backendPath: '/v1/shop/',
+      backendPath: '/v1/shop/products/',
       kind: 'shop',
     },
     {

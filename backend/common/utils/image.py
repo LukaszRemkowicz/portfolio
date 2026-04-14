@@ -6,6 +6,7 @@ from typing import Any
 from PIL import Image
 
 from django.core.files.base import ContentFile
+from django.db.models.fields.files import FieldFile
 
 
 @dataclass(frozen=True)
@@ -15,6 +16,40 @@ class ImageSpec:
     dimension: int
     quality: int
     dimension_percentage: int | None = None
+    aspect_ratio: float | None = None
+
+
+def get_available_image_url(image_field: FieldFile | None) -> str:
+    """Return a file URL only when the field points to an existing stored file.
+
+    Image/file fields can retain stale names after replacements, cleanup issues, or
+    partial failures. This helper centralizes the safe read path used by callers that
+    want to present an image URL only when storage still confirms the file exists.
+    """
+    if not file_exists_in_storage(image_field):
+        return ""
+
+    if image_field is None:
+        return ""
+
+    try:
+        return str(image_field.url)
+    except (OSError, ValueError):
+        pass
+
+    return ""
+
+
+def file_exists_in_storage(file_field: FieldFile | None) -> bool:
+    """Return whether a Django file field points to a file that currently exists in storage."""
+    if not file_field:
+        return False
+
+    try:
+        name = str(file_field.name or "")
+        return bool(name and file_field.storage.exists(name))
+    except (OSError, ValueError):
+        return False
 
 
 def convert_to_webp(

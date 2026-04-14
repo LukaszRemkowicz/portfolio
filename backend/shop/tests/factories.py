@@ -3,6 +3,7 @@
 import factory
 from factory.django import DjangoModelFactory
 
+from astrophotography.tests.factories import AstroImageFactory
 from shop.models import ShopProduct
 
 
@@ -12,10 +13,7 @@ class ShopProductFactory(DjangoModelFactory):
     class Meta:
         model = ShopProduct
 
-    # BaseImage requires `path`; use factory's ImageField to generate a real file
-    path = factory.django.ImageField(filename="product.jpg", color="blue", format="JPEG")
-
-    # Translated fields: factory-boy sets these on the default language (EN)
+    image = factory.SubFactory(AstroImageFactory)
     title = factory.Faker("catch_phrase")
     description = factory.Faker("paragraph")
 
@@ -23,7 +21,6 @@ class ShopProductFactory(DjangoModelFactory):
     currency = "USD"
     external_url = factory.Faker("url")
     is_active = True
-    order = factory.Sequence(lambda n: n)
 
 
 class InactiveShopProductFactory(ShopProductFactory):

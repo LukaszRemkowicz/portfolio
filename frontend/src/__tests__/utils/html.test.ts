@@ -52,6 +52,14 @@ describe('HTML Utils', () => {
       expect(sanitizeHtml(input)).toBe('<img src="x">');
     });
 
+    it('removes background styles from backend rich text while preserving other formatting', () => {
+      const input =
+        '<p><span style="background-color: #ccc; color: #111;">Hello</span></p>';
+      expect(sanitizeHtml(input)).toBe(
+        '<p><span style="color: #111">Hello</span></p>'
+      );
+    });
+
     it('returns empty string for empty input', () => {
       expect(sanitizeHtml('')).toBe('');
     });

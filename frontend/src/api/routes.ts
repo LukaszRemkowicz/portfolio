@@ -18,7 +18,7 @@ export const API_ROUTES: ApiRoutes = {
   contact: `${API_V1}/contact/`,
   settings: `${API_V1}/settings/`,
   projects: `${API_V1}/projects/`,
-  shop: `${API_V1}/shop/`,
+  shop: `${API_V1}/shop/products/`,
   travelHighlights: `${API_V1}/travel-highlights/`,
   travelBySlug: `${API_V1}/travel/`,
   tags: `${API_V1}/tags/`,

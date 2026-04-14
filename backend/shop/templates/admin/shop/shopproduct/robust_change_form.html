@@ -5,10 +5,49 @@
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'users/css/admin_image_cropper.css' %}?v=20260330-1">
 <style>
-  .field-avatar_cropped,
-  .field-about_me_image_cropped,
-  .field-about_me_image2_cropped {
+  .field-image .related-widget-wrapper .select2-container {
+    min-width: min(100%, 280px) !important;
+  }
+
+  .field-image .select2-container--default.select2-container--default.select2-container--default .select2-selection--single {
+    padding-left: 16px !important;
+    padding-right: 0 !important;
+  }
+
+  .field-image .select2-container--default.select2-container--default.select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding-left: 0 !important;
+    padding-right: 48px !important;
+  }
+
+  .field-image .select2-container--default.select2-container--default.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    padding-left: 0 !important;
+  }
+
+  /*
+     We hide the manual "Choose File" buttons because this field
+     should only be populated by the 'Apply' button in the cropper.
+     This effectively makes it 'readonly' for the user.
+  */
+  .field-thumbnail_cropped input,
+  .field-thumbnail_cropped .clear-checkbox {
     display: none !important;
+  }
+
+  .field-thumbnail_cropped .file-upload {
+    font-size: 0.85em;
+    color: var(--body-quiet-color);
+  }
+
+  @media (max-width: 640px) {
+    .field-image .related-widget-wrapper {
+      flex-wrap: wrap !important;
+      align-items: flex-start !important;
+    }
+
+    .field-image .related-widget-wrapper .select2-container {
+      min-width: 0 !important;
+      width: 100% !important;
+    }
   }
 </style>
 {% endblock %}
@@ -50,14 +89,13 @@
 
 {% block submit_buttons_bottom %}
 {{ block.super }}
-{% if admin_image_cropper %}
+{% if admin_fk_image_cropper %}
 <div class="mt-3">
-    {% include "admin/users/widgets/admin_image_cropper.html" with cropper=admin_image_cropper %}
+    {% include "admin/shop/widgets/admin_fk_image_cropper.html" %}
 </div>
 {% endif %}
 {% endblock %}
 
 {% block admin_change_form_document_ready %}
 {{ block.super }}
-<script src="{% static 'users/js/admin_image_cropper.js' %}?v=20260330-1"></script>
 {% endblock %}

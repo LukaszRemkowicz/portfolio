@@ -129,7 +129,7 @@ jest.mock('react-i18next', () => ({
         'shop.metaTitle': 'Shop',
         'shop.metaDescription':
           'A preview of future shop collections, formats, and limited-edition astrophotography releases.',
-        'shop.kicker': 'Placeholder storefront',
+        'shop.kicker': 'Astrophotography prints',
         'shop.title': 'Collect the night sky in print.',
         'shop.subtitle':
           'This static preview page maps out how the future shop can present limited editions, print formats, and educational releases without needing live commerce data yet.',

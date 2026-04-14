@@ -47,7 +47,12 @@ describe('Shop Component', () => {
 
   it('renders empty state correctly', () => {
     (useShopProducts as jest.Mock).mockReturnValue({
-      data: [],
+      data: {
+        title: '',
+        description: '',
+        background_url: '',
+        products: [],
+      },
       isLoading: false,
       isError: false,
     });
@@ -60,15 +65,20 @@ describe('Shop Component', () => {
 
   it('renders shop cards correctly without outdated headers/buttons', () => {
     (useShopProducts as jest.Mock).mockReturnValue({
-      data: [
-        {
-          id: 'dragons',
-          title: 'Fighting Dragons with the Egg',
-          description: 'Mock description for the dragons.',
-          thumbnail_url: 'https://example.com/dragons.webp',
-          url: 'https://example.com/products/dragons',
-        },
-      ],
+      data: {
+        title: 'Collect the night sky in print.',
+        description: 'Shop description from backend settings.',
+        background_url: 'https://example.com/background.webp',
+        products: [
+          {
+            id: 'dragons',
+            title: 'Fighting Dragons with the Egg',
+            description: 'Mock description for the dragons.',
+            thumbnail_url: 'https://example.com/dragons.webp',
+            external_url: 'https://example.com/products/dragons',
+          },
+        ],
+      },
       isLoading: false,
       isError: false,
     });
@@ -86,6 +96,9 @@ describe('Shop Component', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText('Mock description for the dragons.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Shop description from backend settings.')
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View product' })).toHaveAttribute(
       'href',

@@ -12,7 +12,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import IntegrityError, models
 from django.utils.translation import gettext_lazy as _
 
-from common.utils.image import ImageSpec, convert_to_webp
+from common.utils.image import ImageSpec
 from core.models import LandingPageSettings, SingletonModel
 from translation.mixins import AutomatedTranslationModelMixin
 from users.tasks import process_user_images_task
@@ -205,39 +205,6 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
         if cropped_field:
             return cropped_field
         return getattr(self, source_field_name)
-
-    def _convert_image_field_to_webp(
-        self, source_field_name: str, webp_field_name: str, max_dimension: int, quality: int
-    ) -> None:
-        """Convert a source ImageField into its derived WebP field."""
-        source_field: Any = self.get_effective_image_field(source_field_name)
-        webp_field: Any = getattr(self, webp_field_name)
-        dimension_percentage = None
-        spec_method_name = (
-            "get_avatar_spec" if source_field_name == "avatar" else "get_portrait_spec"
-        )
-        spec: ImageSpec = getattr(self, spec_method_name)()
-
-        if not source_field:
-            setattr(self, webp_field_name, None)
-            return
-
-        if str(source_field.name).lower().endswith(".webp"):
-            setattr(self, webp_field_name, source_field.name)
-            return
-
-        result: tuple[str, Any] | None = convert_to_webp(
-            source_field,
-            quality=quality,
-            max_dimension=max_dimension,
-            dimension_percentage=dimension_percentage or spec.dimension_percentage,
-        )
-        if result is None:
-            setattr(self, webp_field_name, None)
-            return
-
-        _, webp_content = result
-        webp_field.save(webp_content.name, webp_content, save=False)
 
     def _get_serving_image_url(self, source_field_name: str, webp_field_name: str) -> str:
         """Return the source or WebP URL according to the admin serving toggle."""

@@ -21,6 +21,7 @@ api_v1_base_urlpatterns = [
     path(API_V1_PATH, include("users.urls")),
     path(API_V1_PATH, include("astrophotography.urls")),
     path(API_V1_PATH, include("inbox.urls")),
+    path(API_V1_PATH + "shop/", include("shop.urls")),
     path(API_V1_PATH + "settings/", SettingsView.as_view(), name="settings"),
     path(API_V1_PATH + "health", health_check_view, name="health-v1"),
 ]

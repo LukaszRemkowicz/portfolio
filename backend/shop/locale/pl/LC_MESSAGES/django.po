@@ -16,6 +16,9 @@ msgstr ""
 msgid "Title"
 msgstr "Tytuł"
 
+msgid "Image"
+msgstr "Zdjęcie"
+
 msgid "Description"
 msgstr "Opis"
 
@@ -57,3 +60,60 @@ msgstr "Kadrowanie obrazu"
 
 msgid "Shop"
 msgstr "Sklep"
+
+msgid "Background Source"
+msgstr "Źródło tła"
+
+msgid "The source background image used for the shop page."
+msgstr "Źródłowy obraz tła używany na stronie sklepu."
+
+msgid "Background"
+msgstr "Tło"
+
+msgid "Cropped background image managed by the admin image cropper."
+msgstr "Wykadrowany obraz tła zarządzany przez kadrowarkę w panelu admina."
+
+msgid "Shop Title"
+msgstr "Tytuł sklepu"
+
+msgid "Main title displayed on the shop page."
+msgstr "Główny tytuł wyświetlany na stronie sklepu."
+
+msgid "Shop Description"
+msgstr "Opis sklepu"
+
+msgid "Text block displayed below the title."
+msgstr "Blok tekstu wyświetlany pod tytułem."
+
+msgid "Shop Settings"
+msgstr "Ustawienia sklepu"
+
+msgid "Background Cropper"
+msgstr "Kadrowanie tła"
+
+msgid "Background Image"
+msgstr "Obraz tła"
+
+msgid "AstroImage"
+msgstr "Zdjęcie"
+
+msgid "Thumbnail (Cropped)"
+msgstr "Miniatura (wykadrowana)"
+
+msgid "Select an existing gallery image for this product."
+msgstr "Wybierz istniejące zdjęcie z galerii dla tego produktu."
+
+msgid "Crop of the image specifically meant for the shop list card. Output of the FK cropper."
+msgstr "Wykadrowana wersja obrazu przeznaczona specjalnie do karty produktu w sklepie. Wynik działania kadrowarki FK."
+
+msgid "Product Source Image"
+msgstr "Źródłowe zdjęcie produktu"
+
+msgid "Select image..."
+msgstr "Wybierz zdjęcie..."
+
+msgid "Virtual Image Cropper"
+msgstr "Wirtualna kadrowarka obrazu"
+
+msgid "Source an image from any AstroImage, adjust the crop, then apply it back to this product."
+msgstr "Wybierz źródłowe zdjęcie z AstroImage, dopasuj kadr, a następnie zastosuj go do tego produktu."

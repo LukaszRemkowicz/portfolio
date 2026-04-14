@@ -145,7 +145,14 @@ export interface ShopProduct {
   title: string;
   description: string;
   thumbnail_url?: string;
-  url: string;
+  external_url: string;
+}
+
+export interface ShopCatalog {
+  title: string;
+  description: string;
+  background_url: string;
+  products: ShopProduct[];
 }
 
 // Component Props Types

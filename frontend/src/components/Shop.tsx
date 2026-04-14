@@ -4,16 +4,23 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { APP_ROUTES } from '../api/constants';
 import { useShopProducts } from '../hooks/useShopProducts';
+import { getMediaUrl } from '../api/media';
 import SEO from './common/SEO';
 import StarBackground from './StarBackground';
 import ShootingStars from './ShootingStars';
 import ClientOnly from './common/ClientOnly';
+import { sanitizeHtml, stripHtml } from '../utils/html';
 import styles from '../styles/components/Shop.module.css';
 import appStyles from '../styles/components/App.module.css';
 
 const Shop: FC = () => {
   const { t } = useTranslation();
-  const { data: products = [], isLoading, isError } = useShopProducts();
+  const { data, isLoading, isError } = useShopProducts();
+  const products = data?.products ?? [];
+  const title = data?.title || t('shop.title');
+  const description = stripHtml(data?.description || '').trim();
+  const backgroundUrl = data?.background_url || '/zodiacal.png';
+  const fallbackDescription = t('shop.subtitle');
 
   return (
     <>
@@ -24,7 +31,11 @@ const Shop: FC = () => {
       />
       <StarBackground />
       <div className={styles.shopContainer}>
-        <div className={styles.zodiacalBackground} aria-hidden='true' />
+        <div
+          className={styles.zodiacalBackground}
+          style={{ backgroundImage: `url('${backgroundUrl}')` }}
+          aria-hidden='true'
+        />
         <div
           style={{
             position: 'fixed',
@@ -42,8 +53,10 @@ const Shop: FC = () => {
             <Sparkles size={14} />
             {t('shop.kicker')}
           </span>
-          <h1 className={appStyles.heroTitle}>{t('shop.title')}</h1>
-          <p className={styles.subtitle}>{t('shop.subtitle')}</p>
+          <h1 className={appStyles.heroTitle}>{title}</h1>
+          <p className={styles.subtitle}>
+            {description || fallbackDescription}
+          </p>
 
           <div className={styles.heroActions}>
             <Link
@@ -74,7 +87,10 @@ const Shop: FC = () => {
                   <div className={styles.productImage}>
                     {product.thumbnail_url ? (
                       <img
-                        src={product.thumbnail_url}
+                        src={
+                          getMediaUrl(product.thumbnail_url) ??
+                          product.thumbnail_url
+                        }
                         alt=''
                         className={styles.productArtwork}
                         loading='lazy'
@@ -84,9 +100,14 @@ const Shop: FC = () => {
                   </div>
                   <div className={styles.productBody}>
                     <h3>{product.title}</h3>
-                    <p>{product.description}</p>
+                    <div
+                      className='product-description-container'
+                      dangerouslySetInnerHTML={{
+                        __html: sanitizeHtml(product.description),
+                      }}
+                    />
                     <a
-                      href={product.url}
+                      href={product.external_url}
                       target='_blank'
                       rel='noreferrer'
                       className={styles.productAction}
