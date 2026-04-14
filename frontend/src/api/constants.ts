@@ -33,6 +33,7 @@ export const API_V1 = '/v1';
 export const APP_ROUTES = {
   HOME: '/',
   ASTROPHOTOGRAPHY: '/astrophotography',
+  SHOP: '/shop',
   PROGRAMMING: '/programming',
   CONTACT: '/contact',
   // Corrected from /travel-highlights — matches App.tsx route definition

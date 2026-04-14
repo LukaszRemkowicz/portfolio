@@ -11,6 +11,12 @@ const mockFetchTravelHighlights: jest.Mock = jest.fn(async () => []);
 const mockFetchLatestAstroImages: jest.Mock = jest.fn(async () => []);
 const mockFetchCategories: jest.Mock = jest.fn(async () => []);
 const mockFetchTags: jest.Mock = jest.fn(async () => []);
+const mockFetchShopProducts: jest.Mock = jest.fn(async () => ({
+  title: '',
+  description: '',
+  background_url: '',
+  products: [],
+}));
 const mockFetchAstroImages: jest.Mock = jest.fn(async () => ({
   count: 0,
   next: null,
@@ -92,6 +98,7 @@ jest.mock('../api/services', () => ({
   fetchCategories: (client?: unknown) => mockFetchCategories(client),
   fetchTags: (params?: unknown, client?: unknown) =>
     mockFetchTags(params, client),
+  fetchShopProducts: (client?: unknown) => mockFetchShopProducts(client),
   fetchAstroImages: (params?: unknown, client?: unknown) =>
     mockFetchAstroImages(params, client),
 }));
@@ -210,6 +217,12 @@ describe('SSR entry server', () => {
       },
       'mock-client'
     );
+  });
+
+  it('prefetches the shop catalog for the shop route', async () => {
+    await render('/shop', 'en', 'https://portfolio.local', 'req-shop');
+
+    expect(mockFetchShopProducts).toHaveBeenCalledWith('mock-client');
   });
 
   it('streams rendered HTML', async () => {

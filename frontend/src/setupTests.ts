@@ -82,6 +82,7 @@ jest.mock('react-i18next', () => ({
       const translations: Record<string, string> = {
         'nav.home': 'Home',
         'nav.astrophotography': 'Astrophotography',
+        'nav.shop': 'Shop',
         'nav.programming': 'Programming',
         'nav.about': 'About',
         'nav.contact': 'Contact',
@@ -125,6 +126,21 @@ jest.mock('react-i18next', () => ({
         'programming.liveDemo': 'Live Demo',
         'programming.empty':
           'The archives appear to be empty. Check back later for new transmissions.',
+        'shop.metaTitle': 'Shop',
+        'shop.metaDescription':
+          'A preview of future shop collections, formats, and limited-edition astrophotography releases.',
+        'shop.kicker': 'Astrophotography prints',
+        'shop.title': 'Collect the night sky in print.',
+        'shop.subtitle':
+          'This static preview page maps out how the future shop can present limited editions, print formats, and educational releases without needing live commerce data yet.',
+        'shop.primaryCta': 'Browse placeholders',
+        'shop.secondaryCta': 'Request a custom print',
+        'shop.placeholderBadge': 'Placeholder',
+        'shop.productEyebrow': 'Curated release',
+        'shop.viewProduct': 'View product',
+        'shop.loading': 'Loading catalog...',
+        'shop.error': 'Catalog is temporarily out of orbit.',
+        'shop.empty': 'No releases are available yet.',
         'categories.Landscape': 'Landscape',
         'categories.Deep Sky': 'Deep Sky',
         'categories.Startrails': 'Startrails',

@@ -14,6 +14,7 @@ import { APP_ROUTES } from './api/constants';
 import styles from './styles/components/App.module.css';
 
 const AstroGallery = lazy(() => import('./components/AstroGallery'));
+const Shop = lazy(() => import('./components/Shop'));
 const Programming = lazy(() => import('./components/Programming'));
 const TravelHighlightsPage = lazy(
   () => import('./components/TravelHighlightsPage')
@@ -58,6 +59,16 @@ const App: React.FC = () => {
                 AstroGallery reads the :slug param and opens the modal. */}
               <Route path=':slug' element={null} />
             </Route>
+            <Route
+              path={APP_ROUTES.SHOP}
+              element={
+                <RouteSuspense>
+                  <MainLayout>
+                    <Shop />
+                  </MainLayout>
+                </RouteSuspense>
+              }
+            />
             <Route
               path={APP_ROUTES.PROGRAMMING}
               element={

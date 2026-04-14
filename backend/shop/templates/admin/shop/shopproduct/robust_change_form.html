@@ -1,0 +1,101 @@
+{% extends "admin/change_form.html" %}
+{% load i18n jazzmin static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'users/css/admin_image_cropper.css' %}?v=20260330-1">
+<style>
+  .field-image .related-widget-wrapper .select2-container {
+    min-width: min(100%, 280px) !important;
+  }
+
+  .field-image .select2-container--default.select2-container--default.select2-container--default .select2-selection--single {
+    padding-left: 16px !important;
+    padding-right: 0 !important;
+  }
+
+  .field-image .select2-container--default.select2-container--default.select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding-left: 0 !important;
+    padding-right: 48px !important;
+  }
+
+  .field-image .select2-container--default.select2-container--default.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    padding-left: 0 !important;
+  }
+
+  /*
+     We hide the manual "Choose File" buttons because this field
+     should only be populated by the 'Apply' button in the cropper.
+     This effectively makes it 'readonly' for the user.
+  */
+  .field-thumbnail_cropped input,
+  .field-thumbnail_cropped .clear-checkbox {
+    display: none !important;
+  }
+
+  .field-thumbnail_cropped .file-upload {
+    font-size: 0.85em;
+    color: var(--body-quiet-color);
+  }
+
+  @media (max-width: 640px) {
+    .field-image .related-widget-wrapper {
+      flex-wrap: wrap !important;
+      align-items: flex-start !important;
+    }
+
+    .field-image .related-widget-wrapper .select2-container {
+      min-width: 0 !important;
+      width: 100% !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block field_sets %}
+<div class="col-12 col-lg-9">
+    <div class="card">
+        <div class="card-body">
+            {% if language_tabs %}
+            <div class="parler-language-tabs{% if language_tabs.css_class %} {{ language_tabs.css_class }}{% endif %}">
+                {% for url, name, code, status in language_tabs %}
+                {% if status == "current" %}
+                <input type="hidden" class="language_button selected" name="{{ code }}" />
+                <span class="current">
+                    {{ name }}
+                    {% if language_tabs.current_is_translated and language_tabs.allow_deletion %}
+                    <a class="deletelink" href="./delete-translation/{{ code }}/"
+                        title="{% trans 'Delete Translation' %}">&nbsp;</a>
+                    {% endif %}
+                </span>
+                {% else %}
+                <span class="{{ status }}">
+                    <a href="{{ url }}">{{ name }}</a>
+                    {% if status == "available" and language_tabs.allow_deletion %}
+                    <a class="deletelink" href="./delete-translation/{{ code }}/"
+                        title="{% trans 'Delete Translation' %}">&nbsp;</a>
+                    {% endif %}
+                </span>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% include "jazzmin/includes/horizontal_tabs.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block submit_buttons_bottom %}
+{{ block.super }}
+{% if admin_fk_image_cropper %}
+<div class="mt-3">
+    {% include "admin/shop/widgets/admin_fk_image_cropper.html" %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+{% endblock %}

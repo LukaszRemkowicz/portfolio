@@ -5,68 +5,9 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
-from common.tests.image_helpers import _jpeg_field
 from core.models import LandingPageSettings
 from core.tests.factories import LandingPageSettingsFactory
 from users.tests.factories import UserFactory
-
-# ---------------------------------------------------------------------------
-# User._convert_image_field_to_webp()
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.django_db
-class TestUserConvertImageFieldToWebp:
-    def test_uses_cropped_image_when_present(self):
-        """If a cropped image exists, the derived WebP should be generated from it."""
-        user = UserFactory.create_superuser()
-        user.avatar = _jpeg_field("avatar-original.jpg")
-        user.avatar_cropped = _jpeg_field("avatar-cropped.jpg")
-
-        user._convert_image_field_to_webp("avatar", "avatar_webp", 1000, 80)
-
-        assert str(user.avatar_webp.name).endswith(".webp")
-        assert "avatar-cropped" in str(user.avatar_webp.name)
-
-    def test_skips_empty_field(self):
-        """If the source field has no image, the derived WebP field must stay empty."""
-        user = UserFactory.create_superuser()
-        user._convert_image_field_to_webp("avatar", "avatar_webp", 1000, 80)
-        assert not user.avatar_webp
-
-    def test_skips_already_webp(self):
-        """If the source already points to .webp, the derived field mirrors it."""
-        user = UserFactory.create_superuser()
-        field = MagicMock()
-        field.__bool__ = MagicMock(return_value=True)
-        field.name = "avatar.webp"
-        user.avatar = field
-
-        user._convert_image_field_to_webp("avatar", "avatar_webp", 1000, 80)
-        assert user.avatar_webp == "avatar.webp"
-
-    def test_converts_and_sets_webp_field(self):
-        """A JPEG avatar should be converted into the derived WebP field."""
-        user = UserFactory.create_superuser()
-        field = _jpeg_field("avatar.jpg")
-        user.avatar = field
-
-        user._convert_image_field_to_webp("avatar", "avatar_webp", 1000, 80)
-
-        assert str(user.avatar_webp.name).endswith(".webp")
-
-    def test_sets_webp_field_to_none_on_broken_image(self):
-        """If PIL cannot open the image, the derived field is cleared, no exception raised."""
-        user = UserFactory.create_superuser()
-        field = MagicMock()
-        field.__bool__ = MagicMock(return_value=True)
-        field.name = "broken.jpg"
-        field.read.side_effect = OSError("corrupt")
-        user.avatar = field
-
-        user._convert_image_field_to_webp("avatar", "avatar_webp", 1000, 80)
-        assert not user.avatar_webp
-
 
 # ---------------------------------------------------------------------------
 # User._get_serving_image_url()

@@ -58,6 +58,14 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
             >
               {t('nav.astrophotography')}
             </NavLink>
+            <NavLink
+              to={APP_ROUTES.SHOP}
+              className={({ isActive }) =>
+                `${styles.link} ${isActive ? styles.active : ''}`
+              }
+            >
+              {t('nav.shop')}
+            </NavLink>
             {isProgrammingEnabled && (
               <NavLink
                 to={APP_ROUTES.PROGRAMMING}
@@ -128,6 +136,13 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
                 className={({ isActive }) => (isActive ? styles.active : '')}
               >
                 {t('nav.astrophotography')}
+              </NavLink>
+              <NavLink
+                to={APP_ROUTES.SHOP}
+                onClick={toggleMenu}
+                className={({ isActive }) => (isActive ? styles.active : '')}
+              >
+                {t('nav.shop')}
               </NavLink>
               {isProgrammingEnabled && (
                 <NavLink

@@ -344,6 +344,33 @@ class TestTranslationServiceBusinessLogic:
         # Verify save_translations called
         instance.save_translations.assert_called_once()
 
+    def test_translate_shop_settings_handles_text_and_html(self, mocker: MockerFixture):
+        """Verify title uses plain text and description uses HTML translation."""
+        mock_agent = mocker.Mock()
+        service = TranslationService(agent=mock_agent)
+
+        instance = mocker.MagicMock()
+        instance.__class__.__name__ = "ShopSettings"
+
+        mock_run = mocker.patch.object(
+            service, "_run_parler_translation", return_value=("Translated", None)
+        )
+        mocker.patch.object(service, "_save_translations")
+
+        results, failures = service.translate_shop_settings(instance, "pl")
+
+        assert results["title"] == "Translated"
+        assert results["description"] == "Translated"
+        assert failures == {}
+        assert mock_run.call_count == 2
+
+        handlers_func = [
+            h.func if isinstance(h, functools.partial) else h
+            for h in (call[0][3] for call in mock_run.call_args_list)
+        ]
+        assert mock_agent.translate in handlers_func
+        assert mock_agent.translate_html in handlers_func
+
     def test_translate_astro_image_uses_html_agent_for_description(self, mocker: MockerFixture):
         """Verify HTML agent use for description in AstroImage translation."""
         mock_agent = mocker.Mock()

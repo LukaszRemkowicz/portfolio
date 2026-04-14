@@ -14,7 +14,7 @@ from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from common.utils.image import ImageSpec, convert_to_webp
+from common.utils.image import ImageSpec, convert_to_webp, file_exists_in_storage
 from core.tasks import process_image_task
 
 logger = logging.getLogger(__name__)
@@ -141,68 +141,55 @@ class BaseImage(TranslatableModel):
                 }
             ) from exc
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        is_new = self._state.adding
-        existing_path_name = ""
-        if self.pk:
-            existing_path_name = (
-                type(self)
-                ._default_manager.filter(pk=self.pk)
-                .values_list("path", flat=True)
-                .first()
-                or ""
-            )
+    def _verify_storage_consistency(
+        self, is_new: bool, path_changed: bool, existing_path_name: str
+    ) -> None:
+        """Ensure the uploaded file was actually saved to storage, with recovery logic."""
+        if not (path_changed and existing_path_name and self.path):
+            return
 
-        path_changed = bool(is_new or self.path_tracker.has_changed("path"))
+        if not file_exists_in_storage(self.path):
+            if (
+                existing_path_name
+                and existing_path_name != str(self.path.name or "")
+                and file_exists_in_storage(
+                    self.path.field.attr_class(self, self.path.field, existing_path_name)
+                )
+            ):
+                self.path.name = existing_path_name
+            else:
+                path_name = str(self.path.name or "")
+                logger.error(
+                    "Image file missing from storage immediately after save",
+                    extra={
+                        "model": self._meta.label,
+                        "pk": str(self.pk),
+                        "path": path_name,
+                        "is_new": is_new,
+                        "path_changed": path_changed,
+                    },
+                )
+                if is_new and self.pk:
+                    type(self).objects.filter(pk=self.pk).delete()
+                raise ValidationError(
+                    {
+                        "path": _(
+                            "The uploaded image file was not saved to " "storage. Please try again."
+                        )
+                    }
+                )
 
-        super().save(*args, **kwargs)
-
-        if path_changed and existing_path_name and self.path:
-            path_name = str(self.path.name or "")
-            storage = self.path.storage
-            if path_name and not storage.exists(path_name):
-                latest_path_name = ""
-                if self.pk:
-                    latest_path_name = (
-                        type(self)
-                        ._default_manager.filter(pk=self.pk)
-                        .values_list("path", flat=True)
-                        .first()
-                        or ""
-                    )
-                if (
-                    latest_path_name
-                    and latest_path_name != path_name
-                    and storage.exists(latest_path_name)
-                ):
-                    self.path.name = latest_path_name
-                else:
-                    logger.error(
-                        "Image file missing from storage immediately after save",
-                        extra={
-                            "model": self._meta.label,
-                            "pk": str(self.pk),
-                            "path": path_name,
-                            "is_new": is_new,
-                            "path_changed": path_changed,
-                        },
-                    )
-                    if is_new and self.pk:
-                        type(self).objects.filter(pk=self.pk).delete()
-                    raise ValidationError(
-                        {
-                            "path": _(
-                                "The uploaded image file was not saved to "
-                                "storage. Please try again."
-                            )
-                        }
-                    )
-
-        if (is_new or path_changed) and self.path and not kwargs.get("update_fields"):
+    def _dispatch_image_processing(
+        self, is_new: bool, path_changed: bool, update_fields: Any
+    ) -> None:
+        """Trigger the background celery task to process the image (WebP + thumbnails)."""
+        if (is_new or path_changed) and self.path and not update_fields:
             process_image_task.delay_on_commit(
                 self._meta.app_label, self._meta.model_name, str(self.pk)
             )
 
+    def _cleanup_old_files(self, path_changed: bool, existing_path_name: str) -> None:
+        """Delete stale image files from storage, respecting the original_image rollback target."""
         if self.pk and path_changed and existing_path_name:
             current_storage: Any = self.path.storage
             current_saved_name = str(self.path.name or "")
@@ -217,6 +204,18 @@ class BaseImage(TranslatableModel):
                 and current_storage.exists(existing_path_name)
             ):
                 current_storage.delete(existing_path_name)
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        is_new = self._state.adding
+        previous_path = self.path_tracker.previous("path") if self.pk else ""
+        existing_path_name = str(getattr(previous_path, "name", previous_path) or "")
+        path_changed = bool(is_new or self.path_tracker.has_changed("path"))
+
+        super().save(*args, **kwargs)
+
+        self._verify_storage_consistency(is_new, path_changed, existing_path_name)
+        self._dispatch_image_processing(is_new, path_changed, kwargs.get("update_fields"))
+        self._cleanup_old_files(path_changed, existing_path_name)
 
     def _convert_to_webp(self) -> bool:
         """Convert from the original source image to WebP using self.get_image_spec().
@@ -356,6 +355,7 @@ class LandingPageSettings(SingletonModel):
     lastimages_enabled = models.BooleanField(
         default=True, verbose_name=_("Last Images Section Enabled")
     )
+    shop_enabled = models.BooleanField(default=False, verbose_name=_("Shop Section Enabled"))
     serve_webp_images = models.BooleanField(
         default=False,
         verbose_name=_("Serve WebP Images"),

@@ -44,6 +44,6 @@ class Command(BaseCommand):
         action = "Rebuilt" if recalculate else "Calculated"
         self.stdout.write(
             self.style.SUCCESS(
-                f"{action} total time spent: {total_hours}h " f"from {processed_images} image(s)."
+                f"{action} total time spent: {total_hours}h from {processed_images} image(s)."
             )
         )

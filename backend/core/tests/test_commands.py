@@ -36,6 +36,7 @@ class TestSeedSettingsCommand:
         assert response.data["contactForm"] is True
         assert response.data["travelHighlights"] is True
         assert response.data["lastimages"] is True
+        assert response.data["shop"] is False
         assert response.data["meteors"]["randomShootingStars"] is True
 
 

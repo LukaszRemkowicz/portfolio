@@ -39,7 +39,27 @@ export const slugify = (text: string): string => {
 export const sanitizeHtml = (html: string): string => {
   if (!html) return '';
 
-  return DOMPurify.sanitize(html);
+  const sanitizedHtml = DOMPurify.sanitize(html);
+
+  return sanitizedHtml.replace(
+    /\sstyle=(['"])(.*?)\1/gi,
+    (_match, quote: string, styleValue: string) => {
+      const preservedDeclarations = styleValue
+        .split(';')
+        .map(declaration => declaration.trim())
+        .filter(Boolean)
+        .filter(
+          declaration =>
+            !/^(background|background-color)\s*:/i.test(declaration)
+        );
+
+      if (preservedDeclarations.length === 0) {
+        return '';
+      }
+
+      return ` style=${quote}${preservedDeclarations.join('; ')}${quote}`;
+    }
+  );
 };
 
 /**

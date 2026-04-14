@@ -30,6 +30,7 @@ import {
   Project,
   MainPageLocation,
   Tag,
+  ShopCatalog,
 } from '../types';
 import { NotFoundError } from './errors';
 import { DataTransport, QueryParams, resolveDataTransport } from './transport';
@@ -227,6 +228,25 @@ export const fetchProjects = async (): Promise<Project[]> => {
   // }
   // return data;
   return [];
+};
+
+/** Fetch the public shop catalog, including storefront title/description and products. */
+export const fetchShopProducts = async (
+  clientOrTransport: AxiosInstance | DataTransport = api
+): Promise<ShopCatalog> => {
+  const transport = resolveDataTransport(clientOrTransport);
+
+  const data = await transport.get<ShopCatalog>({
+    browser: BFF_ROUTES.shop,
+    server: API_ROUTES.shop,
+  });
+
+  return {
+    title: data?.title || '',
+    description: data?.description || '',
+    background_url: getMediaUrl(data?.background_url) || '',
+    products: Array.isArray(data?.products) ? data.products : [],
+  };
 };
 
 /** Fetch and normalize the travel highlights shown on the homepage. */

@@ -98,6 +98,9 @@ Flow:
 Management command:
 - `recalculate_landing_page_total_time_spent`
 
+Implementation location:
+- `backend/astrophotography/management/commands/recalculate_landing_page_total_time_spent.py`
+
 Modes:
 - default: calculate only images where `calculated_exposure_hours == 0`
 - `--recalculate`: rebuild all image values from scratch

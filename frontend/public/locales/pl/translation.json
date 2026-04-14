@@ -2,9 +2,25 @@
   "nav": {
     "home": "Start",
     "astrophotography": "Astrofotografia",
+    "shop": "Sklep",
     "programming": "Programowanie",
     "about": "O mnie",
     "contact": "Kontakt"
+  },
+  "shop": {
+    "metaTitle": "Sklep",
+    "metaDescription": "Podgląd przyszłego sklepu z kolekcjami, formatami wydruków i limitowanymi wydaniami astrofotografii.",
+    "kicker": "Zdjecia astrofotograficzne",
+    "title": "Zabierz nocne niebo na swoją ścianę.",
+    "subtitle": "Ta statyczna podstrona pokazuje kierunek dla przyszłego sklepu: limitowane edycje, formaty wydruków i materiały edukacyjne, jeszcze bez integracji e-commerce.",
+    "primaryCta": "Przeglądaj makiety",
+    "secondaryCta": "Zapytaj o wydruk",
+    "placeholderBadge": "Placeholder",
+    "productEyebrow": "Wybrane wydanie",
+    "viewProduct": "Zobacz produkt",
+    "loading": "Ładowanie katalogu...",
+    "error": "Katalog chwilowo wypadł z orbity.",
+    "empty": "Brak dostępnych wydań."
   },
   "common": {
     "en": "EN",

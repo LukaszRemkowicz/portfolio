@@ -26,6 +26,7 @@ import {
   fetchTags,
   fetchTravelHighlights,
   fetchLatestAstroImages,
+  fetchShopProducts,
 } from './api/services';
 import { ASTRO_GALLERY_PAGE_SIZE } from './hooks/useAstroImages';
 import { fetchTravelHighlightDetail } from './hooks/useTravelHighlightDetail';
@@ -176,6 +177,17 @@ async function prefetchRouteQueries(
 
   if (pathname === APP_ROUTES.HOME) {
     await Promise.all([...commonPrefetches]);
+    return;
+  }
+
+  if (pathname === APP_ROUTES.SHOP) {
+    await Promise.all([
+      ...commonPrefetches,
+      prefetchQuerySafely(queryClient, {
+        queryKey: ['shop-products'],
+        queryFn: () => fetchShopProducts(client),
+      }),
+    ]);
     return;
   }
 

@@ -397,7 +397,7 @@ class TestLandingPageTotalTimeSpentCommand:
         second = AstroImageFactory(exposure_details="second", calculated_exposure_hours=7.0)
         type(second).objects.filter(pk=second.pk).update(calculated_exposure_hours=7.0)
         mock_calculate_task = mocker.patch(
-            "core.management.commands.recalculate_landing_page_total_time_spent."
+            "astrophotography.management.commands.recalculate_landing_page_total_time_spent."
             "calculate_astroimage_exposure_hours_task",
             side_effect=lambda astro_image_id: (
                 type(first).objects.filter(pk=astro_image_id).update(calculated_exposure_hours=1.5),
@@ -409,11 +409,11 @@ class TestLandingPageTotalTimeSpentCommand:
             )[1],
         )
         mock_invalidate_cache = mocker.patch(
-            "core.management.commands.recalculate_landing_page_total_time_spent."
+            "astrophotography.management.commands.recalculate_landing_page_total_time_spent."
             "CacheService.invalidate_landing_page_cache"
         )
         mock_invalidate_ssr = mocker.patch(
-            "core.management.commands.recalculate_landing_page_total_time_spent."
+            "astrophotography.management.commands.recalculate_landing_page_total_time_spent."
             "invalidate_frontend_ssr_cache_task.delay"
         )
         output = StringIO()
@@ -442,7 +442,7 @@ class TestLandingPageTotalTimeSpentCommand:
             str(second.pk): 7.0,
         }
         mock_calculate_task = mocker.patch(
-            "core.management.commands.recalculate_landing_page_total_time_spent."
+            "astrophotography.management.commands.recalculate_landing_page_total_time_spent."
             "calculate_astroimage_exposure_hours_task",
             side_effect=lambda astro_image_id: (
                 type(first)
@@ -456,11 +456,11 @@ class TestLandingPageTotalTimeSpentCommand:
             )[1],
         )
         mock_invalidate_cache = mocker.patch(
-            "core.management.commands.recalculate_landing_page_total_time_spent."
+            "astrophotography.management.commands.recalculate_landing_page_total_time_spent."
             "CacheService.invalidate_landing_page_cache"
         )
         mock_invalidate_ssr = mocker.patch(
-            "core.management.commands.recalculate_landing_page_total_time_spent."
+            "astrophotography.management.commands.recalculate_landing_page_total_time_spent."
             "invalidate_frontend_ssr_cache_task.delay"
         )
         output = StringIO()
