@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -8,7 +9,7 @@ import { useFeatureFlag } from '../hooks/useFeatureFlag';
 jest.mock('../hooks/useFeatureFlag');
 jest.mock('../components/MainLayout', () => ({
   __esModule: true,
-  default: ({ children }: { children: unknown }) => (
+  default: ({ children }: { children: ReactNode }) => (
     <div data-testid='main-layout'>{children}</div>
   ),
 }));

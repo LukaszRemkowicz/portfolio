@@ -79,12 +79,33 @@
             return;
         }
 
+        const parser = new DOMParser();
+        const parsedDocument = parser.parseFromString(responseText, "text/html");
+        const nextDocumentElement = parsedDocument.documentElement;
+        if (!nextDocumentElement) {
+            window.location.assign(responseUrl);
+            return;
+        }
+
         if (responseUrl && responseUrl !== window.location.href) {
             window.history.replaceState({}, "", responseUrl);
         }
-        document.open();
-        document.write(responseText);
-        document.close();
+
+        document.documentElement.replaceWith(nextDocumentElement);
+
+        Array.from(document.querySelectorAll("script")).forEach(function (scriptNode) {
+            const replacement = document.createElement("script");
+
+            Array.from(scriptNode.attributes).forEach(function (attribute) {
+                replacement.setAttribute(attribute.name, attribute.value);
+            });
+
+            if (scriptNode.textContent) {
+                replacement.textContent = scriptNode.textContent;
+            }
+
+            scriptNode.replaceWith(replacement);
+        });
     }
 
     function getProgressConfig(form) {
