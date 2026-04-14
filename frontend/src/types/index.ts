@@ -140,6 +140,21 @@ export interface Project {
   updated_at: string;
 }
 
+export interface ShopProduct {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail_url?: string;
+  external_url: string;
+}
+
+export interface ShopCatalog {
+  title: string;
+  description: string;
+  background_url: string;
+  products: ShopProduct[];
+}
+
 // Component Props Types
 export interface HomeProps {
   portraitUrl: string;
@@ -200,6 +215,7 @@ export interface ApiError {
 
 export interface EnabledFeatures {
   programming?: boolean;
+  shop?: boolean;
   contactForm?: boolean;
   lastimages?: boolean;
   travelHighlights?: boolean;
@@ -214,6 +230,7 @@ export interface ApiRoutes {
   contact: string;
   settings: string;
   projects: string;
+  shop: string;
   travelHighlights: string;
   travelBySlug: string;
   tags: string;

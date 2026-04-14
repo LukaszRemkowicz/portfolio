@@ -29,7 +29,7 @@ Release scripts manage **Staging** and **Production** deployments on a single VP
 These scripts **require** several variables to be set, typically via Doppler.
 
 ### ✅ Mandatory
-1. `ENVIRONMENT`: Determines tags and isolated state (e.g. `production`, `staging`)
+1. `ENVIRONMENT`: Determines tags and isolated state (e.g. `production`, `stage`)
 2. `TAG`: The git tag or version (e.g. `v1.2.3`)
 3. `PROJECT_OWNER`: Injected into frontend metadata
 4. `SITE_DOMAIN` and `API_DOMAIN`: Used for Nginx templates and frontend builds
@@ -74,9 +74,9 @@ doppler run -- ./infra/scripts/release/deploy_staging.sh
 Manual flow:
 
 ```bash
-TAG=v1.0.0-test ENVIRONMENT=staging doppler run -- ./infra/scripts/release/build.sh
-TAG=v1.0.0-test ENVIRONMENT=staging COMPOSE_FILE=docker-compose.stage.yml doppler run -- ./infra/scripts/release/release.sh
-TAG=v1.0.0-test ENVIRONMENT=staging COMPOSE_FILE=docker-compose.stage.yml doppler run -- ./infra/scripts/release/deploy.sh
+TAG=v1.0.0-test ENVIRONMENT=stage doppler run -- ./infra/scripts/release/build.sh
+TAG=v1.0.0-test ENVIRONMENT=stage COMPOSE_FILE=docker-compose.stage.yml doppler run -- ./infra/scripts/release/release.sh
+TAG=v1.0.0-test ENVIRONMENT=stage COMPOSE_FILE=docker-compose.stage.yml doppler run -- ./infra/scripts/release/deploy.sh
 ```
 
 ## 🏭 Production Workflow

@@ -73,3 +73,9 @@ class CacheService:
         """Invalidates landing-page related API cache."""
         CacheService.clear_prefix("api_cache:/v1/settings")
         logger.info("Invalidated landing page cache")
+
+    @staticmethod
+    def invalidate_shop_cache() -> None:
+        """Invalidates shop API cache."""
+        CacheService.clear_prefix("api_cache_shop:/v1/shop")
+        logger.info("Invalidated shop cache")

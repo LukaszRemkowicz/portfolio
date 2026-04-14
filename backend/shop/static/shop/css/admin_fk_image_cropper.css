@@ -1,0 +1,46 @@
+.admin-image-cropper--standalone {
+    border: none !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.admin-image-cropper--standalone .card-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-image-cropper--standalone .card-body {
+    padding: 1.5rem;
+}
+
+.admin-image-cropper--standalone .admin-image-cropper__hint,
+.admin-image-cropper--standalone .admin-image-cropper__controls,
+.admin-image-cropper--standalone .admin-image-cropper__meta {
+    padding-inline: 0.5rem;
+}
+
+.admin-image-cropper--standalone .admin-image-cropper__viewport-wrap {
+    width: min(100%, 400px);
+}
+
+.admin-image-cropper--standalone .admin-image-cropper__actions {
+    gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+    .admin-image-cropper--standalone .card-body {
+        padding: 1rem;
+    }
+
+    .admin-image-cropper--standalone .admin-image-cropper__hint,
+    .admin-image-cropper--standalone .admin-image-cropper__controls,
+    .admin-image-cropper--standalone .admin-image-cropper__meta {
+        padding-inline: 0;
+    }
+
+    .admin-image-cropper--standalone .admin-image-cropper__viewport-wrap {
+        width: min(100%, 340px);
+    }
+
+    .admin-image-cropper--standalone .admin-image-cropper__meta {
+        grid-template-columns: 1fr;
+    }
+}

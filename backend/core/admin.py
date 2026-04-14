@@ -57,6 +57,7 @@ class LandingPageSettingsAdmin(admin.ModelAdmin):
                     "travel_highlights_enabled",
                     "programming_enabled",
                     "lastimages_enabled",
+                    "shop_enabled",
                     "latest_filters",
                     "meteors",
                 )
@@ -79,6 +80,7 @@ class LandingPageSettingsAdmin(admin.ModelAdmin):
         "travel_highlights_enabled",
         "programming_enabled",
         "lastimages_enabled",
+        "shop_enabled",
         "serve_webp_images",
         "meteors",
     )

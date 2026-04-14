@@ -159,6 +159,10 @@ disable_error_code = [
 ]
 
 [[tool.mypy.overrides]]
+module = "shop.models"
+disable_error_code = ["var-annotated"]
+
+[[tool.mypy.overrides]]
 module = [
     "translation.mixins",
     "programming.admin",
@@ -187,6 +191,7 @@ testpaths = [
     "inbox/tests",
     "core/tests",
     "common/tests",
+    "shop/tests",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",

@@ -79,31 +79,77 @@
             return;
         }
 
-        if (responseUrl && responseUrl !== window.location.href) {
-            window.history.replaceState({}, "", responseUrl);
-        }
-
         const parser = new DOMParser();
         const parsedDocument = parser.parseFromString(responseText, "text/html");
-        const newDocumentElement = parsedDocument.documentElement;
-        const currentDocumentElement = document.documentElement;
-
-        if (!newDocumentElement || !currentDocumentElement || !currentDocumentElement.parentNode) {
+        const nextDocumentElement = parsedDocument.documentElement;
+        if (!nextDocumentElement) {
             window.location.assign(responseUrl);
             return;
         }
 
-        currentDocumentElement.parentNode.replaceChild(newDocumentElement, currentDocumentElement);
+        if (responseUrl && responseUrl !== window.location.href) {
+            window.history.replaceState({}, "", responseUrl);
+        }
+
+        document.documentElement.replaceWith(nextDocumentElement);
+
+        Array.from(document.querySelectorAll("script")).forEach(function (scriptNode) {
+            const replacement = document.createElement("script");
+
+            Array.from(scriptNode.attributes).forEach(function (attribute) {
+                replacement.setAttribute(attribute.name, attribute.value);
+            });
+
+            if (scriptNode.textContent) {
+                replacement.textContent = scriptNode.textContent;
+            }
+
+            scriptNode.replaceWith(replacement);
+        });
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
+    function getProgressConfig(form) {
+        const fieldNames = (form.dataset.uploadProgressFieldNames || form.dataset.uploadProgressFieldName || "path")
+            .split(",")
+            .map(function(fieldName) {
+                return fieldName.trim();
+            })
+            .filter(Boolean);
+        const entityLabel =
+            (form.dataset.uploadProgressEntityLabel || "AstroImage").trim() || "AstroImage";
+
+        return {
+            fieldNames: fieldNames.length ? fieldNames : ["path"],
+            uploadTitle: "Uploading " + entityLabel,
+            saveTitle: "Saving " + entityLabel,
+        };
+    }
+
+    function getTrackedFileInputs(form, progressConfig) {
+        return progressConfig.fieldNames
+            .map(function(fieldName) {
+                return form.querySelector("input[type='file'][name='" + fieldName + "']");
+            })
+            .filter(function(fileInput) {
+                return fileInput instanceof HTMLInputElement;
+            });
+    }
+
+    function getActiveFileInput(fileInputs) {
+        return fileInputs.find(function(fileInput) {
+            return fileInput.files && fileInput.files.length > 0;
+        }) || null;
+    }
+
+    function initializeUploadProgress() {
         const form = document.querySelector("#content-main form[enctype='multipart/form-data']");
         if (!(form instanceof HTMLFormElement)) {
             return;
         }
 
-        const fileInput = form.querySelector("input[type='file'][name='path']");
-        if (!(fileInput instanceof HTMLInputElement)) {
+        const progressConfig = getProgressConfig(form);
+        const trackedFileInputs = getTrackedFileInputs(form, progressConfig);
+        if (!trackedFileInputs.length) {
             return;
         }
 
@@ -126,14 +172,15 @@
                 return;
             }
 
-            if (!fileInput.files || fileInput.files.length === 0) {
+            const activeFileInput = getActiveFileInput(trackedFileInputs);
+            if (!activeFileInput || !activeFileInput.files || activeFileInput.files.length === 0) {
                 return;
             }
 
             event.preventDefault();
             requestInFlight = true;
 
-            const file = fileInput.files[0];
+            const file = activeFileInput.files[0];
             const formData = new FormData(form);
             if (activeSubmitter && activeSubmitter.name && !formData.has(activeSubmitter.name)) {
                 formData.append(activeSubmitter.name, activeSubmitter.value || "");
@@ -144,7 +191,7 @@
             });
 
             ui.panel.classList.remove("is-error");
-            ui.title.textContent = "Uploading AstroImage";
+            ui.title.textContent = progressConfig.uploadTitle;
             ui.meta.textContent = file.name + (file.size ? " • " + formatBytes(file.size) : "");
             ui.status.textContent = "Uploading file to the server...";
             setProgress(ui, 0);
@@ -166,7 +213,7 @@
             });
 
             xhr.upload.addEventListener("load", function () {
-                ui.title.textContent = "Saving AstroImage";
+                ui.title.textContent = progressConfig.saveTitle;
                 ui.status.textContent = "Upload complete. Waiting for the server response...";
                 setIndeterminate(ui);
             });
@@ -202,5 +249,11 @@
 
             xhr.send(formData);
         });
-    });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initializeUploadProgress);
+    } else {
+        initializeUploadProgress();
+    }
 })();

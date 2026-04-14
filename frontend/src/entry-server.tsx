@@ -26,6 +26,7 @@ import {
   fetchTags,
   fetchTravelHighlights,
   fetchLatestAstroImages,
+  fetchShopProducts,
 } from './api/services';
 import { ASTRO_GALLERY_PAGE_SIZE } from './hooks/useAstroImages';
 import { fetchTravelHighlightDetail } from './hooks/useTravelHighlightDetail';
@@ -140,12 +141,13 @@ async function prefetchRouteQueries(
   const requestUrl = new URL(url, 'http://frontend.local');
   const pathname = requestUrl.pathname;
   const searchParams = requestUrl.searchParams;
+  const settingsPrefetch = prefetchQuerySafely(queryClient, {
+    queryKey: ['settings', language],
+    queryFn: () =>
+      cachedShellQuery(SHELL_RESOURCES.settings, () => fetchSettings(client)),
+  });
   const commonPrefetches = [
-    prefetchQuerySafely(queryClient, {
-      queryKey: ['settings'],
-      queryFn: () =>
-        cachedShellQuery(SHELL_RESOURCES.settings, () => fetchSettings(client)),
-    }),
+    settingsPrefetch,
     prefetchQuerySafely(queryClient, {
       queryKey: ['profile', language],
       queryFn: () =>
@@ -176,6 +178,28 @@ async function prefetchRouteQueries(
 
   if (pathname === APP_ROUTES.HOME) {
     await Promise.all([...commonPrefetches]);
+    return;
+  }
+
+  if (pathname === APP_ROUTES.SHOP) {
+    await settingsPrefetch;
+    const settings = queryClient.getQueryData<{ shop?: boolean }>([
+      'settings',
+      language,
+    ]);
+
+    if (settings?.shop !== true) {
+      await Promise.all([...commonPrefetches]);
+      return;
+    }
+
+    await Promise.all([
+      ...commonPrefetches,
+      prefetchQuerySafely(queryClient, {
+        queryKey: ['shop-products'],
+        queryFn: () => fetchShopProducts(client),
+      }),
+    ]);
     return;
   }
 

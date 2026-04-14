@@ -1,0 +1,65 @@
+{% load i18n static %}
+
+{% if admin_fk_image_cropper %}
+{{ admin_fk_image_cropper|json_script:"admin-fk-image-cropper-config" }}
+{% endif %}
+
+<section
+    class="card admin-image-cropper admin-image-cropper--standalone"
+    data-admin-fk-image-cropper-root
+    data-visible-tab-panel="{{ admin_fk_image_cropper.visible_tab_panel }}"
+>
+
+    <div class="card-header">
+        <strong>{% trans "Virtual Image Cropper" %}</strong>
+    </div>
+
+    <div class="card-body">
+        <p class="admin-image-cropper__hint">
+            {% trans "Source an image from any AstroImage, adjust the crop, then apply it back to this product." %}
+        </p>
+
+        <div class="admin-fk-image-cropper__viewport-wrap admin-image-cropper__viewport-wrap">
+            <canvas class="admin-image-cropper__canvas" data-admin-fk-image-cropper-canvas></canvas>
+            <div class="admin-image-cropper__overlay" data-admin-fk-image-cropper-overlay data-preview-shape="rounded-square"></div>
+        </div>
+
+        <div class="admin-image-cropper__controls">
+            <label class="admin-image-cropper__control" for="admin-fk-image-cropper-zoom">
+                <span>{% trans "Zoom" %}</span>
+                <input
+                    id="admin-fk-image-cropper-zoom"
+                    type="range"
+                    min="0.1"
+                    max="5.0"
+                    step="0.05"
+                    value="1"
+                    data-admin-fk-image-cropper-zoom
+                >
+            </label>
+
+            <div class="admin-image-cropper__actions">
+                <button type="button" class="btn btn-sm btn-outline-info" data-admin-fk-image-cropper-apply>
+                    {% trans "Apply" %}
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-admin-fk-image-cropper-reset>
+                    {% trans "Reset" %}
+                </button>
+            </div>
+        </div>
+
+        <dl class="admin-image-cropper__meta mb-0 mt-3 pt-3 border-top">
+            <dt>{% trans "Target field" %}</dt>
+            <dd data-admin-fk-image-cropper-field-label><code>loading...</code></dd>
+            <dt>{% trans "Current source" %}</dt>
+            <dd data-admin-fk-image-cropper-source-label>
+                <span class="text-muted">{% trans "Loading..." %}</span>
+            </dd>
+            <dt>{% trans "Status" %}</dt>
+            <dd data-admin-fk-image-cropper-status>{% trans "Initializing..." %}</dd>
+        </dl>
+    </div>
+</section>
+
+<link rel="stylesheet" href="{% static 'shop/css/admin_fk_image_cropper.css' %}?v=20260408-4">
+<script src="{% static 'shop/js/admin_fk_image_cropper.js' %}?v=20260409-1" defer></script>

@@ -11,10 +11,11 @@ import CookieConsent from './components/common/CookieConsent';
 import ClientOnly from './components/common/ClientOnly';
 import ClientDocumentGuards from './components/common/ClientDocumentGuards';
 import { APP_ROUTES } from './api/constants';
+import ProgrammingRoute from './components/ProgrammingRoute';
+import ShopRoute from './components/ShopRoute';
 import styles from './styles/components/App.module.css';
 
 const AstroGallery = lazy(() => import('./components/AstroGallery'));
-const Programming = lazy(() => import('./components/Programming'));
 const TravelHighlightsPage = lazy(
   () => import('./components/TravelHighlightsPage')
 );
@@ -59,12 +60,18 @@ const App: React.FC = () => {
               <Route path=':slug' element={null} />
             </Route>
             <Route
+              path={APP_ROUTES.SHOP}
+              element={
+                <RouteSuspense>
+                  <ShopRoute />
+                </RouteSuspense>
+              }
+            />
+            <Route
               path={APP_ROUTES.PROGRAMMING}
               element={
                 <RouteSuspense>
-                  <MainLayout>
-                    <Programming />
-                  </MainLayout>
+                  <ProgrammingRoute />
                 </RouteSuspense>
               }
             />

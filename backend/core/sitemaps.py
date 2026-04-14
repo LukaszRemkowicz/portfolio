@@ -10,6 +10,7 @@ so the final <loc> URLs will correctly point to SITE_DOMAIN.
 from django.contrib.sitemaps import Sitemap
 
 from astrophotography.models import AstroImage, MainPageLocation
+from core.models import LandingPageSettings
 
 
 class StaticViewSitemap(Sitemap):
@@ -20,13 +21,16 @@ class StaticViewSitemap(Sitemap):
     protocol = "https"
 
     def items(self) -> list[str]:
-        return [
+        items = [
             "/",
             "/astrophotography",
-            "/programming",
             "/travel",
             "/privacy",
         ]
+        settings_obj = LandingPageSettings.get_current()
+        if settings_obj and settings_obj.programming_enabled:
+            items.append("/programming")
+        return items
 
     def location(self, item: str) -> str:
         # Return path only — Django prepends scheme + host automatically.
@@ -65,3 +69,20 @@ class TravelHighlightsSitemap(Sitemap):
 
     def lastmod(self, obj: MainPageLocation):
         return obj.updated_at
+
+
+class ShopSitemap(Sitemap):
+    """Expose the public shop route when the shop feature is enabled."""
+
+    changefreq = "daily"
+    priority = 0.8
+    protocol = "https"
+
+    def items(self) -> list[str]:
+        settings_obj = LandingPageSettings.get_current()
+        if not settings_obj or not settings_obj.shop_enabled:
+            return []
+        return ["/shop"]
+
+    def location(self, item: str) -> str:
+        return item

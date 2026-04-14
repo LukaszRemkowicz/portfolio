@@ -18,3 +18,4 @@ class CropperFieldConfig:
     spec_method: str
     preview_shape: CropperPreviewShape
     crop_aspect_ratio: float
+    output_dimension: int | None = None

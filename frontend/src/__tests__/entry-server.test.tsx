@@ -2,7 +2,10 @@ import React from 'react';
 import { PassThrough } from 'node:stream';
 
 const mockCreateApiClient: jest.Mock = jest.fn(() => 'mock-client');
-const mockFetchSettings: jest.Mock = jest.fn(async () => ({ theme: 'dark' }));
+const mockFetchSettings: jest.Mock = jest.fn(async () => ({
+  theme: 'dark',
+  shop: true,
+}));
 const mockFetchProfile: jest.Mock = jest.fn(async () => ({
   first_name: 'Lukasz',
 }));
@@ -11,6 +14,12 @@ const mockFetchTravelHighlights: jest.Mock = jest.fn(async () => []);
 const mockFetchLatestAstroImages: jest.Mock = jest.fn(async () => []);
 const mockFetchCategories: jest.Mock = jest.fn(async () => []);
 const mockFetchTags: jest.Mock = jest.fn(async () => []);
+const mockFetchShopProducts: jest.Mock = jest.fn(async () => ({
+  title: '',
+  description: '',
+  background_url: '',
+  products: [],
+}));
 const mockFetchAstroImages: jest.Mock = jest.fn(async () => ({
   count: 0,
   next: null,
@@ -92,6 +101,7 @@ jest.mock('../api/services', () => ({
   fetchCategories: (client?: unknown) => mockFetchCategories(client),
   fetchTags: (params?: unknown, client?: unknown) =>
     mockFetchTags(params, client),
+  fetchShopProducts: (client?: unknown) => mockFetchShopProducts(client),
   fetchAstroImages: (params?: unknown, client?: unknown) =>
     mockFetchAstroImages(params, client),
 }));
@@ -210,6 +220,20 @@ describe('SSR entry server', () => {
       },
       'mock-client'
     );
+  });
+
+  it('prefetches the shop catalog for the shop route', async () => {
+    await render('/shop', 'en', 'https://portfolio.local', 'req-shop');
+
+    expect(mockFetchShopProducts).toHaveBeenCalledWith('mock-client');
+  });
+
+  it('skips shop catalog prefetch when the shop feature is disabled', async () => {
+    mockFetchSettings.mockResolvedValueOnce({ theme: 'dark', shop: false });
+
+    await render('/shop', 'en', 'https://portfolio.local', 'req-shop-off');
+
+    expect(mockFetchShopProducts).not.toHaveBeenCalled();
   });
 
   it('streams rendered HTML', async () => {

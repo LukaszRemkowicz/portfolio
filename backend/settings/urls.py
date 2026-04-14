@@ -19,8 +19,9 @@ from django.views.decorators.cache import cache_page
 from django.views.static import serve
 
 from astrophotography.views import AstroImageSecureView, ImageURLViewSet
-from core.sitemaps import AstroImageSitemap, StaticViewSitemap, TravelHighlightsSitemap
+from core.sitemaps import AstroImageSitemap, ShopSitemap, StaticViewSitemap, TravelHighlightsSitemap
 from core.views import health_check_view, root_view
+from shop.views import ShopAstroImageLookupView
 
 from .api_urls import (
     admin_secure_media_urlpatterns,
@@ -35,6 +36,7 @@ admin.site.index_title = "Welcome to Portfolio Admin Portal"
 _sitemaps = {
     "static": StaticViewSitemap,
     "astro": AstroImageSitemap,
+    "shop": ShopSitemap,
     "travel": TravelHighlightsSitemap,
 }
 
@@ -58,12 +60,19 @@ urlpatterns = [
     *api_v1_base_urlpatterns,
     path("select2/", include("django_select2.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),
+    path(
+        "api/v1/shop/image-lookup/",
+        ShopAstroImageLookupView.as_view(),
+        name="shop-image-lookup",
+    ),
     path("", include("translation.urls")),
     path("admin/", admin.site.urls),
-    # Sitemap at root so Google finds it at /sitemap.xml (cached 24 h)
+    # Sitemap at root so Google finds it at /sitemap.xml.
+    # Cache for 12 hours to keep generation cheap while refreshing
+    # reasonably often as content changes.
     path(
         "sitemap.xml",
-        cache_page(86400)(sitemap),
+        cache_page(43200)(sitemap),
         {"sitemaps": _sitemaps},
         name="sitemap",
     ),
@@ -72,7 +81,7 @@ urlpatterns = [
 
 
 def safe_serve(request, path, document_root=None, show_indexes=False):
-    if path.startswith("logs/") or path.startswith("images/"):
+    if path.startswith("logs/"):
         raise Http404()
     return serve(
         request,

@@ -147,6 +147,10 @@ COMPOSE_PROJECT_NAME="$(get_project_name)"
 export COMPOSE_PROJECT_NAME
 echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
 
+# Only long-running services should be switched during deploy. One-shot jobs
+# like `release` are handled explicitly by release.sh earlier in the flow.
+DEPLOY_SERVICES=("be" "fe" "celery-worker" "celery-beat" "nginx")
+
 # ------------------------------------------------------------------
 # Legacy Project Cleanup (One-time transition from implicit naming)
 # ------------------------------------------------------------------
@@ -183,7 +187,7 @@ error_handler() {
   local exit_code=$?
   if [[ "${SWITCHED_CONTAINERS}" == "true" && -n "${SAFE_TAG_BEFORE_DEPLOY}" && "${SAFE_TAG_BEFORE_DEPLOY}" != "${TAG}" ]]; then
     echo "🚨 ERROR detected (exit code: $exit_code). Initiating automatic rollback to ${SAFE_TAG_BEFORE_DEPLOY}..."
-    TAG="${SAFE_TAG_BEFORE_DEPLOY}" "${COMPOSE[@]}" up -d --remove-orphans
+    TAG="${SAFE_TAG_BEFORE_DEPLOY}" "${COMPOSE[@]}" up -d "${DEPLOY_SERVICES[@]}"
     echo "↩️  Rollback complete. System restored to ${SAFE_TAG_BEFORE_DEPLOY}."
   else
     echo "❌ ERROR detected (exit code: $exit_code). No rollback needed/possible."
@@ -203,16 +207,18 @@ export TAG
 # [DEPLOY] [1/6] Image preflight
 # ------------------------------------------------------------------
 echo "🔍 [DEPLOY] [1/6] Image preflight (verifying TAG=$TAG)"
-# Verify each service image for TAG=${TAG}
+# Verify each deploy-managed service image for TAG=${TAG}
 # Implementation note: We dynamically resolve the image from compose config for each service.
-for svc in "be" "fe" "celery-worker" "release" "nginx"; do
+for svc in "${DEPLOY_SERVICES[@]}"; do
   image_to_check=$(get_compose_image "$svc" "${COMPOSE[@]}")
 
   # Fallback to standard naming convention if config resolution fails.
   if [[ "${image_to_check}" =~ ^[[:space:]]*$ ]]; then
     echo "ℹ️  NOTE: Using naming fallback for '${svc}' (config resolution skipped)."
     image_to_check="${ENVIRONMENT}-${svc}"
-    if [[ "$svc" == "release" ]]; then image_to_check="${ENVIRONMENT}-be"; fi
+    if [[ "$svc" == "release" || "$svc" == "celery-beat" ]]; then
+      image_to_check="${ENVIRONMENT}-be"
+    fi
     if [[ "$svc" == "celery-worker" ]]; then image_to_check="${ENVIRONMENT}-worker"; fi
     image_to_check="${image_to_check}:$TAG"
   fi
@@ -231,9 +237,9 @@ echo "✅ Images found. Proceeding with deployment."
 # ------------------------------------------------------------------
 echo "🚀 [DEPLOY] [2/5] Switching containers to new images (TAG=$TAG)"
 if [[ "${DRY_RUN}" == true ]]; then
-  echo "🧾 DRY RUN: would execute: ${COMPOSE[*]} up -d --remove-orphans"
+  echo "🧾 DRY RUN: would execute: ${COMPOSE[*]} up -d ${DEPLOY_SERVICES[*]}"
 else
-  "${COMPOSE[@]}" up -d
+  "${COMPOSE[@]}" up -d "${DEPLOY_SERVICES[@]}"
   SWITCHED_CONTAINERS=true
 fi
 
