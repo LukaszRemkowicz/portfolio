@@ -2,7 +2,10 @@ import React from 'react';
 import { PassThrough } from 'node:stream';
 
 const mockCreateApiClient: jest.Mock = jest.fn(() => 'mock-client');
-const mockFetchSettings: jest.Mock = jest.fn(async () => ({ theme: 'dark' }));
+const mockFetchSettings: jest.Mock = jest.fn(async () => ({
+  theme: 'dark',
+  shop: true,
+}));
 const mockFetchProfile: jest.Mock = jest.fn(async () => ({
   first_name: 'Lukasz',
 }));
@@ -223,6 +226,14 @@ describe('SSR entry server', () => {
     await render('/shop', 'en', 'https://portfolio.local', 'req-shop');
 
     expect(mockFetchShopProducts).toHaveBeenCalledWith('mock-client');
+  });
+
+  it('skips shop catalog prefetch when the shop feature is disabled', async () => {
+    mockFetchSettings.mockResolvedValueOnce({ theme: 'dark', shop: false });
+
+    await render('/shop', 'en', 'https://portfolio.local', 'req-shop-off');
+
+    expect(mockFetchShopProducts).not.toHaveBeenCalled();
   });
 
   it('streams rendered HTML', async () => {

@@ -105,6 +105,9 @@ class TestShopSettingsAdmin:
         soup = BeautifulSoup(response.content, "html.parser")
         cropper_root = soup.select_one("[data-admin-image-cropper-root]")
         assert cropper_root is not None
+        content = response.content.decode("utf-8")
+        assert "/static/astrophotography/js/admin_upload_progress.js" in content
+        assert "/static/astrophotography/css/admin_upload_progress.css" in content
 
     def test_change_view_injects_cropper_context(self, admin_client) -> None:
         settings_obj = ShopSettings.objects.create(
@@ -125,6 +128,8 @@ class TestShopSettingsAdmin:
         soup = BeautifulSoup(response.content, "html.parser")
         cropper_root = soup.select_one("[data-admin-image-cropper-root]")
         assert cropper_root is not None
+        content = response.content.decode("utf-8")
+        assert 'uploadProgressFieldNames = "image,image_cropped"' in content
 
     def test_change_view_shows_translation_status_on_default_language(self, admin_client) -> None:
         settings_obj = ShopSettings.objects.create(

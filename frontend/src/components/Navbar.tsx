@@ -5,7 +5,7 @@ import Logo from './common/Logo';
 import styles from '../styles/components/Navbar.module.css';
 import { Menu, X } from 'lucide-react';
 import { NavbarProps } from '../types';
-import { useSettings } from '../hooks/useSettings';
+import { useFeatureFlags } from '../hooks/useFeatureFlag';
 import { APP_ROUTES } from '../api/constants';
 
 import LanguageSwitcher from './common/LanguageSwitcher';
@@ -16,9 +16,9 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
   const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { data: settings } = useSettings();
-  const features = settings;
-  const isProgrammingEnabled = features?.programming === true;
+  const { isEnabled } = useFeatureFlags();
+  const isProgrammingEnabled = isEnabled('programming');
+  const isShopEnabled = isEnabled('shop');
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -58,14 +58,16 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
             >
               {t('nav.astrophotography')}
             </NavLink>
-            <NavLink
-              to={APP_ROUTES.SHOP}
-              className={({ isActive }) =>
-                `${styles.link} ${isActive ? styles.active : ''}`
-              }
-            >
-              {t('nav.shop')}
-            </NavLink>
+            {isShopEnabled && (
+              <NavLink
+                to={APP_ROUTES.SHOP}
+                className={({ isActive }) =>
+                  `${styles.link} ${isActive ? styles.active : ''}`
+                }
+              >
+                {t('nav.shop')}
+              </NavLink>
+            )}
             {isProgrammingEnabled && (
               <NavLink
                 to={APP_ROUTES.PROGRAMMING}
@@ -137,13 +139,15 @@ const Navbar: FC<NavbarProps> = ({ transparent: _transparent }) => {
               >
                 {t('nav.astrophotography')}
               </NavLink>
-              <NavLink
-                to={APP_ROUTES.SHOP}
-                onClick={toggleMenu}
-                className={({ isActive }) => (isActive ? styles.active : '')}
-              >
-                {t('nav.shop')}
-              </NavLink>
+              {isShopEnabled && (
+                <NavLink
+                  to={APP_ROUTES.SHOP}
+                  onClick={toggleMenu}
+                  className={({ isActive }) => (isActive ? styles.active : '')}
+                >
+                  {t('nav.shop')}
+                </NavLink>
+              )}
               {isProgrammingEnabled && (
                 <NavLink
                   to={APP_ROUTES.PROGRAMMING}

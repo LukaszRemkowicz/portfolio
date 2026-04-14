@@ -14,10 +14,10 @@ export const useSettings = () => {
   return useQuery<SettingsResult, Error>({
     queryKey: ['settings', language],
     queryFn: () => fetchSettings(),
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: true,
   });
 };

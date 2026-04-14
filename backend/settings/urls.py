@@ -19,7 +19,7 @@ from django.views.decorators.cache import cache_page
 from django.views.static import serve
 
 from astrophotography.views import AstroImageSecureView, ImageURLViewSet
-from core.sitemaps import AstroImageSitemap, StaticViewSitemap, TravelHighlightsSitemap
+from core.sitemaps import AstroImageSitemap, ShopSitemap, StaticViewSitemap, TravelHighlightsSitemap
 from core.views import health_check_view, root_view
 from shop.views import ShopAstroImageLookupView
 
@@ -36,6 +36,7 @@ admin.site.index_title = "Welcome to Portfolio Admin Portal"
 _sitemaps = {
     "static": StaticViewSitemap,
     "astro": AstroImageSitemap,
+    "shop": ShopSitemap,
     "travel": TravelHighlightsSitemap,
 }
 
@@ -66,10 +67,12 @@ urlpatterns = [
     ),
     path("", include("translation.urls")),
     path("admin/", admin.site.urls),
-    # Sitemap at root so Google finds it at /sitemap.xml (cached 24 h)
+    # Sitemap at root so Google finds it at /sitemap.xml.
+    # Cache for 12 hours to keep generation cheap while refreshing
+    # reasonably often as content changes.
     path(
         "sitemap.xml",
-        cache_page(86400)(sitemap),
+        cache_page(43200)(sitemap),
         {"sitemaps": _sitemaps},
         name="sitemap",
     ),

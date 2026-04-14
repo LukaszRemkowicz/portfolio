@@ -169,6 +169,24 @@ class TestShopProductListView:
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data["detail"] == "Shop is currently not available."
 
+    def test_list_cache_is_invalidated_when_shop_is_disabled(self, api_client: APIClient) -> None:
+        ShopProductFactory()
+        list_url = reverse(SHOP_PRODUCT_LIST_URL)
+
+        warm_response = api_client.get(list_url)
+        assert warm_response.status_code == status.HTTP_200_OK
+
+        settings_obj = LandingPageSettingsFactory._meta.model.get_current()
+        settings_obj.shop_enabled = False
+        settings_obj.save()
+
+        with patch("common.decorators.cache.logger.debug") as mock_logger:
+            response = api_client.get(list_url)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.data["detail"] == "Shop is currently not available."
+        assert any("Cache MISS" in call.args[0] for call in mock_logger.call_args_list)
+
     def test_list_rejects_post(self, api_client: APIClient) -> None:
         response = api_client.post(reverse(SHOP_PRODUCT_LIST_URL), data={})
 
