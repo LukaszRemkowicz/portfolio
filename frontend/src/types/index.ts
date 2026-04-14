@@ -215,6 +215,7 @@ export interface ApiError {
 
 export interface EnabledFeatures {
   programming?: boolean;
+  shop?: boolean;
   contactForm?: boolean;
   lastimages?: boolean;
   travelHighlights?: boolean;
