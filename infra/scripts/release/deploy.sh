@@ -216,7 +216,9 @@ for svc in "${DEPLOY_SERVICES[@]}"; do
   if [[ "${image_to_check}" =~ ^[[:space:]]*$ ]]; then
     echo "ℹ️  NOTE: Using naming fallback for '${svc}' (config resolution skipped)."
     image_to_check="${ENVIRONMENT}-${svc}"
-    if [[ "$svc" == "release" ]]; then image_to_check="${ENVIRONMENT}-be"; fi
+    if [[ "$svc" == "release" || "$svc" == "celery-beat" ]]; then
+      image_to_check="${ENVIRONMENT}-be"
+    fi
     if [[ "$svc" == "celery-worker" ]]; then image_to_check="${ENVIRONMENT}-worker"; fi
     image_to_check="${image_to_check}:$TAG"
   fi
