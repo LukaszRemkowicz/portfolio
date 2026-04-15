@@ -390,10 +390,10 @@ doppler --config dev run -- docker compose exec -T fe npm test -- --runInBand
 doppler --config dev run -- docker compose exec -T fe npm run test:e2e
 
 # backend test suite
-doppler --config dev run -- docker compose exec -T be poetry run pytest
+doppler --config dev run -- docker compose exec -T be uv run pytest
 
 # backend static analysis
-doppler --config dev run -- docker compose exec -T be poetry run mypy .
+doppler --config dev run -- docker compose exec -T be uv run mypy .
 ```
 
 Compose also exposes dedicated test services:

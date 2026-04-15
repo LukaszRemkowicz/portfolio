@@ -1,5 +1,9 @@
+# syntax=docker/dockerfile:1.7
+
 # portfolio-be/Dockerfile
 FROM python:3.13-slim AS base
+
+COPY --from=ghcr.io/astral-sh/uv:0.7.13 /uv /uvx /bin/
 
 # Install shared runtime dependencies
 # libpq5 is always needed for psycopg2
@@ -16,10 +20,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_VERSION=2.1.3 \
     VIRTUAL_ENV=/venv \
-    POETRY_VIRTUALENVS_CREATE=false \
+    UV_PROJECT_ENVIRONMENT=/venv \
+    UV_LINK_MODE=copy \
     TZ=Europe/Warsaw
 
 # Add virtualenv to PATH
@@ -36,13 +39,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     gettext \
-    && pip install --no-cache-dir "poetry==$POETRY_VERSION" \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies into virtualenv
-COPY backend/pyproject.toml backend/poetry.lock ./
-RUN python -m venv $VIRTUAL_ENV && \
-    poetry install --no-root --only main
+COPY backend/pyproject.toml backend/uv.lock backend/README.md ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
 # Pre-compile translations at build time for production
 COPY backend/ .
@@ -54,17 +56,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     gettext \
-    && pip install --no-cache-dir "poetry==$POETRY_VERSION" \
     && rm -rf /var/lib/apt/lists/*
 
 # Reuse builder venv to avoid re-installing main deps
 COPY --from=builder $VIRTUAL_ENV $VIRTUAL_ENV
 
 # Install ALL dependencies (including dev)
-COPY backend/pyproject.toml backend/poetry.lock ./
-RUN poetry install --no-root
-
 COPY backend/ .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen
+
 RUN mkdir -p /app/media /app/staticfiles
 
 ENTRYPOINT ["/entrypoint.sh"]
