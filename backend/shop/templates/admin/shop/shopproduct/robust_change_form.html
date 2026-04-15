@@ -99,3 +99,36 @@
 {% block admin_change_form_document_ready %}
 {{ block.super }}
 {% endblock %}
+
+{% block extrajs %}
+{{ block.super }}
+<script>
+  (function () {
+    document.addEventListener("DOMContentLoaded", function () {
+      const $ = window.django && window.django.jQuery ? window.django.jQuery : window.jQuery;
+      if (!($ && $.fn && $.fn.djangoAdminSelect2)) {
+        return;
+      }
+
+      window.setTimeout(function () {
+        const $imageField = $("#id_image.admin-autocomplete");
+        if (!$imageField.length) {
+          return;
+        }
+
+        if ($imageField.hasClass("select2-hidden-accessible") && $imageField.data("select2")) {
+          $imageField.select2("destroy");
+        }
+
+        $imageField.siblings(".select2").remove();
+        $imageField.removeClass("select2-hidden-accessible");
+        $imageField.removeAttr("data-select2-id");
+        $imageField.removeAttr("tabindex");
+        $imageField.removeAttr("aria-hidden");
+        $imageField.find("option").removeAttr("data-select2-id");
+        $imageField.djangoAdminSelect2();
+      }, 0);
+    });
+  })();
+</script>
+{% endblock %}

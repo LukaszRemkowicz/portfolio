@@ -1,10 +1,14 @@
 import pytest
 from bs4 import BeautifulSoup
 
+from django.contrib.admin.sites import site
+from django.test import RequestFactory
 from django.urls import reverse
 
+from astrophotography.tests.factories import AstroImageFactory
 from common.tests.image_helpers import _jpeg_field
 from shop.admin import ShopProductAdmin
+from shop.forms import ShopProductAdminForm, ShopProductImageSelectWidget
 from shop.models import ShopSettings
 from shop.tests.factories import ShopProductFactory
 
@@ -87,6 +91,60 @@ class TestShopProductAdmin:
         assert cropper_root is not None
         assert cropper_root["data-visible-tab-panel"] == cropper_data["visible_tab_panel"]
         assert soup.select_one("[data-admin-fk-image-cropper-field-select]") is None
+        content = response.content.decode("utf-8")
+        assert "$imageField.djangoAdminSelect2();" in content
+
+    def test_image_autocomplete_deduplicates_translated_results(self, admin_client) -> None:
+        image = AstroImageFactory(name="Tarantula Nebula")
+        for language_code in ("pl", "de", "fr"):
+            image.set_current_language(language_code)
+            image.name = "Tarantula Nebula"
+            image.save()
+
+        response = admin_client.get(
+            reverse("admin:autocomplete"),
+            {
+                "app_label": "shop",
+                "model_name": "shopproduct",
+                "field_name": "image",
+                "term": "taran",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        matching_results = [result for result in data["results"] if result["id"] == str(image.pk)]
+        assert len(matching_results) == 1
+
+    def test_image_field_queryset_is_distinct(self) -> None:
+        image = AstroImageFactory(name="Tarantula Nebula")
+        for language_code in ("pl", "de", "fr"):
+            image.set_current_language(language_code)
+            image.name = "Tarantula Nebula"
+            image.save()
+
+        form = ShopProductAdminForm()
+        queryset_ids = list(
+            form.fields["image"].queryset.filter(pk=image.pk).values_list("pk", flat=True)
+        )
+
+        assert queryset_ids == [image.pk]
+
+    def test_image_widget_media_uses_admin_autocomplete_without_django_select2_js(self) -> None:
+        admin_instance = ShopProductAdmin(ShopProductFactory._meta.model, site)
+        request = RequestFactory().get(reverse("admin:shop_shopproduct_add"))
+        db_field = ShopProductFactory._meta.model._meta.get_field("image")
+        formfield = admin_instance.formfield_for_foreignkey(db_field, request)
+        widget = formfield.widget
+
+        assert isinstance(widget, ShopProductImageSelectWidget)
+        media_js = " ".join(widget.media._js)
+        media_css = " ".join(widget.media._css.get("all", []))
+
+        assert "admin/js/autocomplete.js" in media_js
+        assert "django_select2" not in media_js
+        assert "core/css/select2_admin.css" in media_css
+        assert widget.attrs["data-autocomplete-light-function"] == "select2"
 
 
 @pytest.mark.django_db

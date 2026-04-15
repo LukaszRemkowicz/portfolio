@@ -8,6 +8,7 @@ import ProjectSkeleton from './skeletons/ProjectSkeleton';
 import ImageWithFallback from './common/ImageWithFallback';
 import { Project, ProjectImage } from '../types';
 import StarBackground from './StarBackground';
+import SEO from './common/SEO';
 
 const ProjectCard: FC<{ project: Project }> = ({ project }) => {
   const { t } = useTranslation();
@@ -97,6 +98,10 @@ const Programming: FC = () => {
 
   return (
     <>
+      <SEO
+        title={t('programming.title')}
+        description={t('programming.subtitle')}
+      />
       <StarBackground />
       <section className={styles.section}>
         <header className={styles.header}>
