@@ -1,73 +1,141 @@
-[tool.poetry]
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "backend"
 version = "1.1.0"
 description = "Portfolio backend with Django REST Framework"
-authors = ["l.remkowicz@gmail.com <l.remkowicz@gmail.com>"]
 readme = "README.md"
-packages = [
-    { include = "core" },
-    { include = "users" },
-    { include = "astrophotography" },
-    { include = "programming" },
-    { include = "inbox" }
+requires-python = ">=3.13,<4.0"
+dependencies = [
+    "django==6.0.3",
+    "djangorestframework==3.17.1",
+    "pillow==12.1.1",
+    "django-environ==0.13.0",
+    "django-cors-headers==4.9.0",
+    "psycopg2==2.9.11",
+    "django-axes==8.3.1",
+    "gunicorn==24.1.1",
+    "django-countries==8.2.0",
+    "django-select2==8.4.8",
+    "django-ckeditor-5==0.2.20",
+    "redis==5.3.1",
+    "openai==1.109.1",
+    "django-extensions==3.2.3",
+    "django-parler==2.3",
+    "django-parler-rest==2.2",
+    "beautifulsoup4==4.14.3",
+    "celery[redis]==5.6.3",
+    "flower==2.0.1",
+    "sentry-sdk==2.57.0",
+    "requests==2.33.1",
+    "django-model-utils==5.0.0",
+    "django-jazzmin==3.0.3",
+    "ipython==9.12.0",
 ]
 
-[tool.poetry.scripts]
+[project.scripts]
 test = "scripts:test"
 test-cov = "scripts:test_cov"
 security = "scripts:security"
 
-[tool.poetry.dependencies]
-python = ">=3.13,<4.0"
-django = "6.0.3"
-djangorestframework = "3.17.1"
-pillow = "12.1.1"
-django-environ = "0.13.0"
-django-cors-headers = "4.9.0"
-psycopg2 = "2.9.11"
-django-axes = "8.3.1"
-gunicorn = "24.1.1"
-django-countries = "8.2.0"
-django-select2 = "8.4.8"
-django-ckeditor-5 = "0.2.20"
-redis = "5.3.1"
-openai = "1.109.1"
-django-extensions = "3.2.3"
-django-parler = "2.3"
-django-parler-rest = "2.2"
-beautifulsoup4 = "4.14.3"
-celery = {version = "5.6.3", extras = ["redis"]}
-flower = "2.0.1"
-sentry-sdk = "2.57.0"
-requests = "2.33.1"
-django-model-utils = "5.0.0"
-django-jazzmin = "3.0.3"
-ipython = "9.12.0"
+[dependency-groups]
+dev = [
+    "pytest==9.0.2",
+    "pytest-django==4.11.1",
+    "pytest-cov==7.0.0",
+    "coverage==7.13.3",
+    "black==26.3.1",
+    "isort==7.0.0",
+    "flake8==7.3.0",
+    "mypy==1.19.1",
+    "django-stubs==5.2.9",
+    "djangorestframework-stubs==3.16.8",
+    "pre-commit==4.5.1",
+    "safety==3.7.0",
+    "flake8-pyproject==1.2.4",
+    "factory-boy==3.3.3",
+    "Faker==37.12.0",
+    "types-requests==2.32.4.20260107",
+    "watchdog==6.0.0",
+    "pytest-mock==3.15.1",
+    "ruff==0.15.9",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "9.0.2"
-pytest-django = "4.11.1"
-pytest-cov = "7.0.0"
-coverage = "7.13.3"
-black = "26.3.1"
-isort = "7.0.0"
-flake8 = "7.3.0"
-mypy = "1.19.1"
-django-stubs = "5.2.9"
-djangorestframework-stubs = "3.16.8"
-pre-commit = "4.5.1"
-safety = "3.7.0"
-flake8-pyproject = "1.2.4"
-factory-boy = "3.3.3"
-Faker = "37.12.0"
-types-requests = "2.32.4.20260107"
-watchdog = "6.0.0"
-pytest-mock = "3.15.1"
-ruff = "^0.15.9"
+[tool.setuptools]
+include-package-data = true
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "astrophotography",
+    "astrophotography.*",
+    "common",
+    "common.*",
+    "core",
+    "core.*",
+    "inbox",
+    "inbox.*",
+    "monitoring",
+    "monitoring.*",
+    "programming",
+    "programming.*",
+    "scripts",
+    "scripts.*",
+    "settings",
+    "settings.*",
+    "shop",
+    "shop.*",
+    "translation",
+    "translation.*",
+    "users",
+    "users.*",
+]
+exclude = [
+    "docker-logs",
+    "media",
+    "staticfiles",
+]
+
+[tool.setuptools.package-data]
+astrophotography = [
+    "agent/assets/prompts/*.md",
+    "templates/**/*.html",
+    "static/**/*",
+    "locale/**/*.po",
+    "locale/**/*.mo",
+]
+core = [
+    "templates/**/*.html",
+    "static/**/*",
+    "locale/**/*.po",
+    "locale/**/*.mo",
+]
+inbox = [
+    "templates/**/*.html",
+]
+monitoring = [
+    "agent_assets/**/*",
+    "log_sources.json",
+    "templates/**/*.html",
+    "static/**/*",
+    "locale/**/*.po",
+    "locale/**/*.mo",
+]
+shop = [
+    "templates/**/*.html",
+    "static/**/*",
+    "locale/**/*.po",
+    "locale/**/*.mo",
+]
+translation = [
+    "templates/**/*.html",
+]
+users = [
+    "templates/**/*.html",
+    "static/**/*",
+]
 
 [tool.black]
 line-length = 100
