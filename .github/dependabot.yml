@@ -29,7 +29,7 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
-  # Backend dependencies (Poetry)
+  # Backend dependencies (uv-managed project)
   - package-ecosystem: "pip"
     directory: "/backend"
     patterns:

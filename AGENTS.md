@@ -119,7 +119,8 @@ Use this quick mapping when a task arrives:
 
 Use these defaults when validating changes:
 
-- Backend: run `poetry run test`
+- Backend: use the backend project test entrypoint, `uv run test`
+  Treat this as the canonical backend validation command for the repo, not as a shorthand for "run pytest directly". This wrapper may use the expected backend runtime and scripts under `backend/`.
 - Frontend: use the frontend Docker container for test commands rather than assuming the host machine is the correct runtime
 
 

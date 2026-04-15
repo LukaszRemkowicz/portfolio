@@ -10,9 +10,18 @@ interface SEOProps {
   description?: string | null;
   ogImage?: string | null;
   url?: string | null;
+  robots?: string | null;
+  includeCanonical?: boolean;
 }
 
-const SEO: FC<SEOProps> = ({ title, description, ogImage, url }) => {
+const SEO: FC<SEOProps> = ({
+  title,
+  description,
+  ogImage,
+  url,
+  robots,
+  includeCanonical = true,
+}) => {
   const { t } = useTranslation();
   const location = useLocation();
   const requestOrigin = useRequestOrigin();
@@ -43,6 +52,7 @@ const SEO: FC<SEOProps> = ({ title, description, ogImage, url }) => {
       {/* Standard Metadata */}
       <title>{finalTitle}</title>
       <meta name='description' content={finalDescription} />
+      {robots && <meta name='robots' content={robots} />}
 
       {/* Open Graph / Facebook */}
       <meta property='og:type' content='website' />
@@ -50,14 +60,14 @@ const SEO: FC<SEOProps> = ({ title, description, ogImage, url }) => {
       <meta property='og:title' content={finalTitle} />
       <meta property='og:description' content={finalDescription} />
       {ogImage && <meta property='og:image' content={ogImage} />}
-      <link rel='canonical' href={finalUrl} />
+      {includeCanonical && <link rel='canonical' href={finalUrl} />}
 
       {/* Twitter */}
-      <meta property='twitter:card' content='summary_large_image' />
-      <meta property='twitter:url' content={finalUrl} />
-      <meta property='twitter:title' content={finalTitle} />
-      <meta property='twitter:description' content={finalDescription} />
-      {ogImage && <meta property='twitter:image' content={ogImage} />}
+      <meta name='twitter:card' content='summary_large_image' />
+      <meta name='twitter:url' content={finalUrl} />
+      <meta name='twitter:title' content={finalTitle} />
+      <meta name='twitter:description' content={finalDescription} />
+      {ogImage && <meta name='twitter:image' content={ogImage} />}
     </Helmet>
   );
 };

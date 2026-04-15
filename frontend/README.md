@@ -187,6 +187,7 @@ These files define:
 Public page URLs:
 
 - `/`
+- `/shop`
 - `/privacy`
 - `/astrophotography`
 - `/astrophotography/:slug`
@@ -194,6 +195,13 @@ Public page URLs:
 - `/travel/:country/:place/:date`
 
 These are FE-owned public routes used by sitemap and SEO.
+
+Important route-contract notes:
+
+- `/travel` is not a standalone public page; only `/travel/:country/:place/:date` is a public website route
+- `/shop` is public only when the `shop` feature flag is enabled
+- `/programming` is public only when the `programming` feature flag is enabled
+- when a feature-gated route is disabled, it should behave as not-found rather than as a normal public page
 
 Current FE-owned transport endpoints still exposed for browser interactivity:
 

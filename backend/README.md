@@ -28,7 +28,7 @@ Granular rate limiting is enforced across all endpoints:
 
 ### 3. Dependency Scanning (**Safety**)
 We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for known vulnerabilities.
-- Integrated into the CI/CD pipeline and available via `poetry run security`.
+- Integrated into the CI/CD pipeline and available via `uv run security`.
 
 ### 4. Infrastructure Security
 - **Non-Root Execution**: Docker containers run under a restricted `appuser`.
@@ -36,7 +36,7 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
 - **Docker-Locked Environment**: Verified multi-stage builds and restricted `.dockerignore`.
 
 ### Technical Features
-- **Modern Stack** - Python 3.13, Django 6.0, and Poetry for dependency management.
+- **Modern Stack** - Python 3.13, Django 6.0, and `uv` for dependency management.
 - **Caching** - Redis-backed caching for Django Select2 and internal performance.
 - **Error Tracking** - Sentry integration for production monitoring and telemetry.
 - **Internationalization (i18n)** - Multi-language support (EN/PL) with automatic message compilation.
@@ -44,8 +44,8 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
 
 ### Prerequisites
 - **Docker & Docker Compose**
-- **Python 3.13** *(optional, only if you want to run Poetry/manual host commands)*
-- **Poetry** *(optional, only if you want to run Poetry/manual host commands)*
+- **Python 3.13** *(optional, only if you want to run `uv`/manual host commands)*
+- **uv** *(optional, only if you want to run `uv`/manual host commands)*
 
 
 ## 🧭 Backend Role In The Current Architecture
@@ -167,21 +167,21 @@ doppler --config dev run -- docker compose exec -T be python manage.py migrate
 doppler --config dev run -- docker compose exec -T be python manage.py compilemessages
 
 # backend checks
-doppler --config dev run -- docker compose exec -T be poetry run pytest
-doppler --config dev run -- docker compose exec -T be poetry run mypy .
-doppler --config dev run -- docker compose exec -T be pre-commit run --all-files
+doppler --config dev run -- docker compose exec -T be uv run pytest
+doppler --config dev run -- docker compose exec -T be uv run mypy .
+doppler --config dev run -- docker compose exec -T be uv run pre-commit run --all-files
 ```
 
 ### 🧰 Manual Commands
 
-If you need more control or want to run tools individually on your host, these are optional host-side commands and require local Poetry/Python setup:
+If you need more control or want to run tools individually on your host, these are optional host-side commands and require local `uv`/Python setup:
 
 ```bash
 # run pytest with custom arguments on the host
-poetry run pytest -v
+uv run pytest -v
 
 # run linters and formatters on the host
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 ## 🐳 Docker Integration (Recommended)

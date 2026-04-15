@@ -1,11 +1,19 @@
 // frontend/src/__tests__/PrivacyPolicy.test.tsx
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { MemoryRouter } from 'react-router-dom';
 import PrivacyPolicy from '../components/PrivacyPolicy';
 
 describe('PrivacyPolicy Component', () => {
+  const renderPrivacyPolicy = () =>
+    render(
+      <MemoryRouter>
+        <PrivacyPolicy />
+      </MemoryRouter>
+    );
+
   beforeEach(() => {
-    render(<PrivacyPolicy />);
+    renderPrivacyPolicy();
   });
 
   describe('Page Structure', () => {
@@ -143,7 +151,7 @@ describe('PrivacyPolicy Component', () => {
     (globalThis as { __TEST_I18N_LANGUAGE__?: string }).__TEST_I18N_LANGUAGE__ =
       'pl';
 
-    render(<PrivacyPolicy />);
+    renderPrivacyPolicy();
 
     expect(
       screen.getByText('Polityka Prywatności i Plików Cookie')

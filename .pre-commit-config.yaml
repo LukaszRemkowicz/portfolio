@@ -69,7 +69,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: bash -c "cd backend && poetry run mypy ."
+        entry: bash -c "cd backend && uv run mypy ."
         language: system
         types: [python]
         pass_filenames: false
@@ -109,10 +109,10 @@ repos:
             rm -f "$project_backup" "$policy_backup";
           } &&
           trap cleanup EXIT &&
-          poetry run safety --stage cicd scan --target .'
+          uv run safety --stage cicd scan --target .'
         language: system
         pass_filenames: false
-        files: ^backend/(pyproject\.toml|poetry\.lock)$
+        files: ^backend/(pyproject\.toml|uv\.lock)$
         always_run: false
         stages: [pre-commit]
 
@@ -121,7 +121,7 @@ repos:
     hooks:
       - id: backend-tests
         name: backend-tests
-        entry: bash -c "cd backend && poetry run test"
+        entry: bash -c "cd backend && uv run test"
         language: system
         pass_filenames: false
         files: ^backend/

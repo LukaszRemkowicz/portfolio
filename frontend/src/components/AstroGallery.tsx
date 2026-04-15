@@ -25,6 +25,8 @@ import { useCategories } from '../hooks/useCategories';
 import { useBackground } from '../hooks/useBackground';
 import { useImageUrls } from '../hooks/useImageUrls';
 import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
+import { getMediaUrl } from '../api/media';
+import { stripHtml, truncateText } from '../utils/html';
 
 const getMinimumBatchForWidth = (width: number): number => {
   if (width <= 480) {
@@ -142,6 +144,19 @@ const AstroGallery: React.FC = () => {
       null
     );
   }, [imgSlug, images, standaloneModalImage]);
+
+  const seoTitle = modalImage?.name || t('common.gallery');
+  const seoDescription = truncateText(
+    (modalImage?.description ? stripHtml(modalImage.description) : '').trim() ||
+      modalImage?.celestial_object ||
+      modalImage?.place?.name ||
+      t('common.gallerySubtitle'),
+    160
+  );
+  const seoImage = getMediaUrl(modalImage?.thumbnail_url || modalImage?.url);
+  const seoUrl = modalImage?.slug
+    ? `${APP_ROUTES.ASTROPHOTOGRAPHY}/${modalImage.slug}`
+    : APP_ROUTES.ASTROPHOTOGRAPHY;
 
   useEffect(() => {
     lastAutoLoadScrollYRef.current = Number.NEGATIVE_INFINITY;
@@ -301,7 +316,12 @@ const AstroGallery: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <SEO title={t('common.gallery')} />
+      <SEO
+        title={seoTitle}
+        description={seoDescription}
+        ogImage={seoImage}
+        url={seoUrl}
+      />
       <div
         className={styles.hero}
         style={{

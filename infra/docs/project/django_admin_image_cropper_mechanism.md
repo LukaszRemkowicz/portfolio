@@ -347,7 +347,7 @@ Common cause seen during development:
 - transient `502` or source-map noise in devtools was misread as the main bug
 
 Check:
-- `poetry run test`
+- `uv run test`
 - backend health endpoint
 - actual server logs for `/admin/...` and `/media/...`
 
@@ -381,7 +381,7 @@ If a field needs a non-square crop:
 
 Minimum verification for cropper changes:
 
-1. `poetry run test`
+1. `uv run test`
 2. manual admin check on `admin.portfolio.local`
 3. switch dropdown across all configured fields
 4. confirm preview loads for persisted files
