@@ -8,14 +8,11 @@ export const stripHtml = (html: string): string => {
   if (!html) return '';
 
   if (typeof DOMParser === 'undefined') {
-    // Server-side fallback: remove tags and normalize common entities so
-    // meta descriptions do not leak tag/style fragments into SSR output.
+    // Server-side fallback: strip tags and normalize spacing without decoding
+    // entities into raw characters in the regex path.
     return html
       .replace(/<[^>]*>/g, ' ')
       .replace(/&nbsp;/gi, ' ')
-      .replace(/&amp;/gi, '&')
-      .replace(/&quot;/gi, '"')
-      .replace(/&#39;/gi, "'")
       .replace(/\s+/g, ' ')
       .trim();
   }
