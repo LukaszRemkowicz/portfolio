@@ -112,6 +112,7 @@ async function renderDocument(
     return {
       abort: () => {},
       language: 'en',
+      statusCode: 200,
       stream,
       suffix: parts[1],
       prefix: `${parts[0]}<div id="root">`,
@@ -120,8 +121,14 @@ async function renderDocument(
 
   const { renderStream } = await import(pathToFileURL(serverEntryPath).href);
 
-  const { stream, helmetContext, dehydratedState, language, abort } =
-    await renderStream(url, acceptLanguage, requestOrigin, requestId);
+  const {
+    stream,
+    helmetContext,
+    dehydratedState,
+    language,
+    abort,
+    statusCode,
+  } = await renderStream(url, acceptLanguage, requestOrigin, requestId);
   const { bodyAttributes, headMarkup, htmlAttributes } =
     renderHelmet(helmetContext);
   const publicEnvScript = `<script>window.__PUBLIC_ENV__ = ${serializePublicEnvForHtml(
@@ -155,6 +162,7 @@ async function renderDocument(
   return {
     abort,
     language,
+    statusCode,
     stream,
     suffix: parts[1].replace('</body>', `${dehydratedStateScript}</body>`),
     prefix: `${parts[0]}<div id="root">`,
@@ -172,13 +180,14 @@ export async function pipeDocument(
   options
 ) {
   const requestOrigin = getRequestOrigin(req);
-  const { abort, language, stream, prefix, suffix } = await renderDocument(
-    url,
-    acceptLanguage,
-    requestOrigin,
-    requestId,
-    options
-  );
+  const { abort, language, statusCode, stream, prefix, suffix } =
+    await renderDocument(
+      url,
+      acceptLanguage,
+      requestOrigin,
+      requestId,
+      options
+    );
 
   return new Promise((resolve, reject) => {
     let finished = false;
@@ -202,7 +211,7 @@ export async function pipeDocument(
           query: requestUrl.search || '',
           host: req.headers.host || 'localhost',
           language: String(req.headers['accept-language'] || language),
-          status: 200,
+          status: statusCode,
           duration_ms: Date.now() - start,
           streaming: true,
         },
@@ -222,7 +231,7 @@ export async function pipeDocument(
       reject(error);
     };
 
-    res.writeHead(200, {
+    res.writeHead(statusCode, {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'private, no-cache, must-revalidate',
       'X-Accel-Buffering': 'no',

@@ -335,6 +335,28 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
         ),
     )
 
+    def get_search_results(
+        self,
+        request: HttpRequest,
+        queryset: QuerySet,
+        search_term: str,
+    ) -> tuple[QuerySet, bool]:
+        """
+        Deduplicate translated admin search results.
+
+        AstroImage search traverses Parler translation tables. When admin autocomplete
+        searches across multiple translated rows for the same image, the base queryset
+        can contain duplicate AstroImage records. Returning a distinct queryset keeps
+        Select2/autocomplete fields from showing the same image once per translation.
+        """
+        queryset, _may_have_duplicates = super().get_search_results(request, queryset, search_term)
+
+        # Plain DISTINCT is not strong enough here because translated search joins can still
+        # expand the result set once ordering is applied. For admin autocomplete we only need
+        # one row per AstroImage primary key, so use PostgreSQL DISTINCT ON semantics.
+        queryset = queryset.order_by("pk").distinct("pk")
+        return queryset, False
+
     def save_model(
         self, request: HttpRequest, obj: models.Model, form: forms.BaseModelForm, change: bool
     ) -> None:

@@ -8,15 +8,40 @@ export const stripHtml = (html: string): string => {
   if (!html) return '';
 
   if (typeof DOMParser === 'undefined') {
-    // Fallback: remove angle brackets so any residual tag fragments
-    // cannot be interpreted as HTML, then normalize whitespace.
-    return html.replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim();
+    // Server-side fallback: strip tags and normalize spacing without decoding
+    // entities into raw characters in the regex path.
+    return html
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   // Use a DOM-based approach for reliability
   const doc = new DOMParser().parseFromString(html, 'text/html');
   return doc.body.textContent || '';
 };
+
+/**
+ * Trim plain-text SEO copy to a stable snippet length without aggressively
+ * cutting mid-word when there is a nearby whitespace boundary.
+ */
+export const truncateText = (text: string, maxLength: number): string => {
+  const normalized = text.trim().replace(/\s+/g, ' ');
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  const boundary = normalized.lastIndexOf(' ', maxLength - 1);
+  const truncated =
+    boundary >= Math.floor(maxLength * 0.6)
+      ? normalized.slice(0, boundary)
+      : normalized.slice(0, maxLength);
+
+  return `${truncated.trim()}...`;
+};
+
 /**
  * Standardizes a string into a slug (lowercase, hyphenated).
  */

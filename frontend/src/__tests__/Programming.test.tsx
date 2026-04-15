@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { MemoryRouter } from 'react-router-dom';
 import Programming from '../components/Programming';
 import { Project } from '../types';
 import { useProjects } from '../hooks/useProjects';
@@ -7,6 +8,13 @@ import { useProjects } from '../hooks/useProjects';
 jest.mock('../hooks/useProjects');
 
 describe('Programming Component', () => {
+  const renderProgramming = () =>
+    render(
+      <MemoryRouter>
+        <Programming />
+      </MemoryRouter>
+    );
+
   beforeEach(() => {
     jest.clearAllMocks();
     (useProjects as jest.Mock).mockReturnValue({
@@ -17,8 +25,10 @@ describe('Programming Component', () => {
   });
 
   it('renders the Project Archive title', () => {
-    render(<Programming />);
-    expect(screen.getByText(/Project Archive/i)).toBeInTheDocument();
+    renderProgramming();
+    expect(
+      screen.getByRole('heading', { name: /Project Archive/i })
+    ).toBeInTheDocument();
   });
 
   it('shows loading state correctly', () => {
@@ -28,7 +38,7 @@ describe('Programming Component', () => {
       error: null,
     });
 
-    render(<Programming />);
+    renderProgramming();
     expect(screen.getAllByTestId('project-skeleton')).toHaveLength(3);
   });
 
@@ -54,7 +64,7 @@ describe('Programming Component', () => {
       error: null,
     });
 
-    render(<Programming />);
+    renderProgramming();
     expect(screen.getByText('Test Project')).toBeInTheDocument();
     expect(screen.getByText('Test Description')).toBeInTheDocument();
   });
