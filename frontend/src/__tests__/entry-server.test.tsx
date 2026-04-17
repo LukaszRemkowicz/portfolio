@@ -231,9 +231,15 @@ describe('SSR entry server', () => {
   it('skips shop catalog prefetch when the shop feature is disabled', async () => {
     mockFetchSettings.mockResolvedValueOnce({ theme: 'dark', shop: false });
 
-    await render('/shop', 'en', 'https://portfolio.local', 'req-shop-off');
+    const result = await render(
+      '/shop',
+      'en',
+      'https://portfolio.local',
+      'req-shop-off'
+    );
 
     expect(mockFetchShopProducts).not.toHaveBeenCalled();
+    expect(result.statusCode).toBe(404);
   });
 
   it('streams rendered HTML', async () => {
@@ -247,7 +253,19 @@ describe('SSR entry server', () => {
     const html = await consumeStream(result.stream);
 
     expect(result.language).toBe('en');
+    expect(result.statusCode).toBe(200);
     expect(typeof result.abort).toBe('function');
     expect(html).toContain('SSR App');
+  });
+
+  it('marks unknown routes as 404 during SSR', async () => {
+    const result = await renderStream(
+      '/wp-json/wc/store/cart',
+      'en',
+      'https://portfolio.local',
+      'req-404'
+    );
+
+    expect(result.statusCode).toBe(404);
   });
 });

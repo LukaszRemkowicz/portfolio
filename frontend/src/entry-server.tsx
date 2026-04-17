@@ -31,12 +31,15 @@ import {
 import { ASTRO_GALLERY_PAGE_SIZE } from './hooks/useAstroImages';
 import { fetchTravelHighlightDetail } from './hooks/useTravelHighlightDetail';
 import { APP_ROUTES } from './api/constants';
+import { getDocumentStatusCodeForSettings } from './routing/publicRoutes';
+import type { EnabledFeatures } from './types';
 
 export interface RenderResult {
   html: string;
   helmetContext: { helmet?: HelmetServerState };
   dehydratedState: DehydratedState;
   language: string;
+  statusCode: number;
 }
 
 export interface StreamRenderResult {
@@ -44,6 +47,7 @@ export interface StreamRenderResult {
   helmetContext: { helmet?: HelmetServerState };
   dehydratedState: DehydratedState;
   language: string;
+  statusCode: number;
   abort: () => void;
 }
 
@@ -271,6 +275,7 @@ interface PreparedRenderContext {
   helmetContext: { helmet?: HelmetServerState };
   dehydratedState: DehydratedState;
   language: string;
+  statusCode: number;
 }
 
 async function prepareRenderContext(
@@ -304,6 +309,11 @@ async function prepareRenderContext(
 
   const helmetContext: { helmet?: HelmetServerState } = {};
   const dehydratedState = dehydrate(queryClient);
+  const pathname = new URL(url, 'http://frontend.local').pathname;
+  const settings = queryClient.getQueryData<EnabledFeatures>([
+    'settings',
+    i18nInstance.language || 'en',
+  ]);
 
   return {
     element: (
@@ -322,6 +332,7 @@ async function prepareRenderContext(
     helmetContext,
     dehydratedState,
     language: i18nInstance.resolvedLanguage || i18nInstance.language || 'en',
+    statusCode: getDocumentStatusCodeForSettings(pathname, settings),
   };
 }
 
@@ -406,5 +417,6 @@ export async function render(
     helmetContext: prepared.helmetContext,
     dehydratedState: prepared.dehydratedState,
     language: prepared.language,
+    statusCode: prepared.statusCode,
   };
 }

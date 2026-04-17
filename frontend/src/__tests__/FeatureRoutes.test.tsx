@@ -46,7 +46,7 @@ describe('Feature routes', () => {
     expect(screen.getByText('Shop page')).toBeInTheDocument();
   });
 
-  it('redirects the shop route to home when disabled', () => {
+  it('renders a not found page for the shop route when disabled', () => {
     (useFeatureFlag as jest.Mock).mockImplementation(() => ({
       isEnabled: false,
       isLoading: false,
@@ -61,11 +61,13 @@ describe('Feature routes', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Home page')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /page not found/i })
+    ).toBeInTheDocument();
     expect(screen.queryByText('Shop page')).not.toBeInTheDocument();
   });
 
-  it('redirects the programming route to home when disabled', () => {
+  it('renders a not found page for the programming route when disabled', () => {
     (useFeatureFlag as jest.Mock).mockImplementation(() => ({
       isEnabled: false,
       isLoading: false,
@@ -80,7 +82,9 @@ describe('Feature routes', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Home page')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /page not found/i })
+    ).toBeInTheDocument();
     expect(screen.queryByText('Programming page')).not.toBeInTheDocument();
   });
 

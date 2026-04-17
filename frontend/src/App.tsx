@@ -1,6 +1,6 @@
 // frontend/src/App.tsx
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import HomePage from './HomePage';
 import { hasAnalyticsConsent } from './utils/analytics';
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
@@ -13,6 +13,7 @@ import ClientDocumentGuards from './components/common/ClientDocumentGuards';
 import { APP_ROUTES } from './api/constants';
 import ProgrammingRoute from './components/ProgrammingRoute';
 import ShopRoute from './components/ShopRoute';
+import NotFoundPage from './components/NotFoundPage';
 import styles from './styles/components/App.module.css';
 
 const AstroGallery = lazy(() => import('./components/AstroGallery'));
@@ -97,10 +98,7 @@ const App: React.FC = () => {
               }
             />
             {/* Catch-all: Redirect to home or show 404 */}
-            <Route
-              path='*'
-              element={<Navigate to={APP_ROUTES.HOME} replace />}
-            />
+            <Route path='*' element={<NotFoundPage />} />
           </Routes>
         </ErrorBoundary>
       </div>
