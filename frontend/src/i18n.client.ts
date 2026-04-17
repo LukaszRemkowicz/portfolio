@@ -30,7 +30,7 @@ const initialLanguage =
     ? normalizeLanguage(window.__INITIAL_LANGUAGE__)
     : undefined;
 
-i18n
+export const i18nReady = i18n
   .use(HttpApi)
   .use(LanguageDetector)
   .use(initReactI18next)

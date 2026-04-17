@@ -33,6 +33,7 @@ import { fetchTravelHighlightDetail } from './hooks/useTravelHighlightDetail';
 import { APP_ROUTES } from './api/constants';
 import { getDocumentStatusCodeForSettings } from './routing/publicRoutes';
 import type { EnabledFeatures } from './types';
+import { logError, logWarning, toErrorPayload } from '../server/logging.js';
 
 export interface RenderResult {
   html: string;
@@ -99,7 +100,11 @@ async function renderAppToString(element: React.ReactElement): Promise<string> {
         }
       },
       onError(error) {
-        console.error('[frontend-ssr] render error', error);
+        logError({
+          event: 'render_error',
+          stage: 'render_to_string',
+          ...toErrorPayload(error),
+        });
       },
     });
   });
@@ -112,9 +117,10 @@ async function prefetchQuerySafely(
   try {
     await queryClient.prefetchQuery(options);
   } catch (error) {
-    console.warn('[frontend-ssr] prefetch failed', {
-      queryKey: options.queryKey,
-      error: error instanceof Error ? error.message : String(error),
+    logWarning({
+      event: 'prefetch_failed',
+      query_key: options.queryKey,
+      ...toErrorPayload(error),
     });
   }
 }
@@ -126,9 +132,10 @@ async function prefetchInfiniteQuerySafely(
   try {
     await queryClient.prefetchInfiniteQuery(options);
   } catch (error) {
-    console.warn('[frontend-ssr] prefetch failed', {
-      queryKey: options.queryKey,
-      error: error instanceof Error ? error.message : String(error),
+    logWarning({
+      event: 'prefetch_infinite_failed',
+      query_key: options.queryKey,
+      ...toErrorPayload(error),
     });
   }
 }
@@ -392,7 +399,11 @@ export async function renderStream(
         }
       },
       onError(error) {
-        console.error('[frontend-ssr] render error', error);
+        logError({
+          event: 'render_error',
+          stage: 'stream_render',
+          ...toErrorPayload(error),
+        });
       },
     });
   });

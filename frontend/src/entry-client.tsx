@@ -9,8 +9,7 @@ import { createRoot, hydrateRoot } from 'react-dom/client';
 import { DehydratedState, QueryClient } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter } from 'react-router-dom';
-import './i18n.client';
-import i18n from './i18n.client';
+import i18n, { i18nReady } from './i18n.client';
 import { setLanguageGetter } from './api/api';
 import { initClientServices } from './utils/initClientServices';
 import { getEnv } from './utils/env';
@@ -43,7 +42,9 @@ i18n.on('languageChanged', () => {
   });
 });
 
-function bootstrapApp() {
+async function bootstrapApp() {
+  await i18nReady;
+
   // Initialise browser-only services (Sentry lazy-load)
   initClientServices();
 

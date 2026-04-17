@@ -1,5 +1,5 @@
 import { invalidateCacheTags } from './ssrCache.js';
-import { logRequest } from './logging.js';
+import { logError, logRequest } from './logging.js';
 import {
   assertJsonContentType,
   readJsonBody,
@@ -11,9 +11,13 @@ export const INTERNAL_CACHE_INVALIDATION_ROUTE = '/internal/cache/invalidate';
 function isAuthorizedInternalCacheRequest(req) {
   const expectedToken = process.env.SSR_CACHE_INVALIDATION_TOKEN || '';
   if (!expectedToken) {
-    console.error(
-      '[frontend-ssr] SSR_CACHE_INVALIDATION_TOKEN is not set — rejecting cache invalidation request'
-    );
+    logError({
+      event: 'cache_invalidation_token_missing',
+      path: INTERNAL_CACHE_INVALIDATION_ROUTE,
+      method: req.method,
+      message:
+        'SSR_CACHE_INVALIDATION_TOKEN is not set — rejecting cache invalidation request',
+    });
     return false;
   }
 
