@@ -11,9 +11,9 @@ parse them reliably. This module provides:
 from __future__ import annotations
 
 import json
-import logging
 from contextvars import ContextVar
 from datetime import UTC, datetime
+from logging import Filter, Formatter, LogRecord
 from typing import Any
 
 _REQUEST_ID: ContextVar[str] = ContextVar("request_id", default="")
@@ -81,14 +81,14 @@ def clear_request_log_context() -> None:
     _REQUEST_HOST.set("")
 
 
-class RequestContextFilter(logging.Filter):
+class RequestContextFilter(Filter):
     """Inject request-scoped metadata into every log record."""
 
     def __init__(self, environment: str = "development") -> None:
         super().__init__()
         self.environment = environment
 
-    def filter(self, record: logging.LogRecord) -> bool:
+    def filter(self, record: LogRecord) -> bool:
         record.environment = self.environment
         record.request_id = _REQUEST_ID.get()
         record.request_method = _REQUEST_METHOD.get()
@@ -97,17 +97,17 @@ class RequestContextFilter(logging.Filter):
         return True
 
 
-class JsonFormatter(logging.Formatter):
+class JsonFormatter(Formatter):
     """Emit one JSON object per log record for Docker stdout consumption."""
 
-    def format(self, record: logging.LogRecord) -> str:
+    def format(self, record: LogRecord) -> str:
         payload = self._build_base_payload(record)
         self._add_request_context(payload, record)
         self._add_extra_fields(payload, record)
         self._add_exception_details(payload, record)
         return json.dumps(payload, ensure_ascii=True, default=str)
 
-    def _build_base_payload(self, record: logging.LogRecord) -> dict[str, Any]:
+    def _build_base_payload(self, record: LogRecord) -> dict[str, Any]:
         return {
             "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             "level": record.levelname,
@@ -121,13 +121,13 @@ class JsonFormatter(logging.Formatter):
             "environment": getattr(record, "environment", ""),
         }
 
-    def _add_request_context(self, payload: dict[str, Any], record: logging.LogRecord) -> None:
+    def _add_request_context(self, payload: dict[str, Any], record: LogRecord) -> None:
         for field_name in ("request_id", "request_method", "request_path", "request_host"):
             value = getattr(record, field_name, "")
             if value:
                 payload[field_name] = value
 
-    def _add_extra_fields(self, payload: dict[str, Any], record: logging.LogRecord) -> None:
+    def _add_extra_fields(self, payload: dict[str, Any], record: LogRecord) -> None:
         excluded_fields = {
             "environment",
             "request_id",
@@ -142,7 +142,7 @@ class JsonFormatter(logging.Formatter):
                 continue
             payload[key] = self._serialize_extra_value(value)
 
-    def _add_exception_details(self, payload: dict[str, Any], record: logging.LogRecord) -> None:
+    def _add_exception_details(self, payload: dict[str, Any], record: LogRecord) -> None:
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
 
