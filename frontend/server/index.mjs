@@ -19,7 +19,7 @@ import { detectLanguage } from './detectLanguage.js';
 import { pipeDocument } from './documentRender.js';
 import { handleBffRequest } from './backendProxy.js';
 import { handleInternalRequest } from './internalCacheRoute.js';
-import { logRequest } from './logging.js';
+import { logError, logRequest, toErrorPayload } from './logging.js';
 import { getRequestId } from './requestMeta.js';
 import { serveStatic } from './staticAssets.js';
 
@@ -116,7 +116,15 @@ const server = http.createServer(async (req, res) => {
       }
     );
   } catch (error) {
-    console.error('[frontend-ssr] request failed', error);
+    logError(
+      {
+        event: 'request_failed',
+        path: req.url || '/',
+        method: req.method,
+        ...toErrorPayload(error),
+      },
+      requestId
+    );
     if (!res.headersSent) {
       res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end('Internal Server Error');
@@ -138,5 +146,9 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, '0.0.0.0', () => {
-  console.log(`[frontend-ssr] listening on 0.0.0.0:${port}`);
+  logRequest({
+    event: 'server_started',
+    host: '0.0.0.0',
+    port,
+  });
 });

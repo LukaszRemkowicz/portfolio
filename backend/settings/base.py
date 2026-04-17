@@ -421,35 +421,94 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
-            "style": "{",
-            "datefmt": "%Y-%m-%d %H:%M:%S %z",
+    "filters": {
+        "request_context": {
+            "()": "common.utils.logging.RequestContextFilter",
+            "environment": ENVIRONMENT,
         },
-        "simple": {
-            "format": "{asctime} {levelname} {message}",
-            "style": "{",
-            "datefmt": "%Y-%m-%d %H:%M:%S %z",
+    },
+    "formatters": {
+        "json": {
+            "()": "common.utils.logging.JsonFormatter",
         },
     },
     "handlers": {
         "console": {
-            "level": "INFO" if not DEBUG else "DEBUG",
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
             "class": "logging.StreamHandler",
-            "formatter": "simple" if not DEBUG else "verbose",
+            "filters": ["request_context"],
+            "formatter": "json",
         },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
     },
     "loggers": {
         "django": {
             "handlers": ["console"],
+            "level": env.str("DJANGO_LOG_LEVEL", default="INFO"),
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
             "level": "INFO",
-            "propagate": True,
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": env.str("DB_LOG_LEVEL", default="WARNING"),
+            "propagate": False,
+        },
+        "celery": {
+            "handlers": ["console"],
+            "level": env.str("CELERY_LOG_LEVEL", default="INFO"),
+            "propagate": False,
+        },
+        "common": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
         },
         "core": {
             "handlers": ["console"],
-            "level": "DEBUG" if DEBUG else "INFO",
-            "propagate": True,
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "users": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "shop": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "monitoring": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "translation": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "astrophotography": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "programming": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
         },
     },
 }

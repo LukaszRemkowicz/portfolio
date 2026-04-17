@@ -14,6 +14,8 @@ from typing import Any
 
 from django.utils import translation
 
+from common.utils.logging import clear_request_log_context, set_request_log_context
+
 logger = logging.getLogger("django.request")
 
 
@@ -36,23 +38,43 @@ class RequestCorrelationMiddleware:
     def __call__(self, request: Any) -> Any:
         request_id = request.META.get("HTTP_X_REQUEST_ID") or str(uuid.uuid4())
         request.request_id = request_id
+        request_method = request.method
+        request_path = request.get_full_path()
+        request_host = request.get_host()
+        set_request_log_context(
+            request_id=request_id,
+            method=request_method,
+            path=request_path,
+            host=request_host,
+        )
 
         started_at = time.monotonic()
-        response = self.get_response(request)
-        duration_ms = int((time.monotonic() - started_at) * 1000)
+        try:
+            response = self.get_response(request)
+        except Exception:
+            duration_ms = int((time.monotonic() - started_at) * 1000)
+            logger.exception(
+                "request_failed",
+                extra={
+                    "status_code": 500,
+                    "duration_ms": duration_ms,
+                },
+            )
+            clear_request_log_context()
+            raise
 
+        duration_ms = int((time.monotonic() - started_at) * 1000)
         response["X-Request-ID"] = request_id
 
         logger.info(
-            "request_id=%s method=%s path=%s status=%s duration_ms=%s host=%s",
-            request_id,
-            request.method,
-            request.get_full_path(),
-            getattr(response, "status_code", "unknown"),
-            duration_ms,
-            request.get_host(),
+            "request_completed",
+            extra={
+                "status_code": getattr(response, "status_code", "unknown"),
+                "duration_ms": duration_ms,
+            },
         )
 
+        clear_request_log_context()
         return response
 
 

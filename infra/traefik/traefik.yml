@@ -36,6 +36,7 @@ certificatesResolvers:
 
 log:
   level: INFO
+  format: json
 
 accessLog:
   filePath: /var/log/traefik/access.log
