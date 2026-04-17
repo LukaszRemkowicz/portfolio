@@ -2,8 +2,8 @@ import pytest
 from pytest_mock import MockerFixture
 
 from common.tests.image_helpers import _jpeg_field, _png_field
+from core.tasks import process_image_task
 from shop.models import ShopSettings
-from shop.tasks import process_shop_settings_images_task
 
 
 @pytest.mark.django_db
@@ -16,17 +16,16 @@ class TestShopSettingsImageProcessing:
         )
 
         convert_mock = mocker.patch(
-            "shop.tasks.convert_to_webp", return_value=("ignored", _png_field("background.webp"))
+            "common.image_processing.convert_to_webp",
+            return_value=("ignored", _png_field("background.webp")),
         )
         save_mock = mocker.patch.object(ShopSettings, "save")
-        logger_mock = mocker.patch("shop.tasks.logger")
 
-        process_shop_settings_images_task(settings_obj.pk)
+        process_image_task("shop", "ShopSettings", settings_obj.pk, ["image"])
 
         convert_mock.assert_called_once()
         assert convert_mock.call_args.args[0] == settings_obj.image_cropped
         save_mock.assert_called_once()
-        assert logger_mock.info.called
 
     def test_process_task_clears_webp_when_no_source_image(self, mocker: MockerFixture) -> None:
         settings_obj = ShopSettings.objects.create(
@@ -38,6 +37,6 @@ class TestShopSettingsImageProcessing:
 
         save_mock = mocker.patch.object(ShopSettings, "save")
 
-        process_shop_settings_images_task(settings_obj.pk)
+        process_image_task("shop", "ShopSettings", settings_obj.pk, ["image"])
 
         save_mock.assert_called_once()

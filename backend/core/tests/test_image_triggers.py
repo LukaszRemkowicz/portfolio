@@ -9,7 +9,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 from astrophotography.tests.factories import MainPageBackgroundImageFactory
 from common.tests.image_helpers import _jpeg_field
-from core.tasks import process_image_task
 
 
 @pytest.mark.django_db
@@ -19,7 +18,7 @@ class TestBaseImageAsyncTrigger:
         Verify that saving a BaseImage (via MainPageBackgroundImage)
         triggers the Celery task and does NOT populate original_image synchronously.
         """
-        with patch.object(process_image_task, "delay_on_commit") as mock_delay:
+        with patch("core.models.process_image_task.delay_on_commit") as mock_delay:
             # build() does not call save()
             img = MainPageBackgroundImageFactory.build()
             # Manually assign new path to ensure FieldTracker sees it as changed
@@ -41,7 +40,7 @@ class TestBaseImageAsyncTrigger:
         """
         Existing broken rows must fail validation when the current image file is missing.
         """
-        with patch.object(process_image_task, "delay_on_commit") as mock_delay:
+        with patch("core.models.process_image_task.delay_on_commit") as mock_delay:
             img = MainPageBackgroundImageFactory()
 
         img.refresh_from_db()

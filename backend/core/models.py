@@ -14,13 +14,15 @@ from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from common.utils.image import ImageSpec, convert_to_webp, file_exists_in_storage
+from common.mixins import ImageProcessingModelMixin
+from common.types import ImageProcessingOperation, ImageSpec
+from common.utils.image import convert_to_webp, file_exists_in_storage
 from core.tasks import process_image_task
 
 logger = logging.getLogger(__name__)
 
 
-class BaseImage(TranslatableModel):
+class BaseImage(ImageProcessingModelMixin, TranslatableModel):
     """Base abstract model for images"""
 
     id = models.UUIDField(
@@ -317,6 +319,22 @@ class BaseImage(TranslatableModel):
             except (OSError, ValueError):
                 return None
         return None
+
+    def get_image_processing_operations(
+        self, changed_field_names: list[str] | None = None
+    ) -> list[ImageProcessingOperation]:
+        return [
+            ImageProcessingOperation(
+                field_name="path",
+                source_image=self.get_original_source(),
+                webp_field_name="path",
+                spec=self.get_image_spec("path"),
+                original_field_name="original_image",
+                thumbnail_field_name="thumbnail",
+                thumbnail_source_image=self.get_thumbnail_source(),
+                thumbnail_generator=self.make_thumbnail,
+            )
+        ]
 
 
 class SingletonModel(models.Model):

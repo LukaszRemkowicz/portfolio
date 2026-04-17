@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.test import SimpleTestCase
 
-from common.utils.image import ImageSpec
+from common.types import ImageSpec
 
 
 class ImageSpecsConfigTest(SimpleTestCase):
