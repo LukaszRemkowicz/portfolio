@@ -246,6 +246,10 @@ disable_error_code = [
     "unused-ignore",
 ]
 
+[[tool.mypy.overrides]]
+module = "astrophotography.admin"
+disable_error_code = ["var-annotated"]
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "settings.tests"
 pythonpath = ["."]

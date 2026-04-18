@@ -13,7 +13,8 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 from astrophotography.models import AstroImage, MainPageBackgroundImage
-from common.utils.image import ImageSpec, convert_to_webp
+from common.types import ImageSpec
+from common.utils.image import convert_to_webp
 from programming.models import ProjectImage
 from users.models import User
 

@@ -10,9 +10,11 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from common.utils.image import ImageSpec, get_available_image_url
+from common.mixins import ImageProcessingModelMixin
+from common.types import ImageProcessingOperation, ImageSpec
+from common.utils.image import get_available_image_url
 from core.models import SingletonModel
-from shop.tasks import process_shop_settings_images_task
+from core.tasks import process_image_task
 from translation.mixins import AutomatedTranslationModelMixin
 
 
@@ -162,7 +164,9 @@ class ShopProduct(AutomatedTranslationModelMixin, TranslatableModel):
             self.trigger_translations()
 
 
-class ShopSettings(AutomatedTranslationModelMixin, TranslatableModel, SingletonModel):
+class ShopSettings(
+    ImageProcessingModelMixin, AutomatedTranslationModelMixin, TranslatableModel, SingletonModel
+):
     """
     Singleton model to store global settings for the shop page.
     """
@@ -258,7 +262,12 @@ class ShopSettings(AutomatedTranslationModelMixin, TranslatableModel, SingletonM
         super().save(*args, **kwargs)
 
         if (source_changed or cropped_changed) and not update_fields:
-            process_shop_settings_images_task.delay_on_commit(self.pk)
+            process_image_task.delay_on_commit(
+                self._meta.app_label,
+                self._meta.model_name,
+                self.pk,
+                ["image"],
+            )
 
         if not update_fields or any(
             field in update_fields for field in self.translation_trigger_fields
@@ -272,3 +281,16 @@ class ShopSettings(AutomatedTranslationModelMixin, TranslatableModel, SingletonM
             or get_available_image_url(self.image_cropped)
             or get_available_image_url(self.image)
         )
+
+    def get_image_processing_operations(
+        self, _changed_field_names: list[str] | None = None
+    ) -> list[ImageProcessingOperation]:
+        return [
+            ImageProcessingOperation(
+                field_name="image",
+                source_image=self.image_cropped if self.image_cropped else self.image,
+                webp_field_name="image_webp",
+                spec=self.get_image_spec(),
+                clear_field_on_failed_conversion=True,
+            )
+        ]

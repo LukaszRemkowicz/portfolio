@@ -1,22 +1,13 @@
 import os
-from dataclasses import dataclass
 from io import BytesIO
-from typing import Any
+from typing import IO, cast
 
 from PIL import Image
 
 from django.core.files.base import ContentFile
 from django.db.models.fields.files import FieldFile
 
-
-@dataclass(frozen=True)
-class ImageSpec:
-    """Configuration for image optimization."""
-
-    dimension: int
-    quality: int
-    dimension_percentage: int | None = None
-    aspect_ratio: float | None = None
+from common.types import ProcessableImageFile
 
 
 def get_available_image_url(image_field: FieldFile | None) -> str:
@@ -53,7 +44,7 @@ def file_exists_in_storage(file_field: FieldFile | None) -> bool:
 
 
 def convert_to_webp(
-    image_field: Any,
+    image_field: ProcessableImageFile | None,
     quality: int = 90,
     max_dimension: int | None = None,
     dimension_percentage: int | None = None,
@@ -86,7 +77,7 @@ def convert_to_webp(
         return None
 
     try:
-        img: Any = Image.open(image_field)
+        img: Image.Image = Image.open(cast(IO[bytes], image_field))
         if img.mode not in ("RGB", "RGBA"):
             img = img.convert("RGB")
 

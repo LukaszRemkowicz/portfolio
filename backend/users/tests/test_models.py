@@ -12,7 +12,7 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 from common.tests.image_helpers import _jpeg_field, _png_field
-from common.utils.image import ImageSpec
+from common.types import ImageSpec
 from users.models import Profile
 from users.tests.factories import ProgrammingProfileFactory, UserFactory
 

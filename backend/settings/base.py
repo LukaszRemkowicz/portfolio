@@ -11,7 +11,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 
 from django.utils.translation import gettext_lazy as _
 
-from common.utils.image import ImageSpec
+from common.types import ImageSpec
 from users.types import CropperFieldConfig, CropperPreviewShape
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

@@ -1,7 +1,7 @@
 import pytest
 
 from common.tests.image_helpers import _jpeg_field, _png_field
-from users.tasks import process_user_images_task
+from core.tasks import process_image_task
 from users.tests.factories import UserFactory
 
 
@@ -17,7 +17,7 @@ class TestProcessUserImagesTask:
         user.avatar = _jpeg_field("test_avatar.jpg")
         user.save()
 
-        process_user_images_task(user.pk, ["avatar"])
+        process_image_task("users", "User", user.pk, ["avatar"])
 
         user.refresh_from_db()
         # In Green phase, we expect conversion to succeed
@@ -30,22 +30,24 @@ class TestProcessUserImagesTask:
         user.avatar = _jpeg_field("test_avatar.jpg")
         user.save()
 
-        mock_invalidate_user_cache = mocker.patch("users.tasks.CacheService.invalidate_user_cache")
+        mock_invalidate_user_cache = mocker.patch(
+            "users.signals.CacheService.invalidate_user_cache"
+        )
         mock_invalidate_frontend = mocker.patch(
-            "users.tasks.invalidate_frontend_ssr_cache_task.delay_on_commit"
+            "users.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
         )
 
-        process_user_images_task(user.pk, ["avatar"])
+        process_image_task("users", "User", user.pk, ["avatar"])
 
-        assert mock_invalidate_user_cache.call_count == 2
-        assert mock_invalidate_frontend.call_count == 2
+        mock_invalidate_user_cache.assert_called_once()
+        mock_invalidate_frontend.assert_called_once()
         mock_invalidate_frontend.assert_called_with(["profile"])
 
     def test_process_user_images_task_uses_new_upload_not_stale_original(self):
         user = UserFactory.create_superuser()
         user.avatar = _jpeg_field("old_avatar.jpg")
         user.save()
-        process_user_images_task(user.pk, ["avatar"])
+        process_image_task("users", "User", user.pk, ["avatar"])
 
         user.refresh_from_db()
         assert "old_avatar" in user.avatar.name
@@ -53,7 +55,7 @@ class TestProcessUserImagesTask:
 
         user.avatar = _jpeg_field("new_avatar.jpg")
         user.save()
-        process_user_images_task(user.pk, ["avatar"])
+        process_image_task("users", "User", user.pk, ["avatar"])
 
         user.refresh_from_db()
         assert "new_avatar" in user.avatar.name
@@ -71,7 +73,7 @@ class TestProcessUserImagesTask:
         user.avatar = _png_field("cropped_avatar.png", size=(280, 280))
         user.save()
 
-        process_user_images_task(user.pk, ["avatar"])
+        process_image_task("users", "User", user.pk, ["avatar"])
 
         user.refresh_from_db()
         assert user.avatar.name.endswith(".png")
@@ -85,7 +87,7 @@ class TestProcessUserImagesTask:
         user.avatar_cropped = _png_field("cropped_avatar.png", size=(280, 280))
         user.save()
 
-        process_user_images_task(user.pk, ["avatar"])
+        process_image_task("users", "User", user.pk, ["avatar"])
 
         user.refresh_from_db()
         assert "original_avatar" in user.avatar.name
