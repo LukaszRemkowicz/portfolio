@@ -43,34 +43,47 @@ function prepareRuntimeAssets() {
       'WARN',
       'Skipping runtime asset preparation because dist is missing'
     );
-    return;
+    return false;
   }
 
-  mkdirSync(assetRoot, { recursive: true });
+  try {
+    mkdirSync(assetRoot, { recursive: true });
 
-  if (existsSync(previousDistDir)) {
-    rmSync(previousDistDir, { force: true, recursive: true });
+    if (existsSync(previousDistDir)) {
+      rmSync(previousDistDir, { force: true, recursive: true });
+    }
+
+    if (existsSync(currentDistDir)) {
+      copyDirectory(currentDistDir, previousDistDir);
+      rmSync(currentDistDir, { force: true, recursive: true });
+    }
+
+    copyDirectory(bundledDistDir, currentDistDir);
+
+    emitLog('INFO', 'Prepared runtime frontend assets', {
+      asset_root: assetRoot,
+      current_dir: currentDistDir,
+      previous_dir: previousDistDir,
+    });
+    return true;
+  } catch (error) {
+    emitLog(
+      'WARN',
+      'Runtime asset preparation failed; serving bundled assets only',
+      {
+        asset_root: assetRoot,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    );
+    return false;
   }
-
-  if (existsSync(currentDistDir)) {
-    copyDirectory(currentDistDir, previousDistDir);
-    rmSync(currentDistDir, { force: true, recursive: true });
-  }
-
-  copyDirectory(bundledDistDir, currentDistDir);
-
-  emitLog('INFO', 'Prepared runtime frontend assets', {
-    asset_root: assetRoot,
-    current_dir: currentDistDir,
-    previous_dir: previousDistDir,
-  });
 }
 
-function startServer() {
+function startServer(useRuntimeAssets) {
   const child = spawn(process.execPath, [serverEntrypoint], {
     env: {
       ...process.env,
-      FRONTEND_ASSET_ROOT: assetRoot,
+      ...(useRuntimeAssets ? { FRONTEND_ASSET_ROOT: assetRoot } : {}),
     },
     stdio: 'inherit',
   });
@@ -87,5 +100,5 @@ function startServer() {
   });
 }
 
-prepareRuntimeAssets();
-startServer();
+const useRuntimeAssets = prepareRuntimeAssets();
+startServer(useRuntimeAssets);
