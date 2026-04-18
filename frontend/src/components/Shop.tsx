@@ -19,7 +19,7 @@ const Shop: FC = () => {
   const products = data?.products ?? [];
   const title = data?.title || t('shop.title');
   const description = stripHtml(data?.description || '').trim();
-  const backgroundUrl = data?.background_url || '/zodiacal.png';
+  const backgroundUrl = data?.background_url || '';
   const fallbackDescription = t('shop.subtitle');
 
   return (
@@ -33,7 +33,9 @@ const Shop: FC = () => {
       <div className={styles.shopContainer}>
         <div
           className={styles.zodiacalBackground}
-          style={{ backgroundImage: `url('${backgroundUrl}')` }}
+          style={
+            backgroundUrl ? { backgroundImage: `url('${backgroundUrl}')` } : {}
+          }
           aria-hidden='true'
         />
         <div
