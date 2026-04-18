@@ -73,22 +73,14 @@ class Command(BaseCommand):
         for instance in queryset.iterator():
             updated_fields = self._backfill_instance(instance)
             if updated_fields:
-                instance.save(update_fields=updated_fields)
+                update_values = {
+                    field_name: self._get_field_name(instance, field_name)
+                    for field_name in updated_fields
+                }
+                type(instance).objects.filter(pk=instance.pk).update(**update_values)
                 updated += 1
-                logger.info(
-                    "Backfilled BaseImage fields for instance",
-                    extra={
-                        "target": target.label,
-                        "instance_id": str(instance.pk),
-                        "updated_fields": updated_fields,
-                    },
-                )
             else:
                 skipped += 1
-                logger.info(
-                    "Skipped BaseImage field backfill for instance because nothing changed",
-                    extra={"target": target.label, "instance_id": str(instance.pk)},
-                )
 
         self.stdout.write(
             f"{target.label}: scanned {scanned}, updated {updated}, skipped {skipped}"

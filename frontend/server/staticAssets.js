@@ -52,11 +52,42 @@ function isSafeStaticPath(pathname, clientDistDir) {
 }
 
 /**
+ * Resolve a requested asset against the current client dist first, then any
+ * older retained dist directories used to bridge deploy transitions.
+ */
+function resolveStaticPath(pathname, clientDistDir, fallbackDistDirs = []) {
+  const candidateDirs = [clientDistDir, ...fallbackDistDirs];
+
+  for (const candidateDir of candidateDirs) {
+    if (!candidateDir || !existsSync(candidateDir)) {
+      continue;
+    }
+
+    const resolvedPath = isSafeStaticPath(pathname, candidateDir);
+    if (resolvedPath && existsSync(resolvedPath)) {
+      return resolvedPath;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Serve a built static asset from the client dist directory.
  */
-export async function serveStatic(req, res, clientDistDir) {
-  const targetPath = isSafeStaticPath(req.url || '/', clientDistDir);
-  if (!targetPath || !existsSync(targetPath)) {
+export async function serveStatic(
+  req,
+  res,
+  clientDistDir,
+  fallbackDistDirs = []
+) {
+  const targetPath = resolveStaticPath(
+    req.url || '/',
+    clientDistDir,
+    fallbackDistDirs
+  );
+
+  if (!targetPath) {
     return false;
   }
 

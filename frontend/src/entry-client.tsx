@@ -13,6 +13,7 @@ import i18n, { i18nReady } from './i18n.client';
 import { setLanguageGetter } from './api/api';
 import { initClientServices } from './utils/initClientServices';
 import { getEnv } from './utils/env';
+import { initPwaRuntime } from './utils/pwaRuntime';
 import AppShell from './AppShell';
 import App from './App';
 
@@ -52,6 +53,7 @@ async function bootstrapApp() {
   if (!rootElement) throw new Error('Root element not found');
 
   const environment = getEnv('ENVIRONMENT', getEnv('NODE_ENV', 'development'));
+  initPwaRuntime(environment);
   // Local development prefers a clean client mount over hydration recovery noise.
   // Production-like environments should hydrate so SSR/client mismatches stay visible.
   const useClientRenderOnly = ['development', 'dev'].includes(environment);

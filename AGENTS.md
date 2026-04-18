@@ -73,6 +73,8 @@ Use these documents as fast context before implementation.
   Use for translation lifecycle, `TranslationTask` debugging, translation admin behavior, serializer fallback behavior, and adding translation support to new models. Describes the async translation architecture and its operational boundaries.
 - `infra/docs/project/release_deploy_architecture.md`
   Use for release scripts, deploy logic, image naming, artifact flow, and rollback behavior. Describes the tag-based release/deploy model and script responsibilities.
+- `infra/docs/project/vps_postgres_ssh_tunneling.md`
+  Use for local SSH tunneling into the VPS PostgreSQL container, pgAdmin connection setup, and port-forwarding examples. Describes the local-to-VPS tunnel shape and Docker container IP usage.
 - `infra/docs/prod/fail2ban_probe_blocker_playbook.md`
   Use for production probe blocking, repeated `.env` scans, and host-level IP banning. Describes the `fail2ban` setup for nginx and Traefik logs.
 - `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
@@ -101,6 +103,7 @@ Use this quick mapping when a task arrives:
 - Collector app architecture, manifest contract, rebuild/run path, or cron rollout work -> `collector/README.md`
 - Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
 - Release/deploy script logic or image naming -> `infra/docs/project/release_deploy_architecture.md`
+- SSH tunnel or pgAdmin access to the VPS PostgreSQL DB -> `infra/docs/project/vps_postgres_ssh_tunneling.md`
 - Production release procedure -> `infra/scripts/README.md`
 - SSR architecture direction -> `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
 - BFF route ownership or `/app/...` migration -> `infra/docs/project/SSR Migration/STAGE-2_full_ssr_bff_migration_plan.md`

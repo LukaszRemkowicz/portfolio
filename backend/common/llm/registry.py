@@ -51,7 +51,7 @@ class LLMProviderRegistry:
             )
 
         cls._providers[name] = provider_class
-        logger.info("Registered LLM provider: %s -> %s", name, provider_class.__name__)
+        logger.debug("Registered LLM provider: %s -> %s", name, provider_class.__name__)
 
     @classmethod
     def get(cls, name: str) -> "LLMProvider":

@@ -46,15 +46,18 @@ ENV NODE_ENV=production
 ENV PORT=8080
 
 COPY --from=build /app/package.json /app/package-lock.json ./
-RUN npm ci --omit=dev
+RUN apk add --no-cache su-exec && npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
 COPY --from=build /app/scripts ./scripts
-
-USER node
+COPY docker/frontend/runtime-entrypoint.sh /usr/local/bin/runtime-entrypoint.sh
+RUN chmod +x /usr/local/bin/runtime-entrypoint.sh && \
+    mkdir -p /app/runtime-assets/current /app/runtime-assets/previous && \
+    chown -R node:node /app/runtime-assets
 
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- "http://127.0.0.1:${PORT}/health" >/dev/null || exit 1
-CMD ["npm", "run", "serve:ssr"]
+ENTRYPOINT ["runtime-entrypoint.sh"]
+CMD ["npm", "run", "serve:runtime"]
 
 FROM runtime AS prod

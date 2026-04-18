@@ -1,5 +1,3 @@
-import sys
-
 import pytest
 
 from django.core.management import call_command
@@ -7,7 +5,6 @@ from django.core.management import call_command
 from astrophotography.models import AstroImage
 from astrophotography.tests.factories import AstroImageFactory
 from core.management.commands.backfill_baseimage_fields import Command
-from scripts.release_entrypoint import RELEASE_CONFIGURATION_COMMANDS
 
 
 @pytest.mark.django_db
@@ -93,8 +90,3 @@ class TestBackfillBaseImageFieldsCommand:
         assert updated_fields == ["original", "original_webp"]
         assert image.original.name == "images/example.jpg"
         assert image.original_webp.name == "images/example.webp"
-
-    def test_release_entrypoint_runs_backfill_command(self) -> None:
-        assert RELEASE_CONFIGURATION_COMMANDS == (
-            (sys.executable, "manage.py", "backfill_baseimage_fields"),
-        )

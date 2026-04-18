@@ -9,7 +9,7 @@ import sys
 logger = logging.getLogger(__name__)
 
 RELEASE_CONFIGURATION_COMMANDS: tuple[tuple[str, ...], ...] = (
-    (sys.executable, "manage.py", "backfill_baseimage_fields"),
+    (sys.executable, "manage.py", "backfill_baseimage_fields", "--verbosity", "0"),
 )
 
 
@@ -18,11 +18,9 @@ def main() -> int:
     for command in RELEASE_CONFIGURATION_COMMANDS:
         printable_command = " ".join(command)
         logger.info("Running release configuration step", extra={"command": printable_command})
-        print(f"Running release configuration step: {printable_command}")
         subprocess.run(command, check=True)
 
     logger.info("Release configuration complete")
-    print("Release configuration complete.")
     return 0
 
 
