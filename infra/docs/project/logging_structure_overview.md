@@ -138,6 +138,21 @@ Typical purpose:
 - shared domain infrastructure
 - `BaseImage` lifecycle
 - cache services
+
+#### `scripts`
+
+Typical purpose:
+
+- release-time backend orchestration
+- rollout-only startup hooks
+
+These modules emit structured logs through the normal app-level namespace configuration, for example:
+
+- [backend/common/image_processing.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/image_processing.py:1)
+- [backend/core/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/models.py:1)
+- [backend/core/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/tasks.py:1)
+- [backend/core/management/commands/backfill_baseimage_fields.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/management/commands/backfill_baseimage_fields.py:1)
+- [backend/scripts/release_entrypoint.py](/Users/lukaszremkowicz/Projects/landingpage/backend/scripts/release_entrypoint.py:1)
 - shared image task compatibility wrapper
 
 Common log shape:

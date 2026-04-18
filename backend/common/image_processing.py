@@ -50,6 +50,14 @@ def process_image_operations(
         processing workflow and then persisted by the model.
     """
     operations = instance.get_image_processing_operations(changed_field_names)
+    logger.info(
+        "Starting shared image processing",
+        extra={
+            "model": type(instance).__name__,
+            "changed_field_names": changed_field_names or [],
+            "operation_count": len(operations),
+        },
+    )
     updated_fields: list[str] = []
 
     for operation in operations:
@@ -58,6 +66,15 @@ def process_image_operations(
     unique_updated_fields = list(dict.fromkeys(updated_fields))
     if unique_updated_fields:
         instance.save(update_fields=_build_save_update_fields(instance, unique_updated_fields))
+        logger.info(
+            "Finished shared image processing with updates",
+            extra={"model": type(instance).__name__, "updated_fields": unique_updated_fields},
+        )
+    else:
+        logger.info(
+            "Finished shared image processing without updates",
+            extra={"model": type(instance).__name__},
+        )
 
     return unique_updated_fields
 
@@ -84,12 +101,29 @@ def _process_image_operation(
         if operation.clear_field_on_missing_source:
             setattr(instance, operation.webp_field_name, None)
             updated_fields.append(operation.webp_field_name)
+            logger.info(
+                "Cleared derived image field because source is missing",
+                extra={
+                    "model": type(instance).__name__,
+                    "field_name": operation.field_name,
+                    "webp_field_name": operation.webp_field_name,
+                },
+            )
         return updated_fields
 
     source_name = str(getattr(source_image, "name", "") or "")
     if source_name.lower().endswith(".webp"):
         setattr(instance, operation.webp_field_name, source_name)
         updated_fields.append(operation.webp_field_name)
+        logger.info(
+            "Reused existing WebP source for derived image field",
+            extra={
+                "model": type(instance).__name__,
+                "field_name": operation.field_name,
+                "webp_field_name": operation.webp_field_name,
+                "source_name": source_name,
+            },
+        )
     else:
         result = convert_to_webp(
             source_image,
@@ -107,6 +141,15 @@ def _process_image_operation(
                 save=False,
             )
             updated_fields.append(operation.webp_field_name)
+            logger.info(
+                "Converted image source to WebP",
+                extra={
+                    "model": type(instance).__name__,
+                    "field_name": operation.field_name,
+                    "webp_field_name": operation.webp_field_name,
+                    "original_name": original_name,
+                },
+            )
             if operation.original_field_name:
                 setattr(instance, operation.original_field_name, original_name)
                 updated_fields.append(operation.original_field_name)
@@ -136,6 +179,14 @@ def _process_image_operation(
                 save=False,
             )
             updated_fields.append(operation.thumbnail_field_name)
+            logger.info(
+                "Generated thumbnail during shared image processing",
+                extra={
+                    "model": type(instance).__name__,
+                    "field_name": operation.field_name,
+                    "thumbnail_field_name": operation.thumbnail_field_name,
+                },
+            )
 
     return updated_fields
 

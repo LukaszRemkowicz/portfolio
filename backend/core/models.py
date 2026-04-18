@@ -35,6 +35,22 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
         verbose_name=_("Image File"),
         help_text=_("The actual image file to be displayed."),
     )
+    original = models.ImageField(
+        upload_to="images/",
+        blank=True,
+        null=True,
+        editable=False,
+        verbose_name=_("Original Image Source"),
+        help_text=_("Canonical uploaded source image for the next BaseImage contract."),
+    )
+    original_webp = models.ImageField(
+        upload_to="images/",
+        blank=True,
+        null=True,
+        editable=False,
+        verbose_name=_("Original Image WebP"),
+        help_text=_("Derived WebP image for the next BaseImage contract."),
+    )
     original_image = models.ImageField(
         upload_to="images/",
         blank=True,
@@ -186,6 +202,16 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
     ) -> None:
         """Trigger the background celery task to process the image (WebP + thumbnails)."""
         if (is_new or path_changed) and self.path and not update_fields:
+            logger.info(
+                "Dispatching shared image-processing task for BaseImage",
+                extra={
+                    "model": self._meta.label,
+                    "pk": str(self.pk),
+                    "is_new": is_new,
+                    "path_changed": path_changed,
+                    "path_name": str(getattr(self.path, "name", "") or ""),
+                },
+            )
             process_image_task.delay_on_commit(
                 self._meta.app_label, self._meta.model_name, str(self.pk)
             )
@@ -248,8 +274,8 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
         """
         settings_obj: LandingPageSettings | None = LandingPageSettings.get_current()
         if settings_obj and settings_obj.serve_webp_images:
-            return self.path
-        return self.original_image or self.path
+            return self.get_original_webp_field() or self.path
+        return self.get_original_field() or self.path
 
     def get_serving_url(self) -> str:
         """Return the URL string of the image to serve."""
@@ -271,6 +297,21 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
         """Prefer the original source image for thumbnail generation when available."""
         return self.get_original_source()
 
+    def get_original_field(self) -> Any:
+        """Return the canonical original asset with fallback to legacy fields during rollout."""
+        return self.original or self.original_image or self.path
+
+    def get_original_webp_field(self) -> Any:
+        """Return the derived WebP asset with fallback to the legacy path field during rollout."""
+        if self.original_webp:
+            return self.original_webp
+
+        path_name = str(getattr(self.path, "name", "") or "").lower()
+        if self.path and path_name.endswith(".webp"):
+            return self.path
+
+        return None
+
     def get_original_source(self) -> Any:
         """Prefer the active uploaded source file over an older converted original.
 
@@ -282,7 +323,7 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
         path_name = str(getattr(self.path, "name", "") or "").lower()
         if self.path and not path_name.endswith(".webp"):
             return self.path
-        return self.original_image or self.path
+        return self.get_original_field()
 
     def __str__(self) -> str:
         name = self.safe_translation_getter("name", any_language=True)
