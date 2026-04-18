@@ -55,6 +55,6 @@ USER node
 
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- "http://127.0.0.1:${PORT}/health" >/dev/null || exit 1
-CMD ["npm", "run", "serve:ssr"]
+CMD ["npm", "run", "serve:runtime"]
 
 FROM runtime AS prod

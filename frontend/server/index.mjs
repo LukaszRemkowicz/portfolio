@@ -26,7 +26,14 @@ import { serveStatic } from './staticAssets.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, '..');
-const clientDistDir = path.join(appRoot, 'dist');
+const bundledClientDistDir = path.join(appRoot, 'dist');
+const frontendAssetRoot = process.env.FRONTEND_ASSET_ROOT || '';
+const clientDistDir = frontendAssetRoot
+  ? path.join(frontendAssetRoot, 'current')
+  : bundledClientDistDir;
+const legacyClientDistDirs = frontendAssetRoot
+  ? [path.join(frontendAssetRoot, 'previous'), bundledClientDistDir]
+  : [];
 const serverEntryPath = path.join(appRoot, 'dist', 'server', 'entry-server.js');
 const indexHtmlPath = path.join(clientDistDir, 'index.html');
 const port = Number(process.env.PORT || process.env.FRONTEND_PORT || 8080);
@@ -72,7 +79,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (await serveStatic(req, res, clientDistDir)) {
+    if (await serveStatic(req, res, clientDistDir, legacyClientDistDirs)) {
       logRequest(
         {
           kind: 'static',

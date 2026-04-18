@@ -127,6 +127,8 @@ services:
     restart: always
     networks:
       - stage_network
+    volumes:
+      - portfolio_staging_frontend_asset_cache:/app/runtime-assets
     expose:
       - "8080"
     environment:
@@ -181,7 +183,6 @@ services:
     command: >
       sh -c "
         python manage.py migrate --noinput &&
-        python manage.py seed_settings &&
         python scripts/release_entrypoint.py &&
         python manage.py collectstatic --noinput
       "
@@ -242,3 +243,4 @@ volumes:
     external: true
   portfolio_staging_nginx_blocklist:
     external: true
+  portfolio_staging_frontend_asset_cache:

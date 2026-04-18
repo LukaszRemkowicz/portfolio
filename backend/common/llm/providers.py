@@ -43,7 +43,7 @@ class MockLLMProvider(LLMProvider):
         temperature: float = 0.0,
     ) -> tuple[str | None, dict]:
         """Mock LLM response for testing purposes."""
-        logger.info("Using mock LLM response for testing purposes.")
+        logger.debug("Using mock LLM response for testing purposes.")
         del system_prompt, user_message, temperature
 
         if self._mock_response is not None:
