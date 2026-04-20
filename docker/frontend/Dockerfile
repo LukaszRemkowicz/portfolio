@@ -20,6 +20,7 @@ FROM base AS build
 ARG SITE_DOMAIN
 ARG API_URL
 ARG GA_TRACKING_ID
+ARG ENABLE_GA=false
 ARG SENTRY_DSN_FE
 ARG ENVIRONMENT=production
 ARG ALLOWED_HOSTS
@@ -28,6 +29,7 @@ ARG PROJECT_OWNER
 ENV SITE_DOMAIN=$SITE_DOMAIN
 ENV VITE_API_URL=$API_URL
 ENV VITE_GA_TRACKING_ID=$GA_TRACKING_ID
+ENV VITE_ENABLE_GA=$ENABLE_GA
 ENV VITE_SENTRY_DSN_FE=$SENTRY_DSN_FE
 ENV VITE_ENVIRONMENT=$ENVIRONMENT
 ENV ALLOWED_HOSTS=$ALLOWED_HOSTS
@@ -61,3 +63,14 @@ ENTRYPOINT ["runtime-entrypoint.sh"]
 CMD ["npm", "run", "serve:runtime"]
 
 FROM runtime AS prod
+
+FROM mcr.microsoft.com/playwright:v1.58.1-noble AS e2e
+WORKDIR /app
+ENV CI=1
+ENV TZ=Europe/Warsaw
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ .
+
+CMD ["npm", "run", "test:e2e"]

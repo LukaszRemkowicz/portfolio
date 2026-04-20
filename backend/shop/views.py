@@ -94,18 +94,18 @@ class ShopAstroImageLookupView(APIView):
 
     authentication_classes: list[type] = []
     permission_classes = [AllowAny]
-    queryset = AstroImage.objects.all().only("pk", "thumbnail", "original_image", "path", "slug")
+    queryset = AstroImage.objects.all().only("pk", "thumbnail", "original", "original_webp", "slug")
 
     def _get_lookup_url(self, request: Request, image: AstroImage) -> str:
         if image.thumbnail:
             return request.build_absolute_uri(image.thumbnail.url)
 
-        if image.original_image:
+        if image.original:
             logger.info(
                 "Shop image lookup fell back to AstroImage original image",
                 extra={"image_id": image.pk},
             )
-            return request.build_absolute_uri(image.original_image.url)
+            return request.build_absolute_uri(image.original.url)
 
         logger.info(
             "Shop image lookup fell back to secure AstroImage serve route",

@@ -3,34 +3,37 @@
 Test settings for pytest
 """
 
-__all__ = [  # noqa: F405
-    "DATABASES",
-    "CACHES",
-    "EMAIL_BACKEND",
-    "PASSWORD_HASHERS",
-    "LOGGING_CONFIG",
-    "SIMULATE_CONTACT_EMAILS",
-]
-
-# Set required environment variables BEFORE importing settings
 import os
 
-if not os.environ.get("ADMIN_DOMAIN"):
-    os.environ["ADMIN_DOMAIN"] = "testadmin.local"
-if not os.environ.get("API_DOMAIN"):
-    os.environ["API_DOMAIN"] = "testapi.local"
-if not os.environ.get("CSRF_COOKIE_DOMAIN"):
-    os.environ["CSRF_COOKIE_DOMAIN"] = ".testapi.local"
-# Use Docker service discovery when tests run in containers, otherwise localhost.
-if os.environ.get("DOCKER_ENV") == "true":
-    os.environ.setdefault("DB_HOST", "db")
-else:
-    os.environ.setdefault("DB_HOST", "localhost")
-
-if not os.environ.get("SECRET_KEY"):
-    os.environ["SECRET_KEY"] = "test-secret-key-for-pytest"
-
 from .base import *  # noqa: F401,F403,E402
+
+SECRET_KEY = "test-secret-key-for-pytest"
+
+ADMIN_DOMAIN = "testadmin.local"
+API_DOMAIN = "testapi.local"
+CSRF_COOKIE_DOMAIN = ".testapi.local"
+
+_test_base_hosts = [SITE_DOMAIN, ADMIN_DOMAIN, API_DOMAIN]  # noqa: F405
+ALLOWED_HOSTS = [h for h in _test_base_hosts if h] + ["localhost", "127.0.0.1", "0.0.0.0"]
+
+CORS_ALLOWED_ORIGINS = []
+for h in _test_base_hosts:
+    if h:
+        CORS_ALLOWED_ORIGINS.append(f"https://{h}")
+        CORS_ALLOWED_ORIGINS.append(f"http://{h}")
+        CORS_ALLOWED_ORIGINS.append(f"http://{h}:3000")
+CORS_ALLOWED_ORIGINS = list(set(CORS_ALLOWED_ORIGINS))
+
+CSRF_TRUSTED_ORIGINS = []
+for h in _test_base_hosts:
+    if h:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{h}")
+        CSRF_TRUSTED_ORIGINS.append(f"http://{h}")
+CSRF_TRUSTED_ORIGINS = list(set(CSRF_TRUSTED_ORIGINS))
+
+DATABASES["default"]["HOST"] = (  # noqa: F405
+    "db" if os.environ.get("DOCKER_ENV") == "true" else "localhost"
+)
 
 # Configure test database name
 # pytest-django automatically creates a test database with this name
@@ -57,6 +60,8 @@ CACHES = {
 # Use console email backend for tests
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 SIMULATE_CONTACT_EMAILS = True
+DEFAULT_FROM_EMAIL = "tests@portfolio.local"
+CONTACT_EMAIL = "owner@portfolio.local"
 
 # Faster test settings
 PASSWORD_HASHERS = [

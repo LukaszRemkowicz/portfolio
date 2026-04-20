@@ -40,7 +40,7 @@ class _DummyImageModel:
         self._meta = _Meta(field_names)
         self.image_webp = _SavedFieldFile()
         self.thumbnail = _SavedFieldFile()
-        self.original_image: str | None = None
+        self.original: str | None = None
         self.save_calls: list[list[str]] = []
         self.operations: list[ImageProcessingOperation] = []
 
@@ -65,7 +65,7 @@ class TestProcessImageOperations:
                 source_image=source_image,
                 webp_field_name="image_webp",
                 spec=ImageSpec(dimension=1200, quality=75),
-                original_field_name="original_image",
+                original_field_name="original",
                 thumbnail_field_name="thumbnail",
                 thumbnail_generator=lambda _source: thumbnail_content,
             )
@@ -77,11 +77,11 @@ class TestProcessImageOperations:
 
         updated_fields = process_image_operations(instance)
 
-        assert updated_fields == ["image_webp", "original_image", "thumbnail"]
+        assert updated_fields == ["image_webp", "original", "thumbnail"]
         assert instance.image_webp.saved_name == "source.webp"
-        assert instance.original_image == "uploads/source.jpg"
+        assert instance.original == "uploads/source.jpg"
         assert instance.thumbnail.saved_name == "thumb.webp"
-        assert instance.save_calls == [["image_webp", "original_image", "thumbnail", "updated_at"]]
+        assert instance.save_calls == [["image_webp", "original", "thumbnail", "updated_at"]]
 
     def test_clears_target_field_when_source_missing(self) -> None:
         instance = _DummyImageModel()

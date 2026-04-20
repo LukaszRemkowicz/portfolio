@@ -1,12 +1,17 @@
 # backend/common/tests/test_image_utils.py
-"""Unit tests for common.utils.image — convert_to_webp utility."""
+"""Unit tests for common.utils.image helpers."""
 
 from unittest.mock import MagicMock
 
 from PIL import Image
 
 from common.tests.image_helpers import NamedBytesIO, _jpeg_field, _png_field
-from common.utils.image import convert_to_webp
+from common.utils.image import (
+    build_webp_thumbnail,
+    convert_to_webp,
+    delete_file_from_storage,
+    seed_file_name,
+)
 
 # ---------------------------------------------------------------------------
 # Tests
@@ -56,7 +61,8 @@ class TestConvertToWebp:
         assert result is not None
         original_name, webp_content = result
         assert original_name == "photo.jpg"
-        assert webp_content.name == "photo.webp"
+        assert webp_content.name.startswith("photo_")
+        assert webp_content.name.endswith(".webp")
 
         webp_content.seek(0)
         img = Image.open(webp_content)
@@ -68,7 +74,8 @@ class TestConvertToWebp:
 
         assert result is not None
         _, webp_content = result
-        assert webp_content.name == "banner.webp"
+        assert webp_content.name.startswith("banner_")
+        assert webp_content.name.endswith(".webp")
 
     def test_custom_quality_is_accepted(self):
         """A custom quality value should not raise and should produce output."""
@@ -110,3 +117,85 @@ class TestConvertToWebp:
         webp_content.seek(0)
         img = Image.open(webp_content)
         assert img.format == "WEBP"
+
+
+class TestDeleteFileFromStorage:
+    """Tests for delete_file_from_storage()."""
+
+    def test_returns_false_for_empty_input(self):
+        assert delete_file_from_storage(None, "images/photo.jpg") is False
+        assert delete_file_from_storage(MagicMock(), "") is False
+
+    def test_deletes_existing_file(self):
+        field = MagicMock()
+        field.storage.exists.return_value = True
+
+        result = delete_file_from_storage(field, "images/photo.jpg")
+
+        assert result is True
+        field.storage.exists.assert_called_once_with("images/photo.jpg")
+        field.storage.delete.assert_called_once_with("images/photo.jpg")
+
+    def test_skips_missing_file(self):
+        field = MagicMock()
+        field.storage.exists.return_value = False
+
+        result = delete_file_from_storage(field, "images/photo.jpg")
+
+        assert result is False
+        field.storage.exists.assert_called_once_with("images/photo.jpg")
+        field.storage.delete.assert_not_called()
+
+    def test_returns_false_when_storage_check_fails(self):
+        field = MagicMock()
+        field.storage.exists.side_effect = OSError("boom")
+
+        result = delete_file_from_storage(field, "images/photo.jpg")
+
+        assert result is False
+        field.storage.delete.assert_not_called()
+
+
+class TestBuildWebpThumbnail:
+    """Tests for build_webp_thumbnail()."""
+
+    def test_builds_seeded_webp_thumbnail(self):
+        thumbnail = build_webp_thumbnail(
+            _jpeg_field("images/photo.jpg", size=(1600, 1200)),
+            size=(400, 400),
+        )
+
+        assert thumbnail.name.startswith("thumb_photo_")
+        assert thumbnail.name.endswith(".webp")
+
+        thumbnail.seek(0)
+        image = Image.open(thumbnail)
+        assert image.format == "WEBP"
+        assert image.width <= 400
+        assert image.height <= 400
+
+    def test_flattens_transparent_png_to_rgb(self):
+        thumbnail = build_webp_thumbnail(
+            _png_field("images/icon.png", mode="RGBA", size=(300, 300)),
+            size=(150, 150),
+        )
+
+        thumbnail.seek(0)
+        image = Image.open(thumbnail)
+        assert image.mode == "RGB"
+
+
+class TestSeedFileName:
+    """Tests for seed_file_name()."""
+
+    def test_keeps_stem_and_extension(self):
+        seeded_name = seed_file_name("photo.JPG")
+
+        assert seeded_name.startswith("photo_")
+        assert seeded_name.endswith(".jpg")
+
+    def test_generates_different_names_for_same_input(self):
+        first_name = seed_file_name("photo.jpg")
+        second_name = seed_file_name("photo.jpg")
+
+        assert first_name != second_name

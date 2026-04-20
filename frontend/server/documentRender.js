@@ -28,6 +28,7 @@ function serializePublicEnvForHtml(config) {
   return serializeStateForHtml({
     API_URL: config.API_URL,
     GA_TRACKING_ID: config.GA_TRACKING_ID,
+    ENABLE_GA: config.ENABLE_GA,
     PROJECT_OWNER: config.PROJECT_OWNER,
     SITE_DOMAIN: config.SITE_DOMAIN,
   });

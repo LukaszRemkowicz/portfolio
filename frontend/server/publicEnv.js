@@ -15,6 +15,7 @@
 const TEMPLATE_PLACEHOLDERS = {
   API_URL: '__API_ORIGIN__',
   GA_TRACKING_ID: '__GA_TRACKING_ID__',
+  ENABLE_GA: '__ENABLE_GA__',
   PROJECT_OWNER: '__PROJECT_OWNER__',
   SITE_DOMAIN: '__SITE_DOMAIN__',
 };
@@ -79,6 +80,7 @@ function createPublicEnv(overrides = {}) {
       readPublicEnv('API_URL', `https://api.${SITE_DOMAIN}`),
     GA_TRACKING_ID:
       overrides.GA_TRACKING_ID || readPublicEnv('GA_TRACKING_ID', ''),
+    ENABLE_GA: overrides.ENABLE_GA || readPublicEnv('ENABLE_GA', 'false'),
     PROJECT_OWNER:
       overrides.PROJECT_OWNER ||
       readPublicEnv('PROJECT_OWNER', 'Portfolio Owner'),

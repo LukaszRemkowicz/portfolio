@@ -12,7 +12,7 @@ class TestProcessImageTask:
         """
         GIVEN an instance with a JPEG path
         WHEN process_image_task is called
-        THEN the path should be converted to WebP and original_image populated.
+        THEN the canonical original/original_webp fields should be populated.
         """
         # Prevent automatic task execution during factory creation for this test
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -22,11 +22,10 @@ class TestProcessImageTask:
         process_image_task("astrophotography", "MainPageBackgroundImage", img.pk)
 
         img.refresh_from_db()
-        # In Green phase, we expect conversion to succeed
-        assert img.path.name.endswith(".webp")
-        # original_image should exist
-        assert img.original_image
-        assert img.original_image.name.endswith(".jpg")
+        assert img.original
+        assert img.original.name.endswith(".jpg")
+        assert img.original_webp
+        assert img.original_webp.name.endswith(".webp")
 
     def test_run_shared_image_processing_logs_and_returns_when_model_missing(self, mocker) -> None:
         error_mock = mocker.patch("core.tasks.logger.error")

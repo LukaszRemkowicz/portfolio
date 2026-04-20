@@ -35,6 +35,7 @@ class AstroImageFactory(DjangoModelFactory):
 
     name = factory.Faker("sentence", nb_words=3)
     description = factory.Faker("paragraph")
+    original = factory.django.ImageField()
     path = factory.django.ImageField()
     capture_date = factory.LazyFunction(lambda: timezone.now().date())
     place = factory.SubFactory(PlaceFactory)
@@ -99,6 +100,7 @@ class MainPageBackgroundImageFactory(DjangoModelFactory):
         model = MainPageBackgroundImage
 
     name = factory.Faker("sentence", nb_words=2)
+    original = factory.django.ImageField()
     path = factory.django.ImageField()
 
 

@@ -109,7 +109,7 @@
     }
 
     function getProgressConfig(form) {
-        const fieldNames = (form.dataset.uploadProgressFieldNames || form.dataset.uploadProgressFieldName || "path")
+        const fieldNames = (form.dataset.uploadProgressFieldNames || form.dataset.uploadProgressFieldName || "original_upload")
             .split(",")
             .map(function(fieldName) {
                 return fieldName.trim();
@@ -119,7 +119,7 @@
             (form.dataset.uploadProgressEntityLabel || "AstroImage").trim() || "AstroImage";
 
         return {
-            fieldNames: fieldNames.length ? fieldNames : ["path"],
+            fieldNames: fieldNames.length ? fieldNames : ["original_upload"],
             uploadTitle: "Uploading " + entityLabel,
             saveTitle: "Saving " + entityLabel,
         };

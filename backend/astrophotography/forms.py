@@ -1,3 +1,4 @@
+from typing import Any
 from urllib.parse import urlencode
 
 from django_countries import countries
@@ -5,7 +6,7 @@ from parler.forms import TranslatableModelForm
 
 from django import forms
 from django.conf import settings
-from django.contrib.admin.widgets import FilteredSelectMultiple
+from django.contrib.admin.widgets import AdminDateWidget, FilteredSelectMultiple
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -19,6 +20,88 @@ from core.widgets import (
 )
 
 from .models import AstroImage, MainPageBackgroundImage, MeteorsMainPageConfig, Place, Tag
+from .protocols import SupportsBaseImageUploadForm
+
+
+class BaseImageSourceUploadFormMixin:
+    """Expose the source upload field in admin while hiding the legacy model field."""
+
+    def _configure_source_upload_field(self: SupportsBaseImageUploadForm) -> None:
+        """Hide the legacy model field and configure the source upload field."""
+        # TODO: legacy field, will be removed in future.
+        self.fields.pop("path", None)
+
+        current_source = self._get_current_source_field()
+        self.fields["original_upload"].required = not bool(current_source)
+
+        if self.instance.pk and current_source:
+            self._init_secure_original_widget(current_source)
+
+    def _get_current_source_field(self: SupportsBaseImageUploadForm) -> Any:
+        return self.instance.original_field
+
+    def _init_secure_original_widget(
+        self: SupportsBaseImageUploadForm, current_source: Any
+    ) -> None:
+        """Configure the source upload widget with a signed secure URL."""
+        url = reverse(
+            "admin-astroimage-secure-media",
+            kwargs={"pk": str(self.instance.pk), "field_name": "original"},
+        )
+        app_label = self.instance._meta.app_label
+        model_name = self.instance._meta.model_name
+        pk = self.instance.pk
+        sig_id = f"admin_media_{app_label}_{model_name}_{pk}_original"
+        params = generate_signed_url_params(sig_id, 3600)
+        full_url = f"{url}?{urlencode(params)}"
+        filename = current_source.name.split("/")[-1]
+
+        self.fields["original_upload"].widget = SecureAdminFileWidget(
+            signed_url=full_url, label=filename
+        )
+
+    def _apply_uploaded_original(self: SupportsBaseImageUploadForm) -> None:
+        """Copy the admin upload field into the canonical source field."""
+        uploaded_original = self.cleaned_data.get("original_upload")
+        if uploaded_original:
+            self.instance.original = uploaded_original
+
+    def _validate_current_source_exists(
+        self: SupportsBaseImageUploadForm, cleaned_data: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        """Reject editing a broken row when the current stored source file is missing."""
+        uploaded_original = cleaned_data.get("original_upload") if cleaned_data else None
+        current_source = self._get_current_source_field()
+        current_source_name = str(getattr(current_source, "name", "") or "")
+
+        if self.instance.pk and not uploaded_original and current_source_name:
+            try:
+                if not current_source.storage.exists(current_source_name):
+                    self.add_error(
+                        "original_upload",
+                        _(
+                            "The selected image file does not exist in storage. "
+                            "Please upload it again."
+                        ),
+                    )
+            except (OSError, ValueError):
+                self.add_error(
+                    "original_upload",
+                    _(
+                        "The selected image file could not be validated in storage. "
+                        "Please upload it again."
+                    ),
+                )
+
+        return cleaned_data
+
+    def _remap_source_upload_errors(self: SupportsBaseImageUploadForm, errors: Any) -> None:
+        """Map model validation errors onto the admin source upload field."""
+        error_dict = getattr(errors, "error_dict", None)
+        if error_dict:
+            for field_name in ["original", "path"]:
+                if field_name in error_dict:
+                    error_dict.setdefault("original_upload", []).extend(error_dict.pop(field_name))
 
 
 class PlaceAdminForm(TranslatableModelForm):
@@ -76,7 +159,8 @@ class TagAdminForm(TranslatableModelForm):
         exclude = ("slug",)
 
 
-class AstroImageForm(TranslatableModelForm):
+class AstroImageForm(BaseImageSourceUploadFormMixin, TranslatableModelForm):
+    original_upload = forms.ImageField(required=True, label=_("Original Image"))
     tags = forms.ModelMultipleChoiceField(  # type: ignore[var-annotated]
         queryset=Tag.objects.all(),
         required=False,
@@ -88,6 +172,7 @@ class AstroImageForm(TranslatableModelForm):
         model = AstroImage
         exclude = ("calculated_exposure_hours",)
         widgets = {
+            "capture_date": AdminDateWidget(),
             "location": ThemedSelect2Widget(),
             "place": ThemedSelect2Widget(
                 tags=True,
@@ -146,7 +231,7 @@ class AstroImageForm(TranslatableModelForm):
             raise forms.ValidationError(
                 _("Cannot have both telescope and lens. Please choose one or the other.")
             )
-        return cleaned_data
+        return self._validate_current_source_exists(cleaned_data)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -154,7 +239,7 @@ class AstroImageForm(TranslatableModelForm):
         self._init_location_choices()
         self._init_tags_initial_data()
         self._init_name_field_validation()
-        self._init_secure_path_widget()
+        self._configure_source_upload_field()
 
     def _init_place_queryset(self) -> None:
         """Fix duplicate places in dropdown by clearing ordering."""
@@ -188,30 +273,39 @@ class AstroImageForm(TranslatableModelForm):
         if current_lang == default_lang and "name" in self.fields:
             self.fields["name"].required = True
 
-    def _init_secure_path_widget(self) -> None:
-        """Configure the SecureAdminFileWidget with signed URLs."""
-        if self.instance.pk and self.instance.path and "path" in self.fields:
-            url = reverse(
-                "admin-astroimage-secure-media",
-                kwargs={"pk": str(self.instance.pk), "field_name": "path"},
-            )
-            app_label = self.instance._meta.app_label
-            model_name = self.instance._meta.model_name
-            pk = self.instance.pk
-            sig_id = f"admin_media_{app_label}_{model_name}_{pk}_path"
-            params = generate_signed_url_params(sig_id, 3600)
-            full_url = f"{url}?{urlencode(params)}"
-            filename = self.instance.path.name.split("/")[-1]
+    def _post_clean(self) -> None:
+        self._apply_uploaded_original()
+        super()._post_clean()
 
-            self.fields["path"].widget = SecureAdminFileWidget(signed_url=full_url, label=filename)
+    def _update_errors(self, errors) -> None:
+        self._remap_source_upload_errors(errors)
+        super()._update_errors(errors)
 
 
-class MainPageBackgroundImageForm(TranslatableModelForm):
+class MainPageBackgroundImageForm(BaseImageSourceUploadFormMixin, TranslatableModelForm):
     """Custom form for main page background images."""
+
+    original_upload = forms.ImageField(required=False, label=_("Original Image"))
 
     class Meta:
         model = MainPageBackgroundImage
         fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._configure_source_upload_field()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        return self._validate_current_source_exists(cleaned_data)
+
+    def _post_clean(self) -> None:
+        self._apply_uploaded_original()
+        super()._post_clean()
+
+    def _update_errors(self, errors) -> None:
+        self._remap_source_upload_errors(errors)
+        super()._update_errors(errors)
 
 
 class MeteorsMainPageConfigForm(forms.ModelForm):

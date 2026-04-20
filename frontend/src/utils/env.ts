@@ -37,6 +37,12 @@ const SETTINGS: EnvSchema = {
  */
 export const getEnv = (key: keyof EnvSchema, fallback: string = ''): string => {
   try {
+    if (typeof window !== 'undefined') {
+      const runtimeValue = window.__PUBLIC_ENV__?.[key];
+      if (runtimeValue) {
+        return runtimeValue;
+      }
+    }
     return SETTINGS[key] || fallback;
   } catch {
     return fallback;

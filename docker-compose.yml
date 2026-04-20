@@ -19,7 +19,7 @@ x-backend-common: &backend-common
   volumes:
     - ./backend:/app
     - portfolio_dev_static_data:/app/staticfiles
-  environment:
+  environment: &backend-env
     DOCKER_ENV: "true"
     PYTHONPATH: "."
     TZ: "Europe/Warsaw"
@@ -186,14 +186,22 @@ services:
       retries: 3
 
   fe-test:
-    <<: *frontend-common
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      target: e2e
+    networks:
+      - portfolio_network
     profiles: [ "test" ]
-    command: npm test
+    command: sh -lc "npm test -- --watchAll=false && npm run test:e2e"
 
   test:
     <<: *backend-common
     profiles: [ "test" ]
     command: pytest
+    environment:
+      <<: *backend-env
+      SKIP_PERMISSION_FIX: true
 
   db:
     image: postgres:18

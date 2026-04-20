@@ -30,6 +30,7 @@ from common.constants import FALLBACK_URL_SLUG
 from common.utils.signing import generate_signed_url_params
 from core.models import LandingPageSettings
 from core.tasks import process_image_task
+from core.tests.factories import LandingPageSettingsFactory
 
 # URL Names
 ASTROIMAGE_LIST_URL_NAME: str = "astroimages:astroimage-list"
@@ -198,6 +199,22 @@ class TestBackgroundMainPageView:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["url"] is None
+
+    def test_list_background_image_uses_original_when_webp_missing(
+        self, api_client: APIClient
+    ) -> None:
+        """Public background API must fall back to the canonical original when WebP is absent."""
+        settings = LandingPageSettingsFactory(serve_webp_images=True)
+        background = MainPageBackgroundImageFactory()
+        background.original_webp = None
+        background.save(update_fields=["original_webp"])
+
+        url: str = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
+        with patch.object(LandingPageSettings, "get_current", return_value=settings):
+            response: Response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["url"] == background.original.url
 
 
 @pytest.mark.django_db
@@ -629,20 +646,19 @@ class TestAstroImageSecureView:
         response: Response = api_client.get(url, params)
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
-        assert f"/protected_media/{astro_image.path.name}" == response["X-Accel-Redirect"]
+        serving_field = astro_image.original_webp_field or astro_image.original_field
+        assert f"/protected_media/{serving_field.name}" == response["X-Accel-Redirect"]
 
     def test_astro_image_secure_view_always_serves_full_resolution_path(
         self, api_client: APIClient, astro_image: AstroImage
     ) -> None:
-        """The modal/lightbox endpoint must serve the current full-resolution asset."""
+        """The modal/lightbox endpoint must serve the canonical public asset."""
         from core.tests.factories import LandingPageSettingsFactory
 
         LandingPageSettingsFactory(serve_webp_images=False)
         astro_image.refresh_from_db()
 
-        assert astro_image.path
-        assert astro_image.original_image
-        assert astro_image.path.name != astro_image.original_image.name
+        assert astro_image.original_field
 
         url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
         params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
@@ -651,7 +667,8 @@ class TestAstroImageSecureView:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
-        assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.path.name}"
+        serving_field = astro_image.original_webp_field or astro_image.original_field
+        assert response["X-Accel-Redirect"] == f"/protected_media/{serving_field.name}"
 
     def test_secure_media_view_missing_signature(
         self, api_client: APIClient, astro_image: AstroImage
@@ -706,24 +723,24 @@ class TestAstroImageAdminSecureMediaView:
     ) -> None:
         url: str = reverse(
             "admin-astroimage-secure-media",
-            kwargs={"pk": str(astro_image.pk), "field_name": "path"},
+            kwargs={"pk": str(astro_image.pk), "field_name": "original"},
         )
-        sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_path"
+        sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_original"
         params: dict[str, Any] = generate_signed_url_params(sig_id)
         response = admin_client.get(url, params)
         astro_image.refresh_from_db()
         assert response.status_code == status.HTTP_200_OK
         assert "X-Accel-Redirect" in response
-        assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.path.name}"
+        assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.original.name}"
 
     def test_admin_secure_media_view_forbidden_anonymous(
         self, api_client: APIClient, astro_image: AstroImage
     ) -> None:
         url: str = reverse(
             "admin-astroimage-secure-media",
-            kwargs={"pk": str(astro_image.pk), "field_name": "path"},
+            kwargs={"pk": str(astro_image.pk), "field_name": "original"},
         )
-        sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_path"
+        sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_original"
         params: dict[str, Any] = generate_signed_url_params(sig_id)
         response = api_client.get(url, params)
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -733,7 +750,7 @@ class TestAstroImageAdminSecureMediaView:
     ) -> None:
         url: str = reverse(
             "admin-astroimage-secure-media",
-            kwargs={"pk": str(astro_image.pk), "field_name": "path"},
+            kwargs={"pk": str(astro_image.pk), "field_name": "original"},
         )
         response = admin_client.get(url)
         assert response.status_code == status.HTTP_403_FORBIDDEN
