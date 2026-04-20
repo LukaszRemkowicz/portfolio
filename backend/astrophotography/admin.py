@@ -494,13 +494,14 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
 
 
 @admin.register(MainPageBackgroundImage)
-class MainPageBackgroundImageAdmin(BaseTranslatableAdmin):
+class MainPageBackgroundImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
     """
     Admin for main page background images.
     Features:
     - Dynamic Parler-style UI synchronization for translations
     """
 
+    change_form_template = "admin/astrophotography/secure_media_change_form.html"
     form = MainPageBackgroundImageForm
 
     list_display = ("get_name", "original", "created_at")

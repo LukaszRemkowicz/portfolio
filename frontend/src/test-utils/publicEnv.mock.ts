@@ -4,6 +4,8 @@ export const publicEnv = Object.freeze({
   API_URL: 'http://localhost:8000',
   GA_TRACKING_ID: '',
   ENABLE_GA: 'false',
+  SENTRY_DSN_FE: '',
+  ENVIRONMENT: 'test',
   PROJECT_OWNER: 'Portfolio Owner',
   SITE_DOMAIN,
 });

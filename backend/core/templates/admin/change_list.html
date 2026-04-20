@@ -141,13 +141,13 @@
 {% block extrajs %}
     {{  block.super }}
     <script type="text/javascript" src="{% static 'vendor/select2/js/select2.min.js' %}"></script>
+    {{ cl.model_admin.filter_input_length|json_script:"admin-filter-input-length" }}
     <script>
         window.filterInputLengthDefault = 0;
-        window.filterInputLength = {
-            {% for k,v in cl.model_admin.filter_input_length.items %}
-                '{{ k }}': {{ v }},
-            {% endfor %}
-        }
+        const filter_input_length_data = document.getElementById("admin-filter-input-length");
+        window.filterInputLength = filter_input_length_data
+            ? JSON.parse(filter_input_length_data.textContent)
+            : {};
     </script>
     <script type="text/javascript" src="{% static 'jazzmin/js/change_list.js' %}"></script>
 {% endblock %}

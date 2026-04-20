@@ -211,4 +211,5 @@ class SecureAdminFileWidget(AdminFileWidget):
                     return str(self.label)
 
             context["widget"]["value"] = SecureLink(self.signed_url, self.label)
+            context["widget"]["is_initial"] = True
         return context

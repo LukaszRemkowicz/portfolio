@@ -81,6 +81,10 @@ function createPublicEnv(overrides = {}) {
     GA_TRACKING_ID:
       overrides.GA_TRACKING_ID || readPublicEnv('GA_TRACKING_ID', ''),
     ENABLE_GA: overrides.ENABLE_GA || readPublicEnv('ENABLE_GA', 'false'),
+    SENTRY_DSN_FE:
+      overrides.SENTRY_DSN_FE || readPublicEnv('SENTRY_DSN_FE', ''),
+    ENVIRONMENT:
+      overrides.ENVIRONMENT || readPublicEnv('ENVIRONMENT', 'development'),
     PROJECT_OWNER:
       overrides.PROJECT_OWNER ||
       readPublicEnv('PROJECT_OWNER', 'Portfolio Owner'),

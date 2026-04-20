@@ -358,6 +358,37 @@ class TestMainPageBackgroundImageAdmin:
         assert response.status_code == 200
         assert "Admin Existing BG" in response.content.decode("utf-8")
 
+    def test_admin_change_view_uses_secure_file_widget(self, admin_client: Client) -> None:
+        bg_image: MainPageBackgroundImage = MainPageBackgroundImageFactory()
+        url: str = reverse(self.CHANGE_URL_NAME, args=[bg_image.pk])
+
+        response = cast(HttpResponse, admin_client.get(url))
+
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert 'class="secure-file-currently"' in content
+        expected_url = reverse(
+            "admin-generic-secure-media",
+            kwargs={
+                "app_label": "astrophotography",
+                "model_name": "mainpagebackgroundimage",
+                "pk": str(bg_image.pk),
+                "field_name": "original",
+            },
+        )
+        assert expected_url in content
+
+    def test_admin_change_view_shows_sidebar_image_preview(self, admin_client: Client) -> None:
+        bg_image: MainPageBackgroundImage = MainPageBackgroundImageFactory()
+        url: str = reverse(self.CHANGE_URL_NAME, args=[bg_image.pk])
+
+        response = cast(HttpResponse, admin_client.get(url))
+
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert "Image Preview" in content
+        assert 'class="sidebar-image-preview"' in content
+
     def test_admin_add_creates_object(self, admin_client: Client) -> None:
         url: str = reverse("admin:astrophotography_mainpagebackgroundimage_add")
         image_file = BytesIO()

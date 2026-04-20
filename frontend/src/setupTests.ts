@@ -15,6 +15,9 @@ window.__PUBLIC_ENV__ = {
   API_URL:
     process.env.API_URL || process.env.VITE_API_URL || 'http://localhost:8000',
   GA_TRACKING_ID: process.env.VITE_GA_TRACKING_ID || 'G-TEST',
+  ENABLE_GA: process.env.VITE_ENABLE_GA || 'false',
+  SENTRY_DSN_FE: process.env.VITE_SENTRY_DSN_FE || '',
+  ENVIRONMENT: process.env.VITE_ENVIRONMENT || process.env.NODE_ENV || 'test',
   PROJECT_OWNER: mockProjectOwner,
   SITE_DOMAIN: process.env.SITE_DOMAIN || 'portfolio.local',
 };

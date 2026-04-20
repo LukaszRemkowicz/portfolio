@@ -44,13 +44,18 @@ class BaseImageSourceUploadFormMixin:
         self: SupportsBaseImageUploadForm, current_source: Any
     ) -> None:
         """Configure the source upload widget with a signed secure URL."""
-        url = reverse(
-            "admin-astroimage-secure-media",
-            kwargs={"pk": str(self.instance.pk), "field_name": "original"},
-        )
         app_label = self.instance._meta.app_label
         model_name = self.instance._meta.model_name
         pk = self.instance.pk
+        url = reverse(
+            "admin-generic-secure-media",
+            kwargs={
+                "app_label": app_label,
+                "model_name": model_name,
+                "pk": str(pk),
+                "field_name": "original",
+            },
+        )
         sig_id = f"admin_media_{app_label}_{model_name}_{pk}_original"
         params = generate_signed_url_params(sig_id, 3600)
         full_url = f"{url}?{urlencode(params)}"

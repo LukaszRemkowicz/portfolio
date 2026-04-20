@@ -7,7 +7,7 @@
     window.CKEDITOR.define ||
     function () {};
 
-  document.addEventListener("DOMContentLoaded", function () {
+  function initAdminBaseSite() {
     const navbar = document.querySelector(".navbar-nav.ms-auto");
     if (navbar) {
       const timerLi = document.createElement("li");
@@ -114,7 +114,7 @@
 
         .select2-container--default.select2-container--default.select2-container--default .select2-selection--single .select2-selection__rendered {
           line-height: 42px !important;
-          padding-left: 0 !important;
+          padding-left: 15px !important;
         }
 
         .select2-container--default.select2-container--default.select2-container--default .select2-selection--single .select2-selection__arrow {
@@ -152,5 +152,11 @@
 
     applyDynamicSelect2Theme();
     setInterval(applyDynamicSelect2Theme, 250);
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAdminBaseSite);
+  } else {
+    initAdminBaseSite();
+  }
 })();

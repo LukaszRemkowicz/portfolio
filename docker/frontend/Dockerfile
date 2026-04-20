@@ -50,6 +50,7 @@ ENV PORT=8080
 COPY --from=build /app/package.json /app/package-lock.json ./
 RUN apk add --no-cache su-exec && npm ci --omit=dev
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/public ./public
 COPY --from=build /app/server ./server
 COPY --from=build /app/scripts ./scripts
 COPY docker/frontend/runtime-entrypoint.sh /usr/local/bin/runtime-entrypoint.sh
