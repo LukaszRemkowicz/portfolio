@@ -29,6 +29,7 @@ from .types import (
     MonitoringFindingsValue,
     RawCollectedLogPaths,
     SitemapIssue,
+    SitemapIssueCategory,
     SitemapReportResult,
     SitemapSummaryResult,
 )
@@ -924,6 +925,20 @@ class SitemapSummaryService:
             [
                 summary_prompt.strip(),
                 (
+                    "Treat the payload as the only source of truth. "
+                    "Do not infer implementation causes such as pagination, SSR, rendering, "
+                    "or caching unless they are explicitly present in the payload."
+                ),
+                (
+                    "For canonical_mismatch issues, canonical_url is the page's declared "
+                    "canonical target. It is not a redirect target and not proof of "
+                    "pagination problems."
+                ),
+                (
+                    "For final_url_mismatch and redirect_in_sitemap issues, final_url refers "
+                    "to the final resolved URL after a redirect."
+                ),
+                (
                     "Return a single JSON object with keys: "
                     "summary, severity, key_findings, recommendations, trend_summary."
                 ),
@@ -961,7 +976,10 @@ class SitemapSummaryService:
         if issue.status_code is not None:
             payload["status_code"] = issue.status_code
         if issue.final_url is not None:
-            payload["final_url"] = issue.final_url
+            if issue.category == SitemapIssueCategory.CANONICAL_MISMATCH:
+                payload["canonical_url"] = issue.final_url
+            else:
+                payload["final_url"] = issue.final_url
         return payload
 
     def _build_default_severity(self, report: SitemapReportResult) -> str:
