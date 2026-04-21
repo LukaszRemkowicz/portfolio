@@ -231,6 +231,23 @@ describe('SSR entry server', () => {
     );
   });
 
+  it('prefetches the requested astrophotography page during SSR', async () => {
+    await render(
+      '/astrophotography?page=2',
+      'en',
+      'https://portfolio.local',
+      'req-gallery-page'
+    );
+
+    expect(mockFetchAstroImages).toHaveBeenCalledWith(
+      {
+        page: 2,
+        limit: 24,
+      },
+      'mock-client'
+    );
+  });
+
   it('prefetches the shop catalog for the shop route', async () => {
     await render('/shop', 'en', 'https://portfolio.local', 'req-shop');
 

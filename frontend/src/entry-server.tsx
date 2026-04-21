@@ -252,6 +252,11 @@ async function prefetchRouteQueries(
   if (astroMatch) {
     const selectedFilter = searchParams.get('filter') || undefined;
     const selectedTag = searchParams.get('tag') || undefined;
+    const rawPage = searchParams.get('page');
+    const selectedPage =
+      rawPage && Number.isFinite(Number(rawPage)) && Number(rawPage) >= 1
+        ? Math.floor(Number(rawPage))
+        : undefined;
     const astroRouteMatch =
       pathname === APP_ROUTES.ASTROPHOTOGRAPHY
         ? null
@@ -260,6 +265,7 @@ async function prefetchRouteQueries(
     const imageParams = {
       ...(selectedFilter ? { filter: selectedFilter } : {}),
       ...(selectedTag ? { tag: selectedTag } : {}),
+      ...(selectedPage ? { page: selectedPage } : {}),
     };
     const astroDetailPrefetch = astroSlug
       ? queryClient
@@ -297,7 +303,7 @@ async function prefetchRouteQueries(
       }),
       prefetchInfiniteQuerySafely(queryClient, {
         queryKey: ['astro-images', language, imageParams],
-        initialPageParam: 1,
+        initialPageParam: selectedPage ?? 1,
         queryFn: ({ pageParam }) =>
           fetchAstroImages(
             {

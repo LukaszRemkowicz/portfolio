@@ -1,5 +1,5 @@
 # backend/astrophotography/tests/test_views.py
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 from unittest.mock import patch
 
@@ -153,6 +153,66 @@ class TestAstroImageViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["count"] == 60
         assert len(response.data["results"]) == 48
+
+    def test_list_astro_images_page_two_returns_only_second_slice(
+        self, api_client: APIClient
+    ) -> None:
+        """Page 2 should return only the second gallery slice, not accumulated results."""
+        base_date = date(2026, 1, 1)
+        for index in range(50):
+            AstroImageFactory(
+                name=f"Image {index}",
+                capture_date=base_date + timedelta(days=index),
+            )
+
+        url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url, {"page": 2})
+
+        expected_pks = [
+            str(pk) for pk in AstroImage.objects.for_gallery({}).values_list("pk", flat=True)[24:48]
+        ]
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["count"] == 50
+        assert len(response.data["results"]) == 24
+        assert response.data["next"] == "http://testserver/v1/astroimages/?page=3"
+        assert response.data["previous"] == "http://testserver/v1/astroimages/"
+        assert [item["pk"] for item in response.data["results"]] == expected_pks
+
+    def test_list_astro_images_page_two_with_filter_returns_only_filtered_slice(
+        self, api_client: APIClient
+    ) -> None:
+        """Page 2 with a filter should stay bounded to that filtered queryset."""
+        base_date = date(2026, 1, 1)
+        for index in range(30):
+            AstroImageFactory(
+                name=f"Deep Sky {index}",
+                celestial_object="Deep Sky",
+                capture_date=base_date + timedelta(days=index),
+            )
+        for index in range(10):
+            AstroImageFactory(
+                name=f"Landscape {index}",
+                celestial_object="Landscape",
+                capture_date=base_date + timedelta(days=100 + index),
+            )
+
+        url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url, {"page": 2, "filter": "Deep Sky"})
+
+        expected_pks = [
+            str(pk)
+            for pk in AstroImage.objects.for_gallery({"filter": "Deep Sky"}).values_list(
+                "pk", flat=True
+            )[24:48]
+        ]
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["count"] == 30
+        assert len(response.data["results"]) == 6
+        assert response.data["next"] is None
+        assert response.data["previous"] == "http://testserver/v1/astroimages/?filter=Deep+Sky"
+        assert [item["pk"] for item in response.data["results"]] == expected_pks
 
     def test_latest_astro_images(self, api_client: APIClient) -> None:
         """Test the dedicated 'latest' endpoint returns exactly 9 images."""

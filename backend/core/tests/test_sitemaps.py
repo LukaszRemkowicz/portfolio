@@ -2,7 +2,8 @@ import pytest
 
 from django.urls import reverse
 
-from core.sitemaps import ShopSitemap, StaticViewSitemap
+from astrophotography.tests.factories import AstroImageFactory
+from core.sitemaps import AstroGalleryPaginationSitemap, ShopSitemap, StaticViewSitemap
 from core.tests.factories import LandingPageSettingsFactory
 
 
@@ -21,6 +22,27 @@ class TestStaticViewSitemap:
         sitemap = StaticViewSitemap()
 
         assert "/programming" in sitemap.items()
+
+
+@pytest.mark.django_db
+class TestAstroGalleryPaginationSitemap:
+    def test_gallery_pagination_sitemap_has_no_items_when_gallery_fits_on_one_page(self) -> None:
+        for _ in range(24):
+            AstroImageFactory()
+
+        sitemap = AstroGalleryPaginationSitemap()
+
+        assert sitemap.items() == []
+
+    def test_gallery_pagination_sitemap_includes_page_two_and_above(self) -> None:
+        for _ in range(50):
+            AstroImageFactory()
+
+        sitemap = AstroGalleryPaginationSitemap()
+
+        assert sitemap.items() == [2, 3]
+        assert sitemap.location(2) == "/astrophotography?page=2"
+        assert sitemap.location(3) == "/astrophotography?page=3"
 
 
 @pytest.mark.django_db
@@ -85,3 +107,14 @@ class TestRootSitemapView:
         second_content = second_response.content.decode("utf-8")
         assert "/shop" in second_content
         assert "/programming" in second_content
+
+    def test_root_sitemap_includes_paginated_astro_gallery_urls(self, client) -> None:
+        for _ in range(50):
+            AstroImageFactory()
+
+        response = client.get(reverse("sitemap"))
+
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert "/astrophotography?page=2" in content
+        assert "/astrophotography?page=3" in content

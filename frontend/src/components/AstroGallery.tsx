@@ -69,6 +69,17 @@ const AstroGallery: React.FC = () => {
 
   const selectedFilter = searchParams.get('filter') as FilterType | null;
   const selectedTag = searchParams.get('tag');
+  const selectedPage = useMemo(() => {
+    const rawPage = searchParams.get('page');
+    if (!rawPage) return undefined;
+
+    const parsedPage = Number(rawPage);
+    if (!Number.isFinite(parsedPage) || parsedPage < 1) {
+      return undefined;
+    }
+
+    return Math.floor(parsedPage);
+  }, [searchParams]);
   const selectedLimit = useMemo(() => {
     const rawLimit = searchParams.get('limit');
     if (!rawLimit) return undefined;
@@ -121,9 +132,10 @@ const AstroGallery: React.FC = () => {
     () => ({
       ...(selectedFilter ? { filter: selectedFilter } : {}),
       ...(selectedTag ? { tag: selectedTag } : {}),
+      ...(selectedPage ? { page: selectedPage } : {}),
       ...(effectiveLimit ? { limit: effectiveLimit } : {}),
     }),
-    [effectiveLimit, selectedFilter, selectedTag]
+    [effectiveLimit, selectedFilter, selectedPage, selectedTag]
   );
 
   const {
@@ -181,6 +193,7 @@ const AstroGallery: React.FC = () => {
     if (
       typeof window === 'undefined' ||
       bootstrapTarget === null ||
+      selectedPage !== undefined ||
       !hasNextPage ||
       isFetchingNextPage ||
       images.length === 0 ||
@@ -196,10 +209,16 @@ const AstroGallery: React.FC = () => {
     hasNextPage,
     images.length,
     isFetchingNextPage,
+    selectedPage,
   ]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !hasNextPage || isFetchingNextPage) {
+    if (
+      typeof window === 'undefined' ||
+      selectedPage !== undefined ||
+      !hasNextPage ||
+      isFetchingNextPage
+    ) {
       return;
     }
 
@@ -229,7 +248,13 @@ const AstroGallery: React.FC = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [fetchNextPage, hasNextPage, images.length, isFetchingNextPage]);
+  }, [
+    fetchNextPage,
+    hasNextPage,
+    images.length,
+    isFetchingNextPage,
+    selectedPage,
+  ]);
   // Smooth scroll to results on filter/tag change (Mobile only)
   useEffect(() => {
     if (window.innerWidth <= 992 && resultsRef.current) {
@@ -267,6 +292,8 @@ const AstroGallery: React.FC = () => {
     // Keep active tag unless it was cleared
     if (selectedTag && selectedFilter !== filter)
       nextParams.set('tag', selectedTag);
+    if (selectedPage !== undefined)
+      nextParams.set('page', String(selectedPage));
     if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
     navigate(`/astrophotography${qs}`);
@@ -277,6 +304,8 @@ const AstroGallery: React.FC = () => {
     const nextParams = new URLSearchParams();
     if (tagSlug) nextParams.set('tag', tagSlug);
     if (selectedFilter) nextParams.set('filter', selectedFilter);
+    if (selectedPage !== undefined)
+      nextParams.set('page', String(selectedPage));
     if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
     navigate(`/astrophotography${qs}`);
@@ -298,6 +327,8 @@ const AstroGallery: React.FC = () => {
     const nextParams = new URLSearchParams();
     if (selectedFilter) nextParams.set('filter', selectedFilter);
     if (selectedTag) nextParams.set('tag', selectedTag);
+    if (selectedPage !== undefined)
+      nextParams.set('page', String(selectedPage));
     if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
     navigate(`/astrophotography/${image.slug}${qs}`);
@@ -320,6 +351,8 @@ const AstroGallery: React.FC = () => {
     const nextParams = new URLSearchParams();
     if (selectedFilter) nextParams.set('filter', selectedFilter);
     if (selectedTag) nextParams.set('tag', selectedTag);
+    if (selectedPage !== undefined)
+      nextParams.set('page', String(selectedPage));
     if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
     navigate(`/astrophotography${qs}`);

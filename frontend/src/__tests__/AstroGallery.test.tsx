@@ -430,6 +430,42 @@ describe('AstroGallery Component', () => {
     expect(screen.queryByText('Gallery')).not.toBeInTheDocument();
   });
 
+  it('uses the requested page without auto-loading additional pages', async () => {
+    const fetchNextPage = jest.fn();
+
+    (useAstroImages as jest.Mock).mockReturnValue({
+      data: Array.from({ length: 24 }, (_, index) => ({
+        pk: String(index + 1),
+        slug: `page-two-image-${index + 1}`,
+        thumbnail_url: `/thumb-${index + 1}.jpg`,
+        name: `Page Two Image ${index + 1}`,
+        description: `Description ${index + 1}`,
+      })),
+      isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: true,
+      fetchNextPage,
+      error: null,
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/astrophotography?page=2']}>
+          <Routes>
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      );
+    });
+
+    expect(useAstroImages).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 2 })
+    );
+    expect(fetchNextPage).not.toHaveBeenCalled();
+  });
+
   it('returns to the homepage when closing a modal opened from the homepage gallery', async () => {
     const mockImages: AstroImage[] = [
       {
