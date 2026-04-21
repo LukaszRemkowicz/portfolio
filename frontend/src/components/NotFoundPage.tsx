@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { APP_ROUTES } from '../api/constants';
 import SEO from './common/SEO';
 import StarBackground from './StarBackground';
-import styles from '../styles/components/Programming.module.css';
+import styles from '../styles/components/NotFoundPage.module.css';
 
 const NotFoundPage: FC = () => {
   return (
@@ -28,6 +28,11 @@ const NotFoundPage: FC = () => {
             Return to the <Link to={APP_ROUTES.HOME}>homepage</Link> or explore{' '}
             <Link to={APP_ROUTES.ASTROPHOTOGRAPHY}>astrophotography</Link>.
           </p>
+          <div className={styles.statusCode} aria-label='404'>
+            <span className={styles.statusDigit}>4</span>
+            <span className={styles.statusDigitAccent}>0</span>
+            <span className={styles.statusDigit}>4</span>
+          </div>
         </div>
       </section>
     </>

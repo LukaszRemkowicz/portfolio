@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useSearchParams,
   useParams,
   useNavigate,
   useLocation,
-  Navigate,
 } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from '../styles/components/AstroGallery.module.css';
@@ -21,12 +21,17 @@ import SEO from './common/SEO';
 import { useAstroImages } from '../hooks/useAstroImages';
 import { useTags } from '../hooks/useTags';
 import { APP_ROUTES } from '../api/constants';
+import { NotFoundError } from '../api/errors';
 import { useCategories } from '../hooks/useCategories';
 import { useBackground } from '../hooks/useBackground';
 import { useImageUrls } from '../hooks/useImageUrls';
-import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
+import {
+  getAstroImageNotFoundQueryKey,
+  useAstroImageDetail,
+} from '../hooks/useAstroImageDetail';
 import { getMediaUrl } from '../api/media';
 import { stripHtml, truncateText } from '../utils/html';
+import NotFoundPage from './NotFoundPage';
 
 const getMinimumBatchForWidth = (width: number): number => {
   if (width <= 480) {
@@ -76,7 +81,9 @@ const AstroGallery: React.FC = () => {
     return parsedLimit;
   }, [searchParams]);
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+  const language = (i18n.language || 'en').split('-')[0];
 
   const { data: background } = useBackground();
   const { data: categories = [] } = useCategories();
@@ -127,8 +134,11 @@ const AstroGallery: React.FC = () => {
     hasNextPage,
     error: queryError,
   } = useAstroImages(params);
-  const { data: standaloneModalImage, isLoading: isModalImageLoading } =
-    useAstroImageDetail(imgSlug || null);
+  const {
+    data: standaloneModalImage,
+    isLoading: isModalImageLoading,
+    error: modalImageError,
+  } = useAstroImageDetail(imgSlug || null);
 
   // Pre-fetch all signed urls
   useImageUrls();
@@ -144,6 +154,11 @@ const AstroGallery: React.FC = () => {
       null
     );
   }, [imgSlug, images, standaloneModalImage]);
+  const isKnownMissingSlug =
+    !!imgSlug &&
+    queryClient.getQueryData<boolean>(
+      getAstroImageNotFoundQueryKey(language, imgSlug)
+    ) === true;
 
   const seoTitle = modalImage?.name || t('common.gallery');
   const seoDescription = truncateText(
@@ -229,15 +244,14 @@ const AstroGallery: React.FC = () => {
     }
   }, [selectedFilter, selectedTag]);
 
-  // Redirect if URL refers to a non-existent image slug
   if (
-    !isImagesLoading &&
-    !isModalImageLoading &&
     imgSlug &&
-    !modalImage &&
-    images.length > 0
+    (isKnownMissingSlug ||
+      (!modalImage &&
+        !isModalImageLoading &&
+        modalImageError instanceof NotFoundError))
   ) {
-    return <Navigate to={APP_ROUTES.ASTROPHOTOGRAPHY} replace />;
+    return <NotFoundPage />;
   }
 
   const handleFilterClick = (filter: FilterType): void => {

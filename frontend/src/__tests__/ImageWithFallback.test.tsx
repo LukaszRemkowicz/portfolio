@@ -25,4 +25,17 @@ describe('ImageWithFallback', () => {
       '/real-image.jpg'
     );
   });
+
+  it('can avoid showing a fallback while src is temporarily empty', () => {
+    render(
+      <ImageWithFallback
+        src=''
+        alt='Modal image'
+        fallbackSrc='/fallback.jpg'
+        fallbackOnEmptySrc={false}
+      />
+    );
+
+    expect(screen.getByAltText('Modal image')).not.toHaveAttribute('src');
+  });
 });

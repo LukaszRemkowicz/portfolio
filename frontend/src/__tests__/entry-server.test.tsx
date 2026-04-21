@@ -1,5 +1,6 @@
 import React from 'react';
 import { PassThrough } from 'node:stream';
+import { NotFoundError } from '../api/errors';
 
 const mockCreateApiClient: jest.Mock = jest.fn(() => 'mock-client');
 const mockFetchSettings: jest.Mock = jest.fn(async () => ({
@@ -25,6 +26,12 @@ const mockFetchAstroImages: jest.Mock = jest.fn(async () => ({
   next: null,
   previous: null,
   results: [],
+}));
+const mockFetchAstroImageDetail: jest.Mock = jest.fn(async () => ({
+  pk: '1',
+  slug: 'test-image',
+  name: 'Test image',
+  description: 'Test image description',
 }));
 const mockFetchTravelHighlightDetail: jest.Mock = jest.fn(async () => ({
   title: 'Tatras',
@@ -104,6 +111,8 @@ jest.mock('../api/services', () => ({
   fetchShopProducts: (client?: unknown) => mockFetchShopProducts(client),
   fetchAstroImages: (params?: unknown, client?: unknown) =>
     mockFetchAstroImages(params, client),
+  fetchAstroImageDetail: (slug?: unknown, client?: unknown) =>
+    mockFetchAstroImageDetail(slug, client),
 }));
 
 jest.mock('../hooks/useTravelHighlightDetail', () => ({
@@ -267,5 +276,32 @@ describe('SSR entry server', () => {
     );
 
     expect(result.statusCode).toBe(404);
+  });
+
+  it('dehydrates unknown astrophotography slugs for FE-owned 404 rendering', async () => {
+    mockFetchAstroImageDetail.mockRejectedValueOnce(new NotFoundError());
+
+    const result = await renderStream(
+      '/astrophotography/.env',
+      'en',
+      'https://portfolio.local',
+      'req-astro-404'
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(mockFetchAstroImageDetail).toHaveBeenCalledWith(
+      '.env',
+      'mock-client'
+    );
+    expect(result.dehydratedState.queries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          queryKey: ['astro-image-not-found', 'en', '.env'],
+          state: expect.objectContaining({
+            data: true,
+          }),
+        }),
+      ])
+    );
   });
 });

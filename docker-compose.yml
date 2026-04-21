@@ -84,9 +84,11 @@ x-local-nginx-common: &local-nginx-common
   restart: unless-stopped
   volumes:
     - ./infra/nginx/static_server.conf:/etc/nginx/nginx.conf:ro
+    - ./infra/nginx/includes:/etc/nginx/includes:ro
     - ./infra/nginx/logs:/var/log/nginx
     - ./backend/media:/app/media:ro
     - ./frontend/public/error.html:/usr/share/nginx/html/error.html:ro
+    - ./frontend/public/404.html:/usr/share/nginx/html/404.html:ro
     - portfolio_dev_static_data:/app/staticfiles:ro
     - nginx_blocklist:/etc/nginx/blocklist:ro
 

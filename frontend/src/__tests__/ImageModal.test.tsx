@@ -1,5 +1,5 @@
 // frontend/src/__tests__/ImageModal.test.tsx
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import ImageModal from '../components/common/ImageModal';
 import { AstroImage } from '../types';
@@ -152,11 +152,11 @@ describe('ImageModal Lightbox', () => {
 
     global.Image = SuccessfulImage as unknown as typeof Image;
 
-    (useImageUrls as jest.Mock)
-      .mockReturnValueOnce({ data: {} })
-      .mockReturnValueOnce({ data: { '1': '/signed-image.webp' } });
+    (useImageUrls as jest.Mock).mockReturnValue({
+      data: { '1': '/signed-image.webp' },
+    });
 
-    const { rerender } = render(
+    render(
       <BrowserRouter>
         <ImageModal image={mockImage} onClose={jest.fn()} />
       </BrowserRouter>
@@ -167,13 +167,8 @@ describe('ImageModal Lightbox', () => {
       'test.jpg'
     );
 
-    rerender(
-      <BrowserRouter>
-        <ImageModal image={mockImage} onClose={jest.fn()} />
-      </BrowserRouter>
-    );
-
-    return screen.findByAltText('Test Image').then(img => {
+    return waitFor(() => {
+      const img = screen.getByAltText('Test Image');
       expect(img).toHaveAttribute('src', '/signed-image.webp');
     });
   });
@@ -208,9 +203,9 @@ describe('ImageModal Lightbox', () => {
       </BrowserRouter>
     );
 
-    return screen.findByAltText('Test Image').then(img => {
+    return waitFor(() => {
+      const img = screen.getByAltText('Test Image');
       expect(img).toHaveAttribute('src', '/signed-image.webp');
-
       fireEvent.click(img);
 
       const images = screen.getAllByAltText('Test Image');
@@ -260,8 +255,68 @@ describe('ImageModal Lightbox', () => {
       </BrowserRouter>
     );
 
-    return screen.findByAltText('Test Image').then(img => {
+    return waitFor(() => {
+      const img = screen.getByAltText('Test Image');
       expect(img).toHaveAttribute('src', 'test.jpg');
+      expect(
+        screen.getByText(
+          'Could not load full image. Showing thumbnail instead.'
+        )
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('shows the detail thumbnail first on direct entry, then upgrades to the signed image', () => {
+    class SuccessfulImage {
+      onload: null | (() => void) = null;
+      onerror: null | (() => void) = null;
+
+      set src(_value: string) {
+        queueMicrotask(() => {
+          this.onload?.();
+        });
+      }
+    }
+
+    global.Image = SuccessfulImage as unknown as typeof Image;
+
+    const directEntryImage = {
+      ...mockImage,
+      thumbnail_url: undefined,
+    };
+
+    (useAstroImageDetail as jest.Mock).mockReturnValue({
+      data: {
+        ...directEntryImage,
+        thumbnail_url: '/detail-thumb.webp',
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    (useImageUrls as jest.Mock).mockReturnValue({
+      data: { '1': '/signed-image.webp' },
+    });
+
+    render(
+      <BrowserRouter>
+        <ImageModal image={directEntryImage} onClose={jest.fn()} />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByAltText('Test Image')).toHaveAttribute(
+      'src',
+      '/detail-thumb.webp'
+    );
+
+    return waitFor(() => {
+      const img = screen.getByAltText('Test Image');
+      expect(img).toHaveAttribute('src', '/signed-image.webp');
+      expect(
+        screen.queryByText(
+          'Could not load full image. Showing thumbnail instead.'
+        )
+      ).not.toBeInTheDocument();
     });
   });
 });
