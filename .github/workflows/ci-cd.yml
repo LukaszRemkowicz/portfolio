@@ -47,6 +47,9 @@ jobs:
     uses: LukaszRemkowicz/ci-cd/.github/workflows/python-quality-uv.yml@main
     with:
       working_directory: backend
+      quality_environment: |
+        PROJECT_OWNER=test
+        SESSION_COOKIE_DOMAIN=.example.com
 
   backend-tests:
     uses: LukaszRemkowicz/ci-cd/.github/workflows/python-tests-uv.yml@main
@@ -59,6 +62,7 @@ jobs:
       postgres_port: "5432"
       test_environment: |
         PROJECT_OWNER=test
+        SESSION_COOKIE_DOMAIN=.example.com
 
   trivy-scan:
     needs: [frontend-quality, frontend-tests, backend-quality, backend-tests]
