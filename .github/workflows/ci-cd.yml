@@ -57,6 +57,8 @@ jobs:
       postgres_user: postgres
       postgres_password: postgres
       postgres_port: "5432"
+      test_environment: |
+        PROJECT_OWNER=test
 
   trivy-scan:
     needs: [frontend-quality, frontend-tests, backend-quality, backend-tests]
