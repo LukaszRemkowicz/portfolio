@@ -319,7 +319,7 @@ class AstroImageQuerySet(TranslatableQuerySet):
                     Q(place__translations__name__iexact=place) | Q(place__isnull=True)
                 )
 
-        return queryset.order_by("-capture_date")
+        return queryset.order_by("-created_at", "-pk")
 
     def for_travel_highlight(self, slider: "MainPageLocation") -> QuerySet:
         """Return images selected for a given travel highlight slider."""

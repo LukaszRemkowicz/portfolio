@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.test import APIClient
 
 from django.urls import reverse
+from django.utils import timezone
 
 from astrophotography.models import (
     AstroImage,
@@ -127,6 +128,35 @@ class TestAstroImageViewSet:
         assert len(response.data["results"]) == 24
         assert response.data["previous"] is None
         assert "page=2" in response.data["next"]
+
+    def test_list_astro_images_orders_gallery_by_created_at_not_capture_date(
+        self, api_client: APIClient
+    ) -> None:
+        """Gallery ordering should follow creation time so FE matches the latest uploads."""
+        older_upload = AstroImageFactory(
+            name="Older upload",
+            capture_date=date(2026, 4, 22),
+        )
+        newer_upload = AstroImageFactory(
+            name="Newer upload",
+            capture_date=date(2020, 1, 1),
+        )
+
+        AstroImage.objects.filter(pk=older_upload.pk).update(
+            created_at=timezone.now() - timedelta(days=2)
+        )
+        AstroImage.objects.filter(pk=newer_upload.pk).update(
+            created_at=timezone.now() - timedelta(hours=1)
+        )
+
+        url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert [item["pk"] for item in response.data["results"][:2]] == [
+            str(newer_upload.pk),
+            str(older_upload.pk),
+        ]
 
     def test_list_astro_images_respects_limit_and_page(self, api_client: APIClient) -> None:
         """Client-provided page and limit should control the returned gallery slice."""

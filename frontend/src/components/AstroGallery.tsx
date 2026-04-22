@@ -33,6 +33,13 @@ import { getMediaUrl } from '../api/media';
 import { stripHtml, truncateText } from '../utils/html';
 import NotFoundPage from './NotFoundPage';
 
+interface GalleryReturnLocation {
+  pathname: string;
+  search?: string;
+  hash?: string;
+  scrollY?: number;
+}
+
 const getMinimumBatchForWidth = (width: number): number => {
   if (width <= 480) {
     return 1;
@@ -66,6 +73,7 @@ const AstroGallery: React.FC = () => {
   const [bootstrapTarget, setBootstrapTarget] = useState<number | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const lastAutoLoadScrollYRef = useRef(Number.NEGATIVE_INFINITY);
+  const pendingScrollRestoreRef = useRef<number | null>(null);
 
   const selectedFilter = searchParams.get('filter') as FilterType | null;
   const selectedTag = searchParams.get('tag');
@@ -269,6 +277,23 @@ const AstroGallery: React.FC = () => {
     }
   }, [selectedFilter, selectedTag]);
 
+  useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      imgSlug ||
+      pendingScrollRestoreRef.current === null
+    ) {
+      return;
+    }
+
+    const scrollY = pendingScrollRestoreRef.current;
+    pendingScrollRestoreRef.current = null;
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollY, behavior: 'auto' });
+    });
+  }, [imgSlug, location.key]);
+
   if (
     imgSlug &&
     (isKnownMissingSlug ||
@@ -331,13 +356,34 @@ const AstroGallery: React.FC = () => {
       nextParams.set('page', String(selectedPage));
     if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
-    navigate(`/astrophotography/${image.slug}${qs}`);
+    navigate(`/astrophotography/${image.slug}${qs}`, {
+      state: {
+        returnToGallery: {
+          pathname: location.pathname,
+          search: location.search,
+          hash: location.hash,
+          scrollY: typeof window === 'undefined' ? 0 : window.scrollY,
+        } satisfies GalleryReturnLocation,
+      },
+    });
   };
 
   const closeModal = (): void => {
+    const returnToGallery = location.state?.returnToGallery as
+      | GalleryReturnLocation
+      | undefined;
     const backgroundLocation = location.state?.backgroundLocation as
       | { pathname?: string; search?: string; hash?: string }
       | undefined;
+
+    if (returnToGallery?.pathname) {
+      pendingScrollRestoreRef.current = returnToGallery.scrollY ?? 0;
+      navigate(
+        `${returnToGallery.pathname}${returnToGallery.search || ''}${returnToGallery.hash || ''}`,
+        { replace: true }
+      );
+      return;
+    }
 
     if (backgroundLocation?.pathname) {
       navigate(

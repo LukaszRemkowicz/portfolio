@@ -528,6 +528,82 @@ describe('AstroGallery Component', () => {
     });
   });
 
+  it('restores the previous gallery scroll position when closing a gallery modal', async () => {
+    const mockImages: AstroImage[] = [
+      {
+        pk: '1',
+        slug: 'test-image-1',
+        thumbnail_url: '/test1-thumb.jpg',
+        name: 'Test Image 1',
+        description: 'Test description 1',
+      },
+    ];
+
+    (useAstroImages as jest.Mock).mockReturnValue({
+      data: mockImages,
+      isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      error: null,
+    });
+
+    const scrollToSpy = jest
+      .spyOn(window, 'scrollTo')
+      .mockImplementation(() => undefined);
+
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      value: 860,
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/astrophotography']}>
+          <LocationDisplay />
+          <Routes>
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-screen')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /View details for Test Image 1/i,
+      })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        '/astrophotography/test-image-1'
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close modal' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        '/astrophotography'
+      );
+    });
+
+    await waitFor(() => {
+      expect(scrollToSpy).toHaveBeenCalledWith({
+        top: 860,
+        behavior: 'auto',
+      });
+    });
+
+    scrollToSpy.mockRestore();
+  });
+
   it('renders tags in Sidebar and filters by them', async () => {
     const mockTags: Tag[] = [
       { name: 'Nebula', slug: 'nebula', count: 5 },
