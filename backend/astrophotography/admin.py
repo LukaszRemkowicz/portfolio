@@ -7,8 +7,9 @@ from parler.forms import TranslatableModelForm
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
+from django.contrib.admin.views.main import ChangeList
 from django.db import models
-from django.db.models import Count, F, Window
+from django.db.models import Count, F, Subquery, Window
 from django.db.models.functions import RowNumber
 from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
@@ -52,6 +53,22 @@ from .models import (
 from .types import CountryMaps
 
 logger = logging.getLogger(__name__)
+
+
+class AstroImageChangeList(ChangeList):
+    """Keep the rendered AstroImage admin table ordered by newest added first."""
+
+    def get_queryset(
+        self,
+        request: HttpRequest,
+        exclude_parameters: list[str | None] | None = None,
+    ) -> QuerySet:
+        queryset = super().get_queryset(request, exclude_parameters=exclude_parameters)
+        filtered_pks = queryset.values("pk")
+        return self.root_queryset.filter(pk__in=Subquery(filtered_pks)).order_by(
+            "-created_at",
+            "-pk",
+        )
 
 
 class RegionFilter(admin.SimpleListFilter):
@@ -99,6 +116,22 @@ class BaseTranslatableAdmin(
     - Dynamic Parler-style UI synchronization (via DynamicParlerStyleMixin)
     - Translation status tracking and verification (via TranslationStatusMixin)
     """
+
+    def delete_queryset(self, request: HttpRequest, queryset: QuerySet) -> None:
+        """Delete selected translated objects through a plain PK queryset.
+
+        Django admin bulk delete calls ``queryset.delete()`` directly. For Parler-based
+        admin changelists that queryset may carry ``distinct(...)`` internally, and Django
+        rejects ``delete()`` on such querysets. We keep the selected PKs from the current
+        changelist and perform the actual delete through the model's default manager so the
+        admin action works without depending on translated/distinct queryset internals.
+        """
+        selected_pks = list(queryset.values_list("pk", flat=True))
+        if not selected_pks:
+            return
+
+        base_queryset = self.model._default_manager.filter(pk__in=selected_pks)
+        super().delete_queryset(request, base_queryset)
 
 
 @admin.register(Place)
@@ -235,6 +268,17 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
     list_display_links = ("get_name",)
     list_filter = ("celestial_object", "tags")
 
+    class Media:
+        css = {"all": ("core/css/admin_date_clean.css",)}
+
+    def get_changelist(self, request: HttpRequest, **kwargs: Any) -> type[ChangeList]:
+        """Force the final admin changelist queryset to keep newest objects first."""
+        return AstroImageChangeList
+
+    def get_ordering(self, request: HttpRequest) -> tuple[str, str]:
+        """Keep the changelist ordered by newest added objects first."""
+        return ("-created_at", "-pk")
+
     def get_queryset(self, request: HttpRequest) -> QuerySet[AstroImage]:
         qs = super().get_queryset(request)
         annotated_qs = (
@@ -243,7 +287,7 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
             .annotate(
                 admin_row_number=Window(
                     expression=RowNumber(),
-                    order_by=(F("capture_date").desc(), F("created_at").desc()),
+                    order_by=(F("created_at").desc(), F("pk").desc()),
                 ),
                 admin_total_rows=Window(expression=Count("pk")),
             )
@@ -278,7 +322,7 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
 
     readonly_fields = ("created_at", "updated_at", "thumbnail")
 
-    ordering = ("-capture_date", "-created_at")
+    ordering = ("-created_at", "-pk")
 
     fieldsets = (
         (
@@ -296,7 +340,7 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
         (
             _("Media"),
             {
-                "fields": ("path", "thumbnail"),
+                "fields": ("original_upload", "thumbnail"),
             },
         ),
         (
@@ -361,8 +405,14 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
         self, request: HttpRequest, obj: models.Model, form: forms.BaseModelForm, change: bool
     ) -> None:
         astro_obj = obj if isinstance(obj, AstroImage) else None
-        uploaded_file = request.FILES.get("path")
-        cleaned_path = form.cleaned_data.get("path") if hasattr(form, "cleaned_data") else None
+        uploaded_file = request.FILES.get("original_upload")
+        cleaned_original = (
+            form.cleaned_data.get("original_upload") if hasattr(form, "cleaned_data") else None
+        )
+        current_original = astro_obj.original_field if astro_obj else None
+        uploaded_original_name = uploaded_file.name if uploaded_file else None
+        cleaned_original_name = cleaned_original.name if cleaned_original else None
+        current_original_name = current_original.name if current_original else None
 
         logger.info(
             "AstroImage admin save start",
@@ -370,24 +420,29 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
                 "object_id": str(obj.pk) if obj.pk else None,
                 "change": change,
                 "request_files_keys": list(request.FILES.keys()),
-                "uploaded_path_name": getattr(uploaded_file, "name", None),
-                "cleaned_path_name": getattr(cleaned_path, "name", None),
-                "current_path_name": getattr(getattr(astro_obj, "path", None), "name", None),
+                "uploaded_original_name": uploaded_original_name,
+                "cleaned_original_name": cleaned_original_name,
+                "current_original_name": current_original_name,
             },
         )
 
         super().save_model(request, obj, form, change)
 
-        saved_path = str(getattr(getattr(astro_obj, "path", None), "name", "") or "")
-        saved_exists = bool(astro_obj and saved_path and astro_obj.path.storage.exists(saved_path))
+        saved_original = astro_obj.original_field if astro_obj else None
+        saved_original_name = saved_original.name if saved_original else ""
+        saved_exists = bool(
+            saved_original
+            and saved_original_name
+            and saved_original.storage.exists(saved_original_name)
+        )
 
         logger.info(
             "AstroImage admin save complete",
             extra={
                 "object_id": str(obj.pk),
                 "change": change,
-                "saved_path_name": saved_path,
-                "saved_path_exists": saved_exists,
+                "saved_original_name": saved_original_name,
+                "saved_original_exists": saved_exists,
             },
         )
 
@@ -439,21 +494,22 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
 
 
 @admin.register(MainPageBackgroundImage)
-class MainPageBackgroundImageAdmin(BaseTranslatableAdmin):
+class MainPageBackgroundImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
     """
     Admin for main page background images.
     Features:
     - Dynamic Parler-style UI synchronization for translations
     """
 
+    change_form_template = "admin/astrophotography/secure_media_change_form.html"
     form = MainPageBackgroundImageForm
 
-    list_display = ("get_name", "path", "created_at")
+    list_display = ("get_name", "original", "created_at")
     list_display_links = ("get_name",)
     readonly_fields = ("created_at", "updated_at")
 
     fieldsets = (
-        (None, {"fields": ("name", "description", "path")}),
+        (None, {"fields": ("name", "description", "original_upload")}),
         (
             _("Metadata"),
             {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},

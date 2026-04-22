@@ -8,7 +8,7 @@
 }
 
 .header {
-  margin-bottom: 4rem;
+  margin-bottom: 2.5rem;
   text-align: center;
 }
 
@@ -25,6 +25,24 @@
   font-size: 1.125rem;
   max-width: 32rem;
   margin: 0 auto;
+}
+
+.statusCode {
+  margin: 1.5rem auto 0;
+  font-size: clamp(4.5rem, 11vw, 7.5rem);
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(56, 189, 248, 0.9);
+  text-shadow: 0 0 24px rgba(56, 189, 248, 0.18);
+}
+
+.statusDigit {
+  color: rgba(56, 189, 248, 0.9);
+}
+
+.statusDigitAccent {
+  color: #f8fafc;
 }
 
 .grid {
@@ -150,7 +168,7 @@
 .error,
 .noResults {
   text-align: center;
-  padding: 4rem 1.5rem;
+  padding: 2rem 1.5rem 4rem;
   color: #94a3b8;
   grid-column: 1 / -1;
 }

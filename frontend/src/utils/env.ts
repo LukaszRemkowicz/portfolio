@@ -12,6 +12,16 @@ export interface EnvSchema {
   NODE_ENV: string;
 }
 
+export interface PublicEnvSchema {
+  API_URL: string;
+  GA_TRACKING_ID: string;
+  ENABLE_GA: string;
+  SENTRY_DSN_FE: string;
+  ENVIRONMENT: string;
+  PROJECT_OWNER: string;
+  SITE_DOMAIN: string;
+}
+
 /**
  * Derived type that maps EnvSchema keys to their Vite-prefixed equivalents.
  * This drives the global ImportMetaEnv type.
@@ -37,6 +47,12 @@ const SETTINGS: EnvSchema = {
  */
 export const getEnv = (key: keyof EnvSchema, fallback: string = ''): string => {
   try {
+    if (typeof window !== 'undefined' && key !== 'NODE_ENV') {
+      const runtimeValue = window.__PUBLIC_ENV__?.[key];
+      if (runtimeValue !== undefined) {
+        return runtimeValue;
+      }
+    }
     return SETTINGS[key] || fallback;
   } catch {
     return fallback;

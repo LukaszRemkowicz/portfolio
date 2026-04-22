@@ -37,7 +37,7 @@ class Project(models.Model):
 class ProjectImage(AutomatedTranslationModelMixin, BaseImage):
     """Model for programming project images"""
 
-    path_tracker = FieldTracker(fields=["path", "original_image"])
+    source_tracker = FieldTracker(fields=["original"])
 
     # Translation trigger fields
     translation_service_method = "translate_project_image"
@@ -78,6 +78,11 @@ class ProjectImage(AutomatedTranslationModelMixin, BaseImage):
     def save(self, *args: Any, **kwargs: Any) -> None:
         super().save(*args, **kwargs)
         self.trigger_translations()
+
+    @property
+    def base_upload_dir(self) -> str:
+        """Store all project image variants under the images directory."""
+        return "programming"
 
     def __str__(self) -> str:
         return self.safe_translation_getter("name", any_language=True) or f"Project Image {self.pk}"

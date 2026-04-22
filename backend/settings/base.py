@@ -822,10 +822,12 @@ CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
 # Jazzmin Admin UI Configuration
 # ===========================
 
+is_prod = ENVIRONMENT == "production"
+
 JAZZMIN_SETTINGS = {
     "site_title": "Portfolio Admin",
     "site_header": "Portfolio",
-    "site_brand": "Portfolio Admin",
+    "site_brand": "Portfolio Admin" if is_prod else f"Portfolio Admin {ENVIRONMENT.upper()}",
     "welcome_sign": "Welcome to the Portfolio Admin Interface",
     "copyright": PROJECT_OWNER,
     # User Menu

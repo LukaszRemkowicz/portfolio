@@ -56,7 +56,7 @@ async function bootstrapApp() {
   initPwaRuntime(environment);
   // Local development prefers a clean client mount over hydration recovery noise.
   // Production-like environments should hydrate so SSR/client mismatches stay visible.
-  const useClientRenderOnly = ['development', 'dev'].includes(environment);
+  const useClientRenderOnly = ['development'].includes(environment);
 
   const tree = (
     <AppShell

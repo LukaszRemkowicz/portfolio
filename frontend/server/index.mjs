@@ -43,9 +43,7 @@ const environment = (
   process.env.NODE_ENV ||
   'development'
 ).toLowerCase();
-const useClientRenderOnly = ['development', 'dev', 'local'].includes(
-  environment
-);
+const useClientRenderOnly = ['development', 'local'].includes(environment);
 
 const server = http.createServer(async (req, res) => {
   const start = Date.now();

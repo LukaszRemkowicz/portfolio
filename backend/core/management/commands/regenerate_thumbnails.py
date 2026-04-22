@@ -8,6 +8,7 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
 from astrophotography.models import AstroImage, MainPageBackgroundImage
+from common.utils.image import delete_file_from_storage
 from programming.models import ProjectImage
 
 
@@ -39,8 +40,10 @@ class Command(BaseCommand):
             self.stdout.write(f"\nProcessing {model_name}...")
             for obj in queryset:
                 try:
-                    if not obj.path:
-                        self.stdout.write(f"  [SKIP] {obj} - No image path")
+                    thumb_source = obj.original_field
+
+                    if not thumb_source:
+                        self.stdout.write(f"  [SKIP] {obj} - No image source")
                         total_skipped += 1
                         continue
 
@@ -51,12 +54,6 @@ class Command(BaseCommand):
 
                     self.stdout.write(f"  [GEN ] {obj}")
 
-                    # Core models have make_thumbnail which standardizes on WebP
-                    thumb_source = (
-                        obj.get_thumbnail_source()
-                        if hasattr(obj, "get_thumbnail_source")
-                        else obj.path
-                    )
                     thumb_content: ContentFile = obj.make_thumbnail(thumb_source)
 
                     # Save the new thumbnail
@@ -64,7 +61,7 @@ class Command(BaseCommand):
                         # Clean up old file if it exists and has a different name
                         old_name = obj.thumbnail.name
                         if old_name != thumb_content.name:
-                            obj.thumbnail.delete(save=False)
+                            delete_file_from_storage(obj.thumbnail, old_name)
 
                     obj.thumbnail.save(thumb_content.name, thumb_content, save=True)
                     total_regenerated += 1

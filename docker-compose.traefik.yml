@@ -17,6 +17,7 @@ services:
       # Temporary ports for initial
       - "80:80"
       - "443:443"
+      - "443:443/udp"
       - "8081:8080" # Dashboard API
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro

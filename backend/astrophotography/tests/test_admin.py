@@ -70,11 +70,11 @@ class TestAstroImageAdmin:
         admin_instance = AstroImageAdmin(AstroImage, site)
         assert "display_number" in admin_instance.get_list_display(None)
 
-    def test_admin_list_numbers_are_reversed_while_order_stays_newest_first(
+    def test_admin_list_numbers_are_reversed_while_order_stays_newest_added_first(
         self, admin_user: User
     ) -> None:
-        older_image = AstroImageFactory(capture_date=date(2024, 1, 1))
-        newer_image = AstroImageFactory(capture_date=date(2024, 1, 2))
+        older_image = AstroImageFactory(capture_date=date(2024, 1, 2))
+        newer_image = AstroImageFactory(capture_date=date(2024, 1, 1))
 
         factory = RequestFactory()
         request = factory.get(self.CHANGELIST_URL)
@@ -86,6 +86,21 @@ class TestAstroImageAdmin:
         assert [image.pk for image in queryset[:2]] == [newer_image.pk, older_image.pk]
         assert admin_instance.display_number(queryset[0]) == "2"
         assert admin_instance.display_number(queryset[1]) == "1"
+
+    def test_admin_changelist_renders_newest_added_image_before_older_one(
+        self, admin_client: Client
+    ) -> None:
+        older_image = AstroImageFactory(name="ORDER_OLD", capture_date=date(2026, 4, 20))
+        newer_image = AstroImageFactory(name="ORDER_NEW", capture_date=date(2020, 1, 1))
+
+        response = cast(HttpResponse, admin_client.get(self.CHANGELIST_URL))
+
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        table_body = content.split("<tbody>", 1)[1].split("</tbody>", 1)[0]
+        assert newer_image.name in table_body
+        assert older_image.name in table_body
+        assert table_body.index(newer_image.name) < table_body.index(older_image.name)
 
     def test_admin_change_page_displays_fields(self, admin_client: Client) -> None:
         """
@@ -111,6 +126,55 @@ class TestAstroImageAdmin:
         assert "/static/astrophotography/js/admin_upload_progress.js" in content
         assert "/static/astrophotography/css/admin_upload_progress.css" in content
 
+    def test_admin_add_page_uses_admin_date_widget_for_capture_date(
+        self, admin_client: Client
+    ) -> None:
+        response = cast(
+            HttpResponse,
+            admin_client.get(reverse("admin:astrophotography_astroimage_add")),
+        )
+
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert 'name="capture_date"' in content
+        assert 'class="vDateField' in content
+        assert "admin/js/admin/DateTimeShortcuts.js" in content
+        assert "admin/js/calendar.js" in content
+        assert "core/css/admin_date_clean.css" in content
+
+    def test_admin_add_invalid_submission_keeps_admin_date_widget_for_capture_date(
+        self, admin_client: Client
+    ) -> None:
+        place = PlaceFactory()
+        image_file = BytesIO()
+        image = Image.new("RGB", (100, 100), color="black")
+        image.save(image_file, "jpeg")
+        image_file.name = "invalid_add_date.jpg"
+        image_file.seek(0)
+
+        response = cast(
+            HttpResponse,
+            admin_client.post(
+                reverse("admin:astrophotography_astroimage_add"),
+                {
+                    "name": "Missing Date",
+                    "original_upload": image_file,
+                    "place": place.pk,
+                    "zoom": "True",
+                    "celestial_object": "Landscape",
+                },
+                format="multipart",
+            ),
+        )
+
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert 'name="capture_date"' in content
+        assert 'class="vDateField' in content
+        assert "admin/js/admin/DateTimeShortcuts.js" in content
+        assert "admin/js/calendar.js" in content
+        assert "core/css/admin_date_clean.css" in content
+
     def test_admin_change_page_filtering_pl(self, admin_client: Client) -> None:
         """
         Verify that non-translatable fields are hidden when editing 'pl' language.
@@ -133,6 +197,36 @@ class TestAstroImageAdmin:
         assert "Place/City" not in content
         assert "Astrobin URL" not in content
 
+    def test_admin_changelist_delete_selected_removes_astroimage(
+        self, admin_client: Client
+    ) -> None:
+        image = AstroImageFactory()
+
+        confirmation_response = cast(
+            HttpResponse,
+            admin_client.post(
+                self.CHANGELIST_URL,
+                {"action": "delete_selected", "_selected_action": [str(image.pk)]},
+            ),
+        )
+        assert confirmation_response.status_code == 200
+
+        delete_response = cast(
+            HttpResponse,
+            admin_client.post(
+                self.CHANGELIST_URL,
+                {
+                    "action": "delete_selected",
+                    "_selected_action": [str(image.pk)],
+                    "post": "yes",
+                },
+                follow=True,
+            ),
+        )
+
+        assert delete_response.status_code == 200
+        assert not AstroImage.objects.filter(pk=image.pk).exists()
+
     def test_admin_add_creates_object(self, admin_client: Client) -> None:
         """
         Verify that submitting the AstroImage add form successfully creates a new object
@@ -151,7 +245,7 @@ class TestAstroImageAdmin:
         data = {
             "name": "Test Orion Nebula",
             "description": "A very bright test nebula",
-            "path": image_file,
+            "original_upload": image_file,
             "place": place.pk,
             "capture_date": "2026-01-01",
             "zoom": "True",
@@ -264,6 +358,37 @@ class TestMainPageBackgroundImageAdmin:
         assert response.status_code == 200
         assert "Admin Existing BG" in response.content.decode("utf-8")
 
+    def test_admin_change_view_uses_secure_file_widget(self, admin_client: Client) -> None:
+        bg_image: MainPageBackgroundImage = MainPageBackgroundImageFactory()
+        url: str = reverse(self.CHANGE_URL_NAME, args=[bg_image.pk])
+
+        response = cast(HttpResponse, admin_client.get(url))
+
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert 'class="secure-file-currently"' in content
+        expected_url = reverse(
+            "admin-generic-secure-media",
+            kwargs={
+                "app_label": "astrophotography",
+                "model_name": "mainpagebackgroundimage",
+                "pk": str(bg_image.pk),
+                "field_name": "original",
+            },
+        )
+        assert expected_url in content
+
+    def test_admin_change_view_shows_sidebar_image_preview(self, admin_client: Client) -> None:
+        bg_image: MainPageBackgroundImage = MainPageBackgroundImageFactory()
+        url: str = reverse(self.CHANGE_URL_NAME, args=[bg_image.pk])
+
+        response = cast(HttpResponse, admin_client.get(url))
+
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert "Image Preview" in content
+        assert 'class="sidebar-image-preview"' in content
+
     def test_admin_add_creates_object(self, admin_client: Client) -> None:
         url: str = reverse("admin:astrophotography_mainpagebackgroundimage_add")
         image_file = BytesIO()
@@ -271,7 +396,7 @@ class TestMainPageBackgroundImageAdmin:
         image.save(image_file, "jpeg")
         image_file.name = "test_bg.jpg"
         image_file.seek(0)
-        data = {"name": "Test Background Entry", "path": image_file}
+        data = {"name": "Test Background Entry", "original_upload": image_file}
         response = admin_client.post(url, data, format="multipart")
         if response.status_code == 200:
             form = response.context_data.get("adminform")
@@ -455,7 +580,7 @@ class TestMainPageBackgroundImageAdminActions:
                 HttpResponse,
                 admin_client.post(
                     self.ADD_URL,
-                    {"name": "Test Background", "path": image_file, "_save": "Save"},
+                    {"name": "Test Background", "original_upload": image_file, "_save": "Save"},
                 ),
             )
             assert response.status_code == 302  # Redirect on success
@@ -526,7 +651,7 @@ class TestMainPageBackgroundImageAdminActions:
             data: dict[str, str] = {
                 "name": "Test BG",  # Same name
                 "_save": "Save",
-                "path": replacement_image,
+                "original_upload": replacement_image,
             }
             response = cast(HttpResponse, admin_client.post(url, data, format="multipart"))
 

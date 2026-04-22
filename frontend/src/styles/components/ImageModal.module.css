@@ -94,6 +94,15 @@
   transform: scale(1.01);
 }
 
+.imageStatusMessage {
+  margin: 0.75rem 0 0;
+  color: rgba(255, 244, 214, 0.95);
+  font-family: var(--font-family-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .fullResOverlay {
   position: fixed;
   top: 0;

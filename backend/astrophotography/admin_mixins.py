@@ -12,10 +12,10 @@ from common.utils.signing import generate_signed_url_params
 class SecureAdminSidebarPreviewMixin:
     """
     Mixin for ModelAdmin to inject secure signed URLs for sidebar previews.
-    Handles 'path' and 'thumbnail' fields by default.
+    Handles the canonical source field and thumbnail by default.
     """
 
-    secure_preview_fields = ["path", "thumbnail"]
+    secure_preview_fields = ["original", "thumbnail"]
     secure_preview_url_name = "admin-generic-secure-media"  # Default to generic view
 
     def _add_secure_sidebar_previews(self, obj: Model, context: dict[str, Any]) -> None:
@@ -48,7 +48,7 @@ class SecureAdminSidebarPreviewMixin:
             signed_url = f"{url}?{urlencode(params)}"
 
             # Map to template context names
-            if field_name == "path":
+            if field_name == "original":
                 context["sidebar_image_url"] = signed_url
             elif field_name == "thumbnail":
                 context["sidebar_thumbnail_url"] = signed_url

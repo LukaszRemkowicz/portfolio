@@ -10,7 +10,6 @@ x-backend-defaults: &backend-defaults
     - traefik_proxy
   environment: &backend-defaults-env
     DEBUG: "False"
-    DOCKER_ENV: "true"
     PYTHONPATH: "."
     TZ: "Europe/Warsaw"
     SECRET_KEY: ${SECRET_KEY}
@@ -140,6 +139,8 @@ services:
       NODE_ENV: production
       API_URL: https://${API_DOMAIN}
       SSR_API_URL: http://be:8000
+      GA_TRACKING_ID: ${GA_TRACKING_ID}
+      ENABLE_GA: ${ENABLE_GA:-false}
       PROJECT_OWNER: ${PROJECT_OWNER:-Lukasz}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]

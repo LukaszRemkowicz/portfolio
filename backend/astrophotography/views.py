@@ -193,14 +193,10 @@ class AstroImageSecureView(SecureMediaView):
 
     def get_file_path(self, obj: Model) -> str:
         assert isinstance(obj, AstroImage)
-        # The public secure image endpoint is used by the gallery/modal to fetch
-        # the highest-quality asset. It should not be downgraded by the legacy
-        # "serve_webp_images" admin toggle, which exists for older public asset
-        # flows. Prefer the current full-resolution path and fall back only when
-        # no converted asset exists.
-        if obj.path:
-            return str(obj.path)
-        return str(obj.get_serving_path())
+        # The public secure image endpoint is used by the frontend to fetch the
+        # highest-quality asset for slug-addressable astro images.
+        serving_field = obj.original_webp_field or obj.original_field
+        return str(serving_field or "")
 
     def get_signature_id(self) -> str:
         return str(self.kwargs.get("slug", ""))

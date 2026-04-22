@@ -76,6 +76,26 @@ class ReadOnlyMessageWidget(forms.Widget):
         return forms.Media(css={"all": ("core/css/select2_admin.css",)})
 
 
+class AdminLikeNativeDateWidget(forms.DateInput):
+    """Native date input rendered with Django admin-style shortcut controls."""
+
+    template_name = "core/widgets/admin_like_native_date.html"
+
+    def __init__(self, attrs=None, format=None):
+        attrs = {"type": "date", **(attrs or {})}
+        super().__init__(attrs=attrs, format=format)
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        context["widget"]["today_label"] = _("Today")
+        context["widget"]["choose_date_title"] = _("Choose a Date")
+        return context
+
+    @property
+    def media(self):
+        return forms.Media(js=("core/js/admin_like_native_date.js",))
+
+
 class CountrySelect2Widget(ThemedSelect2Widget):
     """
     A Select2Widget specifically for country fields that allows searching by both
@@ -191,4 +211,5 @@ class SecureAdminFileWidget(AdminFileWidget):
                     return str(self.label)
 
             context["widget"]["value"] = SecureLink(self.signed_url, self.label)
+            context["widget"]["is_initial"] = True
         return context

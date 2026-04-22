@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useSearchParams,
   useParams,
   useNavigate,
   useLocation,
-  Navigate,
 } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from '../styles/components/AstroGallery.module.css';
@@ -21,12 +21,24 @@ import SEO from './common/SEO';
 import { useAstroImages } from '../hooks/useAstroImages';
 import { useTags } from '../hooks/useTags';
 import { APP_ROUTES } from '../api/constants';
+import { NotFoundError } from '../api/errors';
 import { useCategories } from '../hooks/useCategories';
 import { useBackground } from '../hooks/useBackground';
 import { useImageUrls } from '../hooks/useImageUrls';
-import { useAstroImageDetail } from '../hooks/useAstroImageDetail';
+import {
+  getAstroImageNotFoundQueryKey,
+  useAstroImageDetail,
+} from '../hooks/useAstroImageDetail';
 import { getMediaUrl } from '../api/media';
 import { stripHtml, truncateText } from '../utils/html';
+import NotFoundPage from './NotFoundPage';
+
+interface GalleryReturnLocation {
+  pathname: string;
+  search?: string;
+  hash?: string;
+  scrollY?: number;
+}
 
 const getMinimumBatchForWidth = (width: number): number => {
   if (width <= 480) {
@@ -61,9 +73,21 @@ const AstroGallery: React.FC = () => {
   const [bootstrapTarget, setBootstrapTarget] = useState<number | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const lastAutoLoadScrollYRef = useRef(Number.NEGATIVE_INFINITY);
+  const pendingScrollRestoreRef = useRef<number | null>(null);
 
   const selectedFilter = searchParams.get('filter') as FilterType | null;
   const selectedTag = searchParams.get('tag');
+  const selectedPage = useMemo(() => {
+    const rawPage = searchParams.get('page');
+    if (!rawPage) return undefined;
+
+    const parsedPage = Number(rawPage);
+    if (!Number.isFinite(parsedPage) || parsedPage < 1) {
+      return undefined;
+    }
+
+    return Math.floor(parsedPage);
+  }, [searchParams]);
   const selectedLimit = useMemo(() => {
     const rawLimit = searchParams.get('limit');
     if (!rawLimit) return undefined;
@@ -76,7 +100,9 @@ const AstroGallery: React.FC = () => {
     return parsedLimit;
   }, [searchParams]);
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+  const language = (i18n.language || 'en').split('-')[0];
 
   const { data: background } = useBackground();
   const { data: categories = [] } = useCategories();
@@ -114,9 +140,10 @@ const AstroGallery: React.FC = () => {
     () => ({
       ...(selectedFilter ? { filter: selectedFilter } : {}),
       ...(selectedTag ? { tag: selectedTag } : {}),
+      ...(selectedPage ? { page: selectedPage } : {}),
       ...(effectiveLimit ? { limit: effectiveLimit } : {}),
     }),
-    [effectiveLimit, selectedFilter, selectedTag]
+    [effectiveLimit, selectedFilter, selectedPage, selectedTag]
   );
 
   const {
@@ -127,8 +154,11 @@ const AstroGallery: React.FC = () => {
     hasNextPage,
     error: queryError,
   } = useAstroImages(params);
-  const { data: standaloneModalImage, isLoading: isModalImageLoading } =
-    useAstroImageDetail(imgSlug || null);
+  const {
+    data: standaloneModalImage,
+    isLoading: isModalImageLoading,
+    error: modalImageError,
+  } = useAstroImageDetail(imgSlug || null);
 
   // Pre-fetch all signed urls
   useImageUrls();
@@ -144,6 +174,11 @@ const AstroGallery: React.FC = () => {
       null
     );
   }, [imgSlug, images, standaloneModalImage]);
+  const isKnownMissingSlug =
+    !!imgSlug &&
+    queryClient.getQueryData<boolean>(
+      getAstroImageNotFoundQueryKey(language, imgSlug)
+    ) === true;
 
   const seoTitle = modalImage?.name || t('common.gallery');
   const seoDescription = truncateText(
@@ -166,6 +201,7 @@ const AstroGallery: React.FC = () => {
     if (
       typeof window === 'undefined' ||
       bootstrapTarget === null ||
+      selectedPage !== undefined ||
       !hasNextPage ||
       isFetchingNextPage ||
       images.length === 0 ||
@@ -181,10 +217,16 @@ const AstroGallery: React.FC = () => {
     hasNextPage,
     images.length,
     isFetchingNextPage,
+    selectedPage,
   ]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !hasNextPage || isFetchingNextPage) {
+    if (
+      typeof window === 'undefined' ||
+      selectedPage !== undefined ||
+      !hasNextPage ||
+      isFetchingNextPage
+    ) {
       return;
     }
 
@@ -214,7 +256,13 @@ const AstroGallery: React.FC = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [fetchNextPage, hasNextPage, images.length, isFetchingNextPage]);
+  }, [
+    fetchNextPage,
+    hasNextPage,
+    images.length,
+    isFetchingNextPage,
+    selectedPage,
+  ]);
   // Smooth scroll to results on filter/tag change (Mobile only)
   useEffect(() => {
     if (window.innerWidth <= 992 && resultsRef.current) {
@@ -229,15 +277,31 @@ const AstroGallery: React.FC = () => {
     }
   }, [selectedFilter, selectedTag]);
 
-  // Redirect if URL refers to a non-existent image slug
+  useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      imgSlug ||
+      pendingScrollRestoreRef.current === null
+    ) {
+      return;
+    }
+
+    const scrollY = pendingScrollRestoreRef.current;
+    pendingScrollRestoreRef.current = null;
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollY, behavior: 'auto' });
+    });
+  }, [imgSlug, location.key]);
+
   if (
-    !isImagesLoading &&
-    !isModalImageLoading &&
     imgSlug &&
-    !modalImage &&
-    images.length > 0
+    (isKnownMissingSlug ||
+      (!modalImage &&
+        !isModalImageLoading &&
+        modalImageError instanceof NotFoundError))
   ) {
-    return <Navigate to={APP_ROUTES.ASTROPHOTOGRAPHY} replace />;
+    return <NotFoundPage />;
   }
 
   const handleFilterClick = (filter: FilterType): void => {
@@ -253,6 +317,8 @@ const AstroGallery: React.FC = () => {
     // Keep active tag unless it was cleared
     if (selectedTag && selectedFilter !== filter)
       nextParams.set('tag', selectedTag);
+    if (selectedPage !== undefined)
+      nextParams.set('page', String(selectedPage));
     if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
     navigate(`/astrophotography${qs}`);
@@ -263,6 +329,8 @@ const AstroGallery: React.FC = () => {
     const nextParams = new URLSearchParams();
     if (tagSlug) nextParams.set('tag', tagSlug);
     if (selectedFilter) nextParams.set('filter', selectedFilter);
+    if (selectedPage !== undefined)
+      nextParams.set('page', String(selectedPage));
     if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
     navigate(`/astrophotography${qs}`);
@@ -284,15 +352,38 @@ const AstroGallery: React.FC = () => {
     const nextParams = new URLSearchParams();
     if (selectedFilter) nextParams.set('filter', selectedFilter);
     if (selectedTag) nextParams.set('tag', selectedTag);
+    if (selectedPage !== undefined)
+      nextParams.set('page', String(selectedPage));
     if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
-    navigate(`/astrophotography/${image.slug}${qs}`);
+    navigate(`/astrophotography/${image.slug}${qs}`, {
+      state: {
+        returnToGallery: {
+          pathname: location.pathname,
+          search: location.search,
+          hash: location.hash,
+          scrollY: typeof window === 'undefined' ? 0 : window.scrollY,
+        } satisfies GalleryReturnLocation,
+      },
+    });
   };
 
   const closeModal = (): void => {
+    const returnToGallery = location.state?.returnToGallery as
+      | GalleryReturnLocation
+      | undefined;
     const backgroundLocation = location.state?.backgroundLocation as
       | { pathname?: string; search?: string; hash?: string }
       | undefined;
+
+    if (returnToGallery?.pathname) {
+      pendingScrollRestoreRef.current = returnToGallery.scrollY ?? 0;
+      navigate(
+        `${returnToGallery.pathname}${returnToGallery.search || ''}${returnToGallery.hash || ''}`,
+        { replace: true }
+      );
+      return;
+    }
 
     if (backgroundLocation?.pathname) {
       navigate(
@@ -306,6 +397,8 @@ const AstroGallery: React.FC = () => {
     const nextParams = new URLSearchParams();
     if (selectedFilter) nextParams.set('filter', selectedFilter);
     if (selectedTag) nextParams.set('tag', selectedTag);
+    if (selectedPage !== undefined)
+      nextParams.set('page', String(selectedPage));
     if (effectiveLimit) nextParams.set('limit', String(effectiveLimit));
     const qs = nextParams.toString() ? `?${nextParams.toString()}` : '';
     navigate(`/astrophotography${qs}`);

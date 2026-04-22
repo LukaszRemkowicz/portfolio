@@ -94,6 +94,19 @@ msgstr ""
 msgid "Django administration"
 msgstr ""
 
+#: core/templates/admin/change_form.html
+#: core/templates/admin/change_list.html
+#: core/templates/admin/auth/user/change_password.html
+#: core/templates/registration/password_change_form.html
+msgctxt "admin error banner"
+msgid "Please correct the error below."
+msgstr "Popraw poniższy błąd."
+
+msgctxt "admin error banner"
+msgid "Please correct the errors below."
+msgstr "Popraw poniższe błędy."
+
+
 #: core/widgets.py:18
 msgid "Select..."
 msgstr "Wybierz..."

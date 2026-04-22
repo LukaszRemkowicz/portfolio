@@ -209,31 +209,30 @@ class Command(BaseCommand):
     ) -> str:
         """Convert a BaseImage subclass instance. Returns 'converted', 'skipped', or 'error'."""
         name = str(obj)
-        if not obj.path:
-            self.stdout.write(f"  [SKIP] {name} — no path")
+        source = obj.original_field
+        if not source:
+            self.stdout.write(f"  [SKIP] {name} — no source image")
             return "skipped"
 
-        current_name = str(obj.path.name)
+        current_name = str(getattr(obj.original_webp_field, "name", "") or "")
 
         if current_name.lower().endswith(".webp") and not force:
             self.stdout.write(f"  [SKIP] {name} — already WebP")
             return "skipped"
 
-        if obj.original_image and not force:
-            self.stdout.write(f"  [SKIP] {name} — already has original_image")
+        if obj.original_webp and not force:
+            self.stdout.write(f"  [SKIP] {name} — already has original_webp")
             return "skipped"
 
-        # In force mode, re-convert from the original (original_image) at the new quality.
-        # If no original_image exists (first-time conversion), use obj.path as source.
-        source = obj.original_image if (force and obj.original_image) else obj.path
-        label = "RECONV" if (force and obj.original_image) else "CONV"
+        # In force mode, re-convert from the canonical original when it exists.
+        label = "RECONV" if (force and obj.original) else "CONV"
         self.stdout.write(f"  [{label}] {name} — {source.name}")
 
         if dry_run:
             return "converted"
 
         try:
-            spec: ImageSpec = obj.get_image_spec("path")
+            spec: ImageSpec = obj.get_original_spec()
             result = convert_to_webp(
                 source,
                 quality=spec.quality,
@@ -244,19 +243,16 @@ class Command(BaseCommand):
                 self.stderr.write(self.style.ERROR(f"  [ERR ] {name} — conversion returned None"))
                 return "error"
             original_name, webp_content = result
-            # Save the new WebP, overwriting obj.path
-            obj.path.save(webp_content.name, webp_content, save=False)
-            if obj.path:
-                thumb_source = source if source else obj.get_thumbnail_source()
+            obj.original_webp.save(webp_content.name, webp_content, save=False)
+            if obj.original_webp:
+                thumb_source = source if source else obj.original_field
                 thumb_content: ContentFile = obj.make_thumbnail(thumb_source)
                 obj.thumbnail.save(thumb_content.name, thumb_content, save=False)
             update_kwargs = {
-                "path": str(obj.path.name) if obj.path else None,
+                "original": original_name,
+                "original_webp": str(obj.original_webp.name) if obj.original_webp else None,
                 "thumbnail": str(obj.thumbnail.name) if obj.thumbnail else None,
             }
-            # Only set original_image on first conversion (not on force re-conversion)
-            if not force:
-                update_kwargs["original_image"] = original_name
             type(obj).objects.filter(pk=obj.pk).update(**update_kwargs)
             return "converted"
         except Exception as exc:
