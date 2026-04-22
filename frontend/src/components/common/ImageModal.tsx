@@ -27,15 +27,30 @@ const ImageModalContent: FC<ImageModalProps> = ({ image, onClose }) => {
     image ? [image.pk.toString()] : undefined,
     !!image
   );
+  const thumbnailImageSrc =
+    image?.thumbnail_url || activeImageDetail?.thumbnail_url || '';
   const preferredImageSrc =
     (image ? imageUrls[image.pk] : undefined) ||
+    activeImageDetail?.url ||
     image?.url ||
-    image?.thumbnail_url ||
     '';
+  const imageSourceKey = [
+    image?.slug || '',
+    thumbnailImageSrc,
+    preferredImageSrc,
+  ].join('|');
+  const initialImageSrc = thumbnailImageSrc || preferredImageSrc;
 
   const [isFullRes, setIsFullRes] = useState(false);
-  const [resolvedImageSrc, setResolvedImageSrc] = useState(
-    image?.url || image?.thumbnail_url || ''
+  const [resolvedImageState, setResolvedImageState] = useState(() => ({
+    key: imageSourceKey,
+    src: initialImageSrc,
+  }));
+  const [fullImageLoadFailedState, setFullImageLoadFailedState] = useState(
+    () => ({
+      key: imageSourceKey,
+      value: false,
+    })
   );
   const [scale, setScale] = useState(1);
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 }); // Pixels
@@ -53,6 +68,14 @@ const ImageModalContent: FC<ImageModalProps> = ({ image, onClose }) => {
   // Use refs to avoid re-renders during drag
   const dragStartRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
+  const resolvedImageSrc =
+    resolvedImageState.key === imageSourceKey
+      ? resolvedImageState.src
+      : initialImageSrc;
+  const fullImageLoadFailed =
+    fullImageLoadFailedState.key === imageSourceKey
+      ? fullImageLoadFailedState.value
+      : false;
 
   const closeFullRes = () => {
     setIsFullRes(false);
@@ -72,12 +95,24 @@ const ImageModalContent: FC<ImageModalProps> = ({ image, onClose }) => {
 
     probe.onload = () => {
       if (!cancelled) {
-        setResolvedImageSrc(preferredImageSrc);
+        setFullImageLoadFailedState({
+          key: imageSourceKey,
+          value: false,
+        });
+        setResolvedImageState({
+          key: imageSourceKey,
+          src: preferredImageSrc,
+        });
       }
     };
 
     probe.onerror = () => {
-      // Keep the current working image instead of swapping to a broken URL.
+      if (!cancelled) {
+        setFullImageLoadFailedState({
+          key: imageSourceKey,
+          value: true,
+        });
+      }
     };
 
     probe.src = preferredImageSrc;
@@ -87,7 +122,7 @@ const ImageModalContent: FC<ImageModalProps> = ({ image, onClose }) => {
       probe.onload = null;
       probe.onerror = null;
     };
-  }, [preferredImageSrc, resolvedImageSrc]);
+  }, [imageSourceKey, preferredImageSrc, resolvedImageSrc]);
 
   // Clamp pan position to prevent panning beyond image boundaries
   const clampPanPosition = useCallback(
@@ -419,6 +454,7 @@ const ImageModalContent: FC<ImageModalProps> = ({ image, onClose }) => {
         <div className={styles.imageWrapper}>
           <ImageWithFallback
             src={resolvedImageSrc}
+            fallbackOnEmptySrc={false}
             alt={image.name}
             className={styles.modalImage}
             onClick={() => {
@@ -436,6 +472,11 @@ const ImageModalContent: FC<ImageModalProps> = ({ image, onClose }) => {
             draggable='false'
             onContextMenu={e => e.preventDefault()}
           />
+          {fullImageLoadFailed && (
+            <p className={styles.imageStatusMessage} role='status'>
+              Could not load full image. Showing thumbnail instead.
+            </p>
+          )}
         </div>
 
         {isFullRes &&
@@ -480,6 +521,7 @@ const ImageModalContent: FC<ImageModalProps> = ({ image, onClose }) => {
               </button>
               <ImageWithFallback
                 src={resolvedImageSrc}
+                fallbackOnEmptySrc={false}
                 alt={image.name}
                 className={`${styles.fullResImage} ${
                   scale > 1.01 ? styles.isZoomed : ''

@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import date, timedelta
 from unittest.mock import mock_open
@@ -369,6 +370,35 @@ class TestSitemapSummaryService:
         result = service.summarize(report)
 
         assert result.recommendations == "Fix the broken URL.\nRe-run the sitemap audit."
+
+    def test_build_user_message_uses_canonical_url_for_canonical_mismatch(self):
+        service = SitemapSummaryService(provider=MockLLMProvider())
+        report = SitemapReportResult(
+            root_sitemap_url="https://portfolio.example/sitemap.xml",
+            total_sitemaps=1,
+            total_urls=1,
+            issues=[
+                SitemapIssue(
+                    url="https://portfolio.example/astrophotography/sola-total-eclipse",
+                    category=SitemapIssueCategory.CANONICAL_MISMATCH,
+                    message="Canonical URL differs from the sitemap URL.",
+                    status_code=200,
+                    final_url="https://portfolio.example/astrophotography",
+                )
+            ],
+        )
+
+        payload = json.loads(service._build_user_message(report))
+
+        assert payload["issues"] == [
+            {
+                "url": "https://portfolio.example/astrophotography/sola-total-eclipse",
+                "category": "canonical_mismatch",
+                "message": "Canonical URL differs from the sitemap URL.",
+                "status_code": 200,
+                "canonical_url": "https://portfolio.example/astrophotography",
+            }
+        ]
 
 
 @pytest.mark.django_db

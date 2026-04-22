@@ -19,7 +19,13 @@ from django.views.decorators.cache import cache_page
 from django.views.static import serve
 
 from astrophotography.views import AstroImageSecureView, ImageURLViewSet
-from core.sitemaps import AstroImageSitemap, ShopSitemap, StaticViewSitemap, TravelHighlightsSitemap
+from core.sitemaps import (
+    AstroGalleryPaginationSitemap,
+    AstroImageSitemap,
+    ShopSitemap,
+    StaticViewSitemap,
+    TravelHighlightsSitemap,
+)
 from core.views import health_check_view, root_view
 from shop.views import ShopAstroImageLookupView
 
@@ -35,6 +41,7 @@ admin.site.index_title = "Welcome to Portfolio Admin Portal"
 
 _sitemaps = {
     "static": StaticViewSitemap,
+    "astro-pages": AstroGalleryPaginationSitemap,
     "astro": AstroImageSitemap,
     "shop": ShopSitemap,
     "travel": TravelHighlightsSitemap,

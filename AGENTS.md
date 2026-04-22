@@ -65,12 +65,18 @@ Use these documents as fast context before implementation.
   Use for landing-page total-time calculation, `AstroImage.calculated_exposure_hours`, rebuild flow, serializer rounding, and cache invalidation. Describes the current derived-stat architecture and operational caveats.
 - `infra/docs/project/monitoring_system_overview.md`
   Use for monitoring jobs, scheduling, queue routing, log analysis, sitemap analysis, and LLM boundaries. Describes the live monitoring architecture and hard invariants.
+- `infra/docs/project/logging_structure_overview.md`
+  Use for backend/frontend/nginx/Traefik logging formats, JSON-vs-plain-text status, and cross-stack logging structure. Describes how logs are currently emitted across the platform.
 - `collector/README.md`
   Use for the dedicated Python log collector, Docker collector image, manifest-driven source resolution, runtime contract, manual runs, cron installation, and rollout checks. Describes the standalone collector app and its operational boundary.
 - `infra/docs/project/translation_system_overview.md`
   Use for translation lifecycle, `TranslationTask` debugging, translation admin behavior, serializer fallback behavior, and adding translation support to new models. Describes the async translation architecture and its operational boundaries.
 - `infra/docs/project/release_deploy_architecture.md`
   Use for release scripts, deploy logic, image naming, artifact flow, and rollback behavior. Describes the tag-based release/deploy model and script responsibilities.
+- `infra/docs/project/NEW/mcp_log_server_architecture.md`
+  Use for planning the FastMCP-based log/VPS agent server intended to replace the collector over time. Describes the proposed MCP tool surface, auth model, phased migration, and deterministic log-analysis boundary.
+- `infra/docs/project/vps_postgres_ssh_tunneling.md`
+  Use for local SSH tunneling into the VPS PostgreSQL container, pgAdmin connection setup, and port-forwarding examples. Describes the local-to-VPS tunnel shape and Docker container IP usage.
 - `infra/docs/prod/fail2ban_probe_blocker_playbook.md`
   Use for production probe blocking, repeated `.env` scans, and host-level IP banning. Describes the `fail2ban` setup for nginx and Traefik logs.
 - `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
@@ -95,9 +101,12 @@ Use this quick mapping when a task arrives:
 - Landing page total-time stat or exposure-hours rebuilds -> `infra/docs/project/landing_page_total_time_spent_system.md`
 - Django admin image cropping or preview/media bug -> `infra/docs/project/django_admin_image_cropper_mechanism.md`
 - Monitoring, Celery monitoring jobs, sitemap checks -> `infra/docs/project/monitoring_system_overview.md`
+- Backend/frontend/nginx/Traefik logging structure -> `infra/docs/project/logging_structure_overview.md`
 - Collector app architecture, manifest contract, rebuild/run path, or cron rollout work -> `collector/README.md`
 - Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
 - Release/deploy script logic or image naming -> `infra/docs/project/release_deploy_architecture.md`
+- FastMCP log/VPS agent server planning or collector replacement -> `infra/docs/project/NEW/mcp_log_server_architecture.md`
+- SSH tunnel or pgAdmin access to the VPS PostgreSQL DB -> `infra/docs/project/vps_postgres_ssh_tunneling.md`
 - Production release procedure -> `infra/scripts/README.md`
 - SSR architecture direction -> `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
 - BFF route ownership or `/app/...` migration -> `infra/docs/project/SSR Migration/STAGE-2_full_ssr_bff_migration_plan.md`
@@ -119,8 +128,8 @@ Use this quick mapping when a task arrives:
 
 Use these defaults when validating changes:
 
-- Backend: use the backend project test entrypoint, `uv run test`
-  Treat this as the canonical backend validation command for the repo, not as a shorthand for "run pytest directly". This wrapper may use the expected backend runtime and scripts under `backend/`.
+- Backend: run backend `uv` commands from the `backend/` directory, not the repository root
+  Use the backend project test entrypoint as `cd backend && uv run test`. Treat this as the canonical backend validation command for the repo, not as a shorthand for "run pytest directly". This wrapper depends on the backend project working directory and the expected runtime/scripts under `backend/`.
 - Frontend: use the frontend Docker container for test commands rather than assuming the host machine is the correct runtime
 
 

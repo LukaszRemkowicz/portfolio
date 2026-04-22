@@ -1,4 +1,5 @@
 import { act } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   render,
   screen,
@@ -10,6 +11,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import AstroGallery from '../components/AstroGallery';
 import { AstroImage, Tag } from '../types';
+import { NotFoundError } from '../api/errors';
 
 import { useAstroImages } from '../hooks/useAstroImages';
 import { useCategories } from '../hooks/useCategories';
@@ -27,6 +29,10 @@ jest.mock('../hooks/useBackground');
 jest.mock('../hooks/useSettings');
 jest.mock('../hooks/useImageUrls');
 jest.mock('../hooks/useAstroImageDetail');
+jest.mock('@tanstack/react-query', () => ({
+  ...jest.requireActual('@tanstack/react-query'),
+  useQueryClient: jest.fn(),
+}));
 
 const LocationDisplay = () => {
   const location = useLocation();
@@ -105,6 +111,10 @@ describe('AstroGallery Component', () => {
       data: undefined,
       isLoading: false,
       error: null,
+    });
+
+    (useQueryClient as jest.Mock).mockReturnValue({
+      getQueryData: jest.fn(() => undefined),
     });
   });
 
@@ -352,6 +362,110 @@ describe('AstroGallery Component', () => {
     );
   });
 
+  it('renders the not-found page for an unknown astrophotography slug', async () => {
+    (useAstroImages as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      error: null,
+    });
+
+    (useAstroImageDetail as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new NotFoundError(),
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/astrophotography/.env']}>
+          <Routes>
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      );
+    });
+
+    expect(screen.getByText('Page not found')).toBeInTheDocument();
+    expect(screen.queryByTestId('location-display')).not.toBeInTheDocument();
+  });
+
+  it('renders the not-found page immediately when SSR already marked the slug as missing', async () => {
+    (useAstroImages as jest.Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      error: null,
+    });
+
+    (useAstroImageDetail as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    });
+
+    (useQueryClient as jest.Mock).mockReturnValue({
+      getQueryData: jest.fn(() => true),
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/astrophotography/cwecewcew']}>
+          <Routes>
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      );
+    });
+
+    expect(screen.getByText('Page not found')).toBeInTheDocument();
+    expect(screen.queryByText('Gallery')).not.toBeInTheDocument();
+  });
+
+  it('uses the requested page without auto-loading additional pages', async () => {
+    const fetchNextPage = jest.fn();
+
+    (useAstroImages as jest.Mock).mockReturnValue({
+      data: Array.from({ length: 24 }, (_, index) => ({
+        pk: String(index + 1),
+        slug: `page-two-image-${index + 1}`,
+        thumbnail_url: `/thumb-${index + 1}.jpg`,
+        name: `Page Two Image ${index + 1}`,
+        description: `Description ${index + 1}`,
+      })),
+      isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: true,
+      fetchNextPage,
+      error: null,
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/astrophotography?page=2']}>
+          <Routes>
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      );
+    });
+
+    expect(useAstroImages).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 2 })
+    );
+    expect(fetchNextPage).not.toHaveBeenCalled();
+  });
+
   it('returns to the homepage when closing a modal opened from the homepage gallery', async () => {
     const mockImages: AstroImage[] = [
       {
@@ -412,6 +526,82 @@ describe('AstroGallery Component', () => {
     await waitFor(() => {
       expect(screen.getByTestId('location-display')).toHaveTextContent('/');
     });
+  });
+
+  it('restores the previous gallery scroll position when closing a gallery modal', async () => {
+    const mockImages: AstroImage[] = [
+      {
+        pk: '1',
+        slug: 'test-image-1',
+        thumbnail_url: '/test1-thumb.jpg',
+        name: 'Test Image 1',
+        description: 'Test description 1',
+      },
+    ];
+
+    (useAstroImages as jest.Mock).mockReturnValue({
+      data: mockImages,
+      isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      error: null,
+    });
+
+    const scrollToSpy = jest
+      .spyOn(window, 'scrollTo')
+      .mockImplementation(() => undefined);
+
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      value: 860,
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/astrophotography']}>
+          <LocationDisplay />
+          <Routes>
+            <Route path='/astrophotography' element={<AstroGallery />}>
+              <Route path=':slug' element={null} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-screen')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /View details for Test Image 1/i,
+      })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        '/astrophotography/test-image-1'
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close modal' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        '/astrophotography'
+      );
+    });
+
+    await waitFor(() => {
+      expect(scrollToSpy).toHaveBeenCalledWith({
+        top: 860,
+        behavior: 'auto',
+      });
+    });
+
+    scrollToSpy.mockRestore();
   });
 
   it('renders tags in Sidebar and filters by them', async () => {

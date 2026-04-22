@@ -1,0 +1,15 @@
+/*
+ * Hard force submit buttons away from translated input tabs.
+ * This stays in server-rendered CSS so JS timing or caching can't skip it.
+ */
+form .submit-row,
+#content-main form .submit-row,
+.content-wrapper .submit-row {
+  margin-top: 35px !important;
+  padding-top: 15px !important;
+}
+
+input[type="submit"],
+button[type="submit"] {
+  margin-top: 10px !important;
+}

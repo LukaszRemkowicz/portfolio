@@ -14,7 +14,6 @@ x-backend-defaults: &backend-defaults
     - portfolio_network
   environment: &backend-defaults-env
     DEBUG: "False"
-    DOCKER_ENV: "true"
     PYTHONPATH: "."
     TZ: "Europe/Warsaw"
     SECRET_KEY: ${SECRET_KEY}
@@ -150,6 +149,8 @@ services:
     restart: "always"
     networks:
       - portfolio_network
+    volumes:
+      - prod_frontend_asset_cache:/app/runtime-assets
     expose:
       - "8080"
     environment:
@@ -161,6 +162,8 @@ services:
       NODE_ENV: production
       API_URL: https://${API_DOMAIN}
       SSR_API_URL: http://be:8000
+      GA_TRACKING_ID: ${GA_TRACKING_ID}
+      ENABLE_GA: ${ENABLE_GA:-true}
       PROJECT_OWNER: ${PROJECT_OWNER:-Lukasz}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
@@ -199,7 +202,6 @@ services:
     command: >
       sh -c "
         python manage.py migrate --noinput &&
-        python manage.py seed_settings &&
         python scripts/release_entrypoint.py &&
         python manage.py collectstatic --noinput
       "
@@ -270,6 +272,8 @@ volumes:
   celerybeat_data:
     name: portfolio_prod_celerybeat_data
     external: true
+  prod_frontend_asset_cache:
+    name: portfolio_prod_frontend_asset_cache
   nginx_blocklist:
     name: portfolio_prod_nginx_blocklist
     external: true

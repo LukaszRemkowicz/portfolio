@@ -8,8 +8,6 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import HttpApi from 'i18next-http-backend';
 import LanguageDetector from 'i18next-browser-languagedetector';
-import en from '../public/locales/en/translation.json';
-import pl from '../public/locales/pl/translation.json';
 
 declare global {
   interface Window {
@@ -30,17 +28,14 @@ const initialLanguage =
     ? normalizeLanguage(window.__INITIAL_LANGUAGE__)
     : undefined;
 
-i18n
+export const i18nReady = i18n
   .use(HttpApi)
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     lng: initialLanguage, // If set by SSR, i18next uses this first
     fallbackLng: 'en',
-    resources: {
-      en: { translation: en },
-      pl: { translation: pl },
-    },
+    supportedLngs: ['en', 'pl'],
     detection: {
       order: ['querystring', 'cookie', 'localStorage', 'navigator'],
       caches: ['localStorage', 'cookie'],

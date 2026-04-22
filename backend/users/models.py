@@ -12,10 +12,11 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import IntegrityError, models
 from django.utils.translation import gettext_lazy as _
 
-from common.utils.image import ImageSpec
+from common.mixins import ImageProcessingModelMixin
+from common.types import ImageProcessingOperation, ImageSpec
 from core.models import LandingPageSettings, SingletonModel
+from core.tasks import process_image_task
 from translation.mixins import AutomatedTranslationModelMixin
-from users.tasks import process_user_images_task
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,13 @@ class UserManager(TranslatableManager, BaseUserManager):
         return user
 
 
-class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, SingletonModel):
+class User(
+    ImageProcessingModelMixin,
+    AutomatedTranslationModelMixin,
+    TranslatableModel,
+    AbstractUser,
+    SingletonModel,
+):
     """
     Custom user model with email as username.
     Singleton pattern: Only one user instance is allowed in the database.
@@ -185,9 +192,18 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
             super().save(*args, **kwargs)
 
             if changed_image_fields and not kwargs.get("update_fields"):
-                process_user_images_task.delay_on_commit(self.pk, changed_image_fields)
+                process_image_task.delay_on_commit(
+                    self._meta.app_label,
+                    self._meta.model_name,
+                    self.pk,
+                    changed_image_fields,
+                )
 
-            self.trigger_translations()
+            update_fields = kwargs.get("update_fields")
+            if not update_fields or any(
+                field in update_fields for field in self.translation_trigger_fields
+            ):
+                self.trigger_translations()
         except IntegrityError as exc:
             raise ValueError("Failed to save user. Only one user is allowed.") from exc
 
@@ -271,6 +287,25 @@ class User(AutomatedTranslationModelMixin, TranslatableModel, AbstractUser, Sing
     def display_name(self) -> str:
         """Alias for get_full_name() for template convenience."""
         return self.get_full_name()
+
+    def get_image_processing_operations(
+        self, changed_field_names: list[str] | None = None
+    ) -> list[ImageProcessingOperation]:
+        field_names = changed_field_names or list(USER_IMAGE_FIELD_MAPPINGS.keys())
+        operations: list[ImageProcessingOperation] = []
+        for field_name in field_names:
+            if field_name not in USER_IMAGE_FIELD_MAPPINGS:
+                continue
+            spec = self.get_avatar_spec() if field_name == "avatar" else self.get_portrait_spec()
+            operations.append(
+                ImageProcessingOperation(
+                    field_name=field_name,
+                    source_image=self.get_effective_image_field(field_name),
+                    webp_field_name=self.get_webp_field_name(field_name),
+                    spec=spec,
+                )
+            )
+        return operations
 
 
 class Profile(AutomatedTranslationModelMixin, TranslatableModel):

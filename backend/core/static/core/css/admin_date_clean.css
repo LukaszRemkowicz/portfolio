@@ -32,23 +32,12 @@ input[type="date"]:focus {
     box-shadow: 0 0 0 4px rgba(121, 174, 200, 0.15);
 }
 
-/* Hide the native calendar icon in Chrome/Safari/Edge but keep the click behavior */
+/* Keep the browser-native picker affordance intact. */
 input[type="date"]::-webkit-calendar-picker-indicator {
-    background: transparent;
-    bottom: 0;
-    color: transparent;
     cursor: pointer;
-    height: auto;
-    left: 0;
-    position: absolute;
-    right: 0;
-    top: 0;
-    width: auto;
-    display: block;
-    -webkit-appearance: none;
 }
 
-/* Hide inner browser elements for a cleaner look */
+/* Hide inner browser elements for a cleaner look. */
 input[type="date"]::-webkit-inner-spin-button,
 input[type="date"]::-webkit-clear-button {
     display: none;

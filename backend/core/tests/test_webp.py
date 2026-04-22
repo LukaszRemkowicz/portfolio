@@ -1,7 +1,7 @@
 # backend/core/tests/test_webp.py
 """Tests for WebP-related methods on BaseImage and LandingPageSettings."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -34,83 +34,55 @@ class TestLandingPageSettingsGetCurrent:
 
 
 # ---------------------------------------------------------------------------
-# BaseImage._convert_to_webp() via MainPageBackgroundImage
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.django_db
-class TestBaseImageConvertToWebp:
-    def test_converts_jpeg_to_webp(self):
-        """Saving a JPEG image triggers WebP conversion; original_image is populated."""
-        img = MainPageBackgroundImageFactory()
-
-        # Confirm conversion happened (factory creates an ImageField)
-        assert img.path  # path exists
-        # If conversion succeeded, path name ends in .webp
-        if img.path.name.endswith(".webp"):
-            assert img.original_image  # legacy must be set
-
-    def test_no_op_if_already_webp(self):
-        """_convert_to_webp() must not re-convert an image already in WebP."""
-        img = MainPageBackgroundImageFactory()
-        legacy_before = str(img.original_image) if img.original_image else None
-
-        # Call directly with a mocked webp field
-        img.path = MagicMock()
-        img.path.name = "already.webp"
-        img.path.__bool__ = MagicMock(return_value=True)
-        img._convert_to_webp()
-
-        # original_image must not have changed
-        legacy_after = str(img.original_image) if img.original_image else None
-        assert legacy_before == legacy_after
-
-    def test_convert_to_webp_noop_on_empty_path(self):
-        """_convert_to_webp() must be a no-op when path is empty."""
-        img = MainPageBackgroundImageFactory.build()
-        img.path = None
-        img._convert_to_webp()  # should not raise
-
-
-# ---------------------------------------------------------------------------
 # BaseImage.get_serving_path() and get_serving_url()
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
 class TestBaseImageServingPath:
-    def test_get_serving_path_returns_path_when_webp_enabled(self):
-        """When serve_webp_images=True, get_serving_path() returns self.path."""
+    def test_get_serving_path_returns_original_webp_when_webp_enabled(self):
+        """When serve_webp_images=True, get_serving_path() returns original_webp."""
         settings = LandingPageSettingsFactory(serve_webp_images=True)
         img = MainPageBackgroundImageFactory()
+        img.original_webp = "images/example.webp"
 
         with patch.object(LandingPageSettings, "get_current", return_value=settings):
             result = img.get_serving_path()
 
-        assert result == img.path
+        assert result == img.original_webp
 
-    def test_get_serving_path_returns_legacy_when_webp_disabled(self):
-        """When serve_webp_images=False and legacy exists, returns original_image."""
+    def test_get_serving_path_returns_original_when_webp_disabled(self):
+        """When serve_webp_images=False, get_serving_path() returns original."""
         settings = LandingPageSettingsFactory(serve_webp_images=False)
         img = MainPageBackgroundImageFactory()
-        # Simulate a converted image with a legacy path
-        img.original_image = img.path
 
         with patch.object(LandingPageSettings, "get_current", return_value=settings):
             result = img.get_serving_path()
 
-        assert result == img.original_image
+        assert result == img.original
 
-    def test_get_serving_path_falls_back_to_path_if_no_legacy(self):
-        """When serve_webp_images=False and no legacy, returns self.path."""
-        settings = LandingPageSettingsFactory(serve_webp_images=False)
+    def test_get_serving_path_returns_original_when_webp_enabled_but_missing(self):
+        """When WebP serving is enabled but no WebP exists, use the canonical original."""
+        settings = LandingPageSettingsFactory(serve_webp_images=True)
         img = MainPageBackgroundImageFactory()
-        img.original_image = None
+        img.original_webp = None
 
         with patch.object(LandingPageSettings, "get_current", return_value=settings):
             result = img.get_serving_path()
 
-        assert result == img.path
+        assert result == img.original
+
+    def test_get_serving_path_returns_none_without_canonical_fields(self):
+        """When canonical fields are missing, get_serving_path() returns None."""
+        settings = LandingPageSettingsFactory(serve_webp_images=False)
+        img = MainPageBackgroundImageFactory.build()
+        img.original = None
+        img.original_webp = None
+
+        with patch.object(LandingPageSettings, "get_current", return_value=settings):
+            result = img.get_serving_path()
+
+        assert not result
 
     def test_get_serving_url_returns_string(self):
         """get_serving_url() must always return a str, never raise."""
@@ -121,7 +93,7 @@ class TestBaseImageServingPath:
     def test_get_serving_url_returns_empty_string_when_no_path(self):
         """get_serving_url() returns '' when no image is assigned."""
         img = MainPageBackgroundImageFactory.build()
-        img.path = None
-        img.original_image = None
+        img.original = None
+        img.original_webp = None
         url = img.get_serving_url()
         assert url == ""

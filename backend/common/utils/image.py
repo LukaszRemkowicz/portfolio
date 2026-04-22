@@ -1,22 +1,15 @@
 import os
-from dataclasses import dataclass
+import secrets
 from io import BytesIO
-from typing import Any
+from typing import IO, cast
 
 from PIL import Image
 
 from django.core.files.base import ContentFile
 from django.db.models.fields.files import FieldFile
+from django.utils.deconstruct import deconstructible
 
-
-@dataclass(frozen=True)
-class ImageSpec:
-    """Configuration for image optimization."""
-
-    dimension: int
-    quality: int
-    dimension_percentage: int | None = None
-    aspect_ratio: float | None = None
+from common.types import ProcessableImageFile
 
 
 def get_available_image_url(image_field: FieldFile | None) -> str:
@@ -52,8 +45,83 @@ def file_exists_in_storage(file_field: FieldFile | None) -> bool:
         return False
 
 
+def delete_file_from_storage(file_field: FieldFile | None, file_name: str) -> bool:
+    """Delete ``file_name`` through the given file field storage when it still exists."""
+    if not file_field or not file_name:
+        return False
+
+    try:
+        if file_field.storage.exists(file_name):
+            file_field.storage.delete(file_name)
+            return True
+    except (OSError, ValueError):
+        return False
+
+    return False
+
+
+def seed_file_name(file_name: str) -> str:
+    """Return a unique file name while keeping the original stem and extension."""
+    base_name = os.path.basename(file_name)
+    stem, ext = os.path.splitext(base_name)
+    safe_stem = stem or "file"
+    safe_ext = ext.lower()
+    token = secrets.token_hex(6)
+    return f"{safe_stem}_{token}{safe_ext}"
+
+
+@deconstructible
+class SeededImageUploadTo:
+    """Generate unique upload paths from an instance property."""
+
+    def __init__(self, directory_property_name: str, subdirectory: str | None = None):
+        self.directory_property_name = directory_property_name
+        self.subdirectory = subdirectory.strip("/") if subdirectory else None
+
+    def __call__(self, instance, filename: str) -> str:
+        directory = str(getattr(instance, self.directory_property_name)).rstrip("/")
+        if self.subdirectory:
+            directory = f"{directory}/{self.subdirectory}"
+        return f"{directory}/{seed_file_name(filename)}"
+
+
+def seeded_image_upload_to(
+    directory_property_name: str, subdirectory: str | None = None
+) -> SeededImageUploadTo:
+    """Return a deconstructible upload_to helper that reads a directory from the instance."""
+    return SeededImageUploadTo(directory_property_name, subdirectory)
+
+
+def build_webp_thumbnail(
+    image: ProcessableImageFile, size: tuple[int, int], filename_prefix: str = "thumb_"
+) -> ContentFile:
+    """Build a WebP thumbnail with the shared resizing and naming rules.
+
+    The generated thumbnail:
+    - preserves aspect ratio via Pillow's ``thumbnail()``
+    - flattens transparency onto white for predictable portfolio rendering
+    - uses lossless WebP for visual sharpness
+    - gets a seeded file name derived from the source file name
+    """
+    img: Image.Image = Image.open(cast(IO[bytes], image))
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGBA")
+        bg = Image.new("RGB", img.size, (255, 255, 255))
+        bg.paste(img, mask=img.split()[3])
+        img = bg
+    else:
+        img = img.convert("RGB")
+
+    img.thumbnail(size, Image.Resampling.LANCZOS)
+    thumb_io = BytesIO()
+    img.save(thumb_io, "WEBP", lossless=True, method=6)
+    source_name = getattr(image, "name", "unknown").split("/")[-1]
+    thumbnail_name = seed_file_name(filename_prefix + os.path.splitext(source_name)[0] + ".webp")
+    return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
+
+
 def convert_to_webp(
-    image_field: Any,
+    image_field: ProcessableImageFile | None,
     quality: int = 90,
     max_dimension: int | None = None,
     dimension_percentage: int | None = None,
@@ -86,7 +154,7 @@ def convert_to_webp(
         return None
 
     try:
-        img: Any = Image.open(image_field)
+        img: Image.Image = Image.open(cast(IO[bytes], image_field))
         if img.mode not in ("RGB", "RGBA"):
             img = img.convert("RGB")
 
@@ -109,7 +177,7 @@ def convert_to_webp(
         output.seek(0)
 
         original_filename: str = os.path.basename(current_name)
-        webp_filename: str = os.path.splitext(original_filename)[0] + ".webp"
+        webp_filename = seed_file_name(os.path.splitext(original_filename)[0] + ".webp")
         return current_name, ContentFile(output.getvalue(), name=webp_filename)
 
     except Exception:

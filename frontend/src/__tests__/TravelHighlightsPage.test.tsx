@@ -35,6 +35,8 @@ jest.mock('../api/media', () => ({
 }));
 
 describe('TravelHighlightsPage', () => {
+  const originalImage = global.Image;
+
   beforeEach(() => {
     jest.resetAllMocks();
 
@@ -64,6 +66,10 @@ describe('TravelHighlightsPage', () => {
       isLoading: true,
       error: null,
     });
+  });
+
+  afterEach(() => {
+    global.Image = originalImage;
   });
 
   const renderComponent = async (
@@ -215,6 +221,19 @@ describe('TravelHighlightsPage', () => {
   });
 
   test('fetches and uses full-resolution image URLs', async () => {
+    class SuccessfulImage {
+      onload: null | (() => void) = null;
+      onerror: null | (() => void) = null;
+
+      set src(_value: string) {
+        queueMicrotask(() => {
+          this.onload?.();
+        });
+      }
+    }
+
+    global.Image = SuccessfulImage as unknown as typeof Image;
+
     const mockData = {
       images: [
         {

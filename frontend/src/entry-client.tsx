@@ -9,11 +9,11 @@ import { createRoot, hydrateRoot } from 'react-dom/client';
 import { DehydratedState, QueryClient } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter } from 'react-router-dom';
-import './i18n.client';
-import i18n from './i18n.client';
+import i18n, { i18nReady } from './i18n.client';
 import { setLanguageGetter } from './api/api';
 import { initClientServices } from './utils/initClientServices';
 import { getEnv } from './utils/env';
+import { initPwaRuntime } from './utils/pwaRuntime';
 import AppShell from './AppShell';
 import App from './App';
 
@@ -43,7 +43,9 @@ i18n.on('languageChanged', () => {
   });
 });
 
-function bootstrapApp() {
+async function bootstrapApp() {
+  await i18nReady;
+
   // Initialise browser-only services (Sentry lazy-load)
   initClientServices();
 
@@ -51,9 +53,10 @@ function bootstrapApp() {
   if (!rootElement) throw new Error('Root element not found');
 
   const environment = getEnv('ENVIRONMENT', getEnv('NODE_ENV', 'development'));
+  initPwaRuntime(environment);
   // Local development prefers a clean client mount over hydration recovery noise.
   // Production-like environments should hydrate so SSR/client mismatches stay visible.
-  const useClientRenderOnly = ['development', 'dev'].includes(environment);
+  const useClientRenderOnly = ['development'].includes(environment);
 
   const tree = (
     <AppShell

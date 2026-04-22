@@ -19,14 +19,21 @@ import { detectLanguage } from './detectLanguage.js';
 import { pipeDocument } from './documentRender.js';
 import { handleBffRequest } from './backendProxy.js';
 import { handleInternalRequest } from './internalCacheRoute.js';
-import { logRequest } from './logging.js';
+import { logError, logRequest, toErrorPayload } from './logging.js';
 import { getRequestId } from './requestMeta.js';
 import { serveStatic } from './staticAssets.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, '..');
-const clientDistDir = path.join(appRoot, 'dist');
+const bundledClientDistDir = path.join(appRoot, 'dist');
+const frontendAssetRoot = process.env.FRONTEND_ASSET_ROOT || '';
+const clientDistDir = frontendAssetRoot
+  ? path.join(frontendAssetRoot, 'current')
+  : bundledClientDistDir;
+const legacyClientDistDirs = frontendAssetRoot
+  ? [path.join(frontendAssetRoot, 'previous'), bundledClientDistDir]
+  : [];
 const serverEntryPath = path.join(appRoot, 'dist', 'server', 'entry-server.js');
 const indexHtmlPath = path.join(clientDistDir, 'index.html');
 const port = Number(process.env.PORT || process.env.FRONTEND_PORT || 8080);
@@ -36,9 +43,7 @@ const environment = (
   process.env.NODE_ENV ||
   'development'
 ).toLowerCase();
-const useClientRenderOnly = ['development', 'dev', 'local'].includes(
-  environment
-);
+const useClientRenderOnly = ['development', 'local'].includes(environment);
 
 const server = http.createServer(async (req, res) => {
   const start = Date.now();
@@ -72,7 +77,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (await serveStatic(req, res, clientDistDir)) {
+    if (await serveStatic(req, res, clientDistDir, legacyClientDistDirs)) {
       logRequest(
         {
           kind: 'static',
@@ -116,7 +121,15 @@ const server = http.createServer(async (req, res) => {
       }
     );
   } catch (error) {
-    console.error('[frontend-ssr] request failed', error);
+    logError(
+      {
+        event: 'request_failed',
+        path: req.url || '/',
+        method: req.method,
+        ...toErrorPayload(error),
+      },
+      requestId
+    );
     if (!res.headersSent) {
       res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end('Internal Server Error');
@@ -138,5 +151,9 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, '0.0.0.0', () => {
-  console.log(`[frontend-ssr] listening on 0.0.0.0:${port}`);
+  logRequest({
+    event: 'server_started',
+    host: '0.0.0.0',
+    port,
+  });
 });

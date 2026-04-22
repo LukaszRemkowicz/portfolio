@@ -1,5 +1,5 @@
 # backend/astrophotography/tests/test_views.py
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 from unittest.mock import patch
 
@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.test import APIClient
 
 from django.urls import reverse
+from django.utils import timezone
 
 from astrophotography.models import (
     AstroImage,
@@ -30,6 +31,7 @@ from common.constants import FALLBACK_URL_SLUG
 from common.utils.signing import generate_signed_url_params
 from core.models import LandingPageSettings
 from core.tasks import process_image_task
+from core.tests.factories import LandingPageSettingsFactory
 
 # URL Names
 ASTROIMAGE_LIST_URL_NAME: str = "astroimages:astroimage-list"
@@ -127,6 +129,35 @@ class TestAstroImageViewSet:
         assert response.data["previous"] is None
         assert "page=2" in response.data["next"]
 
+    def test_list_astro_images_orders_gallery_by_created_at_not_capture_date(
+        self, api_client: APIClient
+    ) -> None:
+        """Gallery ordering should follow creation time so FE matches the latest uploads."""
+        older_upload = AstroImageFactory(
+            name="Older upload",
+            capture_date=date(2026, 4, 22),
+        )
+        newer_upload = AstroImageFactory(
+            name="Newer upload",
+            capture_date=date(2020, 1, 1),
+        )
+
+        AstroImage.objects.filter(pk=older_upload.pk).update(
+            created_at=timezone.now() - timedelta(days=2)
+        )
+        AstroImage.objects.filter(pk=newer_upload.pk).update(
+            created_at=timezone.now() - timedelta(hours=1)
+        )
+
+        url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert [item["pk"] for item in response.data["results"][:2]] == [
+            str(newer_upload.pk),
+            str(older_upload.pk),
+        ]
+
     def test_list_astro_images_respects_limit_and_page(self, api_client: APIClient) -> None:
         """Client-provided page and limit should control the returned gallery slice."""
         for index in range(30):
@@ -152,6 +183,66 @@ class TestAstroImageViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["count"] == 60
         assert len(response.data["results"]) == 48
+
+    def test_list_astro_images_page_two_returns_only_second_slice(
+        self, api_client: APIClient
+    ) -> None:
+        """Page 2 should return only the second gallery slice, not accumulated results."""
+        base_date = date(2026, 1, 1)
+        for index in range(50):
+            AstroImageFactory(
+                name=f"Image {index}",
+                capture_date=base_date + timedelta(days=index),
+            )
+
+        url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url, {"page": 2})
+
+        expected_pks = [
+            str(pk) for pk in AstroImage.objects.for_gallery({}).values_list("pk", flat=True)[24:48]
+        ]
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["count"] == 50
+        assert len(response.data["results"]) == 24
+        assert response.data["next"] == "http://testserver/v1/astroimages/?page=3"
+        assert response.data["previous"] == "http://testserver/v1/astroimages/"
+        assert [item["pk"] for item in response.data["results"]] == expected_pks
+
+    def test_list_astro_images_page_two_with_filter_returns_only_filtered_slice(
+        self, api_client: APIClient
+    ) -> None:
+        """Page 2 with a filter should stay bounded to that filtered queryset."""
+        base_date = date(2026, 1, 1)
+        for index in range(30):
+            AstroImageFactory(
+                name=f"Deep Sky {index}",
+                celestial_object="Deep Sky",
+                capture_date=base_date + timedelta(days=index),
+            )
+        for index in range(10):
+            AstroImageFactory(
+                name=f"Landscape {index}",
+                celestial_object="Landscape",
+                capture_date=base_date + timedelta(days=100 + index),
+            )
+
+        url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url, {"page": 2, "filter": "Deep Sky"})
+
+        expected_pks = [
+            str(pk)
+            for pk in AstroImage.objects.for_gallery({"filter": "Deep Sky"}).values_list(
+                "pk", flat=True
+            )[24:48]
+        ]
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["count"] == 30
+        assert len(response.data["results"]) == 6
+        assert response.data["next"] is None
+        assert response.data["previous"] == "http://testserver/v1/astroimages/?filter=Deep+Sky"
+        assert [item["pk"] for item in response.data["results"]] == expected_pks
 
     def test_latest_astro_images(self, api_client: APIClient) -> None:
         """Test the dedicated 'latest' endpoint returns exactly 9 images."""
@@ -198,6 +289,22 @@ class TestBackgroundMainPageView:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["url"] is None
+
+    def test_list_background_image_uses_original_when_webp_missing(
+        self, api_client: APIClient
+    ) -> None:
+        """Public background API must fall back to the canonical original when WebP is absent."""
+        settings = LandingPageSettingsFactory(serve_webp_images=True)
+        background = MainPageBackgroundImageFactory()
+        background.original_webp = None
+        background.save(update_fields=["original_webp"])
+
+        url: str = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
+        with patch.object(LandingPageSettings, "get_current", return_value=settings):
+            response: Response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["url"] == background.original.url
 
 
 @pytest.mark.django_db
@@ -629,20 +736,19 @@ class TestAstroImageSecureView:
         response: Response = api_client.get(url, params)
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
-        assert f"/protected_media/{astro_image.path.name}" == response["X-Accel-Redirect"]
+        serving_field = astro_image.original_webp_field or astro_image.original_field
+        assert f"/protected_media/{serving_field.name}" == response["X-Accel-Redirect"]
 
     def test_astro_image_secure_view_always_serves_full_resolution_path(
         self, api_client: APIClient, astro_image: AstroImage
     ) -> None:
-        """The modal/lightbox endpoint must serve the current full-resolution asset."""
+        """The modal/lightbox endpoint must serve the canonical public asset."""
         from core.tests.factories import LandingPageSettingsFactory
 
         LandingPageSettingsFactory(serve_webp_images=False)
         astro_image.refresh_from_db()
 
-        assert astro_image.path
-        assert astro_image.original_image
-        assert astro_image.path.name != astro_image.original_image.name
+        assert astro_image.original_field
 
         url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
         params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
@@ -651,7 +757,8 @@ class TestAstroImageSecureView:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
-        assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.path.name}"
+        serving_field = astro_image.original_webp_field or astro_image.original_field
+        assert response["X-Accel-Redirect"] == f"/protected_media/{serving_field.name}"
 
     def test_secure_media_view_missing_signature(
         self, api_client: APIClient, astro_image: AstroImage
@@ -706,24 +813,24 @@ class TestAstroImageAdminSecureMediaView:
     ) -> None:
         url: str = reverse(
             "admin-astroimage-secure-media",
-            kwargs={"pk": str(astro_image.pk), "field_name": "path"},
+            kwargs={"pk": str(astro_image.pk), "field_name": "original"},
         )
-        sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_path"
+        sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_original"
         params: dict[str, Any] = generate_signed_url_params(sig_id)
         response = admin_client.get(url, params)
         astro_image.refresh_from_db()
         assert response.status_code == status.HTTP_200_OK
         assert "X-Accel-Redirect" in response
-        assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.path.name}"
+        assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.original.name}"
 
     def test_admin_secure_media_view_forbidden_anonymous(
         self, api_client: APIClient, astro_image: AstroImage
     ) -> None:
         url: str = reverse(
             "admin-astroimage-secure-media",
-            kwargs={"pk": str(astro_image.pk), "field_name": "path"},
+            kwargs={"pk": str(astro_image.pk), "field_name": "original"},
         )
-        sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_path"
+        sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_original"
         params: dict[str, Any] = generate_signed_url_params(sig_id)
         response = api_client.get(url, params)
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -733,7 +840,7 @@ class TestAstroImageAdminSecureMediaView:
     ) -> None:
         url: str = reverse(
             "admin-astroimage-secure-media",
-            kwargs={"pk": str(astro_image.pk), "field_name": "path"},
+            kwargs={"pk": str(astro_image.pk), "field_name": "original"},
         )
         response = admin_client.get(url)
         assert response.status_code == status.HTTP_403_FORBIDDEN

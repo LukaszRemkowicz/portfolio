@@ -83,3 +83,49 @@ class TestFixParlerLanguageCodesCommand:
             language_code="en", name="Legacy Astro"
         ).exists()
         assert location_translation_model.objects.filter(language_code="en", story="Story").exists()
+
+
+@pytest.mark.django_db
+class TestCreateAstroImagesBatchCommand:
+    def test_create_astroimages_batch_uses_default_count_and_sets_translations(
+        self, mocker: MockerFixture
+    ) -> None:
+        mocker.patch("astrophotography.models.Place.trigger_translations", autospec=True)
+        mocker.patch("astrophotography.models.AstroImage.trigger_translations", autospec=True)
+        mocker.patch("core.models.process_image_task.delay_on_commit")
+        mocker.patch(
+            "astrophotography.models.calculate_astroimage_exposure_hours_task.delay_on_commit"
+        )
+
+        output = StringIO()
+
+        call_command("create_astroimages_batch", stdout=output)
+
+        assert AstroImage.objects.count() == 10
+        first_image = AstroImage.objects.order_by("created_at").first()
+        assert first_image is not None
+        assert (
+            first_image.safe_translation_getter("name", language_code="en") == "Batch Astro Image 1"
+        )
+        assert (
+            first_image.safe_translation_getter("name", language_code="pl")
+            == "Testowy obraz astro 1"
+        )
+        assert "Created 10 AstroImage record(s)" in output.getvalue()
+
+    def test_create_astroimages_batch_respects_count_option(self, mocker: MockerFixture) -> None:
+        mocker.patch("astrophotography.models.Place.trigger_translations", autospec=True)
+        mocker.patch("astrophotography.models.AstroImage.trigger_translations", autospec=True)
+        mocker.patch("core.models.process_image_task.delay_on_commit")
+        mocker.patch(
+            "astrophotography.models.calculate_astroimage_exposure_hours_task.delay_on_commit"
+        )
+
+        call_command("create_astroimages_batch", count=3)
+
+        assert AstroImage.objects.count() == 3
+        names = list(
+            AstroImage.objects.order_by("created_at").values_list("translations__name", flat=True)
+        )
+        assert any(name == "Batch Astro Image 1" for name in names)
+        assert any(name == "Batch Astro Image 3" for name in names)

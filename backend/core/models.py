@@ -1,12 +1,8 @@
 import logging
-import os
 import uuid
-from io import BytesIO
-from typing import Any, cast
+from typing import Any
 
-from model_utils import FieldTracker
 from parler.models import TranslatableModel
-from PIL import Image
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -14,13 +10,20 @@ from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from common.utils.image import ImageSpec, convert_to_webp, file_exists_in_storage
+from common.mixins import ImageProcessingModelMixin
+from common.types import ImageProcessingOperation, ImageSpec
+from common.utils.image import (
+    build_webp_thumbnail,
+    delete_file_from_storage,
+    file_exists_in_storage,
+    seeded_image_upload_to,
+)
 from core.tasks import process_image_task
 
 logger = logging.getLogger(__name__)
 
 
-class BaseImage(TranslatableModel):
+class BaseImage(ImageProcessingModelMixin, TranslatableModel):
     """Base abstract model for images"""
 
     id = models.UUIDField(
@@ -31,17 +34,37 @@ class BaseImage(TranslatableModel):
     path = models.ImageField(
         upload_to="images/",
         verbose_name=_("Image File"),
-        help_text=_("The actual image file to be displayed."),
+        help_text=_(
+            "Legacy image field kept during the BaseImage refactor. "
+            "TODO: legacy, will be removed in future."
+        ),
+    )
+    original = models.ImageField(
+        upload_to=seeded_image_upload_to("base_upload_dir", "original"),
+        blank=True,
+        null=True,
+        editable=False,
+        verbose_name=_("Original Image Source"),
+        help_text=_("Uploaded source image for the next BaseImage contract."),
+    )
+    original_webp = models.ImageField(
+        upload_to=seeded_image_upload_to("base_upload_dir", "webp"),
+        blank=True,
+        null=True,
+        editable=False,
+        verbose_name=_("Original Image WebP"),
+        help_text=_("Derived WebP image for the next BaseImage contract."),
     )
     original_image = models.ImageField(
-        upload_to="images/",
+        upload_to=seeded_image_upload_to("base_upload_dir", "original"),
         blank=True,
         null=True,
         editable=False,
         verbose_name=_("Original Image"),
         help_text=_(
-            "Original file path before WebP conversion. "
+            "Legacy original-image field kept during the BaseImage refactor. "
             "Used for rollback via the Admin serve_webp_images toggle. "
+            "TODO: legacy, will be removed in future."
         ),
     )
 
@@ -49,16 +72,12 @@ class BaseImage(TranslatableModel):
     # See AstroImage and ProjectImage.
 
     thumbnail = models.ImageField(
-        upload_to="thumbnails/",
+        upload_to=seeded_image_upload_to("base_upload_dir", "thumbnail"),
         blank=True,
         null=True,
         editable=False,
         verbose_name=_("Thumbnail"),
     )
-
-    # Track path AND original_image so save() can detect whether _convert_to_webp() preserved
-    # the old file as a rollback target (and must not delete it).
-    path_tracker = FieldTracker(fields=["path", "original_image"])
 
     # Subclasses override this to control WebP compression level.
     # AstroImage/ProjectImage keep 90 (photography portfolio); backgrounds/user images
@@ -67,29 +86,10 @@ class BaseImage(TranslatableModel):
     max_dimension: int | None = None
     dimension_percentage: int | None = None
 
-    def get_path_spec(self) -> ImageSpec:
-        """Default specification provider for the 'path' field."""
+    def get_original_spec(self) -> ImageSpec:
+        """Default specification provider for the main source field."""
         key = "LANDSCAPE" if self.webp_quality >= 90 else "PORTRAIT"
         spec = settings.IMAGE_OPTIMIZATION_SPECS[key]
-        return ImageSpec(
-            dimension=spec.dimension,
-            quality=spec.quality,
-            dimension_percentage=self.dimension_percentage,
-        )
-
-    def get_image_spec(self, field_name: str) -> ImageSpec:
-        """Return the ImageSpec for a given field by dispatching to specialized methods."""
-        method_name = f"get_{field_name}_spec"
-        if hasattr(self, method_name):
-            spec = cast(ImageSpec, getattr(self, method_name)())
-            return ImageSpec(
-                dimension=spec.dimension,
-                quality=spec.quality,
-                dimension_percentage=self.dimension_percentage,
-            )
-        spec = settings.IMAGE_OPTIMIZATION_SPECS.get(
-            "DEFAULT", ImageSpec(dimension=1200, quality=75)
-        )
         return ImageSpec(
             dimension=spec.dimension,
             quality=spec.quality,
@@ -100,162 +100,191 @@ class BaseImage(TranslatableModel):
         abstract = True
         ordering = ["-created_at"]
 
-    def clean(self) -> None:
-        super().clean()
-        if not self.path:
-            return
-
-        if getattr(self.path, "_committed", True) is False:
-            return
-
-        path_name = str(self.path.name or "")
-        if not path_name:
-            return
-
-        try:
-            if not self.path.storage.exists(path_name):
-                raise ValidationError(
-                    {
-                        "path": _(
-                            "The selected image file does not exist in storage. "
-                            "Please upload it again."
-                        )
-                    }
-                )
-        except (OSError, ValueError) as exc:
-            logger.error(
-                "Failed to validate image storage existence",
-                extra={
-                    "model": self._meta.label,
-                    "pk": str(self.pk),
-                    "path": path_name,
-                    "error": str(exc),
-                },
-            )
-            raise ValidationError(
-                {
-                    "path": _(
-                        "The selected image file could not be validated in "
-                        "storage. Please upload it again."
-                    )
-                }
-            ) from exc
+    @property
+    def base_upload_dir(self) -> str:
+        """Return the model-specific base directory for managed image assets."""
+        raise NotImplementedError("Subclasses must define base_upload_dir.")
 
     def _verify_storage_consistency(
-        self, is_new: bool, path_changed: bool, existing_path_name: str
+        self, is_new: bool, source_changed: bool, existing_source_name: str
     ) -> None:
         """Ensure the uploaded file was actually saved to storage, with recovery logic."""
-        if not (path_changed and existing_path_name and self.path):
+        if not (source_changed and existing_source_name and self.original):
             return
 
-        if not file_exists_in_storage(self.path):
+        if not file_exists_in_storage(self.original):
             if (
-                existing_path_name
-                and existing_path_name != str(self.path.name or "")
+                existing_source_name
+                and existing_source_name != str(self.original.name or "")
                 and file_exists_in_storage(
-                    self.path.field.attr_class(self, self.path.field, existing_path_name)
+                    self.original.field.attr_class(self, self.original.field, existing_source_name)
                 )
             ):
-                self.path.name = existing_path_name
+                self.original.name = existing_source_name
             else:
-                path_name = str(self.path.name or "")
+                source_name = str(self.original.name or "")
                 logger.error(
                     "Image file missing from storage immediately after save",
                     extra={
                         "model": self._meta.label,
                         "pk": str(self.pk),
-                        "path": path_name,
+                        "source_name": source_name,
                         "is_new": is_new,
-                        "path_changed": path_changed,
+                        "source_changed": source_changed,
                     },
                 )
                 if is_new and self.pk:
                     type(self).objects.filter(pk=self.pk).delete()
                 raise ValidationError(
                     {
-                        "path": _(
+                        "original": _(
                             "The uploaded image file was not saved to " "storage. Please try again."
                         )
                     }
                 )
 
     def _dispatch_image_processing(
-        self, is_new: bool, path_changed: bool, update_fields: Any
+        self, is_new: bool, source_changed: bool, update_fields: Any
     ) -> None:
         """Trigger the background celery task to process the image (WebP + thumbnails)."""
-        if (is_new or path_changed) and self.path and not update_fields:
+        source_field = self.original_field
+        if (is_new or source_changed) and source_field and not update_fields:
+            logger.info(
+                "Dispatching shared image-processing task for BaseImage",
+                extra={
+                    "model": self._meta.label,
+                    "pk": str(self.pk),
+                    "is_new": is_new,
+                    "source_changed": source_changed,
+                    "source_name": str(getattr(source_field, "name", "") or ""),
+                },
+            )
             process_image_task.delay_on_commit(
                 self._meta.app_label, self._meta.model_name, str(self.pk)
             )
 
-    def _cleanup_old_files(self, path_changed: bool, existing_path_name: str) -> None:
-        """Delete stale image files from storage, respecting the original_image rollback target."""
-        if self.pk and path_changed and existing_path_name:
-            current_storage: Any = self.path.storage
-            current_saved_name = str(self.path.name or "")
-            # If original_image was freshly set by _convert_to_webp(), the old file is now
-            # preserved as the rollback target — do not delete it.
-            original_was_set: bool = self.path_tracker.has_changed("original_image") and bool(
-                self.original_image
-            )
-            if (
-                existing_path_name != current_saved_name
-                and not original_was_set
-                and current_storage.exists(existing_path_name)
-            ):
-                current_storage.delete(existing_path_name)
+    def _cleanup_old_files(self, file_names_to_delete: set[str]) -> None:
+        """Delete old managed image files after a successful source replacement."""
+        if not (self.pk and file_names_to_delete and self.original):
+            return
+
+        for file_name in file_names_to_delete:
+            delete_file_from_storage(self.original, file_name)
+
+    def _handle_post_save_image_effects(
+        self,
+        *,
+        is_new: bool,
+        source_changed: bool,
+        existing_source_name: str,
+        previous_file_names: set[str],
+        update_fields: Any,
+    ) -> None:
+        """Run image-specific side effects that are only safe after persistence succeeds.
+
+        This method intentionally executes *after* ``super().save()`` so it can work
+        from the final stored state instead of the in-memory pre-save state.
+
+        It performs three follow-up steps:
+
+        1. Verify storage consistency for the current ``original`` file. This catches
+           cases where the model row was saved but the uploaded file was not actually
+           persisted by storage.
+        2. Dispatch async image processing when the source really changed. The final
+           persisted source name is re-checked here because storage may normalize the
+           uploaded filename during save.
+        3. Delete stale managed files from the previous state. Cleanup uses the
+           pre-save file-name snapshot and only runs when the source genuinely changed.
+
+        Args:
+            is_new: Whether the row was being created during this save call.
+            source_changed: Whether the source appeared to change before persistence.
+            existing_source_name: The stored original-source name from before this save.
+            previous_file_names: Managed file names that were attached before save.
+            update_fields: The ``update_fields`` value originally passed to ``save()``.
+        """
+        self._verify_storage_consistency(is_new, source_changed, existing_source_name)
+        persisted_source_name = str(getattr(self.original, "name", "") or "")
+        effective_source_changed = bool(is_new or persisted_source_name != existing_source_name)
+        stale_file_names = previous_file_names if effective_source_changed else set()
+        self._dispatch_image_processing(is_new, effective_source_changed, update_fields)
+        self._cleanup_old_files(stale_file_names)
+
+    def _synchronize_source_fields(self, previous_source_name: str, is_new: bool) -> None:
+        """Update derived-field state from the current original source before save.
+
+        If the source changed, clear stale thumbnail/WebP data.
+        If the source itself is a WebP file, mirror it into ``original_webp``.
+        """
+        source_field = self.original_field
+        if not source_field:
+            return
+
+        uploaded_name = str(getattr(source_field, "name", "") or "")
+        if not uploaded_name:
+            return
+
+        source_is_pending_upload = (
+            bool(source_field) and getattr(source_field, "_committed", True) is False
+        )
+        source_updated = is_new or source_is_pending_upload or uploaded_name != previous_source_name
+
+        self.original = source_field
+        if uploaded_name.lower().endswith(".webp"):
+            self.original_webp = source_field
+        elif source_updated:
+            self.original_webp = None
+
+        if source_updated:
+            self.thumbnail = None
 
     def save(self, *args: Any, **kwargs: Any) -> None:
+        """Persist the model and coordinate source synchronization, processing, and cleanup."""
         is_new = self._state.adding
-        previous_path = self.path_tracker.previous("path") if self.pk else ""
-        existing_path_name = str(getattr(previous_path, "name", previous_path) or "")
-        path_changed = bool(is_new or self.path_tracker.has_changed("path"))
+        previous_source = self.source_tracker.previous(self.original_field_name) if self.pk else ""
+        existing_source_name = str(getattr(previous_source, "name", previous_source) or "")
+        previous_file_names = {
+            file_name
+            for file_name in (
+                existing_source_name,
+                str(getattr(self.original_webp_field, "name", "") or ""),
+                str(getattr(self.thumbnail_field, "name", "") or ""),
+            )
+            if file_name
+        }
+
+        if not kwargs.get("update_fields"):
+            self._synchronize_source_fields(existing_source_name, is_new)
+
+        current_source_name = str(getattr(self.original, "name", "") or "")
+        source_changed = bool(is_new or current_source_name != existing_source_name)
 
         super().save(*args, **kwargs)
-
-        self._verify_storage_consistency(is_new, path_changed, existing_path_name)
-        self._dispatch_image_processing(is_new, path_changed, kwargs.get("update_fields"))
-        self._cleanup_old_files(path_changed, existing_path_name)
-
-    def _convert_to_webp(self) -> bool:
-        """Convert from the original source image to WebP using self.get_image_spec().
-
-        Stores the original file path in original_image for rollback purposes.
-        No-op if the image is already in WebP format or conversion fails.
-        """
-        spec = self.get_image_spec("path")
-        source = self.get_original_source()
-        result: tuple[str, Any] | None = convert_to_webp(
-            source,
-            quality=spec.quality,
-            max_dimension=spec.dimension,
-            dimension_percentage=spec.dimension_percentage,
+        self._handle_post_save_image_effects(
+            is_new=is_new,
+            source_changed=source_changed,
+            existing_source_name=existing_source_name,
+            previous_file_names=previous_file_names,
+            update_fields=kwargs.get("update_fields"),
         )
-        if result is None:
-            return False
-        original_name, webp_content = result
-        self.original_image = original_name
-        self.path.save(webp_content.name, webp_content, save=False)
-        return True
 
     def get_serving_path(self) -> Any:
         """Return the image field to serve based on the serve_webp_images Admin toggle.
 
-        When serve_webp_images=True → serve WebP (self.path).
-        When serve_webp_images=False → serve original image if available, else WebP.
+        When serve_webp_images=True -> serve the WebP asset.
+        When serve_webp_images=False -> serve the original asset.
         """
         settings_obj: LandingPageSettings | None = LandingPageSettings.get_current()
         if settings_obj and settings_obj.serve_webp_images:
-            return self.path
-        return self.original_image or self.path
+            return self.original_webp_field or self.original_field
+        return self.original_field
 
     def get_serving_url(self) -> str:
         """Return the URL string of the image to serve."""
         serving_field: Any = self.get_serving_path()
         if serving_field:
             try:
-                serving_name = str(getattr(serving_field, "name", "") or "")
-                if serving_name and serving_field.storage.exists(serving_name):
+                if file_exists_in_storage(serving_field):
                     return str(serving_field.url)
             except (OSError, ValueError):
                 logger.warning(
@@ -265,22 +294,35 @@ class BaseImage(TranslatableModel):
                 )
         return ""
 
-    def get_thumbnail_source(self) -> Any:
-        """Prefer the original source image for thumbnail generation when available."""
-        return self.get_original_source()
+    @property
+    def original_field(self) -> Any:
+        """Return the original asset."""
+        return self.original
 
-    def get_original_source(self) -> Any:
-        """Prefer the active uploaded source file over an older converted original.
+    @property
+    def original_field_name(self) -> str:
+        """Return the original field name."""
+        return "original"
 
-        When a new upload is assigned to ``path`` before conversion runs, ``original_image``
-        may still point at the previous source asset. In that case we must use the new
-        uploaded file from ``path``; otherwise reconversion and thumbnail generation will
-        incorrectly reuse stale bytes.
-        """
-        path_name = str(getattr(self.path, "name", "") or "").lower()
-        if self.path and not path_name.endswith(".webp"):
-            return self.path
-        return self.original_image or self.path
+    @property
+    def original_webp_field(self) -> Any:
+        """Return the derived WebP asset."""
+        return self.original_webp
+
+    @property
+    def original_webp_field_name(self) -> str:
+        """Return the derived WebP field name."""
+        return "original_webp"
+
+    @property
+    def thumbnail_field(self) -> Any:
+        """Return the thumbnail asset."""
+        return self.thumbnail
+
+    @property
+    def thumbnail_field_name(self) -> str:
+        """Return the thumbnail field name."""
+        return "thumbnail"
 
     def __str__(self) -> str:
         name = self.safe_translation_getter("name", any_language=True)
@@ -288,35 +330,36 @@ class BaseImage(TranslatableModel):
 
     def make_thumbnail(self, image: Any, size: tuple[int, int] | None = None) -> ContentFile:
         """Generate a WebP thumbnail using the configured thumbnail spec."""
-        img: Any = Image.open(image)
-        # Handle transparency: create a white background if image has alpha channel
-        if img.mode in ("RGBA", "P"):
-            img = img.convert("RGBA")
-            bg = Image.new("RGB", img.size, (255, 255, 255))
-            bg.paste(img, mask=img.split()[3])
-            img = bg
-        else:
-            img = img.convert("RGB")
         spec = settings.IMAGE_OPTIMIZATION_SPECS["THUMBNAIL"]
         target_size = size or (spec.dimension, spec.dimension)
-        img.thumbnail(target_size, Image.Resampling.LANCZOS)
-        thumb_io = BytesIO()
-        # Use lossless WebP for thumbnail sharpness during visual-quality tuning.
-        img.save(thumb_io, "WEBP", lossless=True, method=6)
-        original_name = getattr(image, "name", "unknown").split("/")[-1]
-        thumbnail_name = "thumb_" + os.path.splitext(original_name)[0] + ".webp"
-        return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
+        return build_webp_thumbnail(image, size=target_size)
 
     def get_thumbnail_url(self) -> str | None:
         """Get thumbnail URL only when the thumbnail file exists."""
         if self.thumbnail:
             try:
-                thumbnail_name = str(self.thumbnail.name or "")
-                if thumbnail_name and self.thumbnail.storage.exists(thumbnail_name):
+                if file_exists_in_storage(self.thumbnail):
                     return self.thumbnail.url  # type: ignore[no-any-return]
             except (OSError, ValueError):
                 return None
         return None
+
+    def get_image_processing_operations(
+        self, changed_field_names: list[str] | None = None
+    ) -> list[ImageProcessingOperation]:
+        """Describe the image-processing workflow for this model instance."""
+        return [
+            ImageProcessingOperation(
+                field_name=self.original_field_name,
+                source_image=self.original_field,
+                webp_field_name=self.original_webp_field_name,
+                spec=self.get_original_spec(),
+                original_field_name=self.original_field_name,
+                thumbnail_field_name=self.thumbnail_field_name,
+                thumbnail_source_image=self.original_field,
+                thumbnail_generator=self.make_thumbnail,
+            )
+        ]
 
 
 class SingletonModel(models.Model):

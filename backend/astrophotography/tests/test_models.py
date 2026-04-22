@@ -56,7 +56,7 @@ class TestAstroImageModel:
         image: AstroImage = AstroImageFactory(name="Test Nebula")
         image.refresh_from_db()
         assert image.thumbnail is not None
-        assert image.thumbnail.name.startswith("thumbnails/thumb_")
+        assert image.thumbnail.name.startswith("images/thumbnail/thumb_")
 
     def test_zoom_field_default(self) -> None:
         """Test that zoom field defaults to False"""
@@ -96,7 +96,7 @@ class TestAstroImageModel:
         image.refresh_from_db()
         url: str = image.get_thumbnail_url()
         assert url
-        assert "/media/thumbnails/" in url or "/media/images/" in url
+        assert "/media/images/thumbnail/" in url
 
     def test_get_thumbnail_url_returns_none_when_thumbnail_file_missing(self) -> None:
         """Missing thumbnail files should not leak dead media URLs to the API."""
@@ -110,18 +110,18 @@ class TestAstroImageModel:
 
         assert image.get_thumbnail_url() is None
 
-    def test_get_path_spec(self):
+    def test_get_original_spec(self):
         """Test that get_path_spec returns correct spec based on webp_quality."""
         # Quality >= 90 -> LANDSCAPE
         image_l: AstroImage = AstroImageFactory()
         image_l.webp_quality = 90
-        spec_l = image_l.get_path_spec()
+        spec_l = image_l.get_original_spec()
         assert spec_l == settings.IMAGE_OPTIMIZATION_SPECS["LANDSCAPE"]
 
         # Quality < 90 -> PORTRAIT
         image_p: AstroImage = AstroImageFactory()
         image_p.webp_quality = 80
-        spec_p = image_p.get_path_spec()
+        spec_p = image_p.get_original_spec()
         assert spec_p == settings.IMAGE_OPTIMIZATION_SPECS["PORTRAIT"]
 
 
@@ -135,7 +135,7 @@ class TestMainPageBackgroundImageModel:
     def test_get_path_spec_uses_background_specific_settings(self) -> None:
         """Backgrounds should use their own quality/dimension, not generic image buckets."""
         bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Test BG")
-        spec = bg.get_path_spec()
+        spec = bg.get_original_spec()
         assert spec.dimension == bg.max_dimension
         assert spec.quality == bg.webp_quality
 
@@ -332,16 +332,22 @@ class TestTagModel:
 
 @pytest.mark.django_db
 class TestImageUpdateLogic:
+    def test_form_requires_original_upload_for_new_image(self) -> None:
+        """AstroImage admin form should require the canonical source upload on create."""
+        form = AstroImageForm()
+
+        assert form.fields["original_upload"].required is True
+
     def test_thumbnail_updates_when_image_changes(self) -> None:
         """
-        Verify that the thumbnail is regenerated when the path (image file) changes.
+        Verify that the thumbnail is regenerated when the source image changes.
         """
         # 1. Create initial image
         img_data1 = BytesIO()
         Image.new("RGB", (100, 100), color="red").save(img_data1, "JPEG")
         file1 = SimpleUploadedFile("shared.jpg", img_data1.getvalue(), content_type="image/jpeg")
 
-        image: AstroImage = AstroImageFactory(path=file1)
+        image: AstroImage = AstroImageFactory(original=file1)
         image.refresh_from_db()
         initial_thumb_name = image.thumbnail.name
         initial_thumb_content = image.thumbnail.read()
@@ -351,7 +357,7 @@ class TestImageUpdateLogic:
         Image.new("RGB", (100, 100), color="blue").save(img_data2, "JPEG")
         file2 = SimpleUploadedFile("shared.jpg", img_data2.getvalue(), content_type="image/jpeg")
 
-        image.path = file2
+        image.original = file2
         image.save()
 
         image.refresh_from_db()
@@ -372,7 +378,7 @@ class TestImageUpdateLogic:
         image.refresh_from_db()
         initial_thumb_name = image.thumbnail.name
 
-        # Save again without changing path
+        # Save again without changing source image
         image.save()
 
         image.refresh_from_db()
@@ -386,7 +392,7 @@ class TestImageUpdateLogic:
         """
         # 1. Create initial
         image: AstroImage = AstroImageFactory(name="Form Test")
-        old_path = image.path.name
+        old_path = image.original.name
         old_thumb_name = image.thumbnail.name
 
         # 2. Prepare form data with NEW image
@@ -402,7 +408,7 @@ class TestImageUpdateLogic:
             "capture_date": "2024-01-01",
             "celestial_object": "Landscape",
         }
-        files = {"path": new_file}
+        files = {"original_upload": new_file}
 
         form = AstroImageForm(data=data, files=files, instance=image)
         if not form.is_valid():
@@ -413,7 +419,7 @@ class TestImageUpdateLogic:
         form.save()
 
         image.refresh_from_db()
-        assert image.path.name != old_path
+        assert image.original.name != old_path
         assert image.thumbnail.name != old_thumb_name
         assert image.name == "Updated Name"
 
@@ -433,8 +439,8 @@ class TestImageUpdateLogic:
         image: AstroImage = AstroImageFactory(name="Replacement Persistence Test")
         image.refresh_from_db()
 
-        old_path = str(image.path.name)
-        assert image.path.storage.exists(old_path)
+        old_path = str(image.original.name)
+        assert image.original.storage.exists(old_path)
 
         img_data = BytesIO()
         Image.new("RGB", (100, 100), color="purple").save(img_data, "PNG")
@@ -442,22 +448,22 @@ class TestImageUpdateLogic:
             "replacement_persistence.png", img_data.getvalue(), content_type="image/png"
         )
 
-        image.path = new_file
+        image.original = new_file
         image.save()
         image.refresh_from_db()
 
-        new_path = str(image.path.name)
+        new_path = str(image.original.name)
         assert new_path != old_path
-        assert image.path.storage.exists(new_path)
-        assert not image.path.storage.exists(old_path)
+        assert image.original.storage.exists(new_path)
+        assert not image.original.storage.exists(old_path)
 
     def test_form_is_invalid_when_existing_image_file_is_missing(self) -> None:
         """
-        Admin/model forms must reject editing a row whose path points to a missing file.
+        Admin/model forms must reject editing a row whose source file is missing.
         """
         image: AstroImage = AstroImageFactory(name="Broken Existing Image")
         image.refresh_from_db()
-        image.path.storage.delete(image.path.name)
+        image.original.storage.delete(image.original.name)
 
         data = {
             "name": "Broken Existing Image Updated",
@@ -468,7 +474,7 @@ class TestImageUpdateLogic:
         form = AstroImageForm(data=data, instance=image)
 
         assert not form.is_valid()
-        assert "path" in form.errors
+        assert "original_upload" in form.errors
 
     def test_form_allows_replacing_missing_existing_image_with_new_upload(self) -> None:
         """
@@ -477,7 +483,7 @@ class TestImageUpdateLogic:
         """
         image: AstroImage = AstroImageFactory(name="Broken But Replaceable")
         image.refresh_from_db()
-        image.path.storage.delete(image.path.name)
+        image.original.storage.delete(image.original.name)
 
         img_data = BytesIO()
         Image.new("RGB", (100, 100), color="purple").save(img_data, "PNG")
@@ -490,7 +496,7 @@ class TestImageUpdateLogic:
             "capture_date": image.capture_date.isoformat(),
             "celestial_object": image.celestial_object,
         }
-        files = {"path": replacement}
+        files = {"original_upload": replacement}
 
         form = AstroImageForm(data=data, files=files, instance=image)
 

@@ -14,6 +14,17 @@ describe('media URL normalization', () => {
     });
   });
 
+  it('keeps new baseimage thumbnail paths same-origin', () => {
+    jest.isolateModules(() => {
+      process.env.SSR_API_URL = 'http://be:8000';
+      const { getMediaUrl } = require('../media');
+
+      expect(getMediaUrl('/media/images/thumbnail/thumb.webp')).toBe(
+        '/media/images/thumbnail/thumb.webp'
+      );
+    });
+  });
+
   it('keeps relative secure image URLs same-origin', () => {
     jest.isolateModules(() => {
       process.env.SSR_API_URL = 'http://be:8000';

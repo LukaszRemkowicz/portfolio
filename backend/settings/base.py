@@ -11,7 +11,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 
 from django.utils.translation import gettext_lazy as _
 
-from common.utils.image import ImageSpec
+from common.types import ImageSpec
 from users.types import CropperFieldConfig, CropperPreviewShape
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -421,35 +421,99 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
-            "style": "{",
-            "datefmt": "%Y-%m-%d %H:%M:%S %z",
+    "filters": {
+        "request_context": {
+            "()": "common.utils.logging.RequestContextFilter",
+            "environment": ENVIRONMENT,
         },
-        "simple": {
-            "format": "{asctime} {levelname} {message}",
-            "style": "{",
-            "datefmt": "%Y-%m-%d %H:%M:%S %z",
+    },
+    "formatters": {
+        "json": {
+            "()": "common.utils.logging.JsonFormatter",
         },
     },
     "handlers": {
         "console": {
-            "level": "INFO" if not DEBUG else "DEBUG",
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
             "class": "logging.StreamHandler",
-            "formatter": "simple" if not DEBUG else "verbose",
+            "filters": ["request_context"],
+            "formatter": "json",
         },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
     },
     "loggers": {
         "django": {
             "handlers": ["console"],
+            "level": env.str("DJANGO_LOG_LEVEL", default="INFO"),
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
             "level": "INFO",
-            "propagate": True,
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": env.str("DB_LOG_LEVEL", default="WARNING"),
+            "propagate": False,
+        },
+        "celery": {
+            "handlers": ["console"],
+            "level": env.str("CELERY_LOG_LEVEL", default="INFO"),
+            "propagate": False,
+        },
+        "axes": {
+            "handlers": ["console"],
+            "level": env.str("AXES_LOG_LEVEL", default="WARNING"),
+            "propagate": False,
+        },
+        "common": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
         },
         "core": {
             "handlers": ["console"],
-            "level": "DEBUG" if DEBUG else "INFO",
-            "propagate": True,
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "users": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "shop": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "monitoring": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "translation": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "astrophotography": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
+        },
+        "programming": {
+            "handlers": ["console"],
+            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
+            "propagate": False,
         },
     },
 }
@@ -758,10 +822,12 @@ CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
 # Jazzmin Admin UI Configuration
 # ===========================
 
+is_prod = ENVIRONMENT == "production"
+
 JAZZMIN_SETTINGS = {
     "site_title": "Portfolio Admin",
     "site_header": "Portfolio",
-    "site_brand": "Portfolio Admin",
+    "site_brand": "Portfolio Admin" if is_prod else f"Portfolio Admin {ENVIRONMENT.upper()}",
     "welcome_sign": "Welcome to the Portfolio Admin Interface",
     "copyright": PROJECT_OWNER,
     # User Menu

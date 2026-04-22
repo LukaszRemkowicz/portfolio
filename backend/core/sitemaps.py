@@ -7,9 +7,12 @@ Django automatically prepends the protocol + host from the incoming request,
 so the final <loc> URLs will correctly point to SITE_DOMAIN.
 """
 
+from math import ceil
+
 from django.contrib.sitemaps import Sitemap
 
 from astrophotography.models import AstroImage, MainPageLocation
+from astrophotography.pagination import AstroImagePagination
 from core.models import LandingPageSettings
 
 
@@ -52,6 +55,34 @@ class AstroImageSitemap(Sitemap):
 
     def lastmod(self, obj: AstroImage):
         return obj.updated_at
+
+
+class AstroGalleryPaginationSitemap(Sitemap):
+    """Paginated public astrophotography gallery URLs such as /astrophotography?page=2."""
+
+    changefreq = "weekly"
+    priority = 0.6
+    protocol = "https"
+
+    def items(self) -> list[int]:
+        page_size = AstroImagePagination.page_size
+        if not page_size:
+            return []
+
+        total_images = AstroImage.objects.count()
+        total_pages = ceil(total_images / page_size)
+
+        if total_pages <= 1:
+            return []
+
+        return list(range(2, total_pages + 1))
+
+    def location(self, page_number: int) -> str:
+        return f"/astrophotography?page={page_number}"
+
+    def lastmod(self, _page_number: int):
+        latest_image = AstroImage.objects.order_by("-updated_at").first()
+        return latest_image.updated_at if latest_image else None
 
 
 class TravelHighlightsSitemap(Sitemap):

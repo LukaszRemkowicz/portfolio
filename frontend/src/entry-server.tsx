@@ -19,6 +19,7 @@ import {
 } from '../server/views/shell.js';
 import {
   fetchAstroImages,
+  fetchAstroImageDetail,
   fetchBackground,
   fetchCategories,
   fetchProfile,
@@ -31,8 +32,14 @@ import {
 import { ASTRO_GALLERY_PAGE_SIZE } from './hooks/useAstroImages';
 import { fetchTravelHighlightDetail } from './hooks/useTravelHighlightDetail';
 import { APP_ROUTES } from './api/constants';
+import { NotFoundError } from './api/errors';
 import { getDocumentStatusCodeForSettings } from './routing/publicRoutes';
 import type { EnabledFeatures } from './types';
+import {
+  getAstroImageNotFoundQueryKey,
+  getAstroImageQueryKey,
+} from './hooks/useAstroImageDetail';
+import { logError, logWarning, toErrorPayload } from '../server/logging.js';
 
 export interface RenderResult {
   html: string;
@@ -99,7 +106,11 @@ async function renderAppToString(element: React.ReactElement): Promise<string> {
         }
       },
       onError(error) {
-        console.error('[frontend-ssr] render error', error);
+        logError({
+          event: 'render_error',
+          stage: 'render_to_string',
+          ...toErrorPayload(error),
+        });
       },
     });
   });
@@ -112,9 +123,10 @@ async function prefetchQuerySafely(
   try {
     await queryClient.prefetchQuery(options);
   } catch (error) {
-    console.warn('[frontend-ssr] prefetch failed', {
-      queryKey: options.queryKey,
-      error: error instanceof Error ? error.message : String(error),
+    logWarning({
+      event: 'prefetch_failed',
+      query_key: options.queryKey,
+      ...toErrorPayload(error),
     });
   }
 }
@@ -126,12 +138,17 @@ async function prefetchInfiniteQuerySafely(
   try {
     await queryClient.prefetchInfiniteQuery(options);
   } catch (error) {
-    console.warn('[frontend-ssr] prefetch failed', {
-      queryKey: options.queryKey,
-      error: error instanceof Error ? error.message : String(error),
+    logWarning({
+      event: 'prefetch_infinite_failed',
+      query_key: options.queryKey,
+      ...toErrorPayload(error),
     });
   }
 }
+
+type RoutePrefetchResult = {
+  statusCodeOverride?: number;
+};
 
 async function prefetchRouteQueries(
   queryClient: QueryClient,
@@ -139,7 +156,7 @@ async function prefetchRouteQueries(
   language: string,
   requestOrigin?: string,
   requestId?: string
-) {
+): Promise<RoutePrefetchResult> {
   const client = createApiClient(() => language, requestOrigin, requestId);
   const cachedShellQuery = getCachedShellLoader(language, requestOrigin);
   const requestUrl = new URL(url, 'http://frontend.local');
@@ -182,7 +199,7 @@ async function prefetchRouteQueries(
 
   if (pathname === APP_ROUTES.HOME) {
     await Promise.all([...commonPrefetches]);
-    return;
+    return {};
   }
 
   if (pathname === APP_ROUTES.SHOP) {
@@ -194,7 +211,7 @@ async function prefetchRouteQueries(
 
     if (settings?.shop !== true) {
       await Promise.all([...commonPrefetches]);
-      return;
+      return {};
     }
 
     await Promise.all([
@@ -204,7 +221,7 @@ async function prefetchRouteQueries(
         queryFn: () => fetchShopProducts(client),
       }),
     ]);
-    return;
+    return {};
   }
 
   const travelMatch = matchPath(
@@ -226,7 +243,7 @@ async function prefetchRouteQueries(
           }),
       }),
     ]);
-    return;
+    return {};
   }
 
   const astroMatch =
@@ -235,10 +252,44 @@ async function prefetchRouteQueries(
   if (astroMatch) {
     const selectedFilter = searchParams.get('filter') || undefined;
     const selectedTag = searchParams.get('tag') || undefined;
+    const rawPage = searchParams.get('page');
+    const selectedPage =
+      rawPage && Number.isFinite(Number(rawPage)) && Number(rawPage) >= 1
+        ? Math.floor(Number(rawPage))
+        : undefined;
+    const astroRouteMatch =
+      pathname === APP_ROUTES.ASTROPHOTOGRAPHY
+        ? null
+        : matchPath(`${APP_ROUTES.ASTROPHOTOGRAPHY}/:slug`, pathname);
+    const astroSlug = astroRouteMatch?.params.slug;
     const imageParams = {
       ...(selectedFilter ? { filter: selectedFilter } : {}),
       ...(selectedTag ? { tag: selectedTag } : {}),
+      ...(selectedPage ? { page: selectedPage } : {}),
     };
+    const astroDetailPrefetch = astroSlug
+      ? queryClient
+          .fetchQuery({
+            queryKey: getAstroImageQueryKey(language, astroSlug),
+            queryFn: () => fetchAstroImageDetail(astroSlug, client),
+          })
+          .catch(error => {
+            if (error instanceof NotFoundError) {
+              queryClient.setQueryData(
+                getAstroImageNotFoundQueryKey(language, astroSlug),
+                true
+              );
+              return null;
+            }
+
+            logWarning({
+              event: 'prefetch_failed',
+              query_key: ['astro-image', language, astroSlug],
+              ...toErrorPayload(error),
+            });
+            return null;
+          })
+      : null;
 
     await Promise.all([
       ...commonPrefetches,
@@ -252,7 +303,7 @@ async function prefetchRouteQueries(
       }),
       prefetchInfiniteQuerySafely(queryClient, {
         queryKey: ['astro-images', language, imageParams],
-        initialPageParam: 1,
+        initialPageParam: selectedPage ?? 1,
         queryFn: ({ pageParam }) =>
           fetchAstroImages(
             {
@@ -263,11 +314,13 @@ async function prefetchRouteQueries(
             client
           ),
       }),
+      ...(astroDetailPrefetch ? [astroDetailPrefetch] : []),
     ]);
-    return;
+    return {};
   }
 
   await Promise.all(commonPrefetches);
+  return {};
 }
 
 interface PreparedRenderContext {
@@ -299,7 +352,7 @@ async function prepareRenderContext(
   const { createServerI18n } = await import('./i18n.server');
   const i18nInstance = await createServerI18n(acceptLanguage);
 
-  await prefetchRouteQueries(
+  const routePrefetchResult = await prefetchRouteQueries(
     queryClient,
     url,
     i18nInstance.language || 'en',
@@ -332,7 +385,9 @@ async function prepareRenderContext(
     helmetContext,
     dehydratedState,
     language: i18nInstance.resolvedLanguage || i18nInstance.language || 'en',
-    statusCode: getDocumentStatusCodeForSettings(pathname, settings),
+    statusCode:
+      routePrefetchResult.statusCodeOverride ??
+      getDocumentStatusCodeForSettings(pathname, settings),
   };
 }
 
@@ -392,7 +447,11 @@ export async function renderStream(
         }
       },
       onError(error) {
-        console.error('[frontend-ssr] render error', error);
+        logError({
+          event: 'render_error',
+          stage: 'stream_render',
+          ...toErrorPayload(error),
+        });
       },
     });
   });

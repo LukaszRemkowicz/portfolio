@@ -26,7 +26,7 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from common.constants import FALLBACK_URL_SLUG
-from common.utils.image import ImageSpec
+from common.types import ImageSpec
 from core.models import BaseImage, LandingPageSettings, SingletonModel
 from translation.mixins import AutomatedTranslationModelMixin
 from translation.services import TranslationService
@@ -319,7 +319,7 @@ class AstroImageQuerySet(TranslatableQuerySet):
                     Q(place__translations__name__iexact=place) | Q(place__isnull=True)
                 )
 
-        return queryset.order_by("-capture_date")
+        return queryset.order_by("-created_at", "-pk")
 
     def for_travel_highlight(self, slider: "MainPageLocation") -> QuerySet:
         """Return images selected for a given travel highlight slider."""
@@ -419,8 +419,7 @@ class AstroImageQuerySet(TranslatableQuerySet):
 class AstroImage(AutomatedTranslationModelMixin, BaseImage):
     """Model for astrophotography images"""
 
-    # Track changes to the 'path' field (inherited from BaseImage)
-    path_tracker = FieldTracker(fields=["path", "original_image"])
+    source_tracker = FieldTracker(fields=["original"])
 
     # Translation trigger fields
     translation_service_method = "translate_astro_image"
@@ -533,6 +532,11 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
 
     objects = AstroImageQuerySet.as_manager()
 
+    @property
+    def base_upload_dir(self) -> str:
+        """Store all astro image variants under the images directory."""
+        return "images"
+
     def __str__(self) -> str:
         name = self.safe_translation_getter("name", any_language=True)
         if not name:
@@ -604,7 +608,7 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
     webp_quality = 95
     max_dimension = 2560
 
-    path_tracker = FieldTracker(fields=["path", "original_image"])
+    source_tracker = FieldTracker(fields=["original"])
 
     # Translation trigger fields
     translation_service_method = "translate_main_page_background_image"
@@ -613,7 +617,10 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
     path = models.ImageField(
         upload_to="backgrounds/",
         verbose_name=_("Image File"),
-        help_text=_("The large background image file."),
+        help_text=_(
+            "Legacy background image field kept during the BaseImage refactor. "
+            "TODO: legacy, will be removed in future."
+        ),
     )
     translations = TranslatedFields(
         name=models.CharField(
@@ -636,9 +643,14 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
         verbose_name_plural = _("Main Page Background Images")
         ordering = ["-created_at"]
 
-    def get_path_spec(self) -> ImageSpec:
+    def get_original_spec(self) -> ImageSpec:
         """Use the background-specific quality and dimension settings."""
         return ImageSpec(dimension=self.max_dimension, quality=self.webp_quality)
+
+    @property
+    def base_upload_dir(self) -> str:
+        """Store all background image variants under the backgrounds directory."""
+        return "backgrounds"
 
     def clean(self):
         """Enforce that the name is required for the default language."""

@@ -96,6 +96,7 @@ done
 # ------------------------------------------------------------------
 : "${API_DOMAIN:?API_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
 : "${GA_TRACKING_ID:?GA_TRACKING_ID is required (inject via: doppler run -- ./build.sh)}"
+: "${ENABLE_GA:=true}"
 : "${SITE_DOMAIN:?SITE_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
 : "${SENTRY_DSN_FE:?SENTRY_DSN_FE is required (inject via: doppler run -- ./build.sh)}"
 : "${ALLOWED_HOSTS:?ALLOWED_HOSTS is required (inject via: doppler run -- ./build.sh)}"
@@ -194,6 +195,7 @@ docker build \
   --build-arg "SITE_DOMAIN=${SITE_DOMAIN}" \
   --build-arg "API_URL=https://${API_DOMAIN}" \
   --build-arg "GA_TRACKING_ID=${GA_TRACKING_ID}" \
+  --build-arg "ENABLE_GA=${ENABLE_GA}" \
   --build-arg "SENTRY_DSN_FE=${SENTRY_DSN_FE}" \
   --build-arg "ALLOWED_HOSTS=${ALLOWED_HOSTS}" \
   --build-arg "FRONTEND_PORT=${FRONTEND_PORT}" \

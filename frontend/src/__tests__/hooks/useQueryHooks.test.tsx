@@ -67,6 +67,18 @@ describe('TanStack Query Hooks', () => {
     );
   });
 
+  it('useAstroImages starts from the requested page when page is provided', () => {
+    renderHook(() => useAstroImages({ page: 2 }));
+    expect(useInfiniteQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['astro-images', 'en', { page: 2 }],
+        queryFn: expect.any(Function),
+        initialPageParam: 2,
+        getNextPageParam: expect.any(Function),
+      })
+    );
+  });
+
   it('useAstroImageDetail calls useQuery with correct options', () => {
     renderHook(() => useAstroImageDetail('m31'));
     expect(useQuery).toHaveBeenCalledWith(

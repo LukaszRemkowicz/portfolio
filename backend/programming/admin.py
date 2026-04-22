@@ -1,7 +1,9 @@
 import logging
 
 from parler.admin import TranslatableAdmin, TranslatableTabularInline
+from parler.forms import TranslatableModelForm
 
+from django import forms
 from django.conf import settings
 from django.contrib import admin
 
@@ -12,12 +14,35 @@ from .models import Project, ProjectImage
 logger = logging.getLogger(__name__)
 
 
+class ProjectImageAdminForm(TranslatableModelForm):
+    original_upload = forms.ImageField(required=False, label="Original Image")
+
+    class Meta:
+        model = ProjectImage
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # TODO: legacy field, will be removed in future.
+        self.fields.pop("path", None)
+
+        current_source = self.instance.original_field
+        self.fields["original_upload"].required = not bool(current_source)
+
+    def _post_clean(self) -> None:
+        uploaded_original = self.cleaned_data.get("original_upload")
+        if uploaded_original:
+            self.instance.original = uploaded_original
+        super()._post_clean()
+
+
 class ProjectImageInline(TranslatableTabularInline):
     """Inline for managing project images with translation support."""
 
     model = ProjectImage
+    form = ProjectImageAdminForm
     extra = 1
-    fields = ("name", "description", "path", "is_cover")
+    fields = ("name", "description", "original_upload", "is_cover")
 
 
 @admin.register(Project)
@@ -52,6 +77,7 @@ class ProjectImageAdmin(TranslatableAdmin):
     Supports automated translation of image metadata (name, description).
     """
 
+    form = ProjectImageAdminForm
     list_display = ("name", "project", "is_cover", "created_at")
     list_filter = ("is_cover", "project", "created_at")
     search_fields = ("name", "description", "project__name")
@@ -59,7 +85,7 @@ class ProjectImageAdmin(TranslatableAdmin):
 
     fieldsets = (
         (None, {"fields": ("project", "name", "description")}),
-        ("Image", {"fields": ("path", "is_cover")}),
+        ("Image", {"fields": ("original_upload", "is_cover")}),
         (
             "Metadata",
             {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},

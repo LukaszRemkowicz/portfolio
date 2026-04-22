@@ -2,11 +2,13 @@ import { useEffect, useRef, useState, ImgHTMLAttributes } from 'react';
 
 interface ImageWithFallbackProps extends ImgHTMLAttributes<HTMLImageElement> {
   fallbackSrc?: string;
+  fallbackOnEmptySrc?: boolean;
 }
 
 const ImageWithFallback = ({
   src,
   fallbackSrc = '/landscape.webp',
+  fallbackOnEmptySrc = true,
   alt,
   className,
   onLoad,
@@ -15,7 +17,10 @@ const ImageWithFallback = ({
 }: ImageWithFallbackProps) => {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
-  const resolvedSrc = !src || failedSrc === src ? fallbackSrc : src;
+  const resolvedSrc =
+    failedSrc === src
+      ? fallbackSrc
+      : src || (fallbackOnEmptySrc ? fallbackSrc : undefined);
 
   useEffect(() => {
     const img = imgRef.current;

@@ -8,6 +8,7 @@ describe('Google Analytics Utility', () => {
     jest.resetModules();
     process.env.VITE_GA_TRACKING_ID = GA_ID;
     process.env.VITE_ENABLE_GA = 'true';
+    window.__PUBLIC_ENV__ = undefined;
 
     // Clear DOM and global state
     document.head.innerHTML = '';
@@ -109,5 +110,23 @@ describe('Google Analytics Utility', () => {
         expect(document.querySelector('script')).toBeTruthy();
       }
     );
+
+    test('prefers runtime public env over build-time values', () => {
+      jest.resetModules();
+      process.env.VITE_ENABLE_GA = 'false';
+      window.__PUBLIC_ENV__ = {
+        ENABLE_GA: 'true',
+        GA_TRACKING_ID: GA_ID,
+      };
+      let localAnalytics: typeof import('../utils/analytics');
+      jest.isolateModules(() => {
+        localAnalytics = require('../utils/analytics');
+      });
+
+      localAnalytics!.loadGoogleAnalytics();
+      const script = document.querySelector('script');
+      expect(script).toBeTruthy();
+      expect(script?.getAttribute('src')).toContain(GA_ID);
+    });
   });
 });

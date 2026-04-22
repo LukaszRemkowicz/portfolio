@@ -1,8 +1,15 @@
-{% load i18n %}{% if widget.is_initial %}<div class="secure-file-container"
-  style="display: flex; flex-direction: column; gap: 8px;">
-  <div class="secure-file-currently">{{ widget.initial_text }}: <a href="{{ widget.value.url }}"
-      target="_blank" style="font-weight: bold;">{{ widget.value }}</a></div>
-  <div class="secure-file-change">{{ widget.input_text }}: <input type="{{ widget.type }}" name="{{ widget.name }}" {%
-      include "django/forms/widgets/attrs.html" %}></div>
-</div>{% else %}<input type="{{ widget.type }}" name="{{ widget.name }}" {% include "django/forms/widgets/attrs.html"
-  %}>{% endif %}
+{% load i18n %}
+{% if widget.is_initial %}
+<div class="secure-file-container" style="display: flex; flex-direction: column; gap: 8px;">
+  <div class="secure-file-currently">
+    {{ widget.initial_text }}:
+    <a href="{{ widget.value.url }}" target="_blank" style="font-weight: bold;">{{ widget.value }}</a>
+  </div>
+  <div class="secure-file-change">
+    {{ widget.input_text }}:
+    <input type="{{ widget.type }}" name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>
+  </div>
+</div>
+{% else %}
+<input type="{{ widget.type }}" name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>
+{% endif %}

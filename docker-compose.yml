@@ -19,7 +19,7 @@ x-backend-common: &backend-common
   volumes:
     - ./backend:/app
     - portfolio_dev_static_data:/app/staticfiles
-  environment:
+  environment: &backend-env
     DOCKER_ENV: "true"
     PYTHONPATH: "."
     TZ: "Europe/Warsaw"
@@ -84,9 +84,11 @@ x-local-nginx-common: &local-nginx-common
   restart: unless-stopped
   volumes:
     - ./infra/nginx/static_server.conf:/etc/nginx/nginx.conf:ro
+    - ./infra/nginx/includes:/etc/nginx/includes:ro
     - ./infra/nginx/logs:/var/log/nginx
     - ./backend/media:/app/media:ro
     - ./frontend/public/error.html:/usr/share/nginx/html/error.html:ro
+    - ./frontend/public/404.html:/usr/share/nginx/html/404.html:ro
     - portfolio_dev_static_data:/app/staticfiles:ro
     - nginx_blocklist:/etc/nginx/blocklist:ro
 
@@ -175,7 +177,6 @@ services:
     command: >
       sh -c "
         python manage.py migrate --noinput &&
-        python manage.py seed_settings &&
         python manage.py compilemessages &&
         python manage.py collectstatic --noinput &&
         python manage.py runserver 0.0.0.0:8000
@@ -187,14 +188,22 @@ services:
       retries: 3
 
   fe-test:
-    <<: *frontend-common
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      target: e2e
+    networks:
+      - portfolio_network
     profiles: [ "test" ]
-    command: npm test
+    command: sh -lc "npm test -- --watchAll=false && npm run test:e2e"
 
   test:
     <<: *backend-common
     profiles: [ "test" ]
     command: pytest
+    environment:
+      <<: *backend-env
+      SKIP_PERMISSION_FIX: true
 
   db:
     image: postgres:18
