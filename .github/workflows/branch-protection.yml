@@ -5,70 +5,8 @@ on:
 
 jobs:
   branch-protection:
-    name: Check Branch Protection Rules
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Validate branch source
-        run: |
-          echo "🔍 Checking branch protection rules..."
-
-          # Get the source branch name
-          SOURCE_BRANCH="${{ github.head_ref }}"
-          TARGET_BRANCH="${{ github.base_ref }}"
-
-          echo "📋 Source branch: $SOURCE_BRANCH"
-          echo "📋 Target branch: $TARGET_BRANCH"
-
-          # Check if target is main
-          if [ "$TARGET_BRANCH" != "main" ]; then
-            echo "✅ Target branch is not main, allowing merge"
-            exit 0
-          fi
-
-          # Check if source is dev
-          if [ "$SOURCE_BRANCH" = "dev" ]; then
-            echo "✅ Source branch is dev, allowing merge to main"
-            exit 0
-          fi
-
-          # Check if it's a hotfix branch (hotfix/*)
-          if [[ "$SOURCE_BRANCH" =~ ^hotfix/.* ]]; then
-            echo "✅ Source branch is a hotfix, allowing merge to main"
-            exit 0
-          fi
-
-          # Check if it's a release branch (release/*)
-          if [[ "$SOURCE_BRANCH" =~ ^release/.* ]]; then
-            echo "✅ Source branch is a release, allowing merge to main"
-            exit 0
-          fi
-
-          # If none of the above, reject the merge
-          echo "❌ BRANCH PROTECTION VIOLATION!"
-          echo "🚫 Cannot merge branch '$SOURCE_BRANCH' directly to 'main'"
-          echo ""
-          echo "📝 Allowed branches to merge to main:"
-          echo "   • dev (main development branch)"
-          echo "   • hotfix/* (emergency fixes)"
-          echo "   • release/* (release branches)"
-          echo ""
-          echo "💡 To merge '$SOURCE_BRANCH' to main:"
-          echo "   1. First merge '$SOURCE_BRANCH' → dev"
-          echo "   2. Then merge dev → main"
-          echo "   3. Or create a hotfix branch if it's urgent"
-          echo ""
-          exit 1
-
-      - name: Check required status checks
-        run: |
-          echo "🔍 Checking if all required CI/CD checks passed..."
-
-          # This step will fail if any required checks haven't passed
-          # GitHub will automatically check the required status checks
-          # defined in the branch protection settings
-
-          echo "✅ All required status checks are passing"
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/branch-protection.yml@main
+    with:
+      target_branch: main
+      allowed_exact_branches: dev
+      allowed_pattern_branches: ^hotfix/.*,^release/.*

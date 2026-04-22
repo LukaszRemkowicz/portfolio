@@ -4,8 +4,6 @@ on:
   pull_request:
 
 env:
-  PYTHON_VERSION: "3.13"
-  NODE_VERSION: "20"
   PROJECT_OWNER: "GitHub Actions"
 
 concurrency:
@@ -14,179 +12,68 @@ concurrency:
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
-  # Frontend: Lint, Type Check, and Test
   frontend:
-    name: Frontend Quality & Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/node-ci.yml@main
+    with:
+      node_version: "20"
+      working_directory: frontend
+      cache_dependency_path: frontend/package-lock.json
+      install_command: npm ci
+      lint_command: npm run lint
+      format_check_command: npm run format:check || (npx prettier --list-different 'src/**/*.{ts,tsx,css}' && exit 1)
+      type_check_command: npx tsc --noEmit
+      test_command: API_URL=http://localhost:8000 npm test -- --coverage --watchAll=false
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Run ESLint
-        working-directory: ./frontend
-        run: npm run lint
-
-      - name: Run Prettier check
-        working-directory: ./frontend
-        run: npm run format:check || (npx prettier --list-different 'src/**/*.{ts,tsx,css}' && exit 1)
-
-      - name: TypeScript type check
-        working-directory: ./frontend
-        run: npx tsc --noEmit
-
-      - name: Run tests
-        working-directory: ./frontend
-        run: npm test -- --coverage --watchAll=false
-        env:
-          API_URL: http://localhost:8000
-
-      - name: Upload coverage reports
-        if: github.event_name == 'push'
-        uses: codecov/codecov-action@v6
-        with:
-          files: ./frontend/coverage/lcov.info
-          flags: frontend
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  # Backend: Lint, Type Check, and Test
   backend:
-    name: Backend Quality & Tests
-    runs-on: ubuntu-latest
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/python-uv-ci.yml@main
+    with:
+      python_version: "3.13"
+      working_directory: backend
+      cache_dependency_glob: backend/uv.lock
+      dependency_install_command: uv sync --locked
+      pre_commit_command: SKIP=prettier,eslint,frontend-tests,backend-tests,safety uv run pre-commit run --all-files
+      test_command: DB_HOST=localhost DB_NAME=test_db DB_USER=postgres DB_PASSWORD=postgres DB_PORT=5432 DEFAULT_FROM_EMAIL=test@example.com CONTACT_EMAIL=test@example.com SESSION_COOKIE_DOMAIN=.example.com uv run pytest --cov=. --cov-report=xml
+      postgres_enabled: true
+      postgres_db: test_db
+      postgres_user: postgres
+      postgres_password: postgres
+      postgres_port: "5432"
 
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    env:
-      DB_HOST: localhost
-      DB_NAME: test_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_PORT: 5432
-      DEFAULT_FROM_EMAIL: test@example.com
-      CONTACT_EMAIL: test@example.com
-      SESSION_COOKIE_DOMAIN: .example.com
-      SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
+  trivy-scan:
+    needs: [frontend, backend]
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/trivy-scan.yml@main
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: backend/uv.lock
-
-      - name: Install dependencies
-        working-directory: ./backend
-        run: uv sync --locked
-
-      - name: Run Pre-commit hooks
-        working-directory: ./backend
-        env:
-          SKIP: prettier,eslint,frontend-tests,backend-tests,safety
-        run: uv run pre-commit run --all-files
-
-      - name: Run tests
-        working-directory: ./backend
-        run: uv run pytest --cov=. --cov-report=xml
-
-      - name: Upload coverage reports
-        if: github.event_name == 'push'
-        uses: codecov/codecov-action@v6
-        with:
-          files: ./backend/coverage.xml
-          flags: backend
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  security-scan:
-    name: Security Analysis
+  dependency-security:
+    name: Dependency Security Checks
     runs-on: ubuntu-latest
     environment: portfolio_tests
     needs: [frontend, backend]
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
-    env:
-      DB_HOST: localhost
-      DB_NAME: test_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_PORT: 5432
-      DEFAULT_FROM_EMAIL: test@example.com
-      CONTACT_EMAIL: test@example.com
-      SESSION_COOKIE_DOMAIN: .example.com
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Trivy vulnerability scanner
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/workspace \
-            -w /workspace \
-            aquasec/trivy:0.58.1 fs \
-              --format sarif \
-              --output trivy-results.sarif \
-              --exit-code 0 \
-              --severity CRITICAL,HIGH \
-              .
-
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: "trivy-results.sarif"
-          category: "trivy"
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: "20"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         working-directory: ./frontend
         run: npm ci
 
       - name: Run npm audit
         working-directory: ./frontend
         run: npm audit --audit-level=moderate
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Run Safety CLI to check for vulnerabilities
         uses: pyupio/safety-action@v1
@@ -196,7 +83,7 @@ jobs:
   image-build-check:
     name: Production Image Build Check
     runs-on: ubuntu-latest
-    needs: [frontend, backend, security-scan]
+    needs: [frontend, backend, trivy-scan, dependency-security]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -299,69 +186,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # PR Status Reporting
   pr-status:
-    name: PR Status Report
-    runs-on: ubuntu-latest
-    needs: [frontend, backend, security-scan, image-build-check]
-    if: always() && github.event_name == 'pull_request'
-    permissions:
-      issues: write
-    steps:
-      - name: Report Status
-        uses: actions/github-script@v7
-        with:
-          script: |
-            if (context.payload.pull_request?.head?.repo?.fork) {
-              core.info('Skipping PR status comment for forked pull request: GITHUB_TOKEN cannot write issue comments in this context.');
-              return;
-            }
-
-            const results = {
-              'Frontend (Lint/Types/Tests)': '${{ needs.frontend.result }}',
-              'Backend (Lint/Types/Tests)': '${{ needs.backend.result }}',
-              'Security Analysis': '${{ needs.security-scan.result }}',
-              'Production Image Build Check': '${{ needs.image-build-check.result }}'
-            };
-
-            const emoji = (s) => s === 'success' ? '✅' : (s === 'failure' ? '❌' : '⏹️');
-
-            let body = `## 🚀 CI/CD Pipeline Results\n\n| Check | Status |\n|---|---|\n`;
-            for (const [name, res] of Object.entries(results)) {
-              body += `| ${name} | ${emoji(res)} ${res} |\n`;
-            }
-
-            const allSuccess = Object.values(results).every(s => s === 'success');
-            body += `\n${allSuccess ? '🎉 **All checks passed!**' : '⚠️ **Some checks failed. Please review the logs.**'}`;
-
-            try {
-              const { data: comments } = await github.rest.issues.listComments({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-              });
-
-              const botComment = comments.find(c => c.body.includes('CI/CD Pipeline Results'));
-
-              if (botComment) {
-                await github.rest.issues.updateComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  comment_id: botComment.id,
-                  body
-                });
-              } else {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: context.issue.number,
-                  body
-                });
-              }
-            } catch (error) {
-              if (error.status === 403) {
-                core.warning(`Skipping PR status comment because the GitHub token cannot write comments in this context: ${error.message}`);
-                return;
-              }
-              throw error;
-            }
+    needs: [frontend, backend, trivy-scan, dependency-security, image-build-check]
+    if: always()
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/pr-status.yml@main
+    with:
+      status_items_json: >-
+        {"Frontend (Lint/Types/Tests)":"${{ needs.frontend.result }}","Backend (Lint/Types/Tests)":"${{ needs.backend.result }}","Trivy Security Analysis":"${{ needs.trivy-scan.result }}","Dependency Security Checks":"${{ needs.dependency-security.result }}","Production Image Build Check":"${{ needs.image-build-check.result }}"}
+      success_message: 🎉 **All checks passed!**
+      failure_message: ⚠️ **Some checks failed. Please review the logs.**
