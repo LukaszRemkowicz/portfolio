@@ -80,7 +80,6 @@ class Command(BaseCommand):
             capture_date=timezone.now().date() - timedelta(days=index - 1),
         )
         image.original.save(file_name, ContentFile(image_content), save=False)
-        image.path.save(file_name, ContentFile(image_content), save=False)
 
         image.set_current_language("en")
         image.name = f"Batch Astro Image {index}"

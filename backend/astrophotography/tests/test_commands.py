@@ -111,6 +111,7 @@ class TestCreateAstroImagesBatchCommand:
             first_image.safe_translation_getter("name", language_code="pl")
             == "Testowy obraz astro 1"
         )
+        assert first_image.original
         assert "Created 10 AstroImage record(s)" in output.getvalue()
 
     def test_create_astroimages_batch_respects_count_option(self, mocker: MockerFixture) -> None:

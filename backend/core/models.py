@@ -31,21 +31,13 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
-    path = models.ImageField(
-        upload_to="images/",
-        verbose_name=_("Image File"),
-        help_text=_(
-            "Legacy image field kept during the BaseImage refactor. "
-            "TODO: legacy, will be removed in future."
-        ),
-    )
     original = models.ImageField(
         upload_to=seeded_image_upload_to("base_upload_dir", "original"),
         blank=True,
         null=True,
         editable=False,
         verbose_name=_("Original Image Source"),
-        help_text=_("Uploaded source image for the next BaseImage contract."),
+        help_text=_("Uploaded source image."),
     )
     original_webp = models.ImageField(
         upload_to=seeded_image_upload_to("base_upload_dir", "webp"),
@@ -53,19 +45,7 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
         null=True,
         editable=False,
         verbose_name=_("Original Image WebP"),
-        help_text=_("Derived WebP image for the next BaseImage contract."),
-    )
-    original_image = models.ImageField(
-        upload_to=seeded_image_upload_to("base_upload_dir", "original"),
-        blank=True,
-        null=True,
-        editable=False,
-        verbose_name=_("Original Image"),
-        help_text=_(
-            "Legacy original-image field kept during the BaseImage refactor. "
-            "Used for rollback via the Admin serve_webp_images toggle. "
-            "TODO: legacy, will be removed in future."
-        ),
+        help_text=_("Derived WebP image."),
     )
 
     # Translations moved to concrete subclasses because BaseImage is abstract.

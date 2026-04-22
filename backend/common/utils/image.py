@@ -129,7 +129,7 @@ def convert_to_webp(
     """Convert an open ImageField to WebP format.
 
     Args:
-        image_field: An open Django ImageFieldFile (e.g. ``instance.path``).
+        image_field: An open Django ImageFieldFile (e.g. ``instance.original``).
         quality: WebP encoding quality (1–100). Defaults to 90.
         max_dimension: Resize proportionally so the longest side is no larger than this.
         dimension_percentage: Scale both width and height by this percentage.
@@ -140,13 +140,13 @@ def convert_to_webp(
         field is empty, already a ``.webp``, or conversion fails.
 
     The caller is responsible for:
-    1. Persisting ``original_name`` to the legacy field.
+    1. Persisting ``original_name`` to the canonical source field when needed.
     2. Calling ``image_field.save(webp_content_file.name, webp_content_file, save=False)``.
     """
     if not image_field:
         return None
 
-    # Capture current name to return as 'original_name' (original_image) for rollbacks.
+    # Capture the current source name so the caller can retain the canonical upload reference.
     current_name: str = str(image_field.name)
 
     # Do not re-compress if the file is already a WebP image.

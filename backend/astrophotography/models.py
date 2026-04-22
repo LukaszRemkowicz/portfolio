@@ -614,14 +614,6 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
     translation_service_method = "translate_main_page_background_image"
     translation_trigger_fields = ["name", "description"]
 
-    path = models.ImageField(
-        upload_to="backgrounds/",
-        verbose_name=_("Image File"),
-        help_text=_(
-            "Legacy background image field kept during the BaseImage refactor. "
-            "TODO: legacy, will be removed in future."
-        ),
-    )
     translations = TranslatedFields(
         name=models.CharField(
             max_length=255,

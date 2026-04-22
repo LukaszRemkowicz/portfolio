@@ -149,7 +149,9 @@ class TestMainPageBackgroundImageModel:
             "test_bg.png", img_io.read(), content_type="image/png"
         )
 
-        bg_image: MainPageBackgroundImage = MainPageBackgroundImage.objects.create(path=image_file)
+        bg_image: MainPageBackgroundImage = MainPageBackgroundImage.objects.create(
+            original=image_file
+        )
 
         bg_image.set_current_language("en")
         bg_image.name = "Test Background"

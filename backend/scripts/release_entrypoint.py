@@ -4,13 +4,10 @@ from __future__ import annotations
 
 import logging
 import subprocess
-import sys
 
 logger = logging.getLogger(__name__)
 
-RELEASE_CONFIGURATION_COMMANDS: tuple[tuple[str, ...], ...] = (
-    (sys.executable, "manage.py", "backfill_baseimage_fields", "--verbosity", "0"),
-)
+RELEASE_CONFIGURATION_COMMANDS: tuple[tuple[str, ...], ...] = ()
 
 
 def main() -> int:

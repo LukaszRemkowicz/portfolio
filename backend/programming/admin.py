@@ -23,9 +23,6 @@ class ProjectImageAdminForm(TranslatableModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # TODO: legacy field, will be removed in future.
-        self.fields.pop("path", None)
-
         current_source = self.instance.original_field
         self.fields["original_upload"].required = not bool(current_source)
 

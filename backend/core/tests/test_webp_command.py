@@ -47,8 +47,8 @@ class TestConvertImagesToWebpCommand:
 
         # Verify AstroImage was converted
         astro_img.refresh_from_db()
-        assert astro_img.path.name.endswith(".jpg")
         assert astro_img.original is not None
+        assert astro_img.original.name == "test.jpg"
         assert astro_img.original_webp is not None
         assert astro_img.original_webp.name.endswith(".webp")
 
@@ -72,12 +72,12 @@ class TestConvertImagesToWebpCommand:
         # Prevent automatic task execution during factory creation for this test
         mocker.patch("core.models.process_image_task.delay_on_commit")
         astro_img = AstroImageFactory()
-        path_before = astro_img.path.name
+        original_before = astro_img.original.name
 
         call_command("convert_images_to_webp", dry_run=True)
 
         astro_img.refresh_from_db()
-        assert astro_img.path.name == path_before
+        assert astro_img.original.name == original_before
         assert not astro_img.original_webp
 
     def test_command_force_reconversion(self, mocker: MockerFixture) -> None:
@@ -98,7 +98,6 @@ class TestConvertImagesToWebpCommand:
         call_command("convert_images_to_webp")
 
         astro_img.refresh_from_db()
-        assert astro_img.path.name.endswith(".jpg")
         assert astro_img.original == "test.jpg"
         assert astro_img.original_webp.name.endswith(".webp")
 
@@ -133,16 +132,16 @@ class TestConvertImagesToWebpCommand:
         target = AstroImageFactory()
         other = AstroImageFactory()
 
-        other_path_before = other.path.name
+        other_original_before = other.original.name
 
         call_command("convert_images_to_webp", object_id=str(target.pk))
 
         target.refresh_from_db()
         other.refresh_from_db()
 
-        assert target.path.name.endswith(".jpg")
+        assert target.original.name == "test.jpg"
         assert target.original_webp is not None
-        assert other.path.name == other_path_before
+        assert other.original.name == other_original_before
         assert other.original_webp in (None, "")
         assert target.original_webp.name.endswith(".webp")
         mock_call_command.assert_any_call("clear_cache")
@@ -168,7 +167,7 @@ class TestConvertImagesToWebpCommand:
         second = AstroImageFactory()
         third = AstroImageFactory()
 
-        third_path_before = third.path.name
+        third_original_before = third.original.name
 
         call_command(
             "convert_images_to_webp",
@@ -179,11 +178,11 @@ class TestConvertImagesToWebpCommand:
         second.refresh_from_db()
         third.refresh_from_db()
 
-        assert first.path.name.endswith(".jpg")
+        assert first.original.name == "test.jpg"
         assert first.original_webp is not None
-        assert second.path.name.endswith(".jpg")
+        assert second.original.name == "test.jpg"
         assert second.original_webp is not None
-        assert third.path.name == third_path_before
+        assert third.original.name == third_original_before
         assert third.original_webp in (None, "")
         mock_call_command.assert_any_call("clear_cache")
 

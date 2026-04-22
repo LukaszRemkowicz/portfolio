@@ -24,13 +24,10 @@ from .protocols import SupportsBaseImageUploadForm
 
 
 class BaseImageSourceUploadFormMixin:
-    """Expose the source upload field in admin while hiding the legacy model field."""
+    """Expose the canonical source upload field in admin."""
 
     def _configure_source_upload_field(self: SupportsBaseImageUploadForm) -> None:
-        """Hide the legacy model field and configure the source upload field."""
-        # TODO: legacy field, will be removed in future.
-        self.fields.pop("path", None)
-
+        """Configure the source upload field."""
         current_source = self._get_current_source_field()
         self.fields["original_upload"].required = not bool(current_source)
 
@@ -104,9 +101,8 @@ class BaseImageSourceUploadFormMixin:
         """Map model validation errors onto the admin source upload field."""
         error_dict = getattr(errors, "error_dict", None)
         if error_dict:
-            for field_name in ["original", "path"]:
-                if field_name in error_dict:
-                    error_dict.setdefault("original_upload", []).extend(error_dict.pop(field_name))
+            if "original" in error_dict:
+                error_dict.setdefault("original_upload", []).extend(error_dict.pop("original"))
 
 
 class PlaceAdminForm(TranslatableModelForm):

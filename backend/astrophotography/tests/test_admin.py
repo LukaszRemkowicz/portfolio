@@ -347,7 +347,7 @@ class TestMainPageBackgroundImageAdmin:
             "test_bg_admin.png", img_io.read(), content_type="image/png"
         )
 
-        bg_image: MainPageBackgroundImage = MainPageBackgroundImageFactory(path=image_file)
+        bg_image: MainPageBackgroundImage = MainPageBackgroundImageFactory(original=image_file)
         bg_image.set_current_language("en")
         bg_image.name = "Admin Existing BG"
         bg_image.save()
