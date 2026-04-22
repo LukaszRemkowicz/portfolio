@@ -5,6 +5,18 @@ on:
 
 env:
   PROJECT_OWNER: "GitHub Actions"
+  SITE_DOMAIN: test.local
+  API_URL: https://api.test.local
+  GA_TRACKING_ID: test
+  SENTRY_DSN_FE: test
+  ENVIRONMENT: production
+  ALLOWED_HOSTS: test.local,localhost,127.0.0.1
+  IMAGE_PROJECT_OWNER: test
+  DB_HOST: localhost
+  DB_NAME: test_db
+  DB_USER: postgres
+  DB_PASSWORD: postgres
+  DB_PORT: 5432
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,35 +28,49 @@ permissions:
   pull-requests: write
 
 jobs:
-  frontend:
-    uses: LukaszRemkowicz/ci-cd/.github/workflows/node-ci.yml@main
+  frontend-quality:
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/node-quality.yml@main
     with:
-      node_version: "20"
       working_directory: frontend
       cache_dependency_path: frontend/package-lock.json
       install_command: npm ci
       lint_command: npm run lint
       format_check_command: npm run format:check || (npx prettier --list-different 'src/**/*.{ts,tsx,css}' && exit 1)
       type_check_command: npx tsc --noEmit
-      test_command: API_URL=http://localhost:8000 npm test -- --coverage --watchAll=false
 
-  backend:
-    uses: LukaszRemkowicz/ci-cd/.github/workflows/python-uv-ci.yml@main
+  frontend-tests:
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/node-tests.yml@main
     with:
-      python_version: "3.13"
+      working_directory: frontend
+      cache_dependency_path: frontend/package-lock.json
+      install_command: npm ci
+      test_command: npm test -- --coverage --watchAll=false
+      test_environment: |
+        API_URL=http://localhost:8000
+
+  backend-quality:
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/python-quality-uv.yml@main
+    with:
       working_directory: backend
-      cache_dependency_glob: backend/uv.lock
-      dependency_install_command: uv sync --locked
-      pre_commit_command: SKIP=prettier,eslint,frontend-tests,backend-tests,safety uv run pre-commit run --all-files
-      test_command: DB_HOST=localhost DB_NAME=test_db DB_USER=postgres DB_PASSWORD=postgres DB_PORT=5432 DEFAULT_FROM_EMAIL=test@example.com CONTACT_EMAIL=test@example.com SESSION_COOKIE_DOMAIN=.example.com uv run pytest --cov=. --cov-report=xml
+
+  backend-tests:
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/python-tests-uv.yml@main
+    with:
+      working_directory: backend
       postgres_enabled: true
       postgres_db: test_db
       postgres_user: postgres
       postgres_password: postgres
       postgres_port: "5432"
+      test_environment: |
+        DB_HOST=${{ env.DB_HOST }}
+        DB_NAME=${{ env.DB_NAME }}
+        DB_USER=${{ env.DB_USER }}
+        DB_PASSWORD=${{ env.DB_PASSWORD }}
+        DB_PORT=${{ env.DB_PORT }}
 
   trivy-scan:
-    needs: [frontend, backend]
+    needs: [frontend-quality, frontend-tests, backend-quality, backend-tests]
     permissions:
       actions: read
       contents: read
@@ -55,7 +81,7 @@ jobs:
     name: Dependency Security Checks
     runs-on: ubuntu-latest
     environment: portfolio_tests
-    needs: [frontend, backend]
+    needs: [frontend-quality, frontend-tests, backend-tests]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -63,7 +89,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -83,7 +109,7 @@ jobs:
   image-build-check:
     name: Production Image Build Check
     runs-on: ubuntu-latest
-    needs: [frontend, backend, trivy-scan, dependency-security]
+    needs: [frontend-quality, frontend-tests, backend-quality, backend-tests, trivy-scan, dependency-security]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -114,13 +140,13 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: false
           build-args: |
-            SITE_DOMAIN=test.local
-            API_URL=https://api.test.local
-            GA_TRACKING_ID=test
-            SENTRY_DSN_FE=test
-            ENVIRONMENT=production
-            ALLOWED_HOSTS=test.local,localhost,127.0.0.1
-            PROJECT_OWNER=test
+            SITE_DOMAIN=${{ env.SITE_DOMAIN }}
+            API_URL=${{ env.API_URL }}
+            GA_TRACKING_ID=${{ env.GA_TRACKING_ID }}
+            SENTRY_DSN_FE=${{ env.SENTRY_DSN_FE }}
+            ENVIRONMENT=${{ env.ENVIRONMENT }}
+            ALLOWED_HOSTS=${{ env.ALLOWED_HOSTS }}
+            PROJECT_OWNER=${{ env.IMAGE_PROJECT_OWNER }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -134,13 +160,13 @@ jobs:
           load: true
           tags: frontend-smoke:ci
           build-args: |
-            SITE_DOMAIN=test.local
-            API_URL=https://api.test.local
-            GA_TRACKING_ID=test
-            SENTRY_DSN_FE=test
-            ENVIRONMENT=production
-            ALLOWED_HOSTS=test.local,localhost,127.0.0.1
-            PROJECT_OWNER=test
+            SITE_DOMAIN=${{ env.SITE_DOMAIN }}
+            API_URL=${{ env.API_URL }}
+            GA_TRACKING_ID=${{ env.GA_TRACKING_ID }}
+            SENTRY_DSN_FE=${{ env.SENTRY_DSN_FE }}
+            ENVIRONMENT=${{ env.ENVIRONMENT }}
+            ALLOWED_HOSTS=${{ env.ALLOWED_HOSTS }}
+            PROJECT_OWNER=${{ env.IMAGE_PROJECT_OWNER }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -187,11 +213,11 @@ jobs:
           cache-to: type=gha,mode=max
 
   pr-status:
-    needs: [frontend, backend, trivy-scan, dependency-security, image-build-check]
+    needs: [frontend-quality, frontend-tests, backend-quality, backend-tests, trivy-scan, dependency-security, image-build-check]
     if: always()
     uses: LukaszRemkowicz/ci-cd/.github/workflows/pr-status.yml@main
     with:
       status_items_json: >-
-        {"Frontend (Lint/Types/Tests)":"${{ needs.frontend.result }}","Backend (Lint/Types/Tests)":"${{ needs.backend.result }}","Trivy Security Analysis":"${{ needs.trivy-scan.result }}","Dependency Security Checks":"${{ needs.dependency-security.result }}","Production Image Build Check":"${{ needs.image-build-check.result }}"}
+        {"Frontend Quality":"${{ needs.frontend-quality.result }}","Frontend Tests":"${{ needs.frontend-tests.result }}","Backend Quality":"${{ needs.backend-quality.result }}","Backend Tests":"${{ needs.backend-tests.result }}","Trivy Security Analysis":"${{ needs.trivy-scan.result }}","Dependency Security Checks":"${{ needs.dependency-security.result }}","Production Image Build Check":"${{ needs.image-build-check.result }}"}
       success_message: 🎉 **All checks passed!**
       failure_message: ⚠️ **Some checks failed. Please review the logs.**

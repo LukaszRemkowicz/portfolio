@@ -62,6 +62,7 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 SIMULATE_CONTACT_EMAILS = True
 DEFAULT_FROM_EMAIL = "tests@portfolio.local"
 CONTACT_EMAIL = "owner@portfolio.local"
+SESSION_COOKIE_DOMAIN = ".example.com"
 
 # Faster test settings
 PASSWORD_HASHERS = [
