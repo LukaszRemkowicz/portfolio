@@ -9,6 +9,13 @@ from core.tests.factories import LandingPageSettingsFactory
 
 @pytest.mark.django_db
 class TestStaticViewSitemap:
+    def test_static_sitemap_omits_nonexistent_travel_index_route(self) -> None:
+        LandingPageSettingsFactory()
+
+        sitemap = StaticViewSitemap()
+
+        assert "/travel" not in sitemap.items()
+
     def test_static_sitemap_omits_programming_when_disabled(self) -> None:
         LandingPageSettingsFactory(programming_enabled=False)
 
@@ -81,6 +88,7 @@ class TestRootSitemapView:
 
         assert response.status_code == 200
         content = response.content.decode("utf-8")
+        assert "/travel" not in content
         assert "/shop" not in content
         assert "/programming" not in content
 

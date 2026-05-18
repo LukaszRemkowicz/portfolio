@@ -27,7 +27,6 @@ class StaticViewSitemap(Sitemap):
         items = [
             "/",
             "/astrophotography",
-            "/travel",
             "/privacy",
         ]
         settings_obj = LandingPageSettings.get_current()
