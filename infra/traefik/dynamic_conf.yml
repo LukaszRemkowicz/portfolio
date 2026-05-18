@@ -15,6 +15,22 @@ http:
           Permissions-Policy: "camera=(), microphone=(), geolocation=(), payment=()"
           Server: ""
 
+    mcp-api-security:
+      headers:
+        sslRedirect: true
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow"
+          Permissions-Policy: "camera=(), microphone=(), geolocation=(), payment=()"
+          Server: ""
+
     admin-api-security:
       headers:
         sslRedirect: true
