@@ -155,6 +155,7 @@ services:
       - "8080"
     environment:
       TZ: "Europe/Warsaw"
+      ENVIRONMENT: production
       SITE_DOMAIN: ${SITE_DOMAIN}
       SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
       PORT: 8080
@@ -243,6 +244,17 @@ services:
       - "traefik.http.routers.portfolio-prod-admin.tls=true"
       - "traefik.http.routers.portfolio-prod-admin.tls.certresolver=letsencrypt"
       - "traefik.http.routers.portfolio-prod-admin.service=portfolio-prod"
+
+      # WWW Redirect Router
+      - "traefik.http.routers.portfolio-prod-www.rule=Host(`www.${SITE_DOMAIN}`)"
+      - "traefik.http.routers.portfolio-prod-www.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-prod-www.tls=true"
+      - "traefik.http.routers.portfolio-prod-www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portfolio-prod-www.middlewares=portfolio-prod-www-redirect"
+      - "traefik.http.routers.portfolio-prod-www.service=noop@internal"
+      - "traefik.http.middlewares.portfolio-prod-www-redirect.redirectregex.regex=^https://www\\.(.+)"
+      - "traefik.http.middlewares.portfolio-prod-www-redirect.redirectregex.replacement=https://$${1}"
+      - "traefik.http.middlewares.portfolio-prod-www-redirect.redirectregex.permanent=true"
 
       # Middlewares (Security Headers, HSTS, and Rate Limiting)
       - "traefik.http.routers.portfolio-prod.middlewares=public-security@file"

@@ -132,6 +132,7 @@ services:
       - "8080"
     environment:
       TZ: "Europe/Warsaw"
+      ENVIRONMENT: stage
       SITE_DOMAIN: ${SITE_DOMAIN}
       SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
       PORT: 8080

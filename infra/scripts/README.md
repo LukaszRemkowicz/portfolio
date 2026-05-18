@@ -227,8 +227,8 @@ TAG=vX.Y.Z doppler run -- docker compose -f docker-compose.traefik.yml up -d tra
 Useful checks:
 
 ```bash
-sudo fail2ban-client status portfolio-nginx-sensitive-probes
-sudo fail2ban-client status portfolio-traefik-sensitive-probes
+sudo fail2ban-client status portfolio-nginx-probes
+sudo fail2ban-client status portfolio-traefik-probes
 sudo fail2ban-client status
 ```
 
