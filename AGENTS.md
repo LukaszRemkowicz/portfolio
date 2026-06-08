@@ -73,8 +73,12 @@ Use these documents as fast context before implementation.
   Use for translation lifecycle, `TranslationTask` debugging, translation admin behavior, serializer fallback behavior, and adding translation support to new models. Describes the async translation architecture and its operational boundaries.
 - `infra/docs/project/release_deploy_architecture.md`
   Use for release scripts, deploy logic, image naming, artifact flow, and rollback behavior. Describes the tag-based release/deploy model and script responsibilities.
-- `infra/docs/project/NEW/mcp_log_server_architecture.md`
+- `infra/docs/project/analysis/mcp_log_server_architecture.md`
   Use for planning the FastMCP-based log/VPS agent server intended to replace the collector over time. Describes the proposed MCP tool surface, auth model, phased migration, and deterministic log-analysis boundary.
+- `infra/docs/project/analysis/cloudflare_cdn_image_migration_analysis.md`
+  Use for planning Cloudflare CDN/R2 image delivery for frontend-served images, cache-header behavior, and secure full-size image routing. Describes the draft storage/CDN migration direction and known nginx/Traefik cache-policy constraints.
+- `infra/docs/project/analysis/TODO.md`
+  Use for planning image performance work that must preserve astrophotography detail. Describes responsive image variants, frontend `srcset` adoption, public CDN rollout, and explicit original/detail image contracts.
 - `infra/docs/project/vps_postgres_ssh_tunneling.md`
   Use for local SSH tunneling into the VPS PostgreSQL container, pgAdmin connection setup, and port-forwarding examples. Describes the local-to-VPS tunnel shape and Docker container IP usage.
 - `infra/docs/prod/fail2ban_probe_blocker_playbook.md`
@@ -105,7 +109,9 @@ Use this quick mapping when a task arrives:
 - Collector app architecture, manifest contract, rebuild/run path, or cron rollout work -> `collector/README.md`
 - Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
 - Release/deploy script logic or image naming -> `infra/docs/project/release_deploy_architecture.md`
-- FastMCP log/VPS agent server planning or collector replacement -> `infra/docs/project/NEW/mcp_log_server_architecture.md`
+- FastMCP log/VPS agent server planning or collector replacement -> `infra/docs/project/analysis/mcp_log_server_architecture.md`
+- Cloudflare CDN/R2 image migration planning -> `infra/docs/project/analysis/cloudflare_cdn_image_migration_analysis.md`
+- Image performance work that must preserve detail -> `infra/docs/project/analysis/TODO.md`
 - SSH tunnel or pgAdmin access to the VPS PostgreSQL DB -> `infra/docs/project/vps_postgres_ssh_tunneling.md`
 - Production release procedure -> `infra/scripts/README.md`
 - SSR architecture direction -> `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`

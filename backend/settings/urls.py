@@ -88,7 +88,20 @@ urlpatterns = [
 
 
 def safe_serve(request, path, document_root=None, show_indexes=False):
-    if path.startswith("logs/"):
+    host = request.get_host().split(":")[0]
+    allowed_prefixes = (
+        "backgrounds/",
+        "avatars/",
+        "about_me_images/",
+        "thumbnails/",
+        "shop/",
+    )
+    blocked_prefixes = ("logs/", "images/")
+
+    if host != settings.ADMIN_DOMAIN:
+        raise Http404()
+
+    if path.startswith(blocked_prefixes) or not path.startswith(allowed_prefixes):
         raise Http404()
     return serve(
         request,

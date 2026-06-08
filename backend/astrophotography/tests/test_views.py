@@ -736,6 +736,7 @@ class TestAstroImageSecureView:
         response: Response = api_client.get(url, params)
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
+        assert response["Cache-Control"] == "private, no-store, max-age=0"
         serving_field = astro_image.original_webp_field or astro_image.original_field
         assert f"/protected_media/{serving_field.name}" == response["X-Accel-Redirect"]
 
@@ -757,6 +758,7 @@ class TestAstroImageSecureView:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
+        assert response["Cache-Control"] == "private, no-store, max-age=0"
         serving_field = astro_image.original_webp_field or astro_image.original_field
         assert response["X-Accel-Redirect"] == f"/protected_media/{serving_field.name}"
 
@@ -821,6 +823,7 @@ class TestAstroImageAdminSecureMediaView:
         astro_image.refresh_from_db()
         assert response.status_code == status.HTTP_200_OK
         assert "X-Accel-Redirect" in response
+        assert response["Cache-Control"] == "private, no-store, max-age=0"
         assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.original.name}"
 
     def test_admin_secure_media_view_forbidden_anonymous(

@@ -4,9 +4,9 @@ filter = portfolio-nginx-sensitive-probes
 backend = auto
 port = http,https
 logpath = __NGINX_ACCESS_LOG__
-findtime = 10m
+findtime = 1m
 maxretry = 3
-bantime = 7d
+bantime = -1
 
 [portfolio-traefik-probes]
 enabled = true
@@ -14,6 +14,6 @@ filter = portfolio-traefik-sensitive-probes
 backend = auto
 port = http,https
 logpath = /var/log/portfolio/traefik/access.log
-findtime = 10m
+findtime = 1m
 maxretry = 3
-bantime = 7d
+bantime = -1

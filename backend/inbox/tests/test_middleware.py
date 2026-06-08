@@ -17,7 +17,7 @@ def test_kill_switch_middleware_allows_post_when_enabled(
 ) -> None:
     """Test kill_switch_middleware allows POST requests when form is enabled"""
     LandingPageSettingsFactory(contact_form_enabled=True)
-    request = request_factory.post("/api/v1/contact/")
+    request = request_factory.post("/v1/contact/")
     response = kill_switch_middleware.process_request(request)
 
     assert response is None, "Middleware should allow request when enabled"
@@ -31,7 +31,7 @@ def test_kill_switch_middleware_blocks_post_when_disabled(
     """Test kill_switch_middleware blocks POST requests when form is disabled"""
     LandingPageSettingsFactory(contact_form_enabled=False)
 
-    request = request_factory.post("/api/v1/contact/")
+    request = request_factory.post("/v1/contact/")
     response = kill_switch_middleware.process_request(request)
 
     assert response is not None, "Middleware should block request when disabled"
@@ -54,7 +54,7 @@ def test_kill_switch_middleware_ignores_non_post_requests(
     )  # Disabled, but should still allow non-POST
 
     for method in ["GET", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]:
-        request = getattr(request_factory, method.lower())("/api/v1/contact/")
+        request = getattr(request_factory, method.lower())("/v1/contact/")
         response = kill_switch_middleware.process_request(request)
         assert response is None, f"Middleware should ignore {method} requests"
 
@@ -68,12 +68,12 @@ def test_kill_switch_middleware_only_checks_contact_endpoint(
     LandingPageSettingsFactory(contact_form_enabled=False)
 
     other_paths = [
-        "/api/v1/profile/",
-        "/api/v1/image/",
-        "/api/v1/admin/",
-        "/api/v1/contact-messages/",  # Different endpoint
-        "/api/v1/contact",  # Missing trailing slash (not router path)
-        "/api/v1/contact/123/",  # Detail endpoint (not base endpoint)
+        "/v1/profile/",
+        "/v1/image/",
+        "/v1/admin/",
+        "/v1/contact-messages/",  # Different endpoint
+        "/v1/contact",  # Missing trailing slash (not router path)
+        "/v1/contact/123/",  # Detail endpoint (not base endpoint)
         "/",
     ]
 
@@ -91,9 +91,9 @@ def test_kill_switch_middleware_only_checks_exact_router_path(
     """Test kill_switch_middleware only checks exact DRF router path with trailing slash"""
     LandingPageSettingsFactory(contact_form_enabled=False)
 
-    # DRF router always creates URLs with trailing slashes: /api/v1/contact/
-    exact_router_path = "/api/v1/contact/"
-    path_without_slash = "/api/v1/contact"
+    # DRF router always creates URLs with trailing slashes: /v1/contact/
+    exact_router_path = "/v1/contact/"
+    path_without_slash = "/v1/contact"
 
     # Exact router path should be blocked when disabled
     request_with_slash = request_factory.post(exact_router_path)
@@ -121,7 +121,7 @@ def test_kill_switch_middleware_logs_blocked_requests(
 
     LandingPageSettingsFactory(contact_form_enabled=False)
 
-    request = request_factory.post("/api/v1/contact/")
+    request = request_factory.post("/v1/contact/")
     response = kill_switch_middleware.process_request(request)
 
     assert response is not None
