@@ -24,7 +24,6 @@ import { APP_ROUTES } from '../api/constants';
 import { NotFoundError } from '../api/errors';
 import { useCategories } from '../hooks/useCategories';
 import { useBackground } from '../hooks/useBackground';
-import { useImageUrls } from '../hooks/useImageUrls';
 import {
   getAstroImageNotFoundQueryKey,
   useAstroImageDetail,
@@ -159,9 +158,6 @@ const AstroGallery: React.FC = () => {
     isLoading: isModalImageLoading,
     error: modalImageError,
   } = useAstroImageDetail(imgSlug || null);
-
-  // Pre-fetch all signed urls
-  useImageUrls();
 
   const error = queryError ? 'Failed to fetch gallery images.' : null;
   const isInitialLoading = isImagesLoading && images.length === 0 && !error;

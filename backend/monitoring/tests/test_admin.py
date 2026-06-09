@@ -61,6 +61,7 @@ class TestLogAnalysisAdminSecureMediaView:
         response = admin_client.get(url, params)
         assert response.status_code == 200
         assert "X-Accel-Redirect" in response
+        assert response["Cache-Control"] == "private, no-store, max-age=0"
         assert response["X-Accel-Redirect"] == f"/protected_media/{log_analysis.backend_logs.name}"
 
     def test_admin_secure_media_view_forbidden_anonymous(

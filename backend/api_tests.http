@@ -91,7 +91,7 @@ Content-Type: {{contentType}}
 
 ### Test 14: Middleware - POST to exact router path with trailing slash (should work if enabled)
 ### Expected: 201 Created (if form enabled) OR 400 Bad Request (if form disabled)
-### This tests that middleware checks exact DRF router path: /api/v1/contact/
+### This tests that middleware checks exact DRF router path: /v1/contact/
 POST {{baseUrl}}/contact/
 Content-Type: {{contentType}}
 
@@ -99,7 +99,7 @@ Content-Type: {{contentType}}
   "name": "Middleware Test User",
   "email": "middleware.test@example.com",
   "subject": "Middleware Test - Exact Path",
-  "message": "Testing middleware with exact router path /api/v1/contact/"
+  "message": "Testing middleware with exact router path /v1/contact/"
 }
 
 ### Test 15: Middleware - POST to path without trailing slash (should be ignored by middleware)
@@ -112,7 +112,7 @@ Content-Type: {{contentType}}
   "name": "Middleware Test User",
   "email": "middleware.test@example.com",
   "subject": "Middleware Test - No Trailing Slash",
-  "message": "Testing middleware with path without trailing slash /api/v1/contact"
+  "message": "Testing middleware with path without trailing slash /v1/contact"
 }
 
 ### Test 16: Middleware - GET to contact endpoint (should be ignored by middleware)
@@ -150,7 +150,7 @@ Content-Type: {{contentType}}
   "name": "Middleware Test User",
   "email": "middleware.test@example.com",
   "subject": "Middleware Test - Detail Endpoint",
-  "message": "Testing middleware with detail endpoint /api/v1/contact/123/"
+  "message": "Testing middleware with detail endpoint /v1/contact/123/"
 }
 
 ### Test 20: Middleware - POST to different path (should be ignored by middleware)
@@ -163,7 +163,7 @@ Content-Type: {{contentType}}
   "name": "Middleware Test User",
   "email": "middleware.test@example.com",
   "subject": "Middleware Test - Different Path",
-  "message": "Testing middleware with different path /api/v1/profile/"
+  "message": "Testing middleware with different path /v1/profile/"
 }
 
 ### ============================================================

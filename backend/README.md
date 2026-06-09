@@ -76,7 +76,7 @@ Normal public website traffic reaches the frontend server first. Django is the c
 - translation workflows
 - secure media signing and `X-Accel-Redirect` cooperation with nginx
 - contact form processing
-- monitoring and daily log analysis
+- monitoring records and manual analysis tools
 - cache invalidation signals for frontend cache
 
 ## 🔌 Service Integration
@@ -125,14 +125,14 @@ Middleware path:
 
 ## 🤖 Monitoring
 
-Monitoring includes frontend, backend, nginx, and traefik logs.
+Monitoring includes historical frontend, backend, nginx, and traefik log
+reports.
 
-Daily monitoring pipeline:
+Current monitoring status:
 
-1. host cron collects Docker logs
-2. backend monitoring app reads pre-collected log files
-3. LLM summarizes findings
-4. analysis is stored in Django admin and emailed
+1. scheduled collector and Celery beat analysis runs are retired
+2. historical analysis records remain available in Django admin
+3. `agent-monitoring` owns scheduled monitoring and calls MCP for log artifacts
 
 Collected log groups:
 

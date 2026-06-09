@@ -65,7 +65,7 @@ SECRET_KEY = env("SECRET_KEY", default=cast(Any, "django-insecure-development-ke
 SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=not DEBUG)
 SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
 
-SECURE_HSTS_SECONDS = env.bool("SECURE_HSTS_SECONDS", default=31536000 if not DEBUG else 0)
+SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000 if not DEBUG else 0)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=not DEBUG)
 SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=not DEBUG)
 # These headers are set by Nginx — disable Django's duplicates where possible
@@ -225,7 +225,6 @@ LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER = env.str(
     "LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER", default="gpt"
 )
 RUN_LEGACY_DAILY_TASK = env.bool("RUN_LEGACY_DAILY_TASK", default=False)
-DOCKER_LOGS_DIR = env.str("DOCKER_LOGS_DIR", default="/app/docker-logs")
 SSR_CACHE_INVALIDATION_URL = env.str(
     "SSR_CACHE_INVALIDATION_URL", default="http://fe:8080/internal/cache/invalidate"
 )
@@ -744,28 +743,6 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-DAILY_MONITORING_LOG_TASK_NAME = (
-    "monitoring.tasks.daily_log_analysis_task"
-    if RUN_LEGACY_DAILY_TASK
-    else "monitoring.tasks.daily_monitoring_agent_log_task"
-)
-
-CELERY_BEAT_SCHEDULE["daily-log-analysis"] = {
-    "task": DAILY_MONITORING_LOG_TASK_NAME,
-    "schedule": crontab(hour=2, minute=0),  # 2:00 AM UTC daily
-    "options": {
-        "expires": 3600,  # Task expires after 1 hour
-    },
-}
-
-CELERY_BEAT_SCHEDULE["sitemap-analysis"] = {
-    "task": "monitoring.tasks.daily_sitemap_analysis_task",
-    "schedule": crontab(hour=3, minute=0, day_of_month="1-31/5"),
-    "options": {
-        "expires": 3600,
-    },
-}
-
 # ===========================
 # Celery Configuration
 # ===========================
@@ -796,12 +773,8 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
 }
 
 # Task Routing
-# Route monitoring tasks to a specific queue so they can be picked up
-# ONLY by the host-based worker (which has access to docker CLI)
+# Keep only support cleanup on the monitoring queue after scheduled analysis retirement.
 CELERY_TASK_ROUTES = {
-    "monitoring.tasks.daily_log_analysis_task": {"queue": "monitoring"},
-    "monitoring.tasks.daily_monitoring_agent_log_task": {"queue": "monitoring"},
-    "monitoring.tasks.daily_sitemap_analysis_task": {"queue": "monitoring"},
     "monitoring.tasks.cleanup_old_logs_task": {"queue": "monitoring"},
 }
 

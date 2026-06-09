@@ -346,7 +346,7 @@ else
     # containers. We iterate over each to ensure the whole cluster is healthy.
     # Progressive backoff sleep reduces log noise during slow warmups.
     local be_containers
-    be_containers=$(docker ps --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" --filter "label=com.docker.compose.service=be" --format '{{.Names}}')
+    be_containers=$(get_compose_service_containers "${COMPOSE_PROJECT_NAME}" "be")
 
     if [[ -z "${be_containers}" ]]; then
       echo "⚠️  WARNING: No active backend containers found via labels; falling back to default naming."

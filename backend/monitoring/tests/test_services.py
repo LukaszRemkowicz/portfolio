@@ -1,5 +1,4 @@
 import json
-import logging
 from datetime import date, timedelta
 from unittest.mock import mock_open
 
@@ -34,74 +33,14 @@ from monitoring.types import (
 
 @pytest.mark.django_db
 class TestDockerLogCollector:
-    def test_collect_logs_success(self, tmp_path, settings):
-        """Test successful log retrieval from volume-mounted files."""
-        settings.DOCKER_LOGS_DIR = str(tmp_path)
-        (tmp_path / "backend.log").write_text("backend log content")
-        (tmp_path / "frontend.log").write_text("frontend log content")
-        (tmp_path / "nginx_access.log").write_text("nginx access log content")
-        (tmp_path / "nginx_runtime.log").write_text("nginx runtime log content")
-        (tmp_path / "traefik_access.log").write_text("traefik access log content")
-        (tmp_path / "traefik_runtime.log").write_text("traefik runtime log content")
-        (tmp_path / "fail2ban.log").write_text("fail2ban log content")
-        (tmp_path / "collected_at.txt").write_text("2026-03-01T00:00:00Z")
+    def test_get_collected_at_returns_empty_after_collector_retirement(self):
+        """Landingpage no longer owns collector snapshot metadata."""
+        assert DockerLogCollector.get_collected_at() == ""
 
-        log_paths = DockerLogCollector.collect_logs()
-
-        assert log_paths["backend"] == str(tmp_path / "backend.log")
-        assert log_paths["frontend"] == str(tmp_path / "frontend.log")
-        assert log_paths["nginx_access"] == str(tmp_path / "nginx_access.log")
-        assert log_paths["nginx_runtime"] == str(tmp_path / "nginx_runtime.log")
-        assert log_paths["traefik_access"] == str(tmp_path / "traefik_access.log")
-        assert log_paths["traefik_runtime"] == str(tmp_path / "traefik_runtime.log")
-        assert log_paths["fail2ban"] == str(tmp_path / "fail2ban.log")
-
-    def test_collect_logs_missing_backend_raises(self, tmp_path, settings):
-        """FileNotFoundError when backend.log is missing."""
-        settings.DOCKER_LOGS_DIR = str(tmp_path)
-
-        with pytest.raises(FileNotFoundError, match="backend.log"):
+    def test_collect_logs_raises_after_collector_retirement(self):
+        """Landingpage no longer reads collector snapshot files directly."""
+        with pytest.raises(FileNotFoundError, match="collector snapshots are retired"):
             DockerLogCollector.collect_logs()
-
-    def test_collect_logs_missing_optional_logs_warns_but_succeeds(
-        self, tmp_path, settings, caplog
-    ):
-        """Optional log files missing -> warns and returns None, does NOT raise."""
-
-        settings.DOCKER_LOGS_DIR = str(tmp_path)
-        (tmp_path / "backend.log").write_text("backend log content")
-        (tmp_path / "collected_at.txt").write_text("2026-03-01T00:00:00Z")
-        # Optional snapshot files intentionally NOT created
-
-        with caplog.at_level(logging.WARNING, logger="monitoring.services"):
-            log_paths = DockerLogCollector.collect_logs()
-
-        assert log_paths["backend"] == str(tmp_path / "backend.log")
-        assert log_paths["frontend"] is None
-        assert log_paths["nginx_access"] is None
-        assert log_paths["nginx_runtime"] is None
-        assert log_paths["traefik_access"] is None
-        assert log_paths["traefik_runtime"] is None
-        assert log_paths["fail2ban"] is None
-        assert any(
-            "nginx" in record.message.lower()
-            or "frontend" in record.message.lower()
-            or "traefik" in record.message.lower()
-            or "fail2ban" in record.message.lower()
-            for record in caplog.records
-        )
-
-    def test_check_staleness_warns_when_old(self, tmp_path, settings, caplog):
-        """Warning logged when logs are older than MAX_STALENESS_HOURS."""
-
-        settings.DOCKER_LOGS_DIR = str(tmp_path)
-        (tmp_path / "backend.log").write_text("log")
-        (tmp_path / "collected_at.txt").write_text("2000-01-01T00:00:00Z")
-
-        with caplog.at_level(logging.WARNING, logger="monitoring.services"):
-            DockerLogCollector.collect_logs()
-
-        assert any("hours old" in record.message for record in caplog.records)
 
 
 @pytest.mark.django_db
@@ -499,6 +438,10 @@ class TestLogAnalysisOrchestrator:
         with override_settings(ENVIRONMENT="test"):
             # Mocks
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mocker.patch(
+                "monitoring.services.DockerLogCollector.get_collected_at",
+                return_value="2026-03-05T12:00:00Z",
+            )
             mocker.patch("monitoring.services.ProbeBlockingContextBuilder.build", return_value={})
             mock_agent = mocker.MagicMock()
 
@@ -541,6 +484,10 @@ class TestLogAnalysisOrchestrator:
         with override_settings(ENVIRONMENT="test"):
             # Mocks
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mocker.patch(
+                "monitoring.services.DockerLogCollector.get_collected_at",
+                return_value="2026-03-05T12:00:00Z",
+            )
             mocker.patch("monitoring.services.ProbeBlockingContextBuilder.build", return_value={})
             mock_agent = mocker.MagicMock()
 
@@ -635,6 +582,10 @@ class TestOrchestratorHistoricalContextWiring:
 
         with override_settings(ENVIRONMENT="test"):
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mocker.patch(
+                "monitoring.services.DockerLogCollector.get_collected_at",
+                return_value="2026-03-05T12:00:00Z",
+            )
             mock_agent = mocker.MagicMock()
             mock_builder = mocker.patch(
                 "monitoring.services.HistoricalContextBuilder.build",

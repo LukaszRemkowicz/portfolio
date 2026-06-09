@@ -75,6 +75,9 @@ pids/
 *.seed
 *.pid.lock
 
+# Draft project analysis documents
+/infra/docs/project/analysis/
+
 # Coverage directory used by tools like istanbul
 coverage/
 

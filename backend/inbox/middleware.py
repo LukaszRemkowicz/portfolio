@@ -16,9 +16,8 @@ class ContactFormKillSwitchMiddleware(MiddlewareMixin):
     Should be placed early in MIDDLEWARE list for maximum efficiency.
     """
 
-    # Path to check (contact form endpoint)
-    # DRF DefaultRouter always creates URLs with trailing slashes: /api/v1/contact/
-    CONTACT_PATH = "/api/v1/contact/"
+    # DRF DefaultRouter always creates URLs with trailing slashes.
+    CONTACT_PATH = "/v1/contact/"
 
     def process_request(self, request: HttpRequest) -> JsonResponse | None:
         """
@@ -26,11 +25,11 @@ class ContactFormKillSwitchMiddleware(MiddlewareMixin):
         Returns JsonResponse if form is disabled, None to continue processing.
 
         Note: DRF DefaultRouter creates consistent URLs with trailing slashes.
-        We check for the exact router-created path: /api/v1/contact/
+        We check for the exact router-created path: /v1/contact/
         """
         # Only check POST requests to exact contact endpoint
-        # Router creates: /api/v1/contact/ (list/create)
-        # and /api/v1/contact/{id}/ (detail/update/delete)
+        # Router creates: /v1/contact/ (list/create)
+        # and /v1/contact/{id}/ (detail/update/delete)
         # We only want to check the base endpoint for form submissions
         if request.method != "POST" or request.path != self.CONTACT_PATH:
             return None

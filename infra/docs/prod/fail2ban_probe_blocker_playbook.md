@@ -2,7 +2,8 @@
 
 Use this when enabling or operating production probe blocking on the VPS.
 
-Current default ban window for the repo-managed probe jails is 7 days.
+Current default policy for the repo-managed probe jails is 3 matching probes
+from the same IP within 1 minute, followed by a permanent ban.
 
 ## Install / Enable
 
@@ -23,9 +24,13 @@ doppler run -- docker compose -f docker-compose.traefik.yml up -d --force-recrea
 ```
 
 The installer now detects the active nginx access-log path automatically and installs the shorter jail names required by `iptables`.
-The host `fail2ban` log remains at `/var/log/fail2ban.log`, which is also the
-path consumed by the collector when monitoring snapshots include firewall
-activity.
+The host `fail2ban` log remains at `/var/log/fail2ban.log`.
+
+The nginx container also mounts the downloaded user-agent blocklist at
+`/etc/nginx/blocklist`. That blocklist rejects known bad user agents. The
+fail2ban probe jails use access logs instead: they watch blocked sensitive path
+requests, hidden-file requests, prohibited script/archive extensions, and common
+CMS/PHP probe paths.
 
 ## After Repo Changes
 
@@ -100,6 +105,10 @@ Expected result:
 - `Currently banned: 1`
 - the offending IP appears in `Banned IP list`
 - `/var/log/fail2ban.log` shows `NOTICE [portfolio-nginx-probes] Ban <ip>`
+
+The same policy applies to the Traefik probe jail for matching direct-IP or
+host-header probes: 3 matching requests from one IP within 1 minute, then a
+permanent ban.
 
 ## Monitor
 
