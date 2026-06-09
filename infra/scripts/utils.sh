@@ -73,6 +73,23 @@ get_compose_image() {
 }
 
 # ------------------------------------------------------------------
+# get_compose_service_containers
+#   Resolves running long-lived containers for one Compose service.
+#   Excludes one-off `docker compose run` containers, which can share the same
+#   project/service labels but are not deploy-managed service instances.
+# ------------------------------------------------------------------
+get_compose_service_containers() {
+  local project_name="$1"
+  local service_name="$2"
+
+  docker ps \
+    --filter "label=com.docker.compose.project=${project_name}" \
+    --filter "label=com.docker.compose.service=${service_name}" \
+    --filter "label=com.docker.compose.oneoff=False" \
+    --format '{{.Names}}'
+}
+
+# ------------------------------------------------------------------
 # get_project_name
 #   Resolves the Docker project name consistently.
 #   Prioritizes $COMPOSE_PROJECT_NAME, defaults to folder/git-derived naming.

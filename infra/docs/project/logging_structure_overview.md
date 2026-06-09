@@ -208,12 +208,12 @@ Typical purpose:
 
 - log analysis
 - sitemap analysis
-- monitoring agent/tool-loop execution
+- manual monitoring agent/tool-loop execution
 
 Common log shape:
 
 - base JSON fields
-- usually no request context, because many logs are task/background-job based
+- usually no request context, because many logs are manual task/background-job based
 - monitoring-specific free-form messages and any explicit extra fields
 
 Examples live in:

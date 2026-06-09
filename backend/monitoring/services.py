@@ -374,11 +374,7 @@ def normalize_text_value(value: JSONValue, default: str = "") -> str:
 
 
 class DockerLogCollector:
-    """Reads pre-collected logs from a volume-mounted directory.
-
-    Logs are collected by the dedicated collector runtime and written to
-    DOCKER_LOGS_DIR, which is mounted read-only into this container.
-    """
+    """Retired collector adapter kept for legacy orchestrator wiring."""
 
     MAX_STALENESS_HOURS = 25
 
@@ -405,59 +401,16 @@ class DockerLogCollector:
 
     @classmethod
     def get_collected_at(cls) -> str:
-        """Return the raw ISO timestamp from collected_at.txt, or empty string if missing."""
-        path: str = os.path.join(settings.DOCKER_LOGS_DIR, "collected_at.txt")
-        if os.path.exists(path):
-            with open(path, encoding="utf-8") as f:
-                return f.read().strip()
+        """Return empty metadata because landingpage no longer owns snapshots."""
         return ""
 
     @classmethod
     def collect_logs(cls) -> LogPathMap:
-        """Return paths to pre-collected log files from the mounted volume."""
-        logs_dir: str = settings.DOCKER_LOGS_DIR
-
-        cls._check_staleness(logs_dir)
-        collected_paths: LogPathMap = {}
-        size_by_key: dict[str, int] = {}
-
-        for source in LOG_SOURCES:
-            log_path: str = os.path.join(logs_dir, source.filename)
-            if not os.path.exists(log_path):
-                if source.required:
-                    raise FileNotFoundError(
-                        f"Log file not found: {log_path}. "
-                        "Ensure the collector runtime has produced the latest snapshot files."
-                    )
-                logger.warning(
-                    "%s not found in %s — %s logs will be skipped.",
-                    source.filename,
-                    logs_dir,
-                    source.key,
-                )
-                collected_paths[source.key] = None
-                size_by_key[source.key] = 0
-                continue
-
-            log_size: int = os.path.getsize(log_path)
-            size_by_key[source.key] = log_size
-            if log_size > 0 or source.required:
-                collected_paths[source.key] = log_path
-            else:
-                collected_paths[source.key] = None
-                logger.info(
-                    "%s is empty in %s — %s logs will be skipped.",
-                    source.filename,
-                    logs_dir,
-                    source.key,
-                )
-
-        size_report: str = ", ".join(
-            f"{source.key}={size_by_key[source.key]} bytes" for source in LOG_SOURCES
+        """Fail clearly when retired landingpage snapshot collection is invoked."""
+        raise FileNotFoundError(
+            "Landingpage collector snapshots are retired. "
+            "Use agent-monitoring/MCP log artifacts instead."
         )
-        logger.info("Read logs: %s", size_report)
-
-        return collected_paths
 
 
 class LogAnalyzer:

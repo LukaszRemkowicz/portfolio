@@ -124,7 +124,6 @@ services:
     volumes:
       - prod_media_data:/app/media
       - prod_static_data:/app/staticfiles
-      - ${DOCKER_LOGS_DIR:-./logs}:/app/docker-logs
     healthcheck:
       test: ["CMD-SHELL", "celery -A settings inspect ping -d celery@$$HOSTNAME"]
       interval: 30s
@@ -184,7 +183,6 @@ services:
     volumes:
       - prod_media_data:/app/media
       - prod_static_data:/app/staticfiles
-      - ${DOCKER_LOGS_DIR:-./logs}:/app/docker-logs
     healthcheck:
       test: ["CMD-SHELL", "curl -f -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/health || exit 1"]
       interval: 10s

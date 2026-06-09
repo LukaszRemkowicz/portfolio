@@ -24,9 +24,7 @@ doppler run -- docker compose -f docker-compose.traefik.yml up -d --force-recrea
 ```
 
 The installer now detects the active nginx access-log path automatically and installs the shorter jail names required by `iptables`.
-The host `fail2ban` log remains at `/var/log/fail2ban.log`, which is also the
-path consumed by the collector when monitoring snapshots include firewall
-activity.
+The host `fail2ban` log remains at `/var/log/fail2ban.log`.
 
 The nginx container also mounts the downloaded user-agent blocklist at
 `/etc/nginx/blocklist`. That blocklist rejects known bad user agents. The
