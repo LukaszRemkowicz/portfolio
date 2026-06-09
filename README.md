@@ -16,7 +16,6 @@ Personal portfolio web app for astrophotography, travel stories, and programming
 
 - `frontend/` - React + TypeScript app, SSR runtime, browser app, tests, and public assets
 - `backend/` - Django + DRF application, admin, Celery jobs, monitoring, and media logic
-- `collector/` - dedicated Python log collector app for monitoring snapshots
 - `docker/` - Dockerfiles and entrypoints for frontend, backend, redis, nginx, and traefik
 - `infra/` - nginx templates, traefik config, release scripts, security helpers, and ops docs
 - `screenshots/` - README screenshots
@@ -25,7 +24,6 @@ Component docs:
 
 - Frontend: [frontend/README.md](frontend/README.md)
 - Backend: [backend/README.md](backend/README.md)
-- Collector: [collector/README.md](collector/README.md)
 - Infra scripts: [infra/scripts/README.md](infra/scripts/README.md)
 
 ## 📸 Screenshots
@@ -425,16 +423,16 @@ Production/stage deploys rebuild:
 
 ### 📈 Monitoring
 
-Monitoring analyses:
+Monitoring records:
 
 - backend logs
 - frontend SSR/BFF logs
 - nginx logs
-- traefik logs collected on host and analyzed with the daily report
+- traefik logs from historical monitoring reports
 
-Collector docs:
-
-- [collector/README.md](collector/README.md)
+Scheduled collector and Celery beat analysis runs have been retired from this
+repository. `agent-monitoring` now owns scheduled monitoring jobs and calls MCP
+for deterministic log artifacts.
 
 ## 📝 Notes
 

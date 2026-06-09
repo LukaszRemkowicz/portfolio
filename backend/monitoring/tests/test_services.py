@@ -499,6 +499,10 @@ class TestLogAnalysisOrchestrator:
         with override_settings(ENVIRONMENT="test"):
             # Mocks
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mocker.patch(
+                "monitoring.services.DockerLogCollector.get_collected_at",
+                return_value="2026-03-05T12:00:00Z",
+            )
             mocker.patch("monitoring.services.ProbeBlockingContextBuilder.build", return_value={})
             mock_agent = mocker.MagicMock()
 
@@ -541,6 +545,10 @@ class TestLogAnalysisOrchestrator:
         with override_settings(ENVIRONMENT="test"):
             # Mocks
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mocker.patch(
+                "monitoring.services.DockerLogCollector.get_collected_at",
+                return_value="2026-03-05T12:00:00Z",
+            )
             mocker.patch("monitoring.services.ProbeBlockingContextBuilder.build", return_value={})
             mock_agent = mocker.MagicMock()
 
@@ -635,6 +643,10 @@ class TestOrchestratorHistoricalContextWiring:
 
         with override_settings(ENVIRONMENT="test"):
             mock_collector = mocker.patch("monitoring.services.DockerLogCollector.collect_logs")
+            mocker.patch(
+                "monitoring.services.DockerLogCollector.get_collected_at",
+                return_value="2026-03-05T12:00:00Z",
+            )
             mock_agent = mocker.MagicMock()
             mock_builder = mocker.patch(
                 "monitoring.services.HistoricalContextBuilder.build",

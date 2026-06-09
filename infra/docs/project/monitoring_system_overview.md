@@ -37,12 +37,14 @@ These rules should be treated as hard constraints.
 
 - deterministic code owns facts
 - the LLM only summarizes and interprets findings
-- `daily_monitoring_agent_log_task` is the live daily log path
+- `daily_monitoring_agent_log_task` is legacy/manual-only after collector retirement
 - `daily_log_analysis_task` is legacy rollback only
-- sitemap monitoring is deterministic-first and does not use the bounded tool loop
+- sitemap monitoring is deterministic-first and legacy/manual-only after
+  scheduled analysis retirement
 - admin actions queue real Celery tasks and do not create monitoring rows directly
-- log collection is handled outside the backend/Celery monitoring flow
-- monitoring jobs are consumed from the `monitoring` queue
+- scheduled log collection and scheduled monitoring analysis are retired from
+  this repository
+- only support cleanup remains routed to the `monitoring` queue
 
 
 ## Live Monitoring Jobs
@@ -52,11 +54,10 @@ The application currently has four monitoring-related Celery tasks in
 
 ### 1. `daily_monitoring_agent_log_task`
 
-Status: live, primary
+Status: legacy/manual-only
 
-- scheduled from `backend/settings/base.py`
-- runs daily at `02:00` UTC
-- default scheduled log path
+- no longer scheduled from Celery beat
+- no production environment config is provided for old snapshot inputs
 - stores results in `LogAnalysis`
 - sends the standard log-monitoring email
 
@@ -70,11 +71,9 @@ Status: legacy, rollback only
 
 ### 3. `daily_sitemap_analysis_task`
 
-Status: live, primary sitemap job
+Status: legacy/manual-only sitemap job
 
-- scheduled from `backend/settings/base.py`
-- runs at `03:00` UTC
-- runs every 5 days
+- no longer scheduled from Celery beat
 - stores results in `SitemapAnalysis`
 - sends a separate sitemap email
 
@@ -88,26 +87,26 @@ Status: support task
 
 ## Queue Routing
 
-Monitoring jobs are routed to the `monitoring` Celery queue.
+Only support cleanup is routed to the `monitoring` Celery queue.
 
 Operational requirement:
 - the worker must listen to both `celery` and `monitoring`
 
-If it does not, monitoring jobs may be created but never consumed.
+If it does not, cleanup jobs may be created but never consumed.
 
 
-## Log Monitoring Flow
+## Legacy Log Monitoring Flow
 
-The daily log flow is:
+The old Django log flow is retained for historical records and code continuity,
+but it is no longer configured as a production workflow:
 
-1. A trusted log collector runtime gathers runtime logs and access/error log files.
-2. The collector writes snapshot files into `DOCKER_LOGS_DIR`.
-3. `daily_monitoring_agent_log_task` starts orchestration.
-4. `DockerLogCollector` reads the collected files.
-5. `HistoricalContextBuilder` loads recent monitoring history.
-6. `LogReportPreparationService` builds the typed report that is stored and emailed.
-7. `LogStorageService` stores the final `LogAnalysis`.
-8. `LogAnalysisEmailService` sends the email.
+1. An admin queues `daily_monitoring_agent_log_task` from Django admin.
+2. `DockerLogCollector` expects legacy snapshot files from a configured log
+   directory.
+3. `HistoricalContextBuilder` loads recent monitoring history.
+4. `LogReportPreparationService` builds the typed report that is stored and emailed.
+5. `LogStorageService` stores the final `LogAnalysis`.
+6. `LogAnalysisEmailService` sends the email.
 
 Current implementation detail:
 - the bounded monitoring-agent loop remains in the codebase as an experimental
@@ -117,9 +116,10 @@ Current implementation detail:
 Important operational detail:
 - Celery does not collect Docker logs directly
 - the backend environment does not have Docker daemon access
-- log collection is handled by a separate collector path
-- the collector may need both Docker daemon access and direct access to
-  host-mounted log files, depending on the configured source type
+- the former repo-owned collector runtime and cron templates have been removed
+- production `DOCKER_LOGS_DIR` settings and compose mounts have been removed
+- `agent-monitoring` owns scheduled monitoring jobs and calls MCP for
+  deterministic log artifacts
 
 
 ## Sitemap Monitoring Flow
@@ -200,10 +200,11 @@ Main files:
 
 The system currently works in this form:
 
-- daily monitoring-agent log analysis at `02:00` UTC
-- live daily log analysis currently stores the first analyzed report directly
+- no scheduled log-analysis Celery beat entry
+- no scheduled sitemap-analysis Celery beat entry
+- manual log analysis currently stores the first analyzed report directly
 - legacy log task kept only as rollback
-- sitemap monitoring at `03:00` UTC every 5 days
+- sitemap monitoring can still be triggered manually
 - separate log and sitemap emails
 - manual admin runs for both report types
 - shared admin task-status polling endpoint
