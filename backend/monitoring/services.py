@@ -141,14 +141,14 @@ class ProbeBlockingContextBuilder:
     def _load_fail2ban_policy(cls) -> JSONObject:
         default_policy: JSONObject = {
             "portfolio-nginx-probes": {
-                "findtime": "10m",
+                "findtime": "1m",
                 "maxretry": 3,
-                "bantime": "7d",
+                "bantime": "-1",
             },
             "portfolio-traefik-probes": {
-                "findtime": "10m",
+                "findtime": "1m",
                 "maxretry": 3,
-                "bantime": "7d",
+                "bantime": "-1",
             },
         }
         if not cls.JAIL_CONFIG_PATH.exists():
@@ -163,9 +163,9 @@ class ProbeBlockingContextBuilder:
                 continue
             maxretry = _json_int(parser.get(jail_name, "maxretry", fallback="3"), default=3)
             policy[jail_name] = {
-                "findtime": parser.get(jail_name, "findtime", fallback="10m"),
+                "findtime": parser.get(jail_name, "findtime", fallback="1m"),
                 "maxretry": maxretry,
-                "bantime": parser.get(jail_name, "bantime", fallback="7d"),
+                "bantime": parser.get(jail_name, "bantime", fallback="-1"),
             }
         return policy
 

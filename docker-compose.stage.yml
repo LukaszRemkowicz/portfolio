@@ -43,6 +43,8 @@ x-backend-defaults: &backend-defaults
     CELERY_BROKER_URL: redis://redis:6379/0
     CELERY_RESULT_BACKEND: redis://redis:6379/0
     SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
+    SSR_CACHE_INVALIDATION_URL: ${SSR_CACHE_INVALIDATION_URL:-http://fe:8080/internal/cache/invalidate}
+    SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
   depends_on:
     db:
       condition: service_healthy
@@ -156,8 +158,6 @@ services:
     restart: always
     environment:
       <<: *backend-defaults-env
-      SSR_CACHE_INVALIDATION_URL: ${SSR_CACHE_INVALIDATION_URL:-http://fe:8080/internal/cache/invalidate}
-      SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
     volumes:
       - portfolio_staging_media_data:/app/media
       - portfolio_staging_static_data:/app/staticfiles
@@ -180,8 +180,6 @@ services:
     restart: "no"
     environment:
       <<: *backend-defaults-env
-      SSR_CACHE_INVALIDATION_URL: ${SSR_CACHE_INVALIDATION_URL:-http://fe:8080/internal/cache/invalidate}
-      SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
     command: >
       sh -c "
         python manage.py migrate --noinput &&

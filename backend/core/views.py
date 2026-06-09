@@ -114,7 +114,7 @@ class SecureMediaView(APIView):
         Since we return a raw HttpResponse (X-Accel-Redirect),
         DRF's renderer negotiation is unnecessary and can cause 406 errors.
         """
-        return (renderers.StaticHTMLRenderer(), "text/html")
+        return renderers.StaticHTMLRenderer(), "text/html"
 
     def get_object(self) -> Model:
         raise NotImplementedError("Subclasses must implement get_object")
@@ -186,6 +186,7 @@ class SecureMediaView(APIView):
         response["X-Accel-Redirect"] = redirect_uri
         response["Content-Type"] = ""  # Let Nginx determine the content type
         response["Content-Disposition"] = f'{self.content_disposition}; filename="{filename}"'
+        response["Cache-Control"] = "private, no-store, max-age=0"
         logger.info(
             f"Serving secure media via Nginx redirect: {redirect_uri} "
             f"as {filename} ({self.content_disposition})"

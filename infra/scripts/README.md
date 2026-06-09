@@ -207,6 +207,11 @@ Files:
 
 The nginx jail covers probes that reach nginx on the public domain.
 The Traefik jail covers unmatched direct-IP and host-header probes before they reach nginx.
+Both jails ban after 3 matching probes from the same IP within 1 minute, and
+the ban is permanent (`bantime = -1`). The nginx container also mounts the
+downloaded bad-bot user-agent blocklist at `/etc/nginx/blocklist`; the fail2ban
+jails do not read that mounted file directly, but they do watch access-log
+entries for the same sensitive-path families nginx blocks.
 
 Typical host setup:
 
