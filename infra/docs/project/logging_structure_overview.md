@@ -498,6 +498,11 @@ If you are collecting logs for monitoring/fail2ban:
 - Nginx access log file is JSON
 - Nginx error log remains plain text
 
+Current operator report inspection lives in the standalone `agent-monitoring`
+project. Landingpage owns log emission only; it no longer has a Django
+`monitoring` app, report tables, admin report actions, or monitoring Celery
+queue.
+
 ## Verified Sources
 
 - [backend/settings/base.py](/Users/lukaszremkowicz/Projects/landingpage/backend/settings/base.py:421)

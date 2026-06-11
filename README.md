@@ -145,6 +145,11 @@ The stack uses request correlation across FE and BE:
 - FE forwards `X-Request-ID` to BE
 - BE echoes and logs the same request ID
 
+Operational log and sitemap monitoring is handled outside this repository by
+the standalone `agent-monitoring` project. Landingpage emits structured logs
+and still owns public sitemap generation, but it no longer stores monitoring
+reports or exposes Django admin monitoring actions.
+
 ## ⚡ Quick Start
 
 Local development is Docker Compose only. This project is not maintained as a standalone `manage.py runserver` / `npm start` workflow.

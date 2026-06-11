@@ -122,6 +122,11 @@ Middleware path:
 
 - [backend/common/middleware.py](common/middleware.py)
 
+Backend log and sitemap report inspection now belongs to the standalone
+`agent-monitoring` project. This backend emits application logs and generates
+the public sitemap, but it no longer contains the legacy Django monitoring app,
+report models, admin report actions, or monitoring migrations.
+
 ## 🛠️ Development
 
 Local backend development is handled through Docker Compose, not a standalone `python manage.py runserver` workflow.
