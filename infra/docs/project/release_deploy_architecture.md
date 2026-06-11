@@ -138,7 +138,6 @@ The important runtime simplification is:
 
 - `be`
 - `celery-worker`
-- `celery-beat`
 - `release`
 
 all use the same backend artifact:
@@ -155,6 +154,10 @@ It means:
 - separate processes
 - separate commands
 - shared backend image artifact
+
+`celery-beat` also uses the backend artifact, but it is not part of the
+standard deployment switch because no scheduled Beat jobs are active. It is
+kept behind the `manual-beat` compose profile for explicit operator use.
 
 Frontend and nginx remain separate artifacts:
 
@@ -176,8 +179,9 @@ This is intentional because:
 Production compose change already made:
 
 - `celery-worker` now uses `${ENVIRONMENT}-be:${TAG}`
+- `celery-beat` is available only through the `manual-beat` profile
 
-`celery-beat`, `be`, and `release` were already using `${ENVIRONMENT}-be:${TAG}`.
+`be` and `release` were already using `${ENVIRONMENT}-be:${TAG}`.
 
 ## Script Responsibilities
 
@@ -267,6 +271,16 @@ It does:
 - switch long-running services to the specified tag
 - run post-switch health checks
 - update rollback state
+
+The normal deploy-managed services are:
+
+- `be`
+- `fe`
+- `celery-worker`
+- `nginx`
+
+`celery-beat` is intentionally excluded from the normal service switch while it
+has no active schedule.
 
 It does not:
 

@@ -135,6 +135,7 @@ services:
   celery-beat:
     <<: *backend-defaults
     image: ${ENVIRONMENT}-be:${TAG}
+    profiles: ["manual-beat"]
     restart: always
     command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
     environment:

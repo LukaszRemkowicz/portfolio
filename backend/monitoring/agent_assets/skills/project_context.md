@@ -14,7 +14,7 @@ This system runs the personal portfolio, blog, and associated APIs.
 - `db` — PostgreSQL 15
 - `redis` — Redis 7 (Celery broker + Django cache)
 - `celery-worker` — Celery 5 worker, queues: `celery` + `monitoring`
-- `celery-beat` — Celery Beat scheduler, triggers daily tasks at 2:00 AM UTC
+- `celery-beat` — Celery Beat scheduler, manual-profile only while no schedule is active
 
 **Backend Django apps**:
 - `astrophotography` — AstroImages, Places, Tags, Equipment

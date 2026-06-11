@@ -149,7 +149,7 @@ echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
 
 # Only long-running services should be switched during deploy. One-shot jobs
 # like `release` are handled explicitly by release.sh earlier in the flow.
-DEPLOY_SERVICES=("be" "fe" "celery-worker" "celery-beat" "nginx")
+DEPLOY_SERVICES=("be" "fe" "celery-worker" "nginx")
 
 # ------------------------------------------------------------------
 # Legacy Project Cleanup (One-time transition from implicit naming)

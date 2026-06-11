@@ -5,7 +5,6 @@ from typing import Any, cast
 
 import environ
 import sentry_sdk
-from celery.schedules import crontab
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 
@@ -730,18 +729,7 @@ ADMIN_SITE_ORDERING = (
 # ===========================
 
 
-CELERY_BEAT_SCHEDULE = {
-    "weekly-log-cleanup": {
-        "task": "monitoring.tasks.cleanup_old_logs_task",
-        "schedule": crontab(hour=8, minute=0, day_of_week=0),  # 8:00 AM UTC every Sunday
-        "kwargs": {
-            "days_to_keep": 30,  # Keep last 30 days
-        },
-        "options": {
-            "expires": 1800,  # Task expires after 30 minutes
-        },
-    },
-}
+CELERY_BEAT_SCHEDULE: dict[str, Any] = {}
 
 # ===========================
 # Celery Configuration
@@ -773,10 +761,7 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
 }
 
 # Task Routing
-# Keep only support cleanup on the monitoring queue after scheduled analysis retirement.
-CELERY_TASK_ROUTES = {
-    "monitoring.tasks.cleanup_old_logs_task": {"queue": "monitoring"},
-}
+CELERY_TASK_ROUTES: dict[str, Any] = {}
 
 # Task execution settings
 CELERY_TASK_TRACK_STARTED = True

@@ -32,18 +32,6 @@ from monitoring.types import (
 
 
 @pytest.mark.django_db
-class TestDockerLogCollector:
-    def test_get_collected_at_returns_empty_after_collector_retirement(self):
-        """Landingpage no longer owns collector snapshot metadata."""
-        assert DockerLogCollector.get_collected_at() == ""
-
-    def test_collect_logs_raises_after_collector_retirement(self):
-        """Landingpage no longer reads collector snapshot files directly."""
-        with pytest.raises(FileNotFoundError, match="collector snapshots are retired"):
-            DockerLogCollector.collect_logs()
-
-
-@pytest.mark.django_db
 class TestLogCleanupService:
     def test_cleanup_old_logs(self):
         """Test that old logs are deleted."""

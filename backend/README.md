@@ -126,13 +126,13 @@ Middleware path:
 ## 🤖 Monitoring
 
 Monitoring includes historical frontend, backend, nginx, and traefik log
-reports.
+reports in Django admin.
 
 Current monitoring status:
 
-1. scheduled collector and Celery beat analysis runs are retired
-2. historical analysis records remain available in Django admin
-3. `agent-monitoring` owns scheduled monitoring and calls MCP for log artifacts
+1. no scheduled monitoring jobs are defined in Celery Beat
+2. no monitoring tasks are routed to a dedicated monitoring queue
+3. historical report rows remain available in Django admin
 
 Collected log groups:
 

@@ -406,10 +406,10 @@ class DockerLogCollector:
 
     @classmethod
     def collect_logs(cls) -> LogPathMap:
-        """Fail clearly when retired landingpage snapshot collection is invoked."""
+        """Fail clearly when landingpage snapshot collection is invoked."""
         raise FileNotFoundError(
-            "Landingpage collector snapshots are retired. "
-            "Use agent-monitoring/MCP log artifacts instead."
+            "Landingpage collector snapshots are not configured. "
+            "Scheduled log collection is no longer owned by this repository."
         )
 
 
