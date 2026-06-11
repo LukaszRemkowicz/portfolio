@@ -423,16 +423,14 @@ Production/stage deploys rebuild:
 
 ### 📈 Monitoring
 
-Monitoring records:
+Historical monitoring records include:
 
 - backend logs
 - frontend SSR/BFF logs
 - nginx logs
 - traefik logs from historical monitoring reports
 
-Scheduled collector and Celery beat analysis runs have been retired from this
-repository. `agent-monitoring` now owns scheduled monitoring jobs and calls MCP
-for deterministic log artifacts.
+The repository does not define scheduled monitoring jobs.
 
 ## 📝 Notes
 

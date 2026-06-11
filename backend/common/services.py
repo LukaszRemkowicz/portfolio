@@ -13,8 +13,7 @@ class EmailService:
     Base email service providing common email utilities.
 
     This service handles the generic email sending infrastructure.
-    App-specific email generation should be in their own services
-    (e.g., LogAnalysisEmailService, ContactMessageEmailService).
+    App-specific email generation should be in each app's own services.
     """
 
     @staticmethod
