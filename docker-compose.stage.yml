@@ -93,10 +93,7 @@ services:
     <<: *backend-defaults
     image: ${ENVIRONMENT}-worker:${TAG}
     restart: always
-    command: celery -A settings worker -l info -Q celery,monitoring --concurrency=${CELERY_WORKERS:-2}
-    environment:
-      <<: *backend-defaults-env
-      MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
+    command: celery -A settings worker -l info -Q celery --concurrency=${CELERY_WORKERS:-2}
     volumes:
       - portfolio_staging_media_data:/app/media
       - portfolio_staging_static_data:/app/staticfiles

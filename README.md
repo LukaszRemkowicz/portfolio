@@ -15,7 +15,7 @@ Personal portfolio web app for astrophotography, travel stories, and programming
 ## 🗂️ Repository Layout
 
 - `frontend/` - React + TypeScript app, SSR runtime, browser app, tests, and public assets
-- `backend/` - Django + DRF application, admin, Celery jobs, monitoring, and media logic
+- `backend/` - Django + DRF application, admin, Celery jobs, and media logic
 - `docker/` - Dockerfiles and entrypoints for frontend, backend, redis, nginx, and traefik
 - `infra/` - nginx templates, traefik config, release scripts, security helpers, and ops docs
 - `screenshots/` - README screenshots
@@ -113,7 +113,6 @@ Application structure:
 - internal API used by FE
 - sitemap generation
 - secure media authorization/signing
-- monitoring and analysis
 - cache invalidation webhooks to FE
 
 ### Media Delivery
@@ -420,17 +419,6 @@ Production/stage deploys rebuild:
 - `be` when invalidation, serializers, or backend routes change
 
 ## 🔧 Operations
-
-### 📈 Monitoring
-
-Historical monitoring records include:
-
-- backend logs
-- frontend SSR/BFF logs
-- nginx logs
-- traefik logs from historical monitoring reports
-
-The repository does not define scheduled monitoring jobs.
 
 ## 📝 Notes
 
