@@ -37,14 +37,12 @@ These rules should be treated as hard constraints.
 
 - deterministic code owns facts
 - the LLM only summarizes and interprets findings
-- `daily_monitoring_agent_log_task` is legacy/manual-only after collector retirement
-- `daily_log_analysis_task` is legacy rollback only
-- sitemap monitoring is deterministic-first and legacy/manual-only after
-  scheduled analysis retirement
+- `daily_monitoring_agent_log_task` is manual-only
+- `daily_log_analysis_task` is disabled unless `RUN_LEGACY_DAILY_TASK=True`
+- sitemap monitoring is deterministic-first and manual-only
 - admin actions queue real Celery tasks and do not create monitoring rows directly
-- scheduled log collection and scheduled monitoring analysis are retired from
-  this repository
-- only support cleanup remains routed to the `monitoring` queue
+- no scheduled monitoring jobs are defined in Celery Beat
+- no monitoring tasks are routed to a dedicated monitoring queue
 
 
 ## Live Monitoring Jobs
@@ -54,55 +52,47 @@ The application currently has four monitoring-related Celery tasks in
 
 ### 1. `daily_monitoring_agent_log_task`
 
-Status: legacy/manual-only
+Status: manual-only
 
-- no longer scheduled from Celery beat
 - no production environment config is provided for old snapshot inputs
 - stores results in `LogAnalysis`
 - sends the standard log-monitoring email
 
 ### 2. `daily_log_analysis_task`
 
-Status: legacy, rollback only
+Status: disabled by default
 
-- scheduled only when `RUN_LEGACY_DAILY_TASK=True`
+- runs only when `RUN_LEGACY_DAILY_TASK=True`
 - disabled by default
-- kept as an emergency fallback
 
 ### 3. `daily_sitemap_analysis_task`
 
-Status: legacy/manual-only sitemap job
+Status: manual-only sitemap job
 
-- no longer scheduled from Celery beat
 - stores results in `SitemapAnalysis`
 - sends a separate sitemap email
 
 ### 4. `cleanup_old_logs_task`
 
-Status: support task
+Status: manual-only
 
-- runs weekly
-- deletes old `LogAnalysis` rows
+- not scheduled from Celery Beat
+- kept until the monitoring app is removed
 
 
 ## Queue Routing
 
-Only support cleanup is routed to the `monitoring` Celery queue.
+No monitoring tasks are routed to the `monitoring` Celery queue.
 
-Operational requirement:
-- the worker must listen to both `celery` and `monitoring`
-
-If it does not, cleanup jobs may be created but never consumed.
+Manually queued monitoring tasks use default Celery routing.
 
 
-## Legacy Log Monitoring Flow
+## Manual Log Monitoring Flow
 
-The old Django log flow is retained for historical records and code continuity,
-but it is no longer configured as a production workflow:
+The Django admin log flow is manual:
 
 1. An admin queues `daily_monitoring_agent_log_task` from Django admin.
-2. `DockerLogCollector` expects legacy snapshot files from a configured log
-   directory.
+2. `DockerLogCollector` expects snapshot files from a configured log directory.
 3. `HistoricalContextBuilder` loads recent monitoring history.
 4. `LogReportPreparationService` builds the typed report that is stored and emailed.
 5. `LogStorageService` stores the final `LogAnalysis`.
@@ -116,10 +106,8 @@ Current implementation detail:
 Important operational detail:
 - Celery does not collect Docker logs directly
 - the backend environment does not have Docker daemon access
-- the former repo-owned collector runtime and cron templates have been removed
-- production `DOCKER_LOGS_DIR` settings and compose mounts have been removed
-- `agent-monitoring` owns scheduled monitoring jobs and calls MCP for
-  deterministic log artifacts
+- no production `DOCKER_LOGS_DIR` setting or compose mount is configured
+- no scheduled log-monitoring Celery Beat entry exists
 
 
 ## Sitemap Monitoring Flow
@@ -203,7 +191,7 @@ The system currently works in this form:
 - no scheduled log-analysis Celery beat entry
 - no scheduled sitemap-analysis Celery beat entry
 - manual log analysis currently stores the first analyzed report directly
-- legacy log task kept only as rollback
+- disabled log-analysis task runs only when `RUN_LEGACY_DAILY_TASK=True`
 - sitemap monitoring can still be triggered manually
 - separate log and sitemap emails
 - manual admin runs for both report types

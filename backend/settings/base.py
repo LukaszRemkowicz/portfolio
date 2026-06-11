@@ -5,7 +5,6 @@ from typing import Any, cast
 
 import environ
 import sentry_sdk
-from celery.schedules import crontab
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 
@@ -220,11 +219,9 @@ OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 # Available providers: "gpt", "mock", "gemini", "claude", etc.
 # Each service can use a different provider
 TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
-MONITORING_LLM_PROVIDER = env.str("MONITORING_LLM_PROVIDER", default="gpt")
 LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER = env.str(
     "LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER", default="gpt"
 )
-RUN_LEGACY_DAILY_TASK = env.bool("RUN_LEGACY_DAILY_TASK", default=False)
 SSR_CACHE_INVALIDATION_URL = env.str(
     "SSR_CACHE_INVALIDATION_URL", default="http://fe:8080/internal/cache/invalidate"
 )
@@ -494,11 +491,6 @@ LOGGING = {
             "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
             "propagate": False,
         },
-        "monitoring": {
-            "handlers": ["console"],
-            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
-            "propagate": False,
-        },
         "translation": {
             "handlers": ["console"],
             "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
@@ -718,11 +710,6 @@ ADMIN_SITE_ORDERING = (
         "label": _("Translations"),
         "models": ("translation.TranslationTask",),
     },
-    {
-        "app": "monitoring",
-        "label": _("Monitoring"),
-        "models": ("monitoring.LogAnalysis", "monitoring.SitemapAnalysis"),
-    },
 )
 
 # ===========================
@@ -730,18 +717,7 @@ ADMIN_SITE_ORDERING = (
 # ===========================
 
 
-CELERY_BEAT_SCHEDULE = {
-    "weekly-log-cleanup": {
-        "task": "monitoring.tasks.cleanup_old_logs_task",
-        "schedule": crontab(hour=8, minute=0, day_of_week=0),  # 8:00 AM UTC every Sunday
-        "kwargs": {
-            "days_to_keep": 30,  # Keep last 30 days
-        },
-        "options": {
-            "expires": 1800,  # Task expires after 30 minutes
-        },
-    },
-}
+CELERY_BEAT_SCHEDULE: dict[str, Any] = {}
 
 # ===========================
 # Celery Configuration
@@ -773,10 +749,7 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
 }
 
 # Task Routing
-# Keep only support cleanup on the monitoring queue after scheduled analysis retirement.
-CELERY_TASK_ROUTES = {
-    "monitoring.tasks.cleanup_old_logs_task": {"queue": "monitoring"},
-}
+CELERY_TASK_ROUTES: dict[str, Any] = {}
 
 # Task execution settings
 CELERY_TASK_TRACK_STARTED = True
@@ -840,8 +813,6 @@ JAZZMIN_SETTINGS = {
         "axes.AccessLog": "fas fa-list-alt",
         "core.LandingPageSettings": "fas fa-sliders-h",
         "translation.TranslationTask": "fas fa-language",
-        "monitoring.LogAnalysis": "fas fa-chart-line",
-        "monitoring.SitemapAnalysis": "fas fa-sitemap",
     },
     # Changing the order
     "order_with_respect_to": [
@@ -854,7 +825,6 @@ JAZZMIN_SETTINGS = {
         "programming",
         "core",
         "translation",
-        "monitoring",
     ],
     "custom_css": "core/css/admin_sidebar.css",
     "show_theme_chooser": True,

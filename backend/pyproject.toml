@@ -115,14 +115,6 @@ core = [
 inbox = [
     "templates/**/*.html",
 ]
-monitoring = [
-    "agent_assets/**/*",
-    "log_sources.json",
-    "templates/**/*.html",
-    "static/**/*",
-    "locale/**/*.po",
-    "locale/**/*.mo",
-]
 shop = [
     "templates/**/*.html",
     "static/**/*",
@@ -258,7 +250,6 @@ testpaths = [
     "astrophotography/tests",
     "users/tests",
     "translation/tests",
-    "monitoring/tests",
     "programming/tests",
     "inbox/tests",
     "core/tests",
