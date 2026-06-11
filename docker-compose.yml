@@ -46,12 +46,11 @@ x-backend-common: &backend-common
     SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN}
     SENTRY_DSN: ${SENTRY_DSN}
     ENVIRONMENT: ${ENVIRONMENT:-production}
-    MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
     PROJECT_OWNER: ${PROJECT_OWNER}
     REDIS_PASSWORD: ${REDIS_PASSWORD}
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
-    SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
+    SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-true}
     SSR_CACHE_INVALIDATION_URL: ${SSR_CACHE_INVALIDATION_URL:-http://fe:8080/internal/cache/invalidate}
     SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN:-dev-ssr-cache-token}
   depends_on:
@@ -177,7 +176,7 @@ services:
     command: >
       sh -c "
         python manage.py migrate --noinput &&
-        python manage.py compilemessages &&
+        python manage.py compilemessages --locale pl --ignore '.venv/*' &&
         python manage.py collectstatic --noinput &&
         python manage.py runserver 0.0.0.0:8000
       "

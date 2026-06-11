@@ -57,11 +57,10 @@ class MockLLMProvider(LLMProvider):
             "cost_usd": 0.005,
         }
 
-        if self._mock_json_path:
-            mock_path = Path(settings.BASE_DIR) / self._mock_json_path
-        else:
-            mock_path = Path(settings.BASE_DIR) / "monitoring/tests/llm_responses/default.json"
+        if not self._mock_json_path:
+            return '{"summary": "Mock LLM response."}', mock_usage
 
+        mock_path = Path(settings.BASE_DIR) / self._mock_json_path
         with open(mock_path, encoding="utf-8") as f:
             return f.read(), mock_usage
 

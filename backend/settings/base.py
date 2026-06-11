@@ -219,11 +219,9 @@ OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 # Available providers: "gpt", "mock", "gemini", "claude", etc.
 # Each service can use a different provider
 TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
-MONITORING_LLM_PROVIDER = env.str("MONITORING_LLM_PROVIDER", default="gpt")
 LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER = env.str(
     "LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER", default="gpt"
 )
-RUN_LEGACY_DAILY_TASK = env.bool("RUN_LEGACY_DAILY_TASK", default=False)
 SSR_CACHE_INVALIDATION_URL = env.str(
     "SSR_CACHE_INVALIDATION_URL", default="http://fe:8080/internal/cache/invalidate"
 )
@@ -493,11 +491,6 @@ LOGGING = {
             "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
             "propagate": False,
         },
-        "monitoring": {
-            "handlers": ["console"],
-            "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
-            "propagate": False,
-        },
         "translation": {
             "handlers": ["console"],
             "level": env.str("LOG_LEVEL", default="DEBUG" if DEBUG else "INFO"),
@@ -717,11 +710,6 @@ ADMIN_SITE_ORDERING = (
         "label": _("Translations"),
         "models": ("translation.TranslationTask",),
     },
-    {
-        "app": "monitoring",
-        "label": _("Monitoring"),
-        "models": ("monitoring.LogAnalysis", "monitoring.SitemapAnalysis"),
-    },
 )
 
 # ===========================
@@ -825,8 +813,6 @@ JAZZMIN_SETTINGS = {
         "axes.AccessLog": "fas fa-list-alt",
         "core.LandingPageSettings": "fas fa-sliders-h",
         "translation.TranslationTask": "fas fa-language",
-        "monitoring.LogAnalysis": "fas fa-chart-line",
-        "monitoring.SitemapAnalysis": "fas fa-sitemap",
     },
     # Changing the order
     "order_with_respect_to": [
@@ -839,7 +825,6 @@ JAZZMIN_SETTINGS = {
         "programming",
         "core",
         "translation",
-        "monitoring",
     ],
     "custom_css": "core/css/admin_sidebar.css",
     "show_theme_chooser": True,
