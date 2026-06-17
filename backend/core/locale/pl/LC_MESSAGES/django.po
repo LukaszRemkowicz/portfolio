@@ -133,10 +133,6 @@ msgstr "Wiadomość kontaktowa"
 msgid "Contact Messages"
 msgstr "Wiadomości kontaktowe"
 
-#: monitoring/apps.py:8
-msgid "Monitoring"
-msgstr "Monitoring"
-
 #: programming/apps.py:8 settings/base.py:544
 msgid "Programming"
 msgstr "Programowanie"

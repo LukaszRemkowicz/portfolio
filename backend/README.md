@@ -1,6 +1,6 @@
 # 🐍 Portfolio Backend
 
-Django + DRF backend for portfolio content, admin, secure media, translations, and monitoring.
+Django + DRF backend for portfolio content, admin, secure media, and translations.
 
 
 ## 🚀 Features
@@ -76,7 +76,6 @@ Normal public website traffic reaches the frontend server first. Django is the c
 - translation workflows
 - secure media signing and `X-Accel-Redirect` cooperation with nginx
 - contact form processing
-- monitoring records and manual analysis tools
 - cache invalidation signals for frontend cache
 
 ## 🔌 Service Integration
@@ -123,25 +122,10 @@ Middleware path:
 
 - [backend/common/middleware.py](common/middleware.py)
 
-## 🤖 Monitoring
-
-Monitoring includes historical frontend, backend, nginx, and traefik log
-reports in Django admin.
-
-Current monitoring status:
-
-1. no scheduled monitoring jobs are defined in Celery Beat
-2. no monitoring tasks are routed to a dedicated monitoring queue
-3. historical report rows remain available in Django admin
-
-Collected log groups:
-
-- `backend.log`
-- `frontend.log`
-- `nginx_access.log`
-- `nginx_runtime.log`
-- `traefik_access.log`
-- `traefik_runtime.log`
+Backend log and sitemap report inspection now belongs to the standalone
+`agent-monitoring` project. This backend emits application logs and generates
+the public sitemap, but it no longer contains the legacy Django monitoring app,
+report models, admin report actions, or monitoring migrations.
 
 ## 🛠️ Development
 
@@ -203,8 +187,6 @@ doppler --config dev run -- docker compose up --build
   - [backend/astrophotography/models.py](astrophotography/models.py)
 - user/profile domain:
   - [backend/users/models.py](users/models.py)
-- monitoring:
-  - [backend/monitoring/services.py](monitoring/services.py)
 
 ## 📝 Notes
 

@@ -39,7 +39,6 @@ x-backend-defaults: &backend-defaults
     SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN}
     SENTRY_DSN: ${SENTRY_DSN}
     ENVIRONMENT: prod
-    MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
     PROJECT_OWNER: ${PROJECT_OWNER}
     REDIS_PASSWORD: ${REDIS_PASSWORD}
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
@@ -117,10 +116,7 @@ services:
     <<: *backend-defaults
     image: ${ENVIRONMENT}-be:${TAG}
     restart: always
-    command: celery -A settings worker -l info -Q celery,monitoring --concurrency=${CELERY_WORKERS:-4}
-    environment:
-      <<: *backend-defaults-env
-      MONITORING_LLM_PROVIDER: ${MONITORING_LLM_PROVIDER:-gpt}
+    command: celery -A settings worker -l info -Q celery --concurrency=${CELERY_WORKERS:-4}
     volumes:
       - prod_media_data:/app/media
       - prod_static_data:/app/staticfiles

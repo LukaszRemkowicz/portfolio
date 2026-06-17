@@ -77,8 +77,6 @@ include = [
     "core.*",
     "inbox",
     "inbox.*",
-    "monitoring",
-    "monitoring.*",
     "programming",
     "programming.*",
     "scripts",

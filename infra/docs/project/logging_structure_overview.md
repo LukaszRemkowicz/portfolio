@@ -80,7 +80,6 @@ The current Django logging config explicitly configures these backend app namesp
 - `core`
 - `users`
 - `shop`
-- `monitoring`
 - `translation`
 - `astrophotography`
 - `programming`
@@ -201,26 +200,6 @@ Examples live in:
 
 - [backend/shop/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/shop/models.py:1)
 - [backend/shop/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/shop/tasks.py:1)
-
-#### `monitoring`
-
-Typical purpose:
-
-- log analysis
-- sitemap analysis
-- manual monitoring agent/tool-loop execution
-
-Common log shape:
-
-- base JSON fields
-- usually no request context, because many logs are manual task/background-job based
-- monitoring-specific free-form messages and any explicit extra fields
-
-Examples live in:
-
-- [backend/monitoring/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/monitoring/tasks.py:1)
-- [backend/monitoring/services.py](/Users/lukaszremkowicz/Projects/landingpage/backend/monitoring/services.py:1)
-- [backend/monitoring/monitoring_agent_runner.py](/Users/lukaszremkowicz/Projects/landingpage/backend/monitoring/monitoring_agent_runner.py:1)
 
 #### `translation`
 
@@ -518,6 +497,11 @@ If you are collecting logs for monitoring/fail2ban:
 - Traefik access log file is JSON
 - Nginx access log file is JSON
 - Nginx error log remains plain text
+
+Current operator report inspection lives in the standalone `agent-monitoring`
+project. Landingpage owns log emission only; it no longer has a Django
+`monitoring` app, report tables, admin report actions, or monitoring Celery
+queue.
 
 ## Verified Sources
 

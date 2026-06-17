@@ -160,7 +160,6 @@ INSTALLED_APPS = [
     "django_select2",
     "django_ckeditor_5",
     "translation.apps.TranslationConfig",
-    "monitoring.apps.MonitoringConfig",
     "shop.apps.ShopConfig",
 ]
 
