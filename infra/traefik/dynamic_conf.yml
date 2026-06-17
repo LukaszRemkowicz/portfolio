@@ -77,8 +77,3 @@ http:
         regex: "^https?://([^/]+)/dashboard$"
         replacement: "https://${1}/dashboard/"
         permanent: true
-
-tls:
-  certificates:
-    - certFile: /etc/letsencrypt/live/${SITE_DOMAIN}/fullchain.pem
-      keyFile: /etc/letsencrypt/live/${SITE_DOMAIN}/privkey.pem

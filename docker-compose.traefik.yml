@@ -21,7 +21,6 @@ services:
       - "8081:8080" # Dashboard API
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml.template:ro
       - ./infra/traefik/dynamic_conf.yml:/etc/traefik/dynamic_conf.yml.template:ro
       - ${TRAEFIK_LOG_DIR:-/var/log/portfolio/traefik}:/var/log/traefik
