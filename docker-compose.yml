@@ -249,7 +249,7 @@ services:
       --ignore-patterns='*/tests/*;*/test_*.py'
       --recursive
       --
-      celery -A settings worker -l info -Q celery,monitoring
+      celery -A settings worker -l info -Q celery
     restart: unless-stopped
     depends_on:
       - db

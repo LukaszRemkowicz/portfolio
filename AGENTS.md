@@ -62,8 +62,6 @@ Use these documents as fast context before implementation.
   Use for `LandingPageSettings`-driven feature visibility, frontend route/navbar gating, and adding new public feature flags. Describes the backend-to-frontend feature-flag flow and expected consumption pattern.
 - `infra/docs/project/landing_page_total_time_spent_system.md`
   Use for landing-page total-time calculation, `AstroImage.calculated_exposure_hours`, rebuild flow, serializer rounding, and cache invalidation. Describes the current derived-stat architecture and operational caveats.
-- `infra/docs/project/monitoring_system_overview.md`
-  Use for monitoring jobs, scheduling, queue routing, log analysis, sitemap analysis, and LLM boundaries. Describes the live monitoring architecture and hard invariants.
 - `infra/docs/project/logging_structure_overview.md`
   Use for backend/frontend/nginx/Traefik logging formats, JSON-vs-plain-text status, and cross-stack logging structure. Describes how logs are currently emitted across the platform.
 - `infra/docs/project/translation_system_overview.md`
@@ -101,7 +99,6 @@ Use this quick mapping when a task arrives:
 - Feature-gated frontend modules or `LandingPageSettings` booleans -> `infra/docs/project/feature_flag_mechanism.md`
 - Landing page total-time stat or exposure-hours rebuilds -> `infra/docs/project/landing_page_total_time_spent_system.md`
 - Django admin image cropping or preview/media bug -> `infra/docs/project/django_admin_image_cropper_mechanism.md`
-- Monitoring, Celery monitoring jobs, sitemap checks -> `infra/docs/project/monitoring_system_overview.md`
 - Backend/frontend/nginx/Traefik logging structure -> `infra/docs/project/logging_structure_overview.md`
 - Monitoring, collector retirement, or MCP log-server rollout work -> `infra/docs/project/analysis/mcp_log_server_architecture.md`
 - Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
