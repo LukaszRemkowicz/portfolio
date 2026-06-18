@@ -17,3 +17,13 @@ logpath = /var/log/portfolio/traefik/access.log
 findtime = 1m
 maxretry = 3
 bantime = -1
+
+[portfolio-keycloak-token]
+enabled = true
+filter = portfolio-keycloak-token-abuse
+backend = auto
+port = http,https
+logpath = /var/log/portfolio/traefik/access.log
+findtime = 1m
+maxretry = 3
+bantime = -1

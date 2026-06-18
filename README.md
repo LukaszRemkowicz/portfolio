@@ -97,6 +97,28 @@ Application structure:
 - In local development, Traefik is available through an optional Compose profile when you want to mirror the full edge setup.
 - The default local stack can also run directly through nginx without Traefik.
 
+### Cloudflare And Traefik Certificates
+
+Production DNS normally uses Cloudflare as the public edge for proxied hosts.
+For orange-cloud records, browsers see Cloudflare's edge certificate, not the
+certificate stored by Traefik on the VPS.
+
+Traefik still has `tls.certresolver=letsencrypt` on production routers so the
+origin can serve a valid certificate when a host is DNS-only or when Cloudflare
+passes the ACME HTTP-01 challenge through to Traefik. These resolver labels are
+fallback/origin behavior and should not be removed just because Cloudflare is
+handling the browser-facing certificate.
+
+Important distinction:
+
+- Cloudflare proxied: public TLS is handled by Cloudflare.
+- DNS only: public TLS is served directly by Traefik.
+- Current Traefik ACME uses HTTP-01 on port `80`; renewal requires Let's
+  Encrypt to reach Traefik through that entrypoint.
+- If origin certificates must renew reliably while records stay Cloudflare
+  proxied, switch Traefik ACME to Cloudflare DNS-01 instead of removing router
+  `tls.certresolver` labels.
+
 ### Frontend server responsibilities
 
 - SSR page rendering
