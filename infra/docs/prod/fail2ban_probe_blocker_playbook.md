@@ -32,12 +32,23 @@ fail2ban probe jails use access logs instead: they watch blocked sensitive path
 requests, hidden-file requests, prohibited script/archive extensions, and common
 CMS/PHP probe paths.
 
+The Keycloak token jail watches failed `POST` requests to
+`auth.lukaszremkowicz.com/realms/*/protocol/openid-connect/token`. It does not
+ban normal OIDC discovery or JWKS reads.
+
+Traefik and nginx are configured to trust `X-Forwarded-For` only from
+Cloudflare edge ranges and private Traefik/nginx network ranges. This is
+required so fail2ban bans the real visitor IP instead of a Cloudflare edge IP.
+After changing those ranges, recreate Traefik and nginx before judging ban
+behavior from access logs.
+
 ## After Repo Changes
 
 When you change any of these repo-managed files:
 
 - `infra/scripts/security/fail2ban/filter.d/portfolio-nginx-sensitive-probes.conf`
 - `infra/scripts/security/fail2ban/filter.d/portfolio-traefik-sensitive-probes.conf`
+- `infra/scripts/security/fail2ban/filter.d/portfolio-keycloak-token-abuse.conf`
 - `infra/scripts/security/fail2ban/jail.d/portfolio-probe-blocker.local`
 - `infra/scripts/security/install_fail2ban_probe_blocker.sh`
 
@@ -56,6 +67,7 @@ Then verify the live jails:
 sudo fail2ban-client status
 sudo fail2ban-client status portfolio-nginx-probes
 sudo fail2ban-client status portfolio-traefik-probes
+sudo fail2ban-client status portfolio-keycloak-token
 sudo tail -n 20 /var/log/fail2ban.log
 ```
 
@@ -71,6 +83,7 @@ sudo journalctl -u fail2ban -n 50 --no-pager
 sudo fail2ban-client status
 sudo fail2ban-client status portfolio-nginx-probes
 sudo fail2ban-client status portfolio-traefik-probes
+sudo fail2ban-client status portfolio-keycloak-token
 ```
 
 Check whether the watched files are receiving traffic:
@@ -82,6 +95,11 @@ sudo tail -n 20 /etc/nginx/logs/access.log
 sudo ls -l /var/log/portfolio/traefik/access.log
 sudo tail -n 20 /var/log/portfolio/traefik/access.log
 ```
+
+When traffic is proxied through Cloudflare, confirm the logged client IP is the
+real visitor address, not a Cloudflare edge range such as `172.64.0.0/13`,
+`172.68.0.0/16`, `162.158.0.0/15`, or `104.16.0.0/13`. If old bans include
+Cloudflare edge IPs, unban them after deploying the real-IP fix.
 
 If Traefik fails to start because the host-mounted access log is not writable, the container entrypoint now exits with a clear error instead of silently running without file logging. Check:
 
@@ -110,6 +128,30 @@ The same policy applies to the Traefik probe jail for matching direct-IP or
 host-header probes: 3 matching requests from one IP within 1 minute, then a
 permanent ban.
 
+## Test Keycloak Token Ban Flow
+
+Generate a few failed token requests:
+
+```bash
+for i in 1 2 3; do
+  curl -sS -o /dev/null -w "%{http_code}\n" -X POST \
+    https://auth.lukaszremkowicz.com/realms/mcp/protocol/openid-connect/token \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    --data-urlencode "grant_type=client_credentials" \
+    --data-urlencode "client_id=codex-local" \
+    --data-urlencode "client_secret=invalid"
+done
+
+sudo fail2ban-client status portfolio-keycloak-token
+sudo tail -n 20 /var/log/fail2ban.log
+```
+
+Expected result:
+
+- `Currently banned: 1`
+- the offending IP appears in `Banned IP list`
+- `/var/log/fail2ban.log` shows `NOTICE [portfolio-keycloak-token] Ban <ip>`
+
 ## Monitor
 
 Useful day-to-day monitoring commands:
@@ -118,6 +160,7 @@ Useful day-to-day monitoring commands:
 sudo fail2ban-client status
 sudo fail2ban-client status portfolio-nginx-probes
 sudo fail2ban-client status portfolio-traefik-probes
+sudo fail2ban-client status portfolio-keycloak-token
 
 sudo tail -f /var/log/fail2ban.log
 sudo journalctl -u fail2ban -f
@@ -148,6 +191,7 @@ Unban a single IP:
 ```bash
 sudo fail2ban-client set portfolio-nginx-probes unbanip <ip>
 sudo fail2ban-client set portfolio-traefik-probes unbanip <ip>
+sudo fail2ban-client set portfolio-keycloak-token unbanip <ip>
 ```
 
 Clear all bans by restarting the service:
@@ -171,6 +215,7 @@ If the nginx jail sees failures but does not ban, check `/var/log/fail2ban.log` 
 
 - `portfolio-nginx-probes`
 - `portfolio-traefik-probes`
+- `portfolio-keycloak-token`
 
 If the Traefik jail stays empty, confirm:
 

@@ -89,7 +89,8 @@
     "qs": "^6.15.0",
     "minimatch": "^10.2.1",
     "serialize-javascript": "^7.0.5",
-    "js-yaml": "4.2.0"
+    "js-yaml": "4.2.0",
+    "undici": "7.28.0"
   },
   "browserslist": [
     "last 2 versions",
