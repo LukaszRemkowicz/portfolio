@@ -216,17 +216,20 @@ entries for the same sensitive-path families nginx blocks.
 Typical host setup:
 
 ```bash
-sudo mkdir -p /var/log/portfolio/traefik
-sudo chown -R <user>:<user> /var/log/portfolio/traefik
+sudo mkdir -p /var/log/traefik
+sudo chown -R <user>:<user> /var/log/traefik
 chmod +x /home/<user>/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
 sudo /home/<user>/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
 sudo systemctl restart fail2ban
 ```
 
-After updating `docker-compose.traefik.yml` / `infra/traefik/traefik.yml`, recreate Traefik so the host access log file is mounted and written:
+After updating the shared Traefik runtime under `/home/<user>/devops/traefik`,
+recreate Traefik so the host access log file is mounted and written:
 
 ```bash
-TAG=vX.Y.Z doppler run -- docker compose -f docker-compose.traefik.yml up -d traefik
+cd /home/<user>/devops/traefik
+doppler run --project traefik --config prd -- \
+  docker compose -f docker-compose.prod.yml up -d traefik
 ```
 
 Useful checks:

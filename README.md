@@ -52,7 +52,7 @@ The project follows a modern, highly decoupled architecture for performance and 
 ### Key Components:
 - **Traefik (Edge Proxy)**: The central entry point for all subdomains. Handles SSL, HSTS, and routing.
 - **Environment Isolation**: Parallel stacks (`PROD` and `STAGE`) ensure zero-collision deployments.
-- **Development Stack**: Local development uses the same core `Nginx + Frontend SSR + Django + PostgreSQL` architecture via `portfolio-dev`. Traefik is also available locally through an optional Compose profile when you want to mirror the full edge setup.
+- **Development Stack**: Local development uses the same core `Nginx + Frontend SSR + Django + PostgreSQL` architecture via `portfolio-dev`. Shared local Traefik is run from `devops/traefik` when you want to mirror the full edge setup.
 - **Doppler**: Centralized, secure secret management across **all** environments (Local & Server).
 
 
@@ -94,7 +94,7 @@ Application structure:
 
 - In staging and production, Traefik is the external edge proxy in front of nginx.
 - It handles host-based routing, TLS termination, and security middleware at the edge.
-- In local development, Traefik is available through an optional Compose profile when you want to mirror the full edge setup.
+- In local development, Traefik is available through the shared `devops/traefik` module when you want to mirror the full edge setup.
 - The default local stack can also run directly through nginx without Traefik.
 
 ### Cloudflare And Traefik Certificates
@@ -392,9 +392,9 @@ doppler --config dev run -- docker compose exec -T be python manage.py collectst
 doppler --config dev run -- docker compose exec -T be python manage.py compilemessages
 ```
 
-Optional local profile:
+Optional shared local Traefik:
 
-- `docker compose --profile traefik up --build` starts `nginx-traefik` so local routing can run through Traefik instead of binding nginx directly to ports `80/443`.
+- `cd /Users/lukaszremkowicz/Projects/devops/traefik && docker compose up -d` starts the shared local Traefik edge so landingpage routing can run through Traefik instead of binding nginx directly to ports `80/443`.
 
 Standalone local development commands such as `python manage.py runserver` or `npm run dev` are not the supported workflow described by this repository.
 

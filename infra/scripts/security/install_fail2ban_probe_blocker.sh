@@ -8,7 +8,7 @@ JAIL_SRC="${SCRIPT_DIR}/fail2ban/jail.d/portfolio-probe-blocker.local"
 FILTER_DIR_DEST="/etc/fail2ban/filter.d"
 JAIL_DIR_DEST="/etc/fail2ban/jail.d"
 JAIL_DEST="${JAIL_DIR_DEST}/portfolio-probe-blocker.local"
-TRAEFIK_LOG_DIR="/var/log/portfolio/traefik"
+TRAEFIK_LOG_DIR="/var/log/traefik"
 TRAEFIK_LOG_FILE="${TRAEFIK_LOG_DIR}/access.log"
 
 if [ "$(id -u)" -ne 0 ]; then

@@ -386,7 +386,7 @@ Traefik access logging is JSON.
 
 Relevant config:
 
-- [infra/traefik/traefik.yml](/Users/lukaszremkowicz/Projects/landingpage/infra/traefik/traefik.yml:38)
+- `/Users/lukaszremkowicz/Projects/devops/traefik/config/traefik.yml`
 
 Current access log definition:
 
@@ -422,7 +422,7 @@ Examples:
 
 - [docker/backend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/backend/entrypoint.sh:1)
 - [docker/frontend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/frontend/entrypoint.sh:1)
-- [docker/traefik/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/traefik/entrypoint.sh:1)
+- `/Users/lukaszremkowicz/Projects/devops/traefik/docker/entrypoint.sh`
 
 These are operational bootstrap logs, not application logs, and they are currently plain text.
 
@@ -511,7 +511,7 @@ queue.
 - [frontend/server/logging.js](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/logging.js:1)
 - [frontend/server/index.mjs](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/index.mjs:1)
 - [infra/nginx/static_server.conf](/Users/lukaszremkowicz/Projects/landingpage/infra/nginx/static_server.conf:43)
-- [infra/traefik/traefik.yml](/Users/lukaszremkowicz/Projects/landingpage/infra/traefik/traefik.yml:38)
+- `/Users/lukaszremkowicz/Projects/devops/traefik/config/traefik.yml`
 - [docker/backend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/backend/entrypoint.sh:1)
 - [docker/frontend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/frontend/entrypoint.sh:1)
-- [docker/traefik/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/traefik/entrypoint.sh:1)
+- `/Users/lukaszremkowicz/Projects/devops/traefik/docker/entrypoint.sh`

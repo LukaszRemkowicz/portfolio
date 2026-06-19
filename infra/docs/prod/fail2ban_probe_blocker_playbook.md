@@ -13,14 +13,17 @@ Run these commands on the production server:
 sudo apt-get update
 sudo apt-get install -y fail2ban
 
-sudo mkdir -p /var/log/portfolio/traefik
-sudo touch /var/log/portfolio/traefik/access.log
+sudo mkdir -p /var/log/traefik
+sudo touch /var/log/traefik/access.log
 
-sudo infra/scripts/security/install_fail2ban_probe_blocker.sh
+sudo /home/<user>/landingpage/infra/scripts/security/install_fail2ban_probe_blocker.sh
 
-doppler run -- docker compose -f docker-compose.traefik.yml up -d traefik
+cd /home/<user>/devops/traefik
+doppler run --project traefik --config prd -- \
+  docker compose -f docker-compose.prod.yml up -d traefik
 sudo systemctl enable --now fail2ban
-doppler run -- docker compose -f docker-compose.traefik.yml up -d --force-recreate traefik
+doppler run --project traefik --config prd -- \
+  docker compose -f docker-compose.prod.yml up -d --force-recreate traefik
 ```
 
 The installer now detects the active nginx access-log path automatically and installs the shorter jail names required by `iptables`.
@@ -92,8 +95,8 @@ Check whether the watched files are receiving traffic:
 sudo ls -l /etc/nginx/logs/access.log
 sudo tail -n 20 /etc/nginx/logs/access.log
 
-sudo ls -l /var/log/portfolio/traefik/access.log
-sudo tail -n 20 /var/log/portfolio/traefik/access.log
+sudo ls -l /var/log/traefik/access.log
+sudo tail -n 20 /var/log/traefik/access.log
 ```
 
 When traffic is proxied through Cloudflare, confirm the logged client IP is the
@@ -166,7 +169,7 @@ sudo tail -f /var/log/fail2ban.log
 sudo journalctl -u fail2ban -f
 
 sudo tail -f /etc/nginx/logs/access.log
-sudo tail -f /var/log/portfolio/traefik/access.log
+sudo tail -f /var/log/traefik/access.log
 ```
 
 ## Restart / Reload
@@ -180,7 +183,9 @@ sudo systemctl status fail2ban --no-pager -l
 sudo fail2ban-client reload
 sudo fail2ban-client status
 
-doppler run -- docker compose -f docker-compose.traefik.yml up -d --force-recreate traefik
+cd /home/<user>/devops/traefik
+doppler run --project traefik --config prd -- \
+  docker compose -f docker-compose.prod.yml up -d --force-recreate traefik
 docker logs --tail 50 traefik
 ```
 
@@ -220,6 +225,6 @@ If the nginx jail sees failures but does not ban, check `/var/log/fail2ban.log` 
 If the Traefik jail stays empty, confirm:
 
 - the `traefik` container was recreated
-- `/var/log/portfolio/traefik/access.log` is mounted and non-empty
+- `/var/log/traefik/access.log` is mounted and non-empty
 - the jail appears in `sudo fail2ban-client status`
 - `docker logs --tail 50 traefik` does not show `Traefik access log is not writable`
