@@ -1,6 +1,6 @@
 # 🧰 Infrastructure Scripts Runbook
 
-This repository uses shell scripts to manage deployments, backups, security, and related operational tasks.
+This repository uses shell scripts to manage deployments, backups, and related operational tasks.
 
 ## 🗂️ Script Groups
 
@@ -8,7 +8,6 @@ Primary script groups:
 
 - `release/` -> image build, release jobs, deployment switch, rollback flow
 - `db_backup/` -> backup, restore, restore validation
-- `security/` -> host-side security helpers such as `fail2ban` probe blocking
 - `utils.sh` -> shared utility functions used across infra scripts
 
 ---
@@ -187,58 +186,6 @@ TAG=v1.2.0 doppler run -- ./infra/scripts/release/prepare_images.sh
 ```
 
 For staging, run `build.sh` first for the same `ENVIRONMENT` and `TAG`, then rerun `release.sh`.
-
-### 🚫 Probe IP blocking with fail2ban
-
-The repository includes a host-side `fail2ban` setup for repeated probes such as:
-
-- `/.env`
-- `/app/.env`
-- `/api/.env`
-- `/.git/config`
-- common CMS / exploit scans like `/wp-admin` and `/xmlrpc.php`
-
-Files:
-
-- `infra/scripts/security/fail2ban/filter.d/portfolio-nginx-sensitive-probes.conf`
-- `infra/scripts/security/fail2ban/filter.d/portfolio-traefik-sensitive-probes.conf`
-- `infra/scripts/security/fail2ban/jail.d/portfolio-probe-blocker.local`
-- `infra/scripts/security/install_fail2ban_probe_blocker.sh`
-
-The nginx jail covers probes that reach nginx on the public domain.
-The Traefik jail covers unmatched direct-IP and host-header probes before they reach nginx.
-Both jails ban after 3 matching probes from the same IP within 1 minute, and
-the ban is permanent (`bantime = -1`). The nginx container also mounts the
-downloaded bad-bot user-agent blocklist at `/etc/nginx/blocklist`; the fail2ban
-jails do not read that mounted file directly, but they do watch access-log
-entries for the same sensitive-path families nginx blocks.
-
-Typical host setup:
-
-```bash
-sudo mkdir -p /var/log/traefik
-sudo chown -R <user>:<user> /var/log/traefik
-chmod +x /home/<user>/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
-sudo /home/<user>/portfolio/infra/scripts/security/install_fail2ban_probe_blocker.sh
-sudo systemctl restart fail2ban
-```
-
-After updating the shared Traefik runtime under `/home/<user>/devops/traefik`,
-recreate Traefik so the host access log file is mounted and written:
-
-```bash
-cd /home/<user>/devops/traefik
-doppler run --project traefik --config prd -- \
-  docker compose -f docker-compose.prod.yml up -d traefik
-```
-
-Useful checks:
-
-```bash
-sudo fail2ban-client status portfolio-nginx-probes
-sudo fail2ban-client status portfolio-traefik-probes
-sudo fail2ban-client status
-```
 
 ### 💾 Backup scripts
 

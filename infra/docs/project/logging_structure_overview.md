@@ -2,12 +2,12 @@
 
 ## Purpose
 
-This document describes the current logging structure across the portfolio stack and clarifies which components already emit JSON logs versus plain-text logs.
+This document describes the current logging structure inside the landingpage application stack and clarifies which components already emit JSON logs versus plain-text logs.
 
 It is intended as:
 
 - a current-state reference for future logging work,
-- an operational guide for reading logs across backend, frontend, nginx, and Traefik,
+- an operational guide for reading logs across backend, frontend, and nginx,
 - a baseline for future log normalization and ingestion work.
 
 Current state verified on 2026-04-17.
@@ -19,8 +19,6 @@ Current JSON logging status:
 - Backend Django app: yes, JSON to Docker stdout
 - Frontend SSR request logs: yes, JSON to Docker stdout
 - Nginx access logs: yes, JSON to file and Docker stdout
-- Traefik access logs: yes, JSON to file
-- Traefik runtime logs: yes, JSON
 - Frontend SSR startup/error logs: yes, JSON
 
 Current plain-text / non-JSON areas:
@@ -378,43 +376,7 @@ Nginx error logs are still plain text:
 
 Nginx access logs are already JSON and visible through Docker stdout. Nginx error logs are still plain text.
 
-## 4. Traefik
-
-### Current format
-
-Traefik access logging is JSON.
-
-Relevant config:
-
-- `/Users/lukaszremkowicz/Projects/devops/traefik/config/traefik.yml`
-
-Current access log definition:
-
-- `accessLog.format: json`
-- file output:
-  - `/var/log/traefik/access.log`
-
-### Current structured fields
-
-Traefik access logs keep default fields and explicitly keep:
-
-- `RequestHost`
-- `RouterName`
-- `ServiceName`
-- `ServiceURL`
-
-### Runtime logs
-
-Traefik runtime logs are now configured for JSON through:
-
-- `log.level: INFO`
-- `log.format: json`
-
-### Conclusion
-
-Traefik access logs are JSON and Traefik runtime logs are now configured as JSON too.
-
-## 5. Shell Entrypoints / Startup Scripts
+## 4. Shell Entrypoints / Startup Scripts
 
 Current startup scripts still emit plain text via shell `echo`.
 
@@ -422,7 +384,6 @@ Examples:
 
 - [docker/backend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/backend/entrypoint.sh:1)
 - [docker/frontend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/frontend/entrypoint.sh:1)
-- `/Users/lukaszremkowicz/Projects/devops/traefik/docker/entrypoint.sh`
 
 These are operational bootstrap logs, not application logs, and they are currently plain text.
 
@@ -433,7 +394,6 @@ These are operational bootstrap logs, not application logs, and they are current
 - Backend Django runtime logs
 - Frontend SSR request logs
 - Nginx access logs
-- Traefik access logs
 
 ### Still plain text today
 
@@ -460,9 +420,6 @@ Current examples:
   - `time_local`
   - `request`
   - `status`
-- Traefik:
-  - Traefik-native JSON field names
-
 For future normalization, a better common field direction would be:
 
 - `timestamp`
@@ -489,19 +446,9 @@ If you are looking at live Docker logs:
 - backend logs are JSON
 - nginx access logs are JSON
 - frontend SSR runtime logs are JSON
-- Traefik runtime/access logs are JSON
 - nginx error lines remain plain text
 
-If you are collecting logs for monitoring/fail2ban:
-
-- Traefik access log file is JSON
-- Nginx access log file is JSON
-- Nginx error log remains plain text
-
-Current operator report inspection lives in the standalone `agent-monitoring`
-project. Landingpage owns log emission only; it no longer has a Django
-`monitoring` app, report tables, admin report actions, or monitoring Celery
-queue.
+Landingpage owns application log emission only.
 
 ## Verified Sources
 
@@ -511,7 +458,5 @@ queue.
 - [frontend/server/logging.js](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/logging.js:1)
 - [frontend/server/index.mjs](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/index.mjs:1)
 - [infra/nginx/static_server.conf](/Users/lukaszremkowicz/Projects/landingpage/infra/nginx/static_server.conf:43)
-- `/Users/lukaszremkowicz/Projects/devops/traefik/config/traefik.yml`
 - [docker/backend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/backend/entrypoint.sh:1)
 - [docker/frontend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/frontend/entrypoint.sh:1)
-- `/Users/lukaszremkowicz/Projects/devops/traefik/docker/entrypoint.sh`
