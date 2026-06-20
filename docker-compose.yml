@@ -92,53 +92,6 @@ x-local-nginx-common: &local-nginx-common
     - nginx_blocklist:/etc/nginx/blocklist:ro
 
 services:
-  traefik:
-    build:
-      context: ./docker/traefik
-    container_name: traefik
-    restart: always
-    read_only: true
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    networks:
-      - traefik_proxy
-    ports:
-      - "127.0.0.1:80:80"
-      - "127.0.0.1:443:443"
-      - "127.0.0.1:8081:8080"
-    environment:
-      TZ: UTC
-      CONTACT_EMAIL: ${CONTACT_EMAIL:-dev@portfolio.local}
-      SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}
-      TRAEFIK_USER: ${TRAEFIK_USER:-admin}
-      TRAEFIK_PASSWORD: ${TRAEFIK_PASSWORD:-admin}
-      STAGING_ALLOWED_IPS: ${STAGING_ALLOWED_IPS:-127.0.0.1,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml.template:ro
-      - ./infra/traefik/dynamic_conf.yml:/etc/traefik/dynamic_conf.yml.template:ro
-      - ${TRAEFIK_LOG_DIR:-./logs/traefik}:/var/log/traefik
-      - ./infra/nginx/ssl/certs/portfolio.local.crt:/etc/letsencrypt/live/portfolio.local/fullchain.pem:ro
-      - ./infra/nginx/ssl/certs/portfolio.local.key:/etc/letsencrypt/live/portfolio.local/privkey.pem:ro
-      - traefik_acme:/letsencrypt
-    tmpfs:
-      - /tmp
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_DASHBOARD_HOST:-traefik.portfolio.local}`)"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.entrypoints=websecure"
-      - "traefik.http.routers.dashboard.tls=true"
-      - "traefik.http.routers.dashboard.middlewares=dashboard-slash@file,dashboard-auth@file,admin-api-security@file"
-      - "traefik.http.middlewares.staging-whitelist.ipallowlist.sourcerange=${STAGING_ALLOWED_IPS:-127.0.0.1,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}"
-
   fe:
     <<: *frontend-common
     environment:
@@ -300,7 +253,4 @@ volumes:
   portfolio_dev_fe_node_modules:
     external: true
   portfolio_dev_static_data:
-    external: true
-  traefik_acme:
-    name: portfolio_traefik_acme
     external: true

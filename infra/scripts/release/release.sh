@@ -250,7 +250,7 @@ if [[ "${ENV_SUFFIX}" == "prod" ]]; then
        BACKUP_DIR="${BACKUP_DIR}" \
        "${PROJECT_DIR}/infra/scripts/db_backup/backup_db.sh"; then
     echo "❌ ERROR: Pre-release database backup failed. Refusing to run migrations." >&2
-    echo "👉 Check backup directory ownership and setup in infra/scripts/README.md and infra/docs/traefik_production_deployment.md" >&2
+    echo "👉 Check backup directory ownership and setup in infra/scripts/README.md" >&2
     exit 1
   fi
 fi

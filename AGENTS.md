@@ -63,21 +63,11 @@ Use these documents as fast context before implementation.
 - `infra/docs/project/landing_page_total_time_spent_system.md`
   Use for landing-page total-time calculation, `AstroImage.calculated_exposure_hours`, rebuild flow, serializer rounding, and cache invalidation. Describes the current derived-stat architecture and operational caveats.
 - `infra/docs/project/logging_structure_overview.md`
-  Use for backend/frontend/nginx/Traefik logging formats, JSON-vs-plain-text status, and cross-stack logging structure. Describes how logs are currently emitted across the platform.
+  Use for backend/frontend/nginx logging formats, JSON-vs-plain-text status, and application log emission structure.
 - `infra/docs/project/translation_system_overview.md`
   Use for translation lifecycle, `TranslationTask` debugging, translation admin behavior, serializer fallback behavior, and adding translation support to new models. Describes the async translation architecture and its operational boundaries.
 - `infra/docs/project/release_deploy_architecture.md`
   Use for release scripts, deploy logic, image naming, artifact flow, and rollback behavior. Describes the tag-based release/deploy model and script responsibilities.
-- `infra/docs/project/analysis/mcp_log_server_architecture.md`
-  Use for planning the FastMCP-based log/VPS agent server intended to replace the collector over time. Describes the proposed MCP tool surface, auth model, phased migration, and deterministic log-analysis boundary.
-- `infra/docs/project/analysis/cloudflare_cdn_image_migration_analysis.md`
-  Use for planning Cloudflare CDN/R2 image delivery for frontend-served images, cache-header behavior, and secure full-size image routing. Describes the draft storage/CDN migration direction and known nginx/Traefik cache-policy constraints.
-- `infra/docs/project/analysis/TODO.md`
-  Use for planning image performance work that must preserve astrophotography detail. Describes responsive image variants, frontend `srcset` adoption, public CDN rollout, and explicit original/detail image contracts.
-- `infra/docs/project/vps_postgres_ssh_tunneling.md`
-  Use for local SSH tunneling into the VPS PostgreSQL container, pgAdmin connection setup, and port-forwarding examples. Describes the local-to-VPS tunnel shape and Docker container IP usage.
-- `infra/docs/prod/fail2ban_probe_blocker_playbook.md`
-  Use for production probe blocking, repeated `.env` scans, and host-level IP banning. Describes the `fail2ban` setup for nginx and Traefik logs.
 - `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
   Use for SSR architecture decisions and initial migration direction. Describes the preferred incremental SSR strategy and early-phase non-goals.
 - `infra/docs/project/SSR Migration/STAGE-2_full_ssr_bff_migration_plan.md`
@@ -99,14 +89,9 @@ Use this quick mapping when a task arrives:
 - Feature-gated frontend modules or `LandingPageSettings` booleans -> `infra/docs/project/feature_flag_mechanism.md`
 - Landing page total-time stat or exposure-hours rebuilds -> `infra/docs/project/landing_page_total_time_spent_system.md`
 - Django admin image cropping or preview/media bug -> `infra/docs/project/django_admin_image_cropper_mechanism.md`
-- Backend/frontend/nginx/Traefik logging structure -> `infra/docs/project/logging_structure_overview.md`
-- Monitoring, collector retirement, or MCP log-server rollout work -> `infra/docs/project/analysis/mcp_log_server_architecture.md`
+- Backend/frontend/nginx logging structure -> `infra/docs/project/logging_structure_overview.md`
 - Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
 - Release/deploy script logic or image naming -> `infra/docs/project/release_deploy_architecture.md`
-- FastMCP log/VPS agent server planning or collector replacement -> `infra/docs/project/analysis/mcp_log_server_architecture.md`
-- Cloudflare CDN/R2 image migration planning -> `infra/docs/project/analysis/cloudflare_cdn_image_migration_analysis.md`
-- Image performance work that must preserve detail -> `infra/docs/project/analysis/TODO.md`
-- SSH tunnel or pgAdmin access to the VPS PostgreSQL DB -> `infra/docs/project/vps_postgres_ssh_tunneling.md`
 - Production release procedure -> `infra/scripts/README.md`
 - SSR architecture direction -> `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
 - BFF route ownership or `/app/...` migration -> `infra/docs/project/SSR Migration/STAGE-2_full_ssr_bff_migration_plan.md`

@@ -456,7 +456,7 @@ Success criteria:
 
 Once browser no longer depends on public backend routes:
 
-- remove public Traefik exposure for backend API
+- remove public backend API exposure
 - keep backend reachable only on internal Docker/network
 - keep admin exposed if needed
 - tighten nginx route ownership so site routes go only to frontend server
@@ -484,7 +484,7 @@ The browser/backend boundary is now tighter:
   - `/v1/categories/`
   - `/v1/tags/`
   - `/v1/images/:slug/serve/`
-- public `api.` Traefik routers were removed from local, stage, and prod compose routing
+- public `api.` routing was removed from local, stage, and prod compose routing
 - public `/media/*` exposure was removed from the `api.` nginx host
 - admin remains separately reachable on the admin hostname
 
