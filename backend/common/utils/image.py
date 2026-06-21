@@ -1,15 +1,52 @@
 import os
 import secrets
+from dataclasses import dataclass
 from io import BytesIO
 from typing import IO, cast
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from django.core.files.base import ContentFile
 from django.db.models.fields.files import FieldFile
 from django.utils.deconstruct import deconstructible
 
 from common.types import ProcessableImageFile
+
+
+@dataclass(frozen=True)
+class ImageOutputFormat:
+    """Generated image output contract shared by encoding and file naming."""
+
+    pillow_format: str
+    extension: str
+    mime_type: str
+
+
+IMAGE_FORMAT = ImageOutputFormat(
+    pillow_format="WEBP",
+    extension=".webp",
+    mime_type="image/webp",
+)
+
+
+def has_output_image_extension(
+    file_name: str | None,
+    output_format: ImageOutputFormat = IMAGE_FORMAT,
+) -> bool:
+    """Return whether a file name already uses the generated image extension."""
+    return str(file_name or "").lower().endswith(output_format.extension)
+
+
+def get_output_image_name(
+    source_name: str,
+    *,
+    filename_prefix: str = "",
+    output_format: ImageOutputFormat = IMAGE_FORMAT,
+) -> str:
+    """Return a seeded generated-image name using the configured output extension."""
+    source_base_name = os.path.basename(source_name)
+    source_stem = os.path.splitext(source_base_name)[0] or "unknown"
+    return seed_file_name(f"{filename_prefix}{source_stem}{output_format.extension}")
 
 
 def get_available_image_url(image_field: FieldFile | None) -> str:
@@ -92,15 +129,15 @@ def seeded_image_upload_to(
     return SeededImageUploadTo(directory_property_name, subdirectory)
 
 
-def build_webp_thumbnail(
+def build_image_thumbnail(
     image: ProcessableImageFile, size: tuple[int, int], filename_prefix: str = "thumb_"
 ) -> ContentFile:
-    """Build a WebP thumbnail with the shared resizing and naming rules.
+    """Build a generated-image thumbnail with the shared resizing and naming rules.
 
     The generated thumbnail:
     - preserves aspect ratio via Pillow's ``thumbnail()``
     - flattens transparency onto white for predictable portfolio rendering
-    - uses lossless WebP for visual sharpness
+    - uses the centralized project image format
     - gets a seeded file name derived from the source file name
     """
     img: Image.Image = Image.open(cast(IO[bytes], image))
@@ -114,43 +151,90 @@ def build_webp_thumbnail(
 
     img.thumbnail(size, Image.Resampling.LANCZOS)
     thumb_io = BytesIO()
-    img.save(thumb_io, "WEBP", lossless=True, method=6)
+    img.save(thumb_io, IMAGE_FORMAT.pillow_format, lossless=True, method=6)
     source_name = getattr(image, "name", "unknown").split("/")[-1]
-    thumbnail_name = seed_file_name(filename_prefix + os.path.splitext(source_name)[0] + ".webp")
+    thumbnail_name = get_output_image_name(source_name, filename_prefix=filename_prefix)
     return ContentFile(thumb_io.getvalue(), name=thumbnail_name)
 
 
-def convert_to_webp(
+def build_image_with_given_width(
+    image: ProcessableImageFile,
+    *,
+    width: int,
+    quality: int,
+    filename_prefix: str,
+) -> tuple[ContentFile, int, int] | None:
+    """Build a width-constrained generated image while preserving aspect ratio."""
+    try:
+        if hasattr(image, "seek"):
+            image.seek(0)
+        with Image.open(cast(IO[bytes], image)) as opened_image:
+            img = opened_image.copy()
+    except (OSError, ValueError, UnidentifiedImageError):
+        return None
+
+    img = _flatten_image_to_rgb(img)
+    if img.width < width:
+        return None
+
+    height = max(1, round(img.height * (width / img.width)))
+    img = img.resize((width, height), Image.Resampling.LANCZOS)
+
+    output = BytesIO()
+    try:
+        img.save(output, IMAGE_FORMAT.pillow_format, quality=quality)
+    except (OSError, ValueError):
+        return None
+
+    source_name = getattr(image, "name", "unknown").split("/")[-1]
+    variant_name = get_output_image_name(source_name, filename_prefix=filename_prefix)
+    return ContentFile(output.getvalue(), name=variant_name), width, height
+
+
+def _flatten_image_to_rgb(img: Image.Image) -> Image.Image:
+    """Return an RGB image, flattening transparent pixels onto white."""
+    if img.mode == "RGBA":
+        bg = Image.new("RGB", img.size, (255, 255, 255))
+        bg.paste(img, mask=img.getchannel("A"))
+        return bg
+
+    if img.mode == "P" and "transparency" in img.info:
+        return _flatten_image_to_rgb(img.convert("RGBA"))
+
+    return img.convert("RGB")
+
+
+def convert_to_project_image_format(
     image_field: ProcessableImageFile | None,
     quality: int = 90,
     max_dimension: int | None = None,
     dimension_percentage: int | None = None,
 ) -> tuple[str, ContentFile] | None:
-    """Convert an open ImageField to WebP format.
+    """Convert an open ImageField to the centralized project image format.
 
     Args:
-        image_field: An open Django ImageFieldFile (e.g. ``instance.path``).
-        quality: WebP encoding quality (1–100). Defaults to 90.
+        image_field: An open Django ImageFieldFile (for example ``instance.original``).
+        quality: Output encoding quality (1-100). Defaults to 90.
         max_dimension: Resize proportionally so the longest side is no larger than this.
         dimension_percentage: Scale both width and height by this percentage.
             When provided, it overrides ``max_dimension``.
 
     Returns:
-        ``(original_name, webp_content_file)`` on success, or ``None`` if the
-        field is empty, already a ``.webp``, or conversion fails.
+        ``(original_name, output_content_file)`` on success, or ``None`` if the
+        field is empty, already in the output format, or conversion fails.
 
     The caller is responsible for:
     1. Persisting ``original_name`` to the legacy field.
-    2. Calling ``image_field.save(webp_content_file.name, webp_content_file, save=False)``.
+    2. Calling ``image_field.save(output_content.name, output_content, save=False)``.
     """
     if not image_field:
         return None
 
-    # Capture current name to return as 'original_name' (original_image) for rollbacks.
+    # Capture current name so callers can persist the canonical original source.
     current_name: str = str(image_field.name)
 
-    # Do not re-compress if the file is already a WebP image.
-    if current_name.lower().endswith(".webp"):
+    # Do not re-compress if the file already uses the project output format.
+    if has_output_image_extension(current_name):
         return None
 
     try:
@@ -173,12 +257,12 @@ def convert_to_webp(
             img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
 
         output: BytesIO = BytesIO()
-        img.save(output, "WEBP", quality=quality)
+        img.save(output, IMAGE_FORMAT.pillow_format, quality=quality)
         output.seek(0)
 
         original_filename: str = os.path.basename(current_name)
-        webp_filename = seed_file_name(os.path.splitext(original_filename)[0] + ".webp")
-        return current_name, ContentFile(output.getvalue(), name=webp_filename)
+        output_filename = get_output_image_name(original_filename)
+        return current_name, ContentFile(output.getvalue(), name=output_filename)
 
     except Exception:
         return None

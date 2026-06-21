@@ -79,6 +79,7 @@ class TestBaseImageModel:
             img._meta.app_label,
             img._meta.model_name,
             str(img.pk),
+            ["original"],
         )
 
     def test_dispatch_image_processing_skips_when_update_fields_are_present(self):

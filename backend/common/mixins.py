@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
+from typing import Any
 
+from django.db import models
 from django.db.models.base import ModelBase
 
 from common.types import ImageProcessingOperation
@@ -39,3 +41,14 @@ class ImageProcessingModelMixin(metaclass=DjangoModelABCMeta):
             original-file handling for this model instance.
         """
         raise NotImplementedError
+
+    def generate_image_variants_or_none(
+        self, *, force: bool = False
+    ) -> models.QuerySet[Any] | None:
+        """Generate optional responsive variants.
+
+        Models that do not support responsive image variants keep the default
+        no-op implementation.
+        """
+        del force
+        return None

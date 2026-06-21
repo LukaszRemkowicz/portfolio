@@ -103,6 +103,10 @@ Use this quick mapping when a task arrives:
 - If docs and code disagree, code is the current truth; update docs after confirming behavior.
 - If a proposed implementation seems risky, inconsistent, or likely incorrect, say so clearly and discuss it. Push back when needed; collaboration and correction are expected.
 - Avoid broad infra changes without checking the relevant runbook first.
+- Never delete files from `infra/docs/project/analysis/`. Files in this folder
+  are protected planning and investigation records. Do not remove, relocate, or
+  empty them in any cleanup unless the user explicitly names the exact file and
+  asks for that specific deletion in the current turn.
 - For commit messages and pull request messages, check `.agent/skills/` first and follow the matching message-writing guidance.
 - For deploy/release work, be explicit about environment: `dev`, `stage`, or `production`.
 - For monitoring work, remember the hard boundary: deterministic code gathers facts; the LLM summarizes and interprets.

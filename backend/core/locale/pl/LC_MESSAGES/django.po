@@ -28,6 +28,81 @@ msgstr "Ustawienia Główne"
 msgid "ID"
 msgstr "ID"
 
+#: core/models.py
+msgid "Stable identifier of this generated image variant row."
+msgstr "Stały identyfikator tego wygenerowanego wariantu zdjęcia."
+
+#: core/models.py
+msgid "Concrete image model that owns this variant."
+msgstr "Konkretny model zdjęcia, do którego należy ten wariant."
+
+#: core/models.py
+msgid "Primary key of the concrete image object that owns this variant."
+msgstr ""
+"Klucz główny konkretnego obiektu zdjęcia, do którego należy ten wariant."
+
+#: core/models.py
+msgid "Original Image WebP"
+msgstr "Oryginalne zdjęcie WebP"
+
+#: core/models.py
+msgid ""
+"TODO_LEGACY: Derived WebP image kept during the ImageVariant rollout. Remove "
+"after generated variants are the public serving path."
+msgstr ""
+"TODO_LEGACY: Pochodne zdjęcie WebP zachowane na czas wdrażania ImageVariant. "
+"Usunąć po przełączeniu publicznego serwowania na wygenerowane warianty."
+
+#: core/models.py
+msgid "File"
+msgstr "Plik"
+
+#: core/models.py
+msgid "Generated WebP file stored for this variant."
+msgstr "Wygenerowany plik WebP zapisany dla tego wariantu."
+
+#: core/models.py
+msgid "Role"
+msgstr "Rola"
+
+#: core/models.py
+msgid "Frontend display role for this variant, such as card, detail, or hero."
+msgstr ""
+"Rola wyświetlania tego wariantu we frontendzie, na przykład karta, szczegół "
+"lub hero."
+
+#: core/models.py
+msgid "Width"
+msgstr "Szerokość"
+
+#: core/models.py
+msgid "Generated image width in pixels."
+msgstr "Szerokość wygenerowanego zdjęcia w pikselach."
+
+#: core/models.py
+msgid "Height"
+msgstr "Wysokość"
+
+#: core/models.py
+msgid "Generated image height in pixels."
+msgstr "Wysokość wygenerowanego zdjęcia w pikselach."
+
+#: core/models.py
+msgid "MIME Type"
+msgstr "Typ MIME"
+
+#: core/models.py
+msgid "MIME type of the generated variant file."
+msgstr "Typ MIME wygenerowanego pliku wariantu."
+
+#: core/models.py
+msgid "When this variant row was first created."
+msgstr "Data pierwszego utworzenia tego wiersza wariantu."
+
+#: core/models.py
+msgid "When this variant row was last updated."
+msgstr "Data ostatniej aktualizacji tego wiersza wariantu."
+
 #: core/models.py:21
 msgid "Created At"
 msgstr "Utworzono"

@@ -280,26 +280,23 @@ Clear the full Django cache:
 doppler --config dev run -- docker compose exec -T be python manage.py clear_cache
 ```
 
-Convert stored images to WebP:
+Backfill responsive image variants:
 
 ```bash
-# convert everything
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp
+# generate missing variants
+doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants
 
 # preview only
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --dry-run
+doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants --dry-run
 
-# reconvert already-converted images from originals
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --force
+# regenerate all variants from originals
+doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants --force
 
 # convert one object
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --object-id <uuid>
+doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants --object-id <uuid>
 
 # convert multiple objects
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --object-ids <uuid1> <uuid2>
-
-# override output size for a run
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --dimension-percentage 50
+doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants --object-ids <uuid1> <uuid2>
 ```
 
 Regenerate thumbnails:
@@ -317,11 +314,11 @@ doppler --config dev run -- docker compose exec -T be python manage.py regenerat
     ```bash
     doppler --config dev run -- docker compose exec -T be python manage.py clear_cache
     ```
-- `convert_images_to_webp`
-  - batch-converts stored images to WebP and preserves rollback originals
+- `backfill_image_variants`
+  - generates missing responsive `ImageVariant` rows from original images
   - run:
     ```bash
-    doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp
+    doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants
     ```
 - `regenerate_thumbnails`
   - rebuilds thumbnails using current thumbnail settings

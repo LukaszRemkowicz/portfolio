@@ -16,7 +16,7 @@ class TestShopSettingsImageProcessing:
         )
 
         convert_mock = mocker.patch(
-            "common.image_processing.convert_to_webp",
+            "common.image_processing.convert_to_project_image_format",
             return_value=("ignored", _png_field("background.webp")),
         )
         save_mock = mocker.patch.object(ShopSettings, "save")

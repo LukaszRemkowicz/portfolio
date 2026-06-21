@@ -1,0 +1,127 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_list jazzmin %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    {{ astroimage_filter_form.media.css }}
+    <style>
+        #change-list-filters {
+            padding-right: 1.5rem;
+            box-sizing: border-box;
+        }
+
+        #changelist-search {
+            display: grid !important;
+            grid-template-columns: minmax(260px, 1.35fr) repeat(3, minmax(150px, 0.85fr)) auto;
+            gap: 0.75rem !important;
+            align-items: center !important;
+            width: 100%;
+            max-width: 100%;
+            padding-right: 0.5rem;
+            box-sizing: border-box;
+        }
+
+        #changelist-search .imagevariant-astroimage-filter {
+            min-width: 0;
+            max-width: none;
+        }
+
+        #changelist-search .imagevariant-astroimage-filter .select2-container,
+        #changelist-search .imagevariant-astroimage-filter select {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+        }
+
+        #changelist-search .form-group {
+            min-width: 0;
+            margin-bottom: 0;
+        }
+
+        #changelist-search .form-group .select2-container,
+        #changelist-search .form-group select {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+        }
+
+        #changelist-search .select2-container--default .select2-selection--single {
+            min-width: 0 !important;
+            max-width: 100% !important;
+        }
+
+        #changelist-search button[type="submit"] {
+            justify-self: start;
+            white-space: nowrap;
+        }
+
+        #changelist-search .quiet {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 1400px) {
+            #changelist-search {
+                grid-template-columns: minmax(260px, 1fr) repeat(2, minmax(160px, 1fr)) auto;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            #changelist-search {
+                grid-template-columns: repeat(2, minmax(220px, 1fr)) auto;
+            }
+        }
+
+        @media (max-width: 760px) {
+            #changelist-search {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block search %}
+    <div class="col-12 pb-4" id="change-list-filters">
+        <div>
+            <form id="changelist-search" method="get">
+                <div class="imagevariant-astroimage-filter">
+                {{ astroimage_filter_form.astroimage }}
+                </div>
+
+                {% if cl.has_filters %}
+                    {% for spec in cl.filter_specs %}{% jazzmin_list_filter cl spec %}{% endfor %}
+                {% endif %}
+
+                {% if cl.has_filters %}
+                    <button type="submit" class="btn {{ jazzmin_ui.button_classes.primary }}">{% trans "Search" %}</button>
+                    {% if show_result_count %}
+                        <span class="small quiet ms-2">
+                            {% blocktrans count counter=cl.result_count %}{{ counter }} result{% plural %}{{ counter }} results{% endblocktrans %}
+                            (<a href="?{% if cl.is_popup %}_popup=1{% endif %}">
+                                {% if cl.show_full_result_count %}
+                                    {% blocktrans with full_result_count=cl.full_result_count %}{{ full_result_count }} total{% endblocktrans %}
+                                {% else %}
+                                    {% trans "Show all" %}
+                                {% endif %}
+                            </a>)
+                        </span>
+                    {% endif %}
+                    {% admin_extra_filters cl as extra_filters %}
+                    {% for pair in extra_filters.items %}
+                        {% if pair.0 != "q" and pair.0 != "astroimage" %}<input type="hidden" name="{{ pair.0 }}" value="{{ pair.1 }}">{% endif %}
+                    {% endfor %}
+                {% endif %}
+            </form>
+
+            {% block object-tools %}
+                {% block object-tools-items %}
+                    {% change_list_object_tools %}
+                {% endblock %}
+            {% endblock %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block extrajs %}
+    {{ block.super }}
+    {{ astroimage_filter_form.media.js }}
+{% endblock %}
