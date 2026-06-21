@@ -4,18 +4,21 @@ from __future__ import annotations
 
 import logging
 import subprocess
+import sys
 
 logger = logging.getLogger(__name__)
 
-RELEASE_CONFIGURATION_COMMANDS: tuple[tuple[str, ...], ...] = ()
+RELEASE_CONFIGURATION_COMMANDS: tuple[str, ...] = ("backfill_image_variants",)
 
 
 def main() -> int:
     """Run release-time configuration commands in a predictable order."""
     for command in RELEASE_CONFIGURATION_COMMANDS:
-        printable_command = " ".join(command)
-        logger.info("Running release configuration step", extra={"command": printable_command})
-        subprocess.run(command, check=True)
+        logger.info("Running release configuration step", extra={"command": command})
+        subprocess.run(
+            (sys.executable, "manage.py", command, "--verbosity", "0"),
+            check=True,
+        )
 
     logger.info("Release configuration complete")
     return 0

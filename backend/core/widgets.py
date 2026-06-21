@@ -1,9 +1,9 @@
 import copy
 
-from django_select2.forms import Select2MultipleWidget, Select2Widget
+from django_select2.forms import ModelSelect2Widget, Select2MultipleWidget, Select2Widget
 
 from django import forms
-from django.contrib.admin.widgets import AdminFileWidget
+from django.contrib.admin.widgets import AdminFileWidget, AutocompleteSelect
 from django.utils.translation import gettext_lazy as _
 
 
@@ -49,6 +49,43 @@ class ThemedSelect2MultipleWidget(Select2MultipleWidget):
         attrs["class"] = attrs.get("class", "") + " themed-select2"
         kwargs["attrs"] = attrs
         super().__init__(*args, **kwargs)
+
+    @property
+    def media(self):
+        return super().media + forms.Media(css={"all": ("core/css/select2_admin.css",)})
+
+
+class ThemedModelSelect2Widget(ModelSelect2Widget):
+    """AJAX-backed Select2 model picker using the project's admin theme."""
+
+    def __init__(self, *args, **kwargs):
+        attrs = kwargs.get("attrs", {})
+        attrs.setdefault("data-placeholder", _("Search..."))
+        attrs.setdefault("data-allow-clear", "true")
+        attrs.setdefault("style", "width: 100%; max-width: 100ch;")
+        attrs["class"] = attrs.get("class", "") + " themed-select2"
+        kwargs["attrs"] = attrs
+        super().__init__(*args, **kwargs)
+
+    @property
+    def media(self):
+        return super().media + forms.Media(css={"all": ("core/css/select2_admin.css",)})
+
+
+class ThemedAdminAutocompleteSelectWidget(AutocompleteSelect):
+    """Django admin autocomplete widget styled like the project's Select2 fields."""
+
+    def __init__(self, field, admin_site, attrs=None, choices=(), using=None):
+        merged_attrs = {
+            "data-placeholder": _("Select..."),
+            "data-allow-clear": "true",
+            "data-autocomplete-light-function": "select2",
+            "style": "width: 100%; max-width: 100ch;",
+            "class": "themed-select2",
+        }
+        if attrs:
+            merged_attrs.update(attrs)
+        super().__init__(field, admin_site, attrs=merged_attrs, choices=choices, using=using)
 
     @property
     def media(self):

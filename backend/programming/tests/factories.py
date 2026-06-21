@@ -20,5 +20,5 @@ class ProjectImageFactory(DjangoModelFactory):
         model = ProjectImage
 
     project = factory.SubFactory(ProjectFactory)
-    image = factory.django.ImageField()
+    original = factory.django.ImageField()
     is_cover = False

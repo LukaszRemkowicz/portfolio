@@ -26,7 +26,7 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from common.constants import FALLBACK_URL_SLUG
-from common.types import ImageSpec
+from common.types import ImageSpec, ImageVariantSpec
 from core.models import BaseImage, LandingPageSettings, SingletonModel
 from translation.mixins import AutomatedTranslationModelMixin
 from translation.services import TranslationService
@@ -420,6 +420,32 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
     """Model for astrophotography images"""
 
     source_tracker = FieldTracker(fields=["original"])
+    image_variant_specs = (
+        ImageVariantSpec(
+            role="original_format",
+            widths=(1920,),
+            quality=90,
+            label="Legacy original_webp equivalent",
+        ),
+        ImageVariantSpec(
+            role="thumbnail",
+            widths=(560,),
+            quality=100,
+            label="Legacy thumbnail field equivalent for gallery thumbnails",
+        ),
+        ImageVariantSpec(
+            role="card",
+            widths=(320, 560, 840, 1120),
+            quality=90,
+            label="Astrophotography card/grid candidates",
+        ),
+        ImageVariantSpec(
+            role="detail",
+            widths=(1280, 1920, 2560),
+            quality=90,
+            label="Astrophotography detail display candidates",
+        ),
+    )
 
     # Translation trigger fields
     translation_service_method = "translate_astro_image"
@@ -607,6 +633,26 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
     # Homepage backgrounds should stay visibly sharper than generic gallery assets.
     webp_quality = 95
     max_dimension = 2560
+    image_variant_specs = (
+        ImageVariantSpec(
+            role="original_format",
+            widths=(2560,),
+            quality=95,
+            label="Legacy original_webp equivalent for homepage backgrounds",
+        ),
+        ImageVariantSpec(
+            role="thumbnail",
+            widths=(560,),
+            quality=100,
+            label="Legacy thumbnail field equivalent for admin/background previews",
+        ),
+        ImageVariantSpec(
+            role="hero",
+            widths=(1280, 1920, 2560),
+            quality=95,
+            label="Homepage background hero candidates",
+        ),
+    )
 
     source_tracker = FieldTracker(fields=["original"])
 
@@ -614,14 +660,6 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
     translation_service_method = "translate_main_page_background_image"
     translation_trigger_fields = ["name", "description"]
 
-    path = models.ImageField(
-        upload_to="backgrounds/",
-        verbose_name=_("Image File"),
-        help_text=_(
-            "Legacy background image field kept during the BaseImage refactor. "
-            "TODO: legacy, will be removed in future."
-        ),
-    )
     translations = TranslatedFields(
         name=models.CharField(
             max_length=255,

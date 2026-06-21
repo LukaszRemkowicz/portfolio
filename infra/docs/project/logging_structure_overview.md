@@ -148,7 +148,7 @@ These modules emit structured logs through the normal app-level namespace config
 - [backend/common/image_processing.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/image_processing.py:1)
 - [backend/core/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/models.py:1)
 - [backend/core/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/tasks.py:1)
-- [backend/core/management/commands/backfill_baseimage_fields.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/management/commands/backfill_baseimage_fields.py:1)
+- [backend/core/management/commands/backfill_image_variants.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/management/commands/backfill_image_variants.py:1)
 - shared image task compatibility wrapper
 
 Common log shape:
