@@ -24,13 +24,10 @@ from .protocols import SupportsBaseImageUploadForm
 
 
 class BaseImageSourceUploadFormMixin:
-    """Expose the source upload field in admin while hiding the legacy model field."""
+    """Expose the source upload field in admin."""
 
     def _configure_source_upload_field(self: SupportsBaseImageUploadForm) -> None:
-        """Hide the legacy model field and configure the source upload field."""
-        # TODO: legacy field, will be removed in future.
-        self.fields.pop("path", None)
-
+        """Configure the source upload field."""
         current_source = self._get_current_source_field()
         self.fields["original_upload"].required = not bool(current_source)
 

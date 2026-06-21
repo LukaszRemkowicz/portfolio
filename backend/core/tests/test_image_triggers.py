@@ -31,6 +31,7 @@ class TestBaseImageAsyncTrigger:
             args, _ = mock_delay.call_args
             assert args[0] == "astrophotography"
             assert args[1] == "mainpagebackgroundimage"
+            assert args[3] == ["original"]
 
             # Assert original_webp is STILL EMPTY (conversion hasn't happened yet)
             img.refresh_from_db()

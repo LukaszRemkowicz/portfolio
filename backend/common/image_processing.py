@@ -21,9 +21,15 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
+from django.db import models
+
 from common.protocols import ImageProcessingCapable
 from common.types import ImageProcessingOperation
-from common.utils.image import convert_to_webp
+from common.utils.image import (
+    IMAGE_FORMAT,
+    convert_to_project_image_format,
+    has_output_image_extension,
+)
 
 if TYPE_CHECKING:
     from django.db.models.fields.files import FieldFile
@@ -62,6 +68,15 @@ def process_image_operations(
 
     for operation in operations:
         updated_fields.extend(_process_image_operation(instance, operation))
+
+    image_variants: models.QuerySet[Any] | None = instance.generate_image_variants_or_none(
+        force=bool(changed_field_names)
+    )
+    if image_variants is not None:
+        logger.info(
+            "Generated responsive image variants during shared image processing",
+            extra={"model": type(instance).__name__, "variant_count": image_variants.count()},
+        )
 
     unique_updated_fields = list(dict.fromkeys(updated_fields))
     if unique_updated_fields:
@@ -112,7 +127,7 @@ def _process_image_operation(
         return updated_fields
 
     source_name = str(getattr(source_image, "name", "") or "")
-    if source_name.lower().endswith(".webp"):
+    if has_output_image_extension(source_name):
         setattr(instance, operation.webp_field_name, source_name)
         updated_fields.append(operation.webp_field_name)
         logger.info(
@@ -125,7 +140,7 @@ def _process_image_operation(
             },
         )
     else:
-        result = convert_to_webp(
+        result = convert_to_project_image_format(
             source_image,
             quality=operation.spec.quality,
             max_dimension=operation.spec.dimension,
@@ -201,7 +216,7 @@ def _get_content_name(content: Any, field_name: str) -> str:
     content_name = getattr(content, "name", None)
     if isinstance(content_name, str) and content_name:
         return content_name
-    return f"{field_name}.webp"
+    return f"{field_name}{IMAGE_FORMAT.extension}"
 
 
 def _build_save_update_fields(instance: Any, updated_fields: list[str]) -> list[str]:

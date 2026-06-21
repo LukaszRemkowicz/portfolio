@@ -255,6 +255,7 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
     - Custom sidebar image preview
     """
 
+    change_list_template = "admin/astrophotography/astroimage/change_list.html"
     change_form_template = "admin/astrophotography/secure_media_change_form.html"
     form = AstroImageForm
     list_display = (
@@ -266,7 +267,7 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
         "tag_list",
     )
     list_display_links = ("get_name",)
-    list_filter = ("celestial_object", "tags")
+    list_filter = ("tags",)
 
     class Media:
         css = {"all": ("core/css/admin_date_clean.css",)}

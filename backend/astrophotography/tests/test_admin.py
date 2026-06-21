@@ -5,6 +5,7 @@ from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
+from bs4 import BeautifulSoup
 from PIL import Image
 from psycopg2.extras import DateRange
 from pytest_mock import MockerFixture
@@ -36,6 +37,7 @@ from astrophotography.tests.factories import (
     MainPageBackgroundImageFactory,
     MainPageLocationFactory,
     PlaceFactory,
+    TagFactory,
 )
 from core.widgets import ThemedRangeWidget
 from users.models import User
@@ -101,6 +103,43 @@ class TestAstroImageAdmin:
         assert newer_image.name in table_body
         assert older_image.name in table_body
         assert table_body.index(newer_image.name) < table_body.index(older_image.name)
+
+    def test_admin_changelist_filters_search_and_add_button_layout(
+        self, admin_client: Client
+    ) -> None:
+        TagFactory(name="Layout tag")
+        AstroImageFactory(name="Layout image")
+
+        response = cast(HttpResponse, admin_client.get(self.CHANGELIST_URL))
+
+        assert response.status_code == 200
+        soup = BeautifulSoup(response.content, "html.parser")
+        search_form = soup.select_one("#changelist-search")
+        assert search_form is not None
+        assert "astroimage-filter-row" in search_form.get("class", [])
+
+        filter_names = [
+            select.get("data-name") for select in search_form.select("select.search-filter")
+        ]
+        assert filter_names == ["tags"]
+
+        searchbar = search_form.select_one("#searchbar")
+        assert searchbar is not None
+        assert str(search_form).index('data-name="tags"') < str(search_form).index('id="searchbar"')
+
+        actions_row = soup.select_one(".change-list-actions")
+        assert actions_row is not None
+        assert actions_row.select_one(".astroimage-action-left") is not None
+        add_link = actions_row.select_one('a[href$="/admin/astrophotography/astroimage/add/"]')
+        assert add_link is not None
+        assert len(soup.select('a[href$="/admin/astrophotography/astroimage/add/"]')) == 1
+        actions_html = str(actions_row)
+        assert actions_html.index("action-counter") < actions_html.index(
+            "/admin/astrophotography/astroimage/add/"
+        )
+        content = response.content.decode("utf-8")
+        assert "grid-template-columns: minmax(220px, 260px) minmax(260px, 420px) auto" in content
+        assert "justify-content: space-between" in content
 
     def test_admin_change_page_displays_fields(self, admin_client: Client) -> None:
         """
@@ -347,7 +386,7 @@ class TestMainPageBackgroundImageAdmin:
             "test_bg_admin.png", img_io.read(), content_type="image/png"
         )
 
-        bg_image: MainPageBackgroundImage = MainPageBackgroundImageFactory(path=image_file)
+        bg_image: MainPageBackgroundImage = MainPageBackgroundImageFactory(original=image_file)
         bg_image.set_current_language("en")
         bg_image.name = "Admin Existing BG"
         bg_image.save()

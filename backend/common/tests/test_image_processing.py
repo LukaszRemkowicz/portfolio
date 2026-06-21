@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass
 
 from django.core.files.base import ContentFile
 
+from common import image_processing
 from common.image_processing import process_image_operations
 from common.tests.image_helpers import _jpeg_field, _png_field
 from common.types import ImageProcessingOperation, ImageSpec
@@ -31,6 +33,14 @@ class _SavedFieldFile:
         self.saved_with_flag = save
 
 
+class _GeneratedVariants:
+    def __init__(self, count: int) -> None:
+        self._count = count
+
+    def count(self) -> int:
+        return self._count
+
+
 class _DummyImageModel:
     def __init__(self, *, with_updated_at: bool = True) -> None:
         field_names = ["image_webp", "thumbnail"]
@@ -43,11 +53,19 @@ class _DummyImageModel:
         self.original: str | None = None
         self.save_calls: list[list[str]] = []
         self.operations: list[ImageProcessingOperation] = []
+        self.variant_generation_result: _GeneratedVariants | None = None
+        self.variant_generation_calls = 0
+        self.variant_generation_force_args: list[bool] = []
 
     def get_image_processing_operations(
         self, changed_field_names: list[str] | None = None
     ) -> list[ImageProcessingOperation]:
         return self.operations
+
+    def generate_image_variants_or_none(self, *, force: bool = False) -> _GeneratedVariants | None:
+        self.variant_generation_calls += 1
+        self.variant_generation_force_args.append(force)
+        return self.variant_generation_result
 
     def save(self, *args: object, **kwargs: object) -> None:
         update_fields = kwargs.get("update_fields")
@@ -71,7 +89,7 @@ class TestProcessImageOperations:
             )
         ]
         mocker.patch(
-            "common.image_processing.convert_to_webp",
+            "common.image_processing.convert_to_project_image_format",
             return_value=("uploads/source.jpg", ContentFile(b"webp-bytes", name="source.webp")),
         )
 
@@ -79,8 +97,10 @@ class TestProcessImageOperations:
 
         assert updated_fields == ["image_webp", "original", "thumbnail"]
         assert instance.image_webp.saved_name == "source.webp"
+        assert instance.image_webp.saved_with_flag is False
         assert instance.original == "uploads/source.jpg"
         assert instance.thumbnail.saved_name == "thumb.webp"
+        assert instance.thumbnail.saved_with_flag is False
         assert instance.save_calls == [["image_webp", "original", "thumbnail", "updated_at"]]
 
     def test_clears_target_field_when_source_missing(self) -> None:
@@ -111,7 +131,7 @@ class TestProcessImageOperations:
                 spec=ImageSpec(dimension=1200, quality=75),
             )
         ]
-        convert_mock = mocker.patch("common.image_processing.convert_to_webp")
+        convert_mock = mocker.patch("common.image_processing.convert_to_project_image_format")
 
         updated_fields = process_image_operations(instance)
 
@@ -131,7 +151,7 @@ class TestProcessImageOperations:
                 clear_field_on_failed_conversion=True,
             )
         ]
-        mocker.patch("common.image_processing.convert_to_webp", return_value=None)
+        mocker.patch("common.image_processing.convert_to_project_image_format", return_value=None)
 
         updated_fields = process_image_operations(instance)
 
@@ -150,7 +170,7 @@ class TestProcessImageOperations:
             )
         ]
         mocker.patch(
-            "common.image_processing.convert_to_webp",
+            "common.image_processing.convert_to_project_image_format",
             return_value=("uploads/source.jpg", ContentFile(b"webp-bytes", name="source.webp")),
         )
 
@@ -171,7 +191,7 @@ class TestProcessImageOperations:
             )
         ]
         mocker.patch(
-            "common.image_processing.convert_to_webp",
+            "common.image_processing.convert_to_project_image_format",
             return_value=("uploads/source.jpg", nameless_content),
         )
 
@@ -191,10 +211,44 @@ class TestProcessImageOperations:
             )
         ]
         mocker.patch(
-            "common.image_processing.convert_to_webp",
+            "common.image_processing.convert_to_project_image_format",
             return_value=("uploads/source.jpg", ContentFile(b"webp-bytes", name="source.webp")),
         )
 
         process_image_operations(instance)
 
         assert instance.save_calls == [["image_webp"]]
+
+    def test_variant_generation_is_inlined_in_processing_workflow(self) -> None:
+        workflow_source = inspect.getsource(image_processing.process_image_operations)
+
+        assert "_process_image_variants" not in workflow_source
+        assert not hasattr(image_processing, "_process_image_variants")
+
+    def test_saves_variant_metadata_when_generation_reports_updates(self) -> None:
+        instance = _DummyImageModel()
+        instance.variant_generation_result = _GeneratedVariants(count=1)
+
+        updated_fields = process_image_operations(instance)
+
+        assert updated_fields == []
+        assert instance.variant_generation_calls == 1
+        assert instance.variant_generation_force_args == [False]
+        assert instance.save_calls == []
+
+    def test_skips_variant_metadata_when_generation_returns_none(self) -> None:
+        instance = _DummyImageModel()
+
+        updated_fields = process_image_operations(instance)
+
+        assert updated_fields == []
+        assert instance.variant_generation_calls == 1
+        assert instance.variant_generation_force_args == [False]
+        assert instance.save_calls == []
+
+    def test_forces_variant_generation_when_source_fields_changed(self) -> None:
+        instance = _DummyImageModel()
+
+        process_image_operations(instance, changed_field_names=["original"])
+
+        assert instance.variant_generation_force_args == [True]

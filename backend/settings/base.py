@@ -657,6 +657,7 @@ ADMIN_SITE_ORDERING = (
         "label": _("Astrophotography"),
         "models": (
             "astrophotography.AstroImage",
+            "core.ImageVariant",
             "astrophotography.MainPageLocation",
             "astrophotography.MainPageBackgroundImage",
             "astrophotography.MeteorsMainPageConfig",
@@ -794,6 +795,7 @@ JAZZMIN_SETTINGS = {
         "users.User": "fas fa-user",
         "users.Profile": "fas fa-id-badge",
         "astrophotography.AstroImage": "fas fa-image",
+        "astrophotography.ImageVariant": "fas fa-image",
         "astrophotography.MainPageLocation": "fas fa-map-marker-alt",
         "astrophotography.MainPageBackgroundImage": "fas fa-camera",
         "astrophotography.MeteorsMainPageConfig": "fas fa-meteor",
@@ -811,6 +813,7 @@ JAZZMIN_SETTINGS = {
         "axes.AccessAttempt": "fas fa-user-lock",
         "axes.AccessLog": "fas fa-list-alt",
         "core.LandingPageSettings": "fas fa-sliders-h",
+        "core.ImageVariant": "fas fa-image",
         "translation.TranslationTask": "fas fa-language",
     },
     # Changing the order

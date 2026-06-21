@@ -5,7 +5,6 @@ Personal portfolio web app for astrophotography, travel stories, and programming
 - frontend SSR server: React + TypeScript
 - backend: Django + DRF
 - edge/static layer: nginx
-- local/server routing: Traefik
 - secrets: Doppler
 
 ## 🌍 Live
@@ -16,8 +15,8 @@ Personal portfolio web app for astrophotography, travel stories, and programming
 
 - `frontend/` - React + TypeScript app, SSR runtime, browser app, tests, and public assets
 - `backend/` - Django + DRF application, admin, Celery jobs, and media logic
-- `docker/` - Dockerfiles and entrypoints for frontend, backend, redis, nginx, and traefik
-- `infra/` - nginx templates, traefik config, release scripts, security helpers, and ops docs
+- `docker/` - Dockerfiles and entrypoints for frontend, backend, redis, and nginx
+- `infra/` - nginx templates, release scripts, and project docs
 - `screenshots/` - README screenshots
 
 Component docs:
@@ -50,10 +49,9 @@ The project follows a modern, highly decoupled architecture for performance and 
 ![Architecture Illustration](infra/docs/project/architecture.png)
 
 ### Key Components:
-- **Traefik (Edge Proxy)**: The central entry point for all subdomains. Handles SSL, HSTS, and routing.
 - **Environment Isolation**: Parallel stacks (`PROD` and `STAGE`) ensure zero-collision deployments.
-- **Development Stack**: Local development uses the same core `Nginx + Frontend SSR + Django + PostgreSQL` architecture via `portfolio-dev`. Traefik is also available locally through an optional Compose profile when you want to mirror the full edge setup.
-- **Doppler**: Centralized, secure secret management across **all** environments (Local & Server).
+- **Development Stack**: Local development uses the same core `Nginx + Frontend SSR + Django + PostgreSQL` architecture via `portfolio-dev`.
+- **Doppler**: Secret management for project runtime configuration.
 
 
 Current request flow:
@@ -89,35 +87,6 @@ Application structure:
   - public media served by nginx
 - `ADMIN_DOMAIN`
   - Django admin
-
-### Traefik Role
-
-- In staging and production, Traefik is the external edge proxy in front of nginx.
-- It handles host-based routing, TLS termination, and security middleware at the edge.
-- In local development, Traefik is available through an optional Compose profile when you want to mirror the full edge setup.
-- The default local stack can also run directly through nginx without Traefik.
-
-### Cloudflare And Traefik Certificates
-
-Production DNS normally uses Cloudflare as the public edge for proxied hosts.
-For orange-cloud records, browsers see Cloudflare's edge certificate, not the
-certificate stored by Traefik on the VPS.
-
-Traefik still has `tls.certresolver=letsencrypt` on production routers so the
-origin can serve a valid certificate when a host is DNS-only or when Cloudflare
-passes the ACME HTTP-01 challenge through to Traefik. These resolver labels are
-fallback/origin behavior and should not be removed just because Cloudflare is
-handling the browser-facing certificate.
-
-Important distinction:
-
-- Cloudflare proxied: public TLS is handled by Cloudflare.
-- DNS only: public TLS is served directly by Traefik.
-- Current Traefik ACME uses HTTP-01 on port `80`; renewal requires Let's
-  Encrypt to reach Traefik through that entrypoint.
-- If origin certificates must renew reliably while records stay Cloudflare
-  proxied, switch Traefik ACME to Cloudflare DNS-01 instead of removing router
-  `tls.certresolver` labels.
 
 ### Frontend server responsibilities
 
@@ -311,26 +280,23 @@ Clear the full Django cache:
 doppler --config dev run -- docker compose exec -T be python manage.py clear_cache
 ```
 
-Convert stored images to WebP:
+Backfill responsive image variants:
 
 ```bash
-# convert everything
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp
+# generate missing variants
+doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants
 
 # preview only
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --dry-run
+doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants --dry-run
 
-# reconvert already-converted images from originals
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --force
+# regenerate all variants from originals
+doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants --force
 
 # convert one object
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --object-id <uuid>
+doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants --object-id <uuid>
 
 # convert multiple objects
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --object-ids <uuid1> <uuid2>
-
-# override output size for a run
-doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp --dimension-percentage 50
+doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants --object-ids <uuid1> <uuid2>
 ```
 
 Regenerate thumbnails:
@@ -348,11 +314,11 @@ doppler --config dev run -- docker compose exec -T be python manage.py regenerat
     ```bash
     doppler --config dev run -- docker compose exec -T be python manage.py clear_cache
     ```
-- `convert_images_to_webp`
-  - batch-converts stored images to WebP and preserves rollback originals
+- `backfill_image_variants`
+  - generates missing responsive `ImageVariant` rows from original images
   - run:
     ```bash
-    doppler --config dev run -- docker compose exec -T be python manage.py convert_images_to_webp
+    doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants
     ```
 - `regenerate_thumbnails`
   - rebuilds thumbnails using current thumbnail settings
@@ -391,10 +357,6 @@ doppler --config dev run -- docker compose exec -T be python manage.py shell
 doppler --config dev run -- docker compose exec -T be python manage.py collectstatic --noinput
 doppler --config dev run -- docker compose exec -T be python manage.py compilemessages
 ```
-
-Optional local profile:
-
-- `docker compose --profile traefik up --build` starts `nginx-traefik` so local routing can run through Traefik instead of binding nginx directly to ports `80/443`.
 
 Standalone local development commands such as `python manage.py runserver` or `npm run dev` are not the supported workflow described by this repository.
 
