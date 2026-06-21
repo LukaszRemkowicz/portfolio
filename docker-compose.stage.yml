@@ -208,6 +208,7 @@ services:
       - portfolio_staging_nginx_blocklist:/etc/nginx/blocklist:ro
     labels:
       - "traefik.enable=true"
+      - "traefik.http.middlewares.direct-allowed-ips.ipallowlist.sourcerange=${ALLOWED_IPS:-127.0.0.1/32}"
       # Main site routing
       - "traefik.http.routers.staging-site.rule=Host(`${SITE_DOMAIN}`)"
       - "traefik.http.routers.staging-site.entrypoints=websecure"
@@ -221,7 +222,7 @@ services:
       - "traefik.http.routers.staging-admin.entrypoints=websecure"
       - "traefik.http.routers.staging-admin.tls=true"
       - "traefik.http.routers.staging-admin.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.staging-admin.middlewares=allowed-ips@docker,staging-security@file,rate-limit@file"
+      - "traefik.http.routers.staging-admin.middlewares=direct-allowed-ips@docker,staging-security@file,rate-limit@file"
       - "traefik.http.routers.staging-admin.priority=2"
       - "traefik.http.routers.staging-admin.service=staging-site"
 
