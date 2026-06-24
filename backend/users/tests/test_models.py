@@ -41,10 +41,9 @@ def test_profile_type_uniqueness(user: User):
 
 
 @pytest.mark.django_db
-def test_user_singleton_pattern_only_one_user_allowed() -> None:
+def test_user_singleton_pattern_only_one_user_allowed(superuser: User) -> None:
     """Test that only one user can exist (singleton pattern)"""
-    # Create first user - should succeed
-    UserFactory.create_superuser()
+    # First user exists through the singleton admin fixture.
     assert User.objects.count() == 1
 
     # Try to create second user - should raise ValueError
@@ -54,7 +53,7 @@ def test_user_singleton_pattern_only_one_user_allowed() -> None:
 
     # Verify only one user still exists
     assert User.objects.count() == 1
-    assert User.objects.first().email == "admin@example.com"
+    assert User.objects.first() == superuser
 
 
 @pytest.mark.django_db
@@ -64,13 +63,13 @@ def test_user_get_user_method() -> None:
     assert User.get_user() is None
 
     # Create user
-    user = UserFactory.create_superuser()
+    created_user: User = UserFactory.create_superuser()
 
     # get_user() should return the user
     retrieved_user = User.get_user()
     assert retrieved_user is not None
-    assert retrieved_user.email == user.email
-    assert retrieved_user.id == user.id
+    assert retrieved_user.email == created_user.email
+    assert retrieved_user.id == created_user.id
 
 
 @pytest.mark.django_db
@@ -78,12 +77,12 @@ def test_user_manager_create_superuser() -> None:
     """Test creating a superuser via UserManager"""
     email = "admin@example.com"
     password = "password123"
-    user = User.objects.create_superuser(email=email, password=password)
+    created_superuser = User.objects.create_superuser(email=email, password=password)
 
-    assert user.email == email
-    assert user.is_staff is True
-    assert user.is_superuser is True
-    assert user.check_password(password) is True
+    assert created_superuser.email == email
+    assert created_superuser.is_staff is True
+    assert created_superuser.is_superuser is True
+    assert created_superuser.check_password(password) is True
 
 
 @pytest.mark.django_db
@@ -94,17 +93,14 @@ def test_user_manager_create_superuser_missing_email() -> None:
 
 
 @pytest.mark.django_db
-def test_user_str_method() -> None:
+def test_user_str_method(user: User) -> None:
     """Test User.__str__ method"""
-    email = "test@example.com"
-    user = UserFactory.build(email=email)
-    assert str(user) == email
+    assert str(user) == user.email
 
 
 @pytest.mark.django_db
-def test_user_save_integrity_error(mocker: MockerFixture) -> None:
+def test_user_save_integrity_error(user: User, mocker: MockerFixture) -> None:
     """Test handling of IntegrityError in User.save()"""
-    user = UserFactory.build(email="test@example.com")
     mock_save = mocker.patch("django.db.models.Model.save")
     mock_save.side_effect = IntegrityError("Duplicate entry")
     with pytest.raises(ValueError, match="Failed to save user. Only one user is allowed."):
@@ -112,9 +108,8 @@ def test_user_save_integrity_error(mocker: MockerFixture) -> None:
 
 
 @pytest.mark.django_db
-def test_user_save_generic_exception(mocker: MockerFixture) -> None:
+def test_user_save_generic_exception(user: User, mocker: MockerFixture) -> None:
     """Test handling of generic Exception in User.save()"""
-    user = UserFactory.build(email="test@example.com")
     mock_save = mocker.patch("django.db.models.Model.save")
     mock_save.side_effect = Exception("Some other error")
     with pytest.raises(Exception, match="Some other error"):
@@ -125,79 +120,75 @@ def test_user_save_generic_exception(mocker: MockerFixture) -> None:
 class TestUserDomainMethods:
     """Tests for User domain logic methods."""
 
-    def test_get_full_name_with_both_names(self):
+    def test_get_full_name_with_both_names(self, user: User):
         """Test get_full_name returns first + last name."""
-        user = UserFactory.create_superuser(
-            email="test@example.com", first_name="John", last_name="Doe"
-        )
+        user.first_name = "John"
+        user.last_name = "Doe"
         assert user.get_full_name() == "John Doe"
 
-    def test_get_full_name_with_only_first_name(self):
+    def test_get_full_name_with_only_first_name(self, user: User):
         """Test get_full_name returns first name only."""
-        user = UserFactory.create_superuser(
-            email="test@example.com", first_name="John", last_name=""
-        )
+        user.first_name = "John"
+        user.last_name = ""
         assert user.get_full_name() == "John"
 
-    def test_get_full_name_fallback_to_email(self):
+    def test_get_full_name_fallback_to_email(self, user: User):
         """Test get_full_name falls back to email."""
-        user = UserFactory.create_superuser(email="test@example.com", first_name="", last_name="")
-        assert user.get_full_name() == "test@example.com"
+        user.email = "test@example.com"
+        user.first_name = ""
+        user.last_name = ""
+        assert user.get_full_name() == user.email
 
-    def test_display_name_property(self):
+    def test_display_name_property(self, user: User):
         """Test display_name property works."""
-        user = UserFactory.create_superuser(
-            email="test@example.com", first_name="John", last_name=""
-        )
+        user.first_name = "John"
+        user.last_name = ""
         assert user.display_name == "John"
 
-    def test_get_avatar_url_with_no_avatar(self):
+    def test_get_avatar_url_with_no_avatar(self, user: User):
         """Test get_avatar_url returns placeholder when no avatar."""
-        user = UserFactory.create_superuser(email="test@example.com")
         url = user.get_avatar_url()
         assert url == "/static/images/default-avatar.png"
 
-    def test_get_avatar_url_appends_version_for_admin_cache_busting(self):
+    def test_get_avatar_url_appends_version_for_admin_cache_busting(
+        self, user: User, mocker: MockerFixture
+    ):
         """Jazzmin sidebar avatar should get a versioned URL after avatar updates."""
-        user = UserFactory.build(email="test@example.com")
-        user.avatar.name = "avatars/avatar.jpg"
         user.updated_at = timezone.now()
+        mocker.patch.object(user, "get_serving_image_url", return_value="/media/avatars/avatar.jpg")
 
         url = user.get_avatar_url()
 
         assert url.startswith("/media/avatars/avatar.jpg")
         assert "?v=" in url
 
-    def test_has_complete_profile_false_missing_fields(self):
+    def test_has_complete_profile_false_missing_fields(self, user: User):
         """Test has_complete_profile returns False when incomplete."""
-        user = UserFactory.create_superuser(email="test@example.com", bio="")
+        user.bio = ""
         assert user.has_complete_profile() is False
 
-    def test_get_avatar_spec(self):
+    def test_get_avatar_spec(self, user: User):
         """Test that get_avatar_spec returns the correct spec from settings."""
-        user = UserFactory.build()
         spec = user.get_avatar_spec()
         assert isinstance(spec, ImageSpec)
         assert spec == settings.IMAGE_OPTIMIZATION_SPECS["AVATAR"]
 
-    def test_get_portrait_spec(self):
+    def test_get_portrait_spec(self, user: User):
         """Test that get_portrait_spec returns the correct spec from settings."""
-        user = UserFactory.build()
         spec = user.get_portrait_spec()
         assert isinstance(spec, ImageSpec)
         assert spec == settings.IMAGE_OPTIMIZATION_SPECS["PORTRAIT"]
 
 
 @pytest.mark.django_db
-def test_user_save_clears_stale_cropped_file_when_original_changes():
-    user = UserFactory.create_superuser()
-    user.avatar = jpeg_field("avatar-original.jpg")
-    user.avatar_cropped = png_field("avatar-cropped.png", size=(280, 280))
-    user.save()
+def test_user_save_clears_stale_cropped_file_when_original_changes(superuser: User):
+    superuser.avatar = jpeg_field("avatar-original.jpg")
+    superuser.avatar_cropped = png_field("avatar-cropped.png", size=(280, 280))
+    superuser.save()
 
-    user.avatar = jpeg_field("avatar-replacement.jpg")
-    user.save()
-    user.refresh_from_db()
+    superuser.avatar = jpeg_field("avatar-replacement.jpg")
+    superuser.save()
+    superuser.refresh_from_db()
 
-    assert "avatar-replacement" in user.avatar.name
-    assert not user.avatar_cropped
+    assert "avatar-replacement" in superuser.avatar.name
+    assert not superuser.avatar_cropped
