@@ -1,129 +1,28 @@
 # AGENTS.md
 
-## Purpose
+Repo-level first-stop guide for Codex and future engineering sessions.
 
-This file is the repo-level working guide for Codex and future engineering sessions.
+## Hard Rules
 
-Use it as the first-stop routing file before implementation. This file is mainly a router to documentation and hard repo rules, not the full source of truth for project behavior.
+- Always read this file before doing any work in this repository.
+- Before changing behavior, check whether the behavior is already documented.
+- Never delete, relocate, or empty files in `infra/docs/project/analysis/` unless the user explicitly names the exact file and asks for that deletion in the current turn.
+- Do not commit or push without explicit user permission.
+- For commit messages and pull request messages, use the repo-local matching task-specific guidance. Do not route these tasks through external custom skills.
 
+## Agent Docs
 
-## Project Context
-
-For general project context, architecture, and repository structure, read:
-
-- `README.md`
-- `frontend/README.md`
-- `backend/README.md`
-- `infra/scripts/README.md`
-
-Use this file mainly as a routing guide for task-specific documentation in `infra/docs/project/` and `infra/docs/agent/`.
-
-Check `.agent/skills/` first for task-specific execution guidance when relevant.
-
-
-## Project Docs
-
-Use `infra/docs/project/` for system behavior, architecture, runbooks, and feature-specific technical context.
-
-
-## Agent/Process Docs
-
-Use `infra/docs/agent/engineering_conventions.md` for repo coding conventions, Python/React guidance, and clean-code expectations.
-Use `infra/docs/agent/implementation_process.md` for larger changes, phased delivery, and implementation-documentation expectations.
-Use `.agent/skills/` for task-specific authoring guidance, especially for commit messages and pull request messages.
-
-
-## Working Rule
-
-Before making changes, check whether the behavior is already documented.
-
-Preferred order when context is missing:
-
-1. Read this file
-2. Check `.agent/skills/` for relevant task-specific guidance
-3. Read the relevant file in `infra/docs/project/` or `infra/docs/agent/`
-4. Read the matching README if needed
-5. Only then dive into implementation code
-
-If a task touches deployment, release flow, SSR/BFF architecture, monitoring, cache invalidation, or admin media/image behavior, consult docs first instead of inferring behavior from scattered files.
-
-
-## Document Map
-
-Use these documents as fast context before implementation.
-
-- `infra/docs/project/cache_invalidation.md`
-  Use for stale homepage/shared content, Django signals, Redis invalidation, or FE SSR cache invalidation. Describes the two-layer cache model and backend-to-frontend invalidation flow.
-- `infra/docs/project/django_admin_image_cropper_mechanism.md`
-  Use for Django admin image cropper changes, preview/media bugs, or extending cropper behavior. Describes the cropper contract, browser flow, media serving rules, and derived image pipeline.
-- `infra/docs/project/latest_images_tags.md`
-  Use for homepage latest-image filters and `LandingPageSettings.latest_filters`. Describes how tags are curated, rendered, cached, and invalidated.
-- `infra/docs/project/feature_flag_mechanism.md`
-  Use for `LandingPageSettings`-driven feature visibility, frontend route/navbar gating, and adding new public feature flags. Describes the backend-to-frontend feature-flag flow and expected consumption pattern.
-- `infra/docs/project/landing_page_total_time_spent_system.md`
-  Use for landing-page total-time calculation, `AstroImage.calculated_exposure_hours`, rebuild flow, serializer rounding, and cache invalidation. Describes the current derived-stat architecture and operational caveats.
-- `infra/docs/project/logging_structure_overview.md`
-  Use for backend/frontend/nginx logging formats, JSON-vs-plain-text status, and application log emission structure.
-- `infra/docs/project/translation_system_overview.md`
-  Use for translation lifecycle, `TranslationTask` debugging, translation admin behavior, serializer fallback behavior, and adding translation support to new models. Describes the async translation architecture and its operational boundaries.
-- `infra/docs/project/release_deploy_architecture.md`
-  Use for release scripts, deploy logic, image naming, artifact flow, and rollback behavior. Describes the tag-based release/deploy model and script responsibilities.
-- `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
-  Use for SSR architecture decisions and initial migration direction. Describes the preferred incremental SSR strategy and early-phase non-goals.
-- `infra/docs/project/SSR Migration/STAGE-2_full_ssr_bff_migration_plan.md`
-  Use for BFF route ownership and FE-to-BE transport migration. Describes the target BFF architecture, endpoint inventory, and transitional `/app/*` rules.
-- `infra/docs/project/architecture.png`
-  Use for quick visual orientation. Describes the platform architecture at a high level.
+- `infra/docs/agent/repository_routing.md`
+  Use for project README routing, project-doc map, feature/runbook routing, and doc update expectations.
 - `infra/docs/agent/engineering_conventions.md`
-  Use for repo coding conventions, Python/React guidance, and clean-code expectations. Describes implementation style rules that do not belong in this router file.
+  Use for coding conventions, Python/React guidance, clean-code expectations, context hygiene, and testing defaults.
 - `infra/docs/agent/implementation_process.md`
-  Use for phased work, implementation-plan docs, and documentation/process expectations for larger changes.
+  Use for larger changes, phased delivery, and implementation documentation.
 
+## Fast Routing
 
-## Short Routing Guide
+- Cache, SSR/BFF, deployment/release, monitoring, admin media/image behavior, translations, feature flags, latest images, or total-time stats -> read the matching document listed in `infra/docs/agent/repository_routing.md` before inferring from code.
+- Backend validation -> run backend `uv` commands from `backend/`; canonical validation is `cd backend && uv run test`.
+- Frontend validation -> use the frontend Docker container rather than assuming the host runtime.
 
-Use this quick mapping when a task arrives:
-
-- Cache bug or stale homepage content -> `infra/docs/project/cache_invalidation.md`
-- Homepage latest-image filters/tags -> `infra/docs/project/latest_images_tags.md`
-- Feature-gated frontend modules or `LandingPageSettings` booleans -> `infra/docs/project/feature_flag_mechanism.md`
-- Landing page total-time stat or exposure-hours rebuilds -> `infra/docs/project/landing_page_total_time_spent_system.md`
-- Django admin image cropping or preview/media bug -> `infra/docs/project/django_admin_image_cropper_mechanism.md`
-- Backend/frontend/nginx logging structure -> `infra/docs/project/logging_structure_overview.md`
-- Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
-- Release/deploy script logic or image naming -> `infra/docs/project/release_deploy_architecture.md`
-- Production release procedure -> `infra/scripts/README.md`
-- SSR architecture direction -> `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
-- BFF route ownership or `/app/...` migration -> `infra/docs/project/SSR Migration/STAGE-2_full_ssr_bff_migration_plan.md`
-
-
-## Implementation Guidance
-
-- Prefer documented behavior over assumptions.
-- If docs and code disagree, code is the current truth; update docs after confirming behavior.
-- If a proposed implementation seems risky, inconsistent, or likely incorrect, say so clearly and discuss it. Push back when needed; collaboration and correction are expected.
-- Avoid broad infra changes without checking the relevant runbook first.
-- Never delete files from `infra/docs/project/analysis/`. Files in this folder
-  are protected planning and investigation records. Do not remove, relocate, or
-  empty them in any cleanup unless the user explicitly names the exact file and
-  asks for that specific deletion in the current turn.
-- For commit messages and pull request messages, check `.agent/skills/` first and follow the matching message-writing guidance.
-- For deploy/release work, be explicit about environment: `dev`, `stage`, or `production`.
-- For monitoring work, remember the hard boundary: deterministic code gathers facts; the LLM summarizes and interprets.
-- For cache-related work, think about both backend Redis invalidation and frontend SSR cache invalidation.
-
-
-## Testing
-
-Use these defaults when validating changes:
-
-- Backend: run backend `uv` commands from the `backend/` directory, not the repository root
-  Use the backend project test entrypoint as `cd backend && uv run test`. Treat this as the canonical backend validation command for the repo, not as a shorthand for "run pytest directly". This wrapper depends on the backend project working directory and the expected runtime/scripts under `backend/`.
-- Frontend: use the frontend Docker container for test commands rather than assuming the host machine is the correct runtime
-
-
-## Keep This File Updated
-
-When adding a new important runbook or stable architecture doc under `infra/docs/project/` or `infra/docs/agent/`, add a short entry here with path, when to use it, and what it describes.
-
-Keep this file short, practical, and optimized for routing, not for full project documentation.
+Keep this file tiny. Put stable details in `infra/docs/agent/` and link them here.

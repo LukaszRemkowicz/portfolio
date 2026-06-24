@@ -23,7 +23,7 @@ class ProjectImageAdminForm(TranslatableModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        current_source = self.instance.original_field
+        current_source = self.instance.original
         self.fields["original_upload"].required = not bool(current_source)
 
     def _post_clean(self) -> None:

@@ -22,14 +22,22 @@ class SafeServeTests(SimpleTestCase):
         with pytest.raises(Http404):
             safe_serve(request, "logs/example.txt", document_root="/tmp")
 
-    def test_blocks_images_directory(self):
+    def test_allows_images_directory(self):
         request = self.factory.get(
             "/media/images/example.jpg",
             HTTP_HOST=settings.ADMIN_DOMAIN,
         )
 
-        with pytest.raises(Http404):
-            safe_serve(request, "images/example.jpg", document_root="/tmp")
+        with patch("settings.urls.serve", return_value=HttpResponse("ok")) as mock_serve:
+            response = safe_serve(request, "images/example.jpg", document_root="/tmp")
+
+        assert response.status_code == 200
+        mock_serve.assert_called_once_with(
+            request,
+            "images/example.jpg",
+            document_root="/tmp",
+            show_indexes=False,
+        )
 
     @patch("settings.urls.serve", return_value=HttpResponse("ok"))
     def test_allows_about_me_images_directory(self, mock_serve):

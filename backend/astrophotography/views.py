@@ -19,6 +19,7 @@ from django.utils.translation import gettext_lazy as _
 
 from common.decorators.cache import cache_response
 from common.throttling import GalleryRateThrottle
+from common.utils.image import file_exists_in_storage
 from common.utils.signing import generate_signed_url_params
 from core.views import GenericAdminSecureMediaView, SecureMediaView
 
@@ -80,7 +81,9 @@ class MainPageBackgroundImageView(ViewSet):
         """Returns the URL of the most recent background image."""
         queryset = MainPageBackgroundImage.objects.order_by("-created_at")
         for instance in queryset:
-            if instance.get_serving_url():
+            if MainPageBackgroundImageSerializer(instance, context={"request": request}).data[
+                "url"
+            ]:
                 serializer: MainPageBackgroundImageSerializer = self.serializer_class(
                     instance, context={"request": request}
                 )
@@ -187,16 +190,36 @@ class CelestialObjectCategoriesView(APIView):
 
 
 class AstroImageSecureView(SecureMediaView):
+    secure_variant_roles = ("original_format", "detail")
+
     def get_object(self) -> AstroImage:
         slug: str = str(self.kwargs.get("slug"))
         return get_object_or_404(AstroImage, slug=slug)
 
+    def get_variant_file_path(self, obj: AstroImage) -> str:
+        """Return the best generated display variant for signed frontend viewing."""
+        variants = (
+            obj.variants.filter(role__in=self.secure_variant_roles)
+            .exclude(file="")
+            .order_by("role", "-width")
+        )
+        for role in self.secure_variant_roles:
+            for variant in variants:
+                if variant.role == role and file_exists_in_storage(variant.file):
+                    return str(variant.file.name)
+        return ""
+
     def get_file_path(self, obj: Model) -> str:
         assert isinstance(obj, AstroImage)
-        # The public secure image endpoint is used by the frontend to fetch the
-        # highest-quality asset for slug-addressable astro images.
-        serving_field = obj.original_webp_field or obj.original_field
-        return str(serving_field or "")
+        serving_field = obj.get_original_image()
+        if not serving_field:
+            return ""
+
+        variant_file_path = self.get_variant_file_path(obj)
+        if variant_file_path:
+            return variant_file_path
+
+        return str(serving_field.name)
 
     def get_signature_id(self) -> str:
         return str(self.kwargs.get("slug", ""))

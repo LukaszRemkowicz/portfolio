@@ -16,7 +16,7 @@ class NamedBytesIO(BytesIO):
         self.name = name
 
 
-def _jpeg_field(
+def jpeg_field(
     name: str = "avatar.jpg",
     color: tuple = (10, 20, 30),
     size: tuple[int, int] = (10, 10),
@@ -27,7 +27,7 @@ def _jpeg_field(
     return SimpleUploadedFile(name, buf.getvalue(), content_type="image/jpeg")
 
 
-def _png_field(
+def png_field(
     name: str = "photo.png",
     mode: str = "RGB",
     size: tuple[int, int] = (10, 10),

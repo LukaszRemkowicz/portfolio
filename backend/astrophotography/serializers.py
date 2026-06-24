@@ -110,8 +110,8 @@ class AstroImageSerializerList(AstroImageBaseSerializer):
 
     thumbnail_url = serializers.SerializerMethodField()
 
-    def get_thumbnail_url(self, obj: AstroImage) -> str:
-        return obj.get_thumbnail_url()
+    def get_thumbnail_url(self, obj: AstroImage) -> str | None:
+        return obj.get_available_variant_url("thumbnail", preferred_width=560)
 
     def to_representation(self, instance: AstroImage) -> dict[str, Any]:
         data = super().to_representation(instance)
@@ -154,8 +154,8 @@ class AstroImageSerializer(AstroImageBaseSerializer):
 class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
 
-    def get_url(self, obj: MainPageBackgroundImage) -> str:
-        return obj.get_serving_url()
+    def get_url(self, obj: MainPageBackgroundImage) -> str | None:
+        return obj.get_available_variant_url("hero", preferred_width=2560)
 
     class Meta:
         model = MainPageBackgroundImage
@@ -165,8 +165,8 @@ class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
 class AstroImageThumbnailSerializer(AstroImageBaseSerializer):
     thumbnail_url = serializers.SerializerMethodField()
 
-    def get_thumbnail_url(self, obj: AstroImage) -> str:
-        return obj.get_thumbnail_url()
+    def get_thumbnail_url(self, obj: AstroImage) -> str | None:
+        return obj.get_available_variant_url("thumbnail", preferred_width=560)
 
     def to_representation(self, instance: AstroImage) -> dict[str, Any]:
         data = super().to_representation(instance)

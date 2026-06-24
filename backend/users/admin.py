@@ -62,13 +62,10 @@ class UserAdmin(  # type: ignore[misc]
                 "fields": (
                     "avatar",
                     "avatar_cropped",
-                    "avatar_webp_path",
                     "about_me_image",
                     "about_me_image_cropped",
-                    "about_me_image_webp_path",
                     "about_me_image2",
                     "about_me_image2_cropped",
-                    "about_me_image2_webp_path",
                 )
             },
         ),
@@ -166,7 +163,7 @@ class UserAdmin(  # type: ignore[misc]
                     except ValueError:
                         current_image_url = ""
 
-                spec = getattr(obj, field_config.spec_method)()
+                spec = field_config.spec
                 crop_aspect_ratio = field_config.crop_aspect_ratio or 1.0
                 if crop_aspect_ratio >= 1:
                     output_width = spec.dimension
@@ -242,28 +239,7 @@ class UserAdmin(  # type: ignore[misc]
         "created_at",
         "updated_at",
         "translation_status",
-        "avatar_webp_path",
-        "about_me_image_webp_path",
-        "about_me_image2_webp_path",
     )
-
-    def _get_webp_path(self, obj: Any, field_name: str) -> str:
-        field = getattr(obj, field_name, None)
-        if not field:
-            return "—"
-        return str(field.name or "—")
-
-    @admin.display(description=_("Avatar WebP Path"))
-    def avatar_webp_path(self, obj: Any) -> str:
-        return self._get_webp_path(obj, "avatar_webp")
-
-    @admin.display(description=_("About Me Image WebP Path"))
-    def about_me_image_webp_path(self, obj: Any) -> str:
-        return self._get_webp_path(obj, "about_me_image_webp")
-
-    @admin.display(description=_("About Me Image 2 WebP Path"))
-    def about_me_image2_webp_path(self, obj: Any) -> str:
-        return self._get_webp_path(obj, "about_me_image2_webp")
 
     def has_add_permission(self, request) -> bool:
         """Only allow adding a user if no user exists (singleton pattern)"""

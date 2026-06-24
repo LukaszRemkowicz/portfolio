@@ -12,6 +12,7 @@ from django.http import QueryDict
 from django.test import override_settings
 from django.urls import reverse
 
+from common.types import ImageSpec
 from users.admin import UserAdmin
 from users.tests.factories import UserFactory
 from users.types import CropperFieldConfig, CropperPreviewShape
@@ -119,9 +120,9 @@ class TestUserAdmin:
                 input_id="id_avatar",
                 target_field_name="avatar_cropped",
                 target_input_id="id_avatar_cropped",
-                spec_method="get_avatar_spec",
                 preview_shape=CropperPreviewShape.CIRCLE,
                 crop_aspect_ratio=1.0,
+                spec=ImageSpec(dimension=280, quality=10),
             ),
         )
     )

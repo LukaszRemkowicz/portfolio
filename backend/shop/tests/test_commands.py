@@ -4,7 +4,7 @@ import pytest
 
 from django.core.management import call_command
 
-from common.tests.image_helpers import _png_field
+from common.tests.image_helpers import png_field
 from shop.models import ShopSettings
 
 
@@ -12,7 +12,7 @@ from shop.models import ShopSettings
 class TestSeedShopSettingsCommand:
     def test_command_seeds_missing_english_and_polish_copy(self) -> None:
         settings_obj = ShopSettings.objects.create(
-            image=_png_field("shop-settings-bg.png", size=(1920, 1080))
+            image=png_field("shop-settings-bg.png", size=(1920, 1080))
         )
 
         output = StringIO()
@@ -46,7 +46,7 @@ class TestSeedShopSettingsCommand:
 
     def test_command_keeps_existing_copy_without_overwrite(self) -> None:
         settings_obj = ShopSettings.objects.create(
-            image=_png_field("shop-settings-bg.png", size=(1920, 1080))
+            image=png_field("shop-settings-bg.png", size=(1920, 1080))
         )
         settings_obj.set_current_language("en")
         settings_obj.title = "Custom title"
@@ -67,7 +67,7 @@ class TestSeedShopSettingsCommand:
 
     def test_command_fills_only_missing_fields_without_overwrite(self) -> None:
         settings_obj = ShopSettings.objects.create(
-            image=_png_field("shop-settings-bg.png", size=(1920, 1080))
+            image=png_field("shop-settings-bg.png", size=(1920, 1080))
         )
         settings_obj.set_current_language("en")
         settings_obj.title = "Custom title"
@@ -89,7 +89,7 @@ class TestSeedShopSettingsCommand:
 
     def test_command_overwrites_existing_copy_when_requested(self) -> None:
         settings_obj = ShopSettings.objects.create(
-            image=_png_field("shop-settings-bg.png", size=(1920, 1080))
+            image=png_field("shop-settings-bg.png", size=(1920, 1080))
         )
         settings_obj.set_current_language("en")
         settings_obj.title = "Custom title"

@@ -1,108 +1,53 @@
-# backend/users/tests/test_webp.py
-"""Tests for WebP-related methods on the User model."""
+"""Tests for generated-serving methods on the User model."""
 
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from core.models import LandingPageSettings
-from core.tests.factories import LandingPageSettingsFactory
+from common.tests.image_helpers import jpeg_field
+from core.tasks import process_image_task
 from users.tests.factories import UserFactory
-
-# ---------------------------------------------------------------------------
-# User._get_serving_image_url()
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
 class TestUserGetServingImageUrl:
-    def _user_with_mocked_fields(
-        self, webp_url: str = "/media/avatar.webp", source_url: str = "/media/avatar.jpg"
-    ):
-        user = UserFactory.create_superuser()
+    def test_serves_original_format_variant(self):
+        user = UserFactory.create_superuser(avatar=jpeg_field("avatar.jpg", size=(800, 800)))
+        variant_file = MagicMock()
+        variant_file.url = "/media/avatar.webp"
 
-        webp_field = MagicMock()
-        webp_field.__bool__ = MagicMock(return_value=True)
-        webp_field.url = webp_url
-
-        source_field = MagicMock()
-        source_field.__bool__ = MagicMock(return_value=True)
-        source_field.url = source_url
-
-        user.avatar = source_field
-        user.avatar_webp = webp_field
-        return user
-
-    def test_serves_webp_when_toggle_is_on(self):
-        """When serve_webp_images=True, the WebP field URL is returned."""
-        settings = LandingPageSettingsFactory(serve_webp_images=True)
-        user = self._user_with_mocked_fields()
-
-        with patch.object(LandingPageSettings, "get_current", return_value=settings):
-            url = user._get_serving_image_url("avatar", "avatar_webp")
+        with patch.object(
+            user,
+            "get_variant_file",
+            return_value=variant_file,
+        ) as get_image_mock:
+            url = user.get_serving_image_url("avatar")
 
         assert url == "/media/avatar.webp"
+        get_image_mock.assert_called_once_with(
+            "original_format",
+            800,
+            source_name="avatar",
+        )
 
-    def test_serves_source_when_toggle_is_off(self):
-        """When serve_webp_images=False, the source field URL is returned."""
-        settings = LandingPageSettingsFactory(serve_webp_images=False)
-        user = self._user_with_mocked_fields()
+    def test_falls_back_to_effective_source_when_generated_variant_is_missing(self, caplog):
+        user = UserFactory.create_superuser(avatar=jpeg_field("avatar.jpg", size=(800, 800)))
+        process_image_task("users", "User", user.pk, ["avatar"])
+        user.variants.all().delete()
 
-        with patch.object(LandingPageSettings, "get_current", return_value=settings):
-            url = user._get_serving_image_url("avatar", "avatar_webp")
+        url = user.get_serving_image_url("avatar")
 
-        assert url == "/media/avatar.jpg"
+        assert ".jpg" in url
+        assert "Falling back to source image" in caplog.text
 
-    def test_falls_back_to_source_when_no_webp_and_toggle_on(self):
-        """When serve_webp_images=True but no WebP exists, falls back to the source field."""
-        settings = LandingPageSettingsFactory(serve_webp_images=True)
+    def test_declares_namespaced_variant_sources_without_thumbnails(self):
         user = UserFactory.create_superuser()
 
-        source_field = MagicMock()
-        source_field.__bool__ = MagicMock(return_value=True)
-        source_field.url = "/media/avatar.jpg"
+        sources = user.get_image_variant_sources(["avatar", "about_me_image"])
 
-        user.avatar = source_field
-        user.avatar_webp = None
+        assert [source.field_name for source in sources] == ["avatar", "about_me_image"]
+        assert [source.role_namespace for source in sources] == ["avatar", "about_me_image"]
+        specs = user.get_image_variant_specs()
 
-        with patch.object(LandingPageSettings, "get_current", return_value=settings):
-            url = user._get_serving_image_url("avatar", "avatar_webp")
-
-        assert url == "/media/avatar.jpg"
-
-    def test_prefers_cropped_source_when_webp_toggle_is_off(self):
-        settings = LandingPageSettingsFactory(serve_webp_images=False)
-        user = UserFactory.create_superuser()
-
-        source_field = MagicMock()
-        source_field.__bool__ = MagicMock(return_value=True)
-        source_field.url = "/media/avatar-original.jpg"
-
-        cropped_field = MagicMock()
-        cropped_field.__bool__ = MagicMock(return_value=True)
-        cropped_field.url = "/media/avatar-cropped.jpg"
-
-        user.avatar = source_field
-        user.avatar_cropped = cropped_field
-        user.avatar_webp = None
-
-        with patch.object(LandingPageSettings, "get_current", return_value=settings):
-            url = user._get_serving_image_url("avatar", "avatar_webp")
-
-        assert url == "/media/avatar-cropped.jpg"
-
-    def test_returns_empty_string_when_field_has_no_url(self):
-        """If the serving field's .url property raises ValueError, '' is returned."""
-        settings = LandingPageSettingsFactory(serve_webp_images=True)
-        user = UserFactory.create_superuser()
-
-        bad_field = MagicMock()
-        bad_field.__bool__ = MagicMock(return_value=True)
-        type(bad_field).url = PropertyMock(side_effect=ValueError("no file"))
-        user.avatar = bad_field
-        user.avatar_webp = None
-
-        with patch.object(LandingPageSettings, "get_current", return_value=settings):
-            url = user._get_serving_image_url("avatar", "avatar_webp")
-
-        assert url == ""
+        assert [spec.role for spec in specs] == ["original_format"]
+        assert specs[0].quality == 35

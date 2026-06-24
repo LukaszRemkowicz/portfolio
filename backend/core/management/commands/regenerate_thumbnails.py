@@ -40,7 +40,7 @@ class Command(BaseCommand):
             self.stdout.write(f"\nProcessing {model_name}...")
             for obj in queryset:
                 try:
-                    thumb_source = obj.original_field
+                    thumb_source = obj.original
 
                     if not thumb_source:
                         self.stdout.write(f"  [SKIP] {obj} - No image source")
@@ -54,7 +54,8 @@ class Command(BaseCommand):
 
                     self.stdout.write(f"  [GEN ] {obj}")
 
-                    thumb_content: ContentFile = obj.make_thumbnail(thumb_source)
+                    thumb_contents: list[ContentFile] = obj.make_thumbnail(thumb_source)
+                    thumb_content = thumb_contents[0]
 
                     # Save the new thumbnail
                     if obj.thumbnail:

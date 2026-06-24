@@ -1,13 +1,13 @@
 from datetime import date
 from io import BytesIO
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from PIL import Image
 from psycopg2.extras import DateRange
 from pytest_mock import MockerFixture
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
@@ -32,7 +32,15 @@ from astrophotography.tests.factories import (
     TagFactory,
 )
 from core.models import LandingPageSettings
+from core.tasks import process_image_task
 from translation.services import TranslationService
+
+
+class TestMainPageBackgroundImageVariantContract:
+    def test_get_hero_variant_returns_default_display_candidate(self) -> None:
+        bg = MainPageBackgroundImage()
+
+        assert bg.get_hero_variant() == ("hero", 1920)
 
 
 @pytest.mark.django_db
@@ -52,15 +60,21 @@ class TestAstroImageModel:
         assert qs[1] == image1
 
     def test_thumbnail_generation(self) -> None:
-        """Test that a thumbnail is automatically generated on save"""
-        image: AstroImage = AstroImageFactory(name="Test Nebula")
+        """Test that the generated thumbnail variant exists after processing."""
+        image: AstroImage = AstroImageFactory(
+            name="Test Nebula",
+            original__width=1200,
+            original__height=800,
+        )
+        process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        assert image.thumbnail is not None
-        assert image.thumbnail.name.startswith("images/thumbnail/thumb_")
+        thumbnail_variant = image.variants.get(role="thumbnail", width=560)
+        assert thumbnail_variant.file.name.startswith("images/thumbnail/")
+        assert thumbnail_variant.file.name.endswith(".webp")
 
     def test_zoom_field_default(self) -> None:
         """Test that zoom field defaults to False"""
-        image: AstroImage = AstroImageFactory()
+        image: AstroImage = AstroImageFactory(original__width=1200, original__height=800)
         assert image.zoom is False
 
     def test_zoom_field_persistence(self) -> None:
@@ -87,42 +101,40 @@ class TestAstroImageModel:
         assert slugify(name) in image1.slug
         assert slugify(name) in image2.slug
 
-    def test_get_thumbnail_url_with_image(self) -> None:
-        """
-        Verify that get_thumbnail_url returns a valid URL when an image exists.
-        This tests the inherited logic from BaseImage.
-        """
-        image: AstroImage = AstroImageFactory()
+    def test_get_image_url_with_thumbnail_variant(self) -> None:
+        """get_image_url returns the generated thumbnail variant URL."""
+        image: AstroImage = AstroImageFactory(original__width=1200, original__height=800)
+        process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        url: str = image.get_thumbnail_url()
-        assert url
-        assert "/media/images/thumbnail/" in url
+        variant = image.variants.get(role="thumbnail", width=560)
 
-    def test_get_thumbnail_url_returns_none_when_thumbnail_file_missing(self) -> None:
-        """Missing thumbnail files should not leak dead media URLs to the API."""
-        image: AstroImage = AstroImageFactory()
+        url: str = image.get_image_url("thumbnail", 560)
+        assert url == variant.file.url
+
+    def test_get_image_url_falls_back_when_thumbnail_variant_file_missing(self) -> None:
+        """Missing thumbnail variant files should not leak dead media URLs to the API."""
+        image: AstroImage = AstroImageFactory(original__width=1200, original__height=800)
+        process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
+        variant = image.variants.get(role="thumbnail")
 
-        assert image.thumbnail is not None
+        missing_name = str(variant.file.name)
+        variant.file.storage.delete(missing_name)
 
-        missing_name = str(image.thumbnail.name)
-        image.thumbnail.storage.delete(missing_name)
+        assert image.get_image_url("thumbnail", 560) == image.original.url
 
-        assert image.get_thumbnail_url() is None
+    def test_original_format_variant_is_configured_like_legacy_original_webp(self):
+        """AstroImage original_format should match the old original_webp target."""
+        image: AstroImage = AstroImageFactory()
+        original_format_spec = next(
+            spec for spec in image.get_image_variant_specs() if spec.role == "original_format"
+        )
 
-    def test_get_original_spec(self):
-        """Test that get_path_spec returns correct spec based on webp_quality."""
-        # Quality >= 90 -> LANDSCAPE
-        image_l: AstroImage = AstroImageFactory()
-        image_l.webp_quality = 90
-        spec_l = image_l.get_original_spec()
-        assert spec_l == settings.IMAGE_OPTIMIZATION_SPECS["LANDSCAPE"]
-
-        # Quality < 90 -> PORTRAIT
-        image_p: AstroImage = AstroImageFactory()
-        image_p.webp_quality = 80
-        spec_p = image_p.get_original_spec()
-        assert spec_p == settings.IMAGE_OPTIMIZATION_SPECS["PORTRAIT"]
+        assert original_format_spec.viewport_widths.as_tuple() == (1920,)
+        assert original_format_spec.quality == 90
+        assert not hasattr(image, "webp_quality")
+        assert not hasattr(image, "max_dimension")
+        assert not hasattr(image, "dimension_percentage")
 
 
 @pytest.mark.django_db
@@ -132,12 +144,18 @@ class TestMainPageBackgroundImageModel:
         bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Test BG")
         assert str(bg) == "Test BG"
 
-    def test_get_path_spec_uses_background_specific_settings(self) -> None:
-        """Backgrounds should use their own quality/dimension, not generic image buckets."""
+    def test_hero_variant_is_background_display_candidate(self) -> None:
+        """Background images should expose only hero display candidates."""
         bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Test BG")
-        spec = bg.get_original_spec()
-        assert spec.dimension == bg.max_dimension
-        assert spec.quality == bg.webp_quality
+        specs = bg.get_image_variant_specs()
+        hero_spec = next(spec for spec in specs if spec.role == "hero")
+
+        assert [spec.role for spec in specs] == ["hero"]
+        assert hero_spec.viewport_widths.as_tuple() == (1280, 1920, 2560)
+        assert hero_spec.quality == 95
+        assert not hasattr(bg, "webp_quality")
+        assert not hasattr(bg, "max_dimension")
+        assert not hasattr(bg, "dimension_percentage")
 
     def test_model_creation_and_translation(self) -> None:
         """Verify that MainPageBackgroundImage can be created with translations."""
@@ -342,17 +360,20 @@ class TestImageUpdateLogic:
 
     def test_thumbnail_updates_when_image_changes(self) -> None:
         """
-        Verify that the thumbnail is regenerated when the source image changes.
+        Verify that the thumbnail variant is regenerated when the source image changes.
         """
         # 1. Create initial image
         img_data1 = BytesIO()
         Image.new("RGB", (100, 100), color="red").save(img_data1, "JPEG")
         file1 = SimpleUploadedFile("shared.jpg", img_data1.getvalue(), content_type="image/jpeg")
 
-        image: AstroImage = AstroImageFactory(original=file1)
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image: AstroImage = AstroImageFactory(original=file1)
+        process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        initial_thumb_name = image.thumbnail.name
-        initial_thumb_content = image.thumbnail.read()
+        initial_variant = image.variants.get(role="thumbnail")
+        initial_thumb_name = initial_variant.file.name
+        initial_thumb_content = initial_variant.file.read()
 
         # 2. Update with NEW image but SAME filename
         img_data2 = BytesIO()
@@ -360,32 +381,41 @@ class TestImageUpdateLogic:
         file2 = SimpleUploadedFile("shared.jpg", img_data2.getvalue(), content_type="image/jpeg")
 
         image.original = file2
-        image.save()
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image.save()
+        process_image_task("astrophotography", "AstroImage", image.pk, ["original"])
 
         image.refresh_from_db()
 
         # 3. Assertions
-        new_thumb_content = image.thumbnail.read()
+        updated_variant = image.variants.get(role="thumbnail")
+        new_thumb_content = updated_variant.file.read()
         assert new_thumb_content != initial_thumb_content, (
-            f"Thumbnail content should change! \n"
+            f"Thumbnail variant content should change! \n"
             f"Initial thumb: {initial_thumb_name}\n"
-            f"New thumb: {image.thumbnail.name}"
+            f"New thumb: {updated_variant.file.name}"
         )
 
     def test_thumbnail_does_not_update_when_image_is_same(self) -> None:
         """
         Verify that the thumbnail is NOT regenerated if we save without changing the image.
         """
-        image: AstroImage = AstroImageFactory(name="Stationary Image")
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image: AstroImage = AstroImageFactory(
+                name="Stationary Image",
+                original__width=1200,
+                original__height=800,
+            )
+        process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        initial_thumb_name = image.thumbnail.name
+        initial_thumb_name = image.variants.get(role="thumbnail", width=560).file.name
 
         # Save again without changing source image
         image.save()
 
         image.refresh_from_db()
         assert (
-            image.thumbnail.name == initial_thumb_name
+            image.variants.get(role="thumbnail", width=560).file.name == initial_thumb_name
         ), "Thumbnail should NOT have been regenerated"
 
     def test_update_via_form(self) -> None:
@@ -393,9 +423,16 @@ class TestImageUpdateLogic:
         Simulate a Django Admin update using the actual model form.
         """
         # 1. Create initial
-        image: AstroImage = AstroImageFactory(name="Form Test")
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image: AstroImage = AstroImageFactory(
+                name="Form Test",
+                original__width=1200,
+                original__height=800,
+            )
+        process_image_task("astrophotography", "AstroImage", image.pk)
+        image.refresh_from_db()
         old_path = image.original.name
-        old_thumb_name = image.thumbnail.name
+        old_thumb_name = image.variants.get(role="thumbnail", width=560).file.name
 
         # 2. Prepare form data with NEW image
         img_data = BytesIO()
@@ -422,7 +459,7 @@ class TestImageUpdateLogic:
 
         image.refresh_from_db()
         assert image.original.name != old_path
-        assert image.thumbnail.name != old_thumb_name
+        assert image.variants.get(role="thumbnail").file.name != old_thumb_name
         assert image.name == "Updated Name"
 
     def test_form_hides_internal_calculated_exposure_hours_field(self) -> None:

@@ -28,10 +28,11 @@ from astrophotography.tests.factories import (
 )
 from astrophotography.utils import get_celestial_categories
 from common.constants import FALLBACK_URL_SLUG
+from common.tests.image_helpers import jpeg_field
 from common.utils.signing import generate_signed_url_params
 from core.models import LandingPageSettings
 from core.tasks import process_image_task
-from core.tests.factories import LandingPageSettingsFactory
+from core.tests.factories import ImageVariantFactory
 
 # URL Names
 ASTROIMAGE_LIST_URL_NAME: str = "astroimages:astroimage-list"
@@ -58,7 +59,22 @@ class TestAstroImageViewSet:
         assert response.data["previous"] is None
         assert len(response.data["results"]) == 1
         assert response.data["results"][0]["pk"] == str(astro_image.pk)
-        # After Phase 2: URL field removed, served via /v1/images/
+
+    def test_list_astro_images_returns_thumbnail_variant_url(self, api_client: APIClient) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(original=jpeg_field("gallery.jpg", size=(1200, 800)))
+        thumbnail = ImageVariantFactory(
+            image=image,
+            file__filename="gallery-thumbnail.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
+        )
+
+        response: Response = api_client.get(reverse(ASTROIMAGE_LIST_URL_NAME))
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["results"][0]["thumbnail_url"] == thumbnail.file.url
 
     def test_retrieve_astro_image(self, api_client: APIClient, astro_image: AstroImage) -> None:
         """Test retrieving a single image via the router generated URL"""
@@ -259,6 +275,46 @@ class TestAstroImageViewSet:
 
 @pytest.mark.django_db
 class TestBackgroundMainPageView:
+    def test_list_background_image_uses_hero_variant_url(self, api_client: APIClient) -> None:
+        """Background endpoint should serve the default generated hero variant URL."""
+        with patch("core.models.process_image_task.delay_on_commit"):
+            background = MainPageBackgroundImageFactory(
+                original=jpeg_field("background.jpg", size=(2600, 1734))
+            )
+        hero = ImageVariantFactory(
+            image=background,
+            file__filename="background-hero.webp",
+            role="hero",
+            width=2560,
+            height=1707,
+        )
+
+        url: str = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["url"] == hero.file.url
+
+    def test_list_background_image_ignores_requested_variant(self, api_client: APIClient) -> None:
+        """Background endpoint always serves the default hero variant for now."""
+        with patch("core.models.process_image_task.delay_on_commit"):
+            background = MainPageBackgroundImageFactory(
+                original=jpeg_field("background.jpg", size=(2600, 1734))
+            )
+        hero_default = ImageVariantFactory(
+            image=background,
+            file__filename="background-hero-default.webp",
+            role="hero",
+            width=2560,
+            height=1707,
+        )
+
+        url: str = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url, {"role": "hero", "width": 1280})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["url"] == hero_default.file.url
+
     def test_list_background_image(self, api_client: APIClient) -> None:
         """Test retrieving the latest valid background image."""
         MainPageBackgroundImageFactory()
@@ -267,7 +323,7 @@ class TestBackgroundMainPageView:
         url: str = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
         with patch.object(
             MainPageBackgroundImage,
-            "get_serving_url",
+            "get_available_variant_url",
             side_effect=[
                 "",
                 "/media/backgrounds/older-valid.png",
@@ -290,21 +346,38 @@ class TestBackgroundMainPageView:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["url"] is None
 
-    def test_list_background_image_uses_original_when_webp_missing(
+    def test_list_background_image_returns_null_when_hero_missing(
         self, api_client: APIClient
     ) -> None:
-        """Public background API must fall back to the canonical original when WebP is absent."""
-        settings = LandingPageSettingsFactory(serve_webp_images=True)
-        background = MainPageBackgroundImageFactory()
-        background.original_webp = None
-        background.save(update_fields=["original_webp"])
+        """Public background API returns null when generated hero variants are missing."""
+        background = MainPageBackgroundImageFactory(
+            original=jpeg_field("background.jpg", size=(2600, 1734))
+        )
+        background.variants.all().delete()
 
         url: str = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
-        with patch.object(LandingPageSettings, "get_current", return_value=settings):
-            response: Response = api_client.get(url)
+        response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["url"] == background.original.url
+        assert response.data["url"] is None
+
+    def test_list_background_image_returns_null_when_source_is_missing(
+        self, api_client: APIClient
+    ) -> None:
+        """Missing background source files should not crash the public endpoint."""
+        with patch("core.models.process_image_task.delay_on_commit"):
+            background = MainPageBackgroundImageFactory(
+                original=jpeg_field("missing-background.jpg", size=(2600, 1734))
+            )
+        missing_name = str(background.original.name)
+        background.original.storage.delete(missing_name)
+        background.variants.all().delete()
+
+        url: str = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
+        response: Response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["url"] is None
 
 
 @pytest.mark.django_db
@@ -365,7 +438,15 @@ class TestTravelHighlightsBySlugView:
         """Test retrieving highlights by country, place, and date slug."""
 
         place: Place = PlaceFactory(name="High Tatras", country="PL")
-        img: AstroImage = AstroImageFactory(place=place, name="Tatras 1")
+        with patch("core.models.process_image_task.delay_on_commit"):
+            img: AstroImage = AstroImageFactory(place=place, name="Tatras 1")
+        thumbnail = ImageVariantFactory(
+            image=img,
+            file__filename="travel-thumbnail.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
+        )
         slider: MainPageLocation = MainPageLocationFactory(
             place=place,
             is_active=True,
@@ -389,6 +470,7 @@ class TestTravelHighlightsBySlugView:
         assert data["place"]["name"] == "High Tatras"
         assert len(data["images"]) == 1
         assert data["images"][0]["name"] == "Tatras 1"
+        assert data["images"][0]["thumbnail_url"] == thumbnail.file.url
 
     def test_get_highlights_with_story(self, api_client: APIClient) -> None:
         """Test retrieving highlights with a story"""
@@ -726,10 +808,11 @@ class TestAstroImageSecureView:
     objects are protected and correctly authenticated via cryptographic signature.
     """
 
-    def test_astro_image_secure_view_success(
-        self, api_client: APIClient, astro_image: AstroImage
-    ) -> None:
+    def test_astro_image_secure_view_success(self, api_client: APIClient) -> None:
+        astro_image = AstroImageFactory(original__width=3000, original__height=2000)
+        process_image_task("astrophotography", "AstroImage", astro_image.pk)
         astro_image.refresh_from_db()
+        original_format = astro_image.variants.get(role="original_format")
         url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
         params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
 
@@ -737,19 +820,17 @@ class TestAstroImageSecureView:
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
         assert response["Cache-Control"] == "private, no-store, max-age=0"
-        serving_field = astro_image.original_webp_field or astro_image.original_field
-        assert f"/protected_media/{serving_field.name}" == response["X-Accel-Redirect"]
+        assert f"/protected_media/{original_format.file.name}" == response["X-Accel-Redirect"]
 
     def test_astro_image_secure_view_always_serves_full_resolution_path(
-        self, api_client: APIClient, astro_image: AstroImage
+        self, api_client: APIClient
     ) -> None:
         """The modal/lightbox endpoint must serve the canonical public asset."""
-        from core.tests.factories import LandingPageSettingsFactory
-
-        LandingPageSettingsFactory(serve_webp_images=False)
+        astro_image = AstroImageFactory(original__width=3000, original__height=2000)
+        process_image_task("astrophotography", "AstroImage", astro_image.pk)
         astro_image.refresh_from_db()
 
-        assert astro_image.original_field
+        original_format = astro_image.variants.get(role="original_format")
 
         url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
         params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
@@ -759,8 +840,30 @@ class TestAstroImageSecureView:
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
         assert response["Cache-Control"] == "private, no-store, max-age=0"
-        serving_field = astro_image.original_webp_field or astro_image.original_field
-        assert response["X-Accel-Redirect"] == f"/protected_media/{serving_field.name}"
+        assert response["X-Accel-Redirect"] == f"/protected_media/{original_format.file.name}"
+
+    def test_astro_image_secure_view_requires_original_source_even_when_variant_exists(
+        self, api_client: APIClient
+    ) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            astro_image = AstroImageFactory(original=jpeg_field("missing-source.jpg"))
+        original_name = astro_image.original.name
+        astro_image.original.storage.delete(original_name)
+        ImageVariantFactory(
+            image=astro_image,
+            file__filename="restored-original-format.webp",
+            role="original_format",
+            width=1920,
+            height=1280,
+        )
+
+        url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
+        params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
+
+        response: Response = api_client.get(url, params)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert not response.has_header("X-Accel-Redirect")
 
     def test_secure_media_view_missing_signature(
         self, api_client: APIClient, astro_image: AstroImage
@@ -798,14 +901,15 @@ class TestMainPageBackgroundImageSecureView:
 
         with patch.object(
             MainPageBackgroundImage,
-            "get_serving_url",
+            "get_available_variant_url",
             return_value="/media/backgrounds/example.png",
-        ):
+        ) as get_available_variant_url:
             response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["url"] == "/media/backgrounds/example.png"
         assert "/background-files/" not in response.data["url"]
+        get_available_variant_url.assert_any_call("hero", preferred_width=2560)
 
 
 @pytest.mark.django_db

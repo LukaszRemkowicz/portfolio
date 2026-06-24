@@ -1,34 +1,40 @@
-import pytest
+from unittest.mock import patch
 
-from common.tests.image_helpers import _jpeg_field, _png_field
+import pytest
+from PIL import Image
+
+from common.tests.image_helpers import jpeg_field, png_field
 from core.tasks import process_image_task
-from users.tests.factories import UserFactory
+from users.models import User
+
+
+def _variant_name(superuser, source_name: str) -> str:
+    variant = superuser.variants.get(role=f"{source_name}__original_format")
+    return str(variant.file.name)
 
 
 @pytest.mark.django_db
 class TestProcessUserImagesTask:
-    def test_process_user_images_task_optimizes_avatar(self):
-        """
-        GIVEN a user with a JPEG avatar
-        WHEN process_user_images_task is called
-        THEN the avatar should be shrunk to 264px and quality 20.
-        """
-        user = UserFactory.create_superuser()
-        user.avatar = _jpeg_field("test_avatar.jpg")
-        user.save()
+    def test_process_user_images_task_generates_avatar_variant(self, superuser: User):
+        superuser.avatar = jpeg_field("test_avatar.jpg", size=(800, 800))
+        with patch("users.models.process_image_task.delay_on_commit"):
+            superuser.save()
 
-        process_image_task("users", "User", user.pk, ["avatar"])
+        process_image_task("users", "User", superuser.pk, ["avatar"])
 
-        user.refresh_from_db()
-        # In Green phase, we expect conversion to succeed
-        assert user.avatar.name.endswith(".jpg")
-        assert user.avatar_webp.name.endswith(".webp")
-        assert "test_avatar" in user.avatar_webp.name
+        superuser.refresh_from_db()
+        variant = superuser.variants.get(role="avatar__original_format")
+        assert superuser.avatar.name.endswith(".jpg")
+        assert variant.width == 800
+        assert variant.file.name.endswith(".webp")
+        assert "test_avatar" in variant.file.name
 
-    def test_process_user_images_task_invalidates_caches_after_conversion(self, mocker):
-        user = UserFactory.create_superuser()
-        user.avatar = _jpeg_field("test_avatar.jpg")
-        user.save()
+    def test_process_user_images_task_invalidates_caches_after_conversion(
+        self, mocker, superuser: User
+    ):
+        superuser.avatar = jpeg_field("test_avatar.jpg", size=(800, 800))
+        with patch("users.models.process_image_task.delay_on_commit"):
+            superuser.save()
 
         mock_invalidate_user_cache = mocker.patch(
             "users.signals.CacheService.invalidate_user_cache"
@@ -37,60 +43,74 @@ class TestProcessUserImagesTask:
             "users.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
         )
 
-        process_image_task("users", "User", user.pk, ["avatar"])
+        process_image_task("users", "User", superuser.pk, ["avatar"])
 
         mock_invalidate_user_cache.assert_called_once()
-        mock_invalidate_frontend.assert_called_once()
-        mock_invalidate_frontend.assert_called_with(["profile"])
+        mock_invalidate_frontend.assert_called_once_with(["profile"])
 
-    def test_process_user_images_task_uses_new_upload_not_stale_original(self):
-        user = UserFactory.create_superuser()
-        user.avatar = _jpeg_field("old_avatar.jpg")
-        user.save()
-        process_image_task("users", "User", user.pk, ["avatar"])
+    def test_process_user_images_task_uses_new_upload_not_stale_original(self, superuser: User):
+        superuser.avatar = jpeg_field("old_avatar.jpg", size=(800, 800))
+        with patch("users.models.process_image_task.delay_on_commit"):
+            superuser.save()
+        process_image_task("users", "User", superuser.pk, ["avatar"])
 
-        user.refresh_from_db()
-        assert "old_avatar" in user.avatar.name
-        assert "old_avatar" in user.avatar_webp.name
+        superuser.refresh_from_db()
+        first_variant_name = _variant_name(superuser, "avatar")
+        assert "old_avatar" in first_variant_name
 
-        user.avatar = _jpeg_field("new_avatar.jpg")
-        user.save()
-        process_image_task("users", "User", user.pk, ["avatar"])
+        superuser.avatar = jpeg_field("new_avatar.jpg", size=(800, 800))
+        with patch("users.models.process_image_task.delay_on_commit"):
+            superuser.save()
+        process_image_task("users", "User", superuser.pk, ["avatar"])
 
-        user.refresh_from_db()
-        assert "new_avatar" in user.avatar.name
-        assert user.avatar.name.endswith(".jpg")
-        assert "new_avatar" in user.avatar_webp.name
-        assert user.avatar_webp.name.endswith(".webp")
+        superuser.refresh_from_db()
+        second_variant_name = _variant_name(superuser, "avatar")
+        assert "new_avatar" in second_variant_name
+        assert second_variant_name.endswith(".webp")
+        assert first_variant_name != second_variant_name
 
-    def test_process_user_images_task_handles_cropped_png_avatar_upload(self):
-        """
-        GIVEN a cropped PNG avatar upload from the admin cropper
-        WHEN process_user_images_task is called
-        THEN the source avatar stays PNG and the derived avatar_webp is regenerated from it.
-        """
-        user = UserFactory.create_superuser()
-        user.avatar = _png_field("cropped_avatar.png", size=(280, 280))
-        user.save()
+    def test_process_user_images_task_handles_cropped_png_avatar_upload(self, superuser: User):
+        superuser.avatar = png_field("cropped_avatar.png", size=(280, 280))
+        with patch("users.models.process_image_task.delay_on_commit"):
+            superuser.save()
 
-        process_image_task("users", "User", user.pk, ["avatar"])
+        process_image_task("users", "User", superuser.pk, ["avatar"])
 
-        user.refresh_from_db()
-        assert user.avatar.name.endswith(".png")
-        assert "cropped_avatar" in user.avatar.name
-        assert user.avatar_webp.name.endswith(".webp")
-        assert "cropped_avatar" in user.avatar_webp.name
+        superuser.refresh_from_db()
+        variant = superuser.variants.get(role="avatar__original_format")
+        assert superuser.avatar.name.endswith(".png")
+        assert "cropped_avatar" in superuser.avatar.name
+        assert variant.file.name.endswith(".webp")
+        assert "cropped_avatar" in variant.file.name
 
-    def test_process_user_images_task_prefers_cropped_image_when_present(self):
-        user = UserFactory.create_superuser()
-        user.avatar = _jpeg_field("original_avatar.jpg")
-        user.avatar_cropped = _png_field("cropped_avatar.png", size=(280, 280))
-        user.save()
+    def test_process_user_images_task_prefers_cropped_image_when_present(self, superuser: User):
+        superuser.avatar = jpeg_field("original_avatar.jpg")
+        superuser.avatar_cropped = png_field("cropped_avatar.png", size=(280, 280))
+        with patch("users.models.process_image_task.delay_on_commit"):
+            superuser.save()
 
-        process_image_task("users", "User", user.pk, ["avatar"])
+        process_image_task("users", "User", superuser.pk, ["avatar"])
 
-        user.refresh_from_db()
-        assert "original_avatar" in user.avatar.name
-        assert "cropped_avatar" in user.avatar_cropped.name
-        assert user.avatar_webp.name.endswith(".webp")
-        assert "cropped_avatar" in user.avatar_webp.name
+        superuser.refresh_from_db()
+        variant = superuser.variants.get(role="avatar__original_format")
+        assert "original_avatar" in superuser.avatar.name
+        assert "cropped_avatar" in superuser.avatar_cropped.name
+        assert variant.file.name.endswith(".webp")
+        assert "cropped_avatar" in variant.file.name
+
+    def test_process_user_images_task_preserves_transparent_avatar_crop(self, superuser: User):
+        superuser.avatar = jpeg_field("original_avatar.jpg")
+        superuser.avatar_cropped = png_field("transparent_avatar.png", mode="RGBA", size=(280, 280))
+        with patch("users.models.process_image_task.delay_on_commit"):
+            superuser.save()
+
+        process_image_task("users", "User", superuser.pk, ["avatar"])
+
+        superuser.refresh_from_db()
+        variant = superuser.variants.get(role="avatar__original_format")
+        with variant.file.open("rb") as generated_file:
+            image = Image.open(generated_file)
+            image.load()
+
+        assert image.mode == "RGBA"
+        assert image.getchannel("A").getextrema()[0] == 0

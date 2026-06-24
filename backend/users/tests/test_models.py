@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.utils import timezone
 
-from common.tests.image_helpers import _jpeg_field, _png_field
+from common.tests.image_helpers import jpeg_field, png_field
 from common.types import ImageSpec
 from users.models import Profile
 from users.tests.factories import ProgrammingProfileFactory, UserFactory
@@ -191,11 +191,11 @@ class TestUserDomainMethods:
 @pytest.mark.django_db
 def test_user_save_clears_stale_cropped_file_when_original_changes():
     user = UserFactory.create_superuser()
-    user.avatar = _jpeg_field("avatar-original.jpg")
-    user.avatar_cropped = _png_field("avatar-cropped.png", size=(280, 280))
+    user.avatar = jpeg_field("avatar-original.jpg")
+    user.avatar_cropped = png_field("avatar-cropped.png", size=(280, 280))
     user.save()
 
-    user.avatar = _jpeg_field("avatar-replacement.jpg")
+    user.avatar = jpeg_field("avatar-replacement.jpg")
     user.save()
     user.refresh_from_db()
 

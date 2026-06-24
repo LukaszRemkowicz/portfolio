@@ -7,9 +7,10 @@ from django.apps import apps
 from django.conf import settings
 
 from common.celery import CommitAwareTask
-from common.image_processing import process_image_operations
 
 logger = logging.getLogger(__name__)
+
+# TODO only update? what with save?
 
 
 def run_shared_image_processing(
@@ -30,14 +31,15 @@ def run_shared_image_processing(
         logger.error("Model %s.%s or instance %s not found.", app_label, model_name, instance_id)
         return
 
-    updated_fields = process_image_operations(instance, changed_field_names)
-    if updated_fields:
+    changed_variant_count = instance.sync_image_variants(changed_field_names, force=False)
+    if changed_variant_count:
+        instance.save(update_fields=["updated_at"])
         logger.info(
-            "Processed images for %s.%s %s with updated fields %s",
+            "Processed images for %s.%s %s with %s changed variants",
             app_label,
             model_name,
             instance_id,
-            updated_fields,
+            changed_variant_count,
         )
 
 

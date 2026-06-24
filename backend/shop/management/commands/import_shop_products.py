@@ -83,6 +83,8 @@ class Command(BaseCommand):
 
                     # --update: refresh metadata fields, keep local images untouched
                     product = existing_qs.first()
+                    if product is None:
+                        raise CommandError(f'Product "{title}" disappeared during import.')
                     self._apply_fields(product, description, thumbnail_url, external_url)
                     product.save(update_fields=["thumbnail_url", "external_url", "is_active"])
 

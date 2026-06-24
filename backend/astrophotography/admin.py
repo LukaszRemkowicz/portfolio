@@ -29,7 +29,10 @@ from translation.mixins import (
     TranslationStatusMixin,
 )
 
-from .admin_mixins import SecureAdminSidebarPreviewMixin
+from .admin_mixins import (
+    IgnoreImageVariantCascadeDeletePermissionMixin,
+    SecureAdminSidebarPreviewMixin,
+)
 from .forms import (
     AstroImageForm,
     MainPageBackgroundImageForm,
@@ -246,7 +249,11 @@ class TripodAdmin(admin.ModelAdmin):
 
 
 @admin.register(AstroImage)
-class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
+class AstroImageAdmin(
+    IgnoreImageVariantCascadeDeletePermissionMixin,
+    SecureAdminSidebarPreviewMixin,
+    BaseTranslatableAdmin,
+):
     """
     Main admin for astrophotography captures and related data.
     Unique complex logic:
@@ -410,7 +417,7 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
         cleaned_original = (
             form.cleaned_data.get("original_upload") if hasattr(form, "cleaned_data") else None
         )
-        current_original = astro_obj.original_field if astro_obj else None
+        current_original = astro_obj.original if astro_obj else None
         uploaded_original_name = uploaded_file.name if uploaded_file else None
         cleaned_original_name = cleaned_original.name if cleaned_original else None
         current_original_name = current_original.name if current_original else None
@@ -429,7 +436,7 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
 
         super().save_model(request, obj, form, change)
 
-        saved_original = astro_obj.original_field if astro_obj else None
+        saved_original = astro_obj.original if astro_obj else None
         saved_original_name = saved_original.name if saved_original else ""
         saved_exists = bool(
             saved_original
@@ -495,7 +502,11 @@ class AstroImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
 
 
 @admin.register(MainPageBackgroundImage)
-class MainPageBackgroundImageAdmin(SecureAdminSidebarPreviewMixin, BaseTranslatableAdmin):
+class MainPageBackgroundImageAdmin(
+    IgnoreImageVariantCascadeDeletePermissionMixin,
+    SecureAdminSidebarPreviewMixin,
+    BaseTranslatableAdmin,
+):
     """
     Admin for main page background images.
     Features:

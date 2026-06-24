@@ -1,12 +1,15 @@
+from urllib.parse import urlparse
+
 import pytest
 from bs4 import BeautifulSoup
 
 from django.contrib.admin.sites import site
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory
 from django.urls import reverse
 
 from astrophotography.tests.factories import AstroImageFactory
-from common.tests.image_helpers import _jpeg_field
+from common.tests.image_helpers import jpeg_field
 from shop.admin import ShopProductAdmin
 from shop.forms import ShopProductAdminForm, ShopProductImageSelectWidget
 from shop.models import ShopSettings
@@ -80,8 +83,11 @@ class TestShopProductAdmin:
 
         cropper_data = response.context["admin_fk_image_cropper"]
         assert cropper_data["field_name"] == "image"
-        assert cropper_data["target_field_name"] == "thumbnail_cropped"
+        assert cropper_data["target_field_name"] == "image_cropped"
         assert cropper_data["visible_tab_panel"] == "media-tab"
+        assert urlparse(cropper_data["source_image_url"]).path == (
+            f"/v1/admin/media/astrophotography/astroimage/{product.image.pk}/original/"
+        )
         assert cropper_data["crop_aspect_ratio"] == pytest.approx(4 / 3)
         assert cropper_data["output_width"] == 560
         assert cropper_data["output_height"] == 420
@@ -92,7 +98,7 @@ class TestShopProductAdmin:
         assert cropper_root["data-visible-tab-panel"] == cropper_data["visible_tab_panel"]
         assert soup.select_one("[data-admin-fk-image-cropper-field-select]") is None
         content = response.content.decode("utf-8")
-        assert "$imageField.djangoAdminSelect2();" in content
+        assert "$imageField.djangoAdminSelect2();" not in content
 
     def test_image_autocomplete_deduplicates_translated_results(self, admin_client) -> None:
         image = AstroImageFactory(name="Tarantula Nebula")
@@ -146,6 +152,38 @@ class TestShopProductAdmin:
         assert "core/css/select2_admin.css" in media_css
         assert widget.attrs["data-autocomplete-light-function"] == "select2"
 
+    def test_change_view_saves_product_image_crop_with_original_extension(
+        self, admin_client
+    ) -> None:
+        product = ShopProductFactory()
+        url = reverse("admin:shop_shopproduct_change", args=[product.pk])
+
+        response = admin_client.post(
+            url,
+            {
+                "title": "Product crop",
+                "description": "",
+                "price": "10.00",
+                "currency": "USD",
+                "external_url": "https://example.com/product",
+                "thumbnail_url": "",
+                "is_active": "on",
+                "image": str(product.image_id),
+                "image_cropped": SimpleUploadedFile(
+                    "product-crop.jpg",
+                    jpeg_field("product-crop.jpg", size=(560, 420)).read(),
+                    content_type="image/jpeg",
+                ),
+                "_save": "Save",
+            },
+            follow=True,
+        )
+
+        product.refresh_from_db()
+        assert response.status_code == 200
+        assert product.image_cropped
+        assert product.image_cropped.name.endswith(".jpg")
+
 
 @pytest.mark.django_db
 class TestShopSettingsAdmin:
@@ -159,6 +197,9 @@ class TestShopSettingsAdmin:
         cropper_data = response.context["admin_image_cropper"]
         assert cropper_data["visible_tab_panel"] == "background-image-tab"
         assert cropper_data["default_field_name"] == "image"
+        assert cropper_data["fields"][0]["crop_aspect_ratio"] == pytest.approx(16 / 9)
+        assert cropper_data["fields"][0]["output_width"] == 1920
+        assert cropper_data["fields"][0]["output_height"] == 1080
 
         soup = BeautifulSoup(response.content, "html.parser")
         cropper_root = soup.select_one("[data-admin-image-cropper-root]")
@@ -169,7 +210,7 @@ class TestShopSettingsAdmin:
 
     def test_change_view_injects_cropper_context(self, admin_client) -> None:
         settings_obj = ShopSettings.objects.create(
-            title="Shop", image=_jpeg_field("settings-bg.jpg")
+            title="Shop", image=jpeg_field("settings-bg.jpg")
         )
 
         url = reverse("admin:shop_shopsettings_change", args=[settings_obj.pk])
@@ -182,6 +223,9 @@ class TestShopSettingsAdmin:
         assert cropper_data["visible_tab_panel"] == "background-image-tab"
         assert cropper_data["default_field_name"] == "image"
         assert cropper_data["fields"][0]["target_field_name"] == "image_cropped"
+        assert cropper_data["fields"][0]["crop_aspect_ratio"] == pytest.approx(16 / 9)
+        assert cropper_data["fields"][0]["output_width"] == 1920
+        assert cropper_data["fields"][0]["output_height"] == 1080
 
         soup = BeautifulSoup(response.content, "html.parser")
         cropper_root = soup.select_one("[data-admin-image-cropper-root]")
@@ -191,7 +235,7 @@ class TestShopSettingsAdmin:
 
     def test_change_view_shows_translation_status_on_default_language(self, admin_client) -> None:
         settings_obj = ShopSettings.objects.create(
-            title="Shop", image=_jpeg_field("settings-bg.jpg")
+            title="Shop", image=jpeg_field("settings-bg.jpg")
         )
 
         url = reverse("admin:shop_shopsettings_change", args=[settings_obj.pk])
@@ -199,3 +243,29 @@ class TestShopSettingsAdmin:
 
         assert response.status_code == 200
         assert b"Translation Status" in response.content
+
+    def test_change_view_saves_cropped_background_upload(self, admin_client) -> None:
+        settings_obj = ShopSettings.objects.create(
+            title="Shop", image=jpeg_field("settings-bg.jpg")
+        )
+        url = reverse("admin:shop_shopsettings_change", args=[settings_obj.pk])
+
+        response = admin_client.post(
+            url,
+            {
+                "title": "Shop",
+                "description": "",
+                "image_cropped": SimpleUploadedFile(
+                    "settings-bg-cropped.png",
+                    jpeg_field("settings-bg-cropped.jpg").read(),
+                    content_type="image/png",
+                ),
+                "_save": "Save",
+            },
+            follow=True,
+        )
+
+        settings_obj.refresh_from_db()
+        assert response.status_code == 200
+        assert settings_obj.image_cropped
+        assert "settings-bg-cropped" in settings_obj.image_cropped.name
