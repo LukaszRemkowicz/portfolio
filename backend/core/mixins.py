@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import Any, ClassVar, cast
 
 from django.core.files.base import ContentFile
 from django.db import models
@@ -16,10 +16,6 @@ from common.utils.image import (
     build_image_with_given_width,
     file_exists_in_storage,
 )
-
-if TYPE_CHECKING:
-    from core.models import ImageVariant
-
 
 type ImageVariantTarget = tuple[str, int, int]
 
@@ -167,9 +163,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
             return f"{source_name}__{role}"
         return role
 
-    def _get_variant_queryset_for_source(
-        self, source: ImageVariantSource
-    ) -> models.QuerySet[ImageVariant]:
+    def _get_variant_queryset_for_source(self, source: ImageVariantSource) -> models.QuerySet[Any]:
         """Return the variant rows owned by exactly one source family."""
         variants: QuerySet = self.variants.all()  # type: ignore[attr-defined]
         if source.role_namespace:
@@ -178,7 +172,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
 
     def _get_image_variant_sync_plan(
         self, source: ImageVariantSource
-    ) -> tuple[tuple[ImageVariantTarget, ...], models.QuerySet[ImageVariant]]:
+    ) -> tuple[tuple[ImageVariantTarget, ...], models.QuerySet[Any]]:
         """Plan incremental sync for one source family.
 
         Returns:
@@ -210,9 +204,8 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
         variants_to_generate = tuple(
             target for target in expected_targets if (target[0], target[1]) in missing_keys
         )
-        variants_to_delete: models.QuerySet[ImageVariant] = cast(
-            "models.QuerySet[ImageVariant]",
-            cast(Any, self).variants.filter(pk__in=variant_ids_to_delete),
+        variants_to_delete: models.QuerySet[Any] = self.variants.filter(  # type: ignore[attr-defined] # noqa: E501
+            pk__in=variant_ids_to_delete
         )
         return variants_to_generate, variants_to_delete
 
@@ -245,7 +238,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
         self,
         source: ImageVariantSource,
         targets: tuple[ImageVariantTarget, ...],
-    ) -> models.QuerySet[ImageVariant]:
+    ) -> models.QuerySet[Any]:
         """Generate concrete ImageVariant rows for explicit role/width targets."""
         from core.models import ImageVariant
 
