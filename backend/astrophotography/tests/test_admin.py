@@ -1,7 +1,6 @@
 import uuid
 from datetime import date
 from io import BytesIO
-from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -39,13 +38,20 @@ from astrophotography.tests.factories import (
     PlaceFactory,
     TagFactory,
 )
+from common.tests.image_helpers import jpeg_field
+from core.tasks import process_image_task
 from core.widgets import ThemedRangeWidget
 from users.models import User
+
+# Django's test client returns _MonkeyPatchedWSGIResponse, which behaves like
+# HttpResponse in these tests. The targeted assignment ignores suppress only the
+# "Expected type 'HttpResponse', got '_MonkeyPatchedWSGIResponse'" mismatch.
 
 
 @pytest.mark.django_db
 class TestAstroImageAdmin:
     CHANGELIST_URL: str = reverse("admin:astrophotography_astroimage_changelist")
+    ADD_URL: str = reverse("admin:astrophotography_astroimage_add")
     CHANGE_URL_NAME: str = "admin:astrophotography_astroimage_change"
 
     def test_admin_list_displays_name(self, admin_client: Client) -> None:
@@ -56,7 +62,7 @@ class TestAstroImageAdmin:
         image: AstroImage = AstroImageFactory()
 
         # Get the page as admin
-        response = cast(HttpResponse, admin_client.get(self.CHANGELIST_URL))
+        response: HttpResponse = admin_client.get(self.CHANGELIST_URL)  # type: ignore[assignment]
 
         # Check success
         assert response.status_code == 200
@@ -66,7 +72,7 @@ class TestAstroImageAdmin:
         assert image.name in content
 
     def test_admin_list_displays_number_column(self, admin_client: Client) -> None:
-        response = cast(HttpResponse, admin_client.get(self.CHANGELIST_URL))
+        response: HttpResponse = admin_client.get(self.CHANGELIST_URL)  # type: ignore[assignment]
 
         assert response.status_code == 200
         admin_instance = AstroImageAdmin(AstroImage, site)
@@ -95,7 +101,7 @@ class TestAstroImageAdmin:
         older_image = AstroImageFactory(name="ORDER_OLD", capture_date=date(2026, 4, 20))
         newer_image = AstroImageFactory(name="ORDER_NEW", capture_date=date(2020, 1, 1))
 
-        response = cast(HttpResponse, admin_client.get(self.CHANGELIST_URL))
+        response: HttpResponse = admin_client.get(self.CHANGELIST_URL)  # type: ignore[assignment]
 
         assert response.status_code == 200
         content = response.content.decode("utf-8")
@@ -110,7 +116,7 @@ class TestAstroImageAdmin:
         TagFactory(name="Layout tag")
         AstroImageFactory(name="Layout image")
 
-        response = cast(HttpResponse, admin_client.get(self.CHANGELIST_URL))
+        response: HttpResponse = admin_client.get(self.CHANGELIST_URL)  # type: ignore[assignment]
 
         assert response.status_code == 200
         soup = BeautifulSoup(response.content, "html.parser")
@@ -148,17 +154,14 @@ class TestAstroImageAdmin:
         image: AstroImage = AstroImageFactory()
         url: str = reverse(self.CHANGE_URL_NAME, args=[image.pk])
 
-        response = cast(HttpResponse, admin_client.get(url))
+        response: HttpResponse = admin_client.get(url)  # type: ignore[assignment]
 
         assert response.status_code == 200
         content: str = response.content.decode("utf-8")
         assert image.name in content
 
     def test_admin_add_page_includes_upload_progress_assets(self, admin_client: Client) -> None:
-        response = cast(
-            HttpResponse,
-            admin_client.get(reverse("admin:astrophotography_astroimage_add")),
-        )
+        response: HttpResponse = admin_client.get(self.ADD_URL)  # type: ignore[assignment]
 
         assert response.status_code == 200
         content: str = response.content.decode("utf-8")
@@ -168,10 +171,7 @@ class TestAstroImageAdmin:
     def test_admin_add_page_uses_admin_date_widget_for_capture_date(
         self, admin_client: Client
     ) -> None:
-        response = cast(
-            HttpResponse,
-            admin_client.get(reverse("admin:astrophotography_astroimage_add")),
-        )
+        response: HttpResponse = admin_client.get(self.ADD_URL)  # type: ignore[assignment]
 
         assert response.status_code == 200
         content = response.content.decode("utf-8")
@@ -191,19 +191,16 @@ class TestAstroImageAdmin:
         image_file.name = "invalid_add_date.jpg"
         image_file.seek(0)
 
-        response = cast(
-            HttpResponse,
-            admin_client.post(
-                reverse("admin:astrophotography_astroimage_add"),
-                {
-                    "name": "Missing Date",
-                    "original_upload": image_file,
-                    "place": place.pk,
-                    "zoom": "True",
-                    "celestial_object": "Landscape",
-                },
-                format="multipart",
-            ),
+        response: HttpResponse = admin_client.post(  # type: ignore[assignment]
+            self.ADD_URL,
+            {
+                "name": "Missing Date",
+                "original_upload": image_file,
+                "place": place.pk,
+                "zoom": "True",
+                "celestial_object": "Landscape",
+            },
+            format="multipart",
         )
 
         assert response.status_code == 200
@@ -223,7 +220,9 @@ class TestAstroImageAdmin:
         url: str = reverse(self.CHANGE_URL_NAME, args=[image.pk])
 
         # Request with language=pl
-        response = cast(HttpResponse, admin_client.get(url, {"language": "pl"}))
+        response: HttpResponse = admin_client.get(  # type: ignore[assignment]
+            url, {"language": "pl"}
+        )
 
         assert response.status_code == 200
         content: str = response.content.decode("utf-8")
@@ -241,26 +240,47 @@ class TestAstroImageAdmin:
     ) -> None:
         image = AstroImageFactory()
 
-        confirmation_response = cast(
-            HttpResponse,
-            admin_client.post(
-                self.CHANGELIST_URL,
-                {"action": "delete_selected", "_selected_action": [str(image.pk)]},
-            ),
+        confirmation_response: HttpResponse = admin_client.post(  # type: ignore[assignment]
+            self.CHANGELIST_URL,
+            {"action": "delete_selected", "_selected_action": [str(image.pk)]},
         )
         assert confirmation_response.status_code == 200
 
-        delete_response = cast(
-            HttpResponse,
-            admin_client.post(
-                self.CHANGELIST_URL,
-                {
-                    "action": "delete_selected",
-                    "_selected_action": [str(image.pk)],
-                    "post": "yes",
-                },
-                follow=True,
-            ),
+        delete_response: HttpResponse = admin_client.post(  # type: ignore[assignment]
+            self.CHANGELIST_URL,
+            {
+                "action": "delete_selected",
+                "_selected_action": [str(image.pk)],
+                "post": "yes",
+            },
+            follow=True,
+        )
+
+        assert delete_response.status_code == 200
+        assert not AstroImage.objects.filter(pk=image.pk).exists()
+
+    def test_admin_changelist_delete_selected_removes_astroimage_with_variants(
+        self, admin_client: Client
+    ) -> None:
+        image = AstroImageFactory(original=jpeg_field("delete-with-variants.jpg", size=(1200, 800)))
+        process_image_task("astrophotography", "AstroImage", image.pk)
+        image.refresh_from_db()
+        assert image.variants.exists()
+
+        confirmation_response: HttpResponse = admin_client.post(  # type: ignore[assignment]
+            self.CHANGELIST_URL,
+            {"action": "delete_selected", "_selected_action": [str(image.pk)]},
+        )
+        assert confirmation_response.status_code == 200
+
+        delete_response: HttpResponse = admin_client.post(  # type: ignore[assignment]
+            self.CHANGELIST_URL,
+            {
+                "action": "delete_selected",
+                "_selected_action": [str(image.pk)],
+                "post": "yes",
+            },
+            follow=True,
         )
 
         assert delete_response.status_code == 200
@@ -271,7 +291,6 @@ class TestAstroImageAdmin:
         Verify that submitting the AstroImage add form successfully creates a new object
         with all attributes and the uploaded file.
         """
-        url: str = reverse("admin:astrophotography_astroimage_add")
         place: Place = PlaceFactory()
 
         # Create a mock image file
@@ -292,7 +311,9 @@ class TestAstroImageAdmin:
             # Additional relationships can be posted as lists if many-to-many
         }
 
-        response = cast(HttpResponse, admin_client.post(url, data, format="multipart"))
+        response: HttpResponse = admin_client.post(  # type: ignore[assignment]
+            self.ADD_URL, data, format="multipart"
+        )
 
         # The admin should save and redirect to the changelist
         if response.status_code == 200:
@@ -308,60 +329,65 @@ class TestAstroImageAdmin:
 
 @pytest.mark.django_db
 class TestEquipmentAdmin:
+    CAMERA_ADD_URL: str = reverse("admin:astrophotography_camera_add")
+    LENS_ADD_URL: str = reverse("admin:astrophotography_lens_add")
+    TELESCOPE_ADD_URL: str = reverse("admin:astrophotography_telescope_add")
+    TRACKER_ADD_URL: str = reverse("admin:astrophotography_tracker_add")
+    TRIPOD_ADD_URL: str = reverse("admin:astrophotography_tripod_add")
+    CAMERA_CHANGELIST_URL: str = reverse("admin:astrophotography_camera_changelist")
+    LENS_CHANGELIST_URL: str = reverse("admin:astrophotography_lens_changelist")
+    CAMERA_CHANGE_URL_NAME: str = "admin:astrophotography_camera_change"
+    LENS_CHANGE_URL_NAME: str = "admin:astrophotography_lens_change"
+
     @pytest.mark.parametrize(
-        ("url_name", "model_class", "model_value"),
+        ("url", "model_class", "model_value"),
         [
-            ("admin:astrophotography_camera_add", Camera, "Sony A7S III"),
-            ("admin:astrophotography_lens_add", Lens, "Sony FE 35mm f/1.4"),
-            ("admin:astrophotography_telescope_add", Telescope, "RedCat 51"),
-            ("admin:astrophotography_tracker_add", Tracker, "Star Adventurer GTi"),
-            ("admin:astrophotography_tripod_add", Tripod, "Benro Mach3"),
+            (CAMERA_ADD_URL, Camera, "Sony A7S III"),
+            (LENS_ADD_URL, Lens, "Sony FE 35mm f/1.4"),
+            (TELESCOPE_ADD_URL, Telescope, "RedCat 51"),
+            (TRACKER_ADD_URL, Tracker, "Star Adventurer GTi"),
+            (TRIPOD_ADD_URL, Tripod, "Benro Mach3"),
         ],
     )
     def test_equipment_admin_add(
         self,
         admin_client: Client,
-        url_name: str,
+        url: str,
         model_class: type[Camera | Lens | Telescope | Tracker | Tripod],
         model_value: str,
     ) -> None:
-        url: str = reverse(url_name)
         data = {"model": model_value}
-        response = cast(HttpResponse, admin_client.post(url, data))
+        response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
         assert response.status_code == 302, f"Failed to add {model_class.__name__}"
         assert model_class.objects.filter(model=model_value).exists()
 
     def test_camera_list_display(self, admin_client: Client) -> None:
         camera: Camera = CameraFactory(model="Nikon Z6 Mod")
-        response = cast(
-            HttpResponse,
-            admin_client.get(reverse("admin:astrophotography_camera_changelist")),
+        response: HttpResponse = admin_client.get(  # type: ignore[assignment]
+            self.CAMERA_CHANGELIST_URL
         )
         assert response.status_code == 200
         assert camera.model in response.content.decode("utf-8")
 
     def test_camera_change_view(self, admin_client: Client) -> None:
         camera: Camera = CameraFactory()
-        response = cast(
-            HttpResponse,
-            admin_client.get(reverse("admin:astrophotography_camera_change", args=[camera.pk])),
+        response: HttpResponse = admin_client.get(  # type: ignore[assignment]
+            reverse(self.CAMERA_CHANGE_URL_NAME, args=[camera.pk])
         )
         assert response.status_code == 200
 
     def test_lens_list_display(self, admin_client: Client) -> None:
         lens: Lens = LensFactory(model="Nikkor Z 20mm f/1.8")
-        response = cast(
-            HttpResponse,
-            admin_client.get(reverse("admin:astrophotography_lens_changelist")),
+        response: HttpResponse = admin_client.get(  # type: ignore[assignment]
+            self.LENS_CHANGELIST_URL
         )
         assert response.status_code == 200
         assert lens.model in response.content.decode("utf-8")
 
     def test_lens_change_view(self, admin_client: Client) -> None:
         lens: Lens = LensFactory()
-        response = cast(
-            HttpResponse,
-            admin_client.get(reverse("admin:astrophotography_lens_change", args=[lens.pk])),
+        response: HttpResponse = admin_client.get(  # type: ignore[assignment]
+            reverse(self.LENS_CHANGE_URL_NAME, args=[lens.pk])
         )
         assert response.status_code == 200
 
@@ -372,7 +398,7 @@ class TestMainPageBackgroundImageAdmin:
     CHANGE_URL_NAME: str = "admin:astrophotography_mainpagebackgroundimage_change"
 
     def test_admin_changelist_view(self, admin_client: Client) -> None:
-        response = cast(HttpResponse, admin_client.get(self.CHANGELIST_URL))
+        response: HttpResponse = admin_client.get(self.CHANGELIST_URL)  # type: ignore[assignment]
         assert response.status_code == 200
         assert "Main Page Background" in response.content.decode("utf-8")
 
@@ -392,7 +418,7 @@ class TestMainPageBackgroundImageAdmin:
         bg_image.save()
 
         url: str = reverse(self.CHANGE_URL_NAME, args=[bg_image.pk])
-        response = cast(HttpResponse, admin_client.get(url))
+        response: HttpResponse = admin_client.get(url)  # type: ignore[assignment]
 
         assert response.status_code == 200
         assert "Admin Existing BG" in response.content.decode("utf-8")
@@ -401,7 +427,7 @@ class TestMainPageBackgroundImageAdmin:
         bg_image: MainPageBackgroundImage = MainPageBackgroundImageFactory()
         url: str = reverse(self.CHANGE_URL_NAME, args=[bg_image.pk])
 
-        response = cast(HttpResponse, admin_client.get(url))
+        response: HttpResponse = admin_client.get(url)  # type: ignore[assignment]
 
         assert response.status_code == 200
         content = response.content.decode("utf-8")
@@ -421,7 +447,7 @@ class TestMainPageBackgroundImageAdmin:
         bg_image: MainPageBackgroundImage = MainPageBackgroundImageFactory()
         url: str = reverse(self.CHANGE_URL_NAME, args=[bg_image.pk])
 
-        response = cast(HttpResponse, admin_client.get(url))
+        response: HttpResponse = admin_client.get(url)  # type: ignore[assignment]
 
         assert response.status_code == 200
         content = response.content.decode("utf-8")
@@ -436,7 +462,9 @@ class TestMainPageBackgroundImageAdmin:
         image_file.name = "test_bg.jpg"
         image_file.seek(0)
         data = {"name": "Test Background Entry", "original_upload": image_file}
-        response = admin_client.post(url, data, format="multipart")
+        response: HttpResponse = admin_client.post(  # type: ignore[assignment]
+            url, data, format="multipart"
+        )
         if response.status_code == 200:
             form = response.context_data.get("adminform")
             errors = form.form.errors if form else "No form errors found"
@@ -462,18 +490,14 @@ class TestPlaceAdmin:
         """Test that creating a new Place via Admin triggers translation task."""
 
         with override_settings(DEFAULT_APP_LANGUAGE="en"):
-
             # Use mocker.MagicMock instead of importing MagicMock
             mock_translate_task.delay.side_effect = lambda *_args, **_kwargs: mocker.MagicMock(
                 id=str(uuid.uuid4())
             )
 
-            response = cast(
-                HttpResponse,
-                admin_client.post(
-                    self.ADD_URL,
-                    {"name": "New Test Place", "country": "US", "_save": "Save"},
-                ),
+            response: HttpResponse = admin_client.post(  # type: ignore[assignment]
+                self.ADD_URL,
+                {"name": "New Test Place", "country": "US", "_save": "Save"},
             )
             assert response.status_code == 302  # Redirect on success
 
@@ -501,7 +525,6 @@ class TestPlaceAdmin:
         """Test that updating Place name via Admin triggers translation task."""
 
         with override_settings(DEFAULT_APP_LANGUAGE="en"):
-
             mock_translate_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
                 id=str(uuid.uuid4())
             )
@@ -512,7 +535,7 @@ class TestPlaceAdmin:
             url: str = reverse(self.CHANGE_URL_NAME, args=[place.pk])
             data: dict[str, str] = {"name": "New Greece", "country": "GR", "_save": "Save"}
 
-            response = cast(HttpResponse, admin_client.post(url, data))
+            response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
         assert response.status_code == 302
 
         # Verify task dispatched
@@ -551,7 +574,7 @@ class TestPlaceAdmin:
             "_save": "Save",
         }
 
-        response = cast(HttpResponse, admin_client.post(url, data))
+        response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
         assert response.status_code == 302
 
         # Verify task WAS NOT called because name did not change
@@ -567,7 +590,9 @@ class TestPlaceAdmin:
 
         # Request with language=pl
         # This triggers changeform_view which should activate 'pl' language
-        response = cast(HttpResponse, admin_client.get(url, {"language": "pl"}))
+        response: HttpResponse = admin_client.get(  # type: ignore[assignment]
+            url, {"language": "pl"}
+        )
 
         assert response.status_code == 200
         content: str = response.content.decode("utf-8")
@@ -582,7 +607,7 @@ class TestPlaceAdmin:
     def test_admin_add_creates_object(self, admin_client: Client) -> None:
         url: str = self.ADD_URL
         data = {"name": "Test Location", "country": "PL", "is_region": "True"}
-        response = admin_client.post(url, data)
+        response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
         if response.status_code == 200:
             form = response.context_data.get("adminform")
             errors = form.form.errors if form else "No form errors found"
@@ -615,12 +640,9 @@ class TestMainPageBackgroundImageAdminActions:
                 "test_bg.png", img_io.read(), content_type="image/png"
             )
 
-            response = cast(
-                HttpResponse,
-                admin_client.post(
-                    self.ADD_URL,
-                    {"name": "Test Background", "original_upload": image_file, "_save": "Save"},
-                ),
+            response: HttpResponse = admin_client.post(  # type: ignore[assignment]
+                self.ADD_URL,
+                {"name": "Test Background", "original_upload": image_file, "_save": "Save"},
             )
             assert response.status_code == 302  # Redirect on success
 
@@ -654,7 +676,7 @@ class TestMainPageBackgroundImageAdminActions:
             url: str = reverse(self.CHANGE_URL_NAME, args=[bg.pk])
             data: dict[str, str] = {"name": "New Name", "_save": "Save"}
 
-            response = cast(HttpResponse, admin_client.post(url, data))
+            response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
         assert response.status_code == 302
 
         mock_translate_task.delay.assert_called_once()
@@ -692,7 +714,9 @@ class TestMainPageBackgroundImageAdminActions:
                 "_save": "Save",
                 "original_upload": replacement_image,
             }
-            response = cast(HttpResponse, admin_client.post(url, data, format="multipart"))
+            response: HttpResponse = admin_client.post(  # type: ignore[assignment]
+                url, data, format="multipart"
+            )
 
         if response.status_code == 200:
             form = response.context_data.get("adminform")
@@ -711,7 +735,7 @@ class TestAdminDebug:
         image: AstroImage = AstroImageFactory()
         url: str = reverse(self.CHANGE_URL_NAME, args=[image.pk])
 
-        response = cast(HttpResponse, admin_client.get(url))
+        response: HttpResponse = admin_client.get(url)  # type: ignore[assignment]
         content: str = response.content.decode("utf-8")
 
         # 1. Verify the link tag is present in the HTML
@@ -721,7 +745,7 @@ class TestAdminDebug:
 
         # 2. Verify the CSS endpoint itself returns the expected generated CSS
         css_url: str = reverse("translation:admin-dynamic-css")
-        css_response = cast(HttpResponse, admin_client.get(css_url))
+        css_response: HttpResponse = admin_client.get(css_url)  # type: ignore[assignment]
         assert css_response.status_code == 200
         assert "Dynamic Parler CSS generated for default language" in css_response.content.decode(
             "utf-8"
@@ -735,7 +759,7 @@ class TestAdminDebug:
         image.save()
 
         url: str = reverse(self.CHANGE_URL_NAME, args=[image.pk]) + "?language=en"
-        response = cast(HttpResponse, admin_client.get(url))
+        response: HttpResponse = admin_client.get(url)  # type: ignore[assignment]
         content: str = response.content.decode("utf-8")
 
         assert '<div class="parler-language-tabs">' in content
@@ -753,7 +777,7 @@ class TestMainPageLocationAdmin:
         location: MainPageLocation = MainPageLocationFactory()
         url: str = reverse(self.CHANGE_URL_NAME, args=[location.pk])
 
-        response = cast(HttpResponse, admin_client.get(url))
+        response: HttpResponse = admin_client.get(url)  # type: ignore[assignment]
         assert response.status_code == 200
 
         content: str = response.content.decode("utf-8")
@@ -826,7 +850,7 @@ class TestMainPageLocationAdmin:
         }
 
         # Global mock in conftest.py handles the return value for us now
-        response = admin_client.post(url, data)
+        response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
         assert response.status_code == 302
 
         # Check if task was called with correct parameters
@@ -841,7 +865,7 @@ class TestMainPageLocationAdmin:
     def test_admin_add_page_loads(self, admin_client: Client) -> None:
         """GET /admin/astrophotography/mainpagelocation/add/ must return 200."""
         url: str = reverse("admin:astrophotography_mainpagelocation_add")
-        response = cast(HttpResponse, admin_client.get(url))
+        response: HttpResponse = admin_client.get(url)  # type: ignore[assignment]
         assert response.status_code == 200
         content: str = response.content.decode("utf-8")
         assert 'id="id_highlight_name"' in content
@@ -873,7 +897,7 @@ class TestMainPageLocationAdmin:
             "_save": "Save",
         }
 
-        response = cast(HttpResponse, admin_client.post(url, data))
+        response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
 
         # Must redirect (302) on successful creation, not show an error page.
         assert response.status_code == 302, (
@@ -913,7 +937,7 @@ class TestMainPageLocationAdmin:
             "_save": "Save",
         }
 
-        response = cast(HttpResponse, admin_client.post(url, data))
+        response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
 
         assert response.status_code == 302, (
             f"Adding a second MainPageLocation failed with status {response.status_code}. "
@@ -942,7 +966,7 @@ class TestMainPageLocationAdmin:
             "_save": "Save",
         }
 
-        response = cast(HttpResponse, admin_client.post(url, data))
+        response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
         # Should stay on the same page (200 OK) with validation error
         assert response.status_code == 200
         assert "overlapping Date range already exists" in response.content.decode()
@@ -955,7 +979,7 @@ class TestTagAdmin:
         data = {
             "name": "Milky Way",
         }
-        response = admin_client.post(url, data)
+        response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
         if response.status_code == 200:
             form = response.context_data.get("adminform")
             errors = form.form.errors if form else "No form errors found"
@@ -969,7 +993,7 @@ class TestMeteorsMainPageConfigAdmin:
     def test_admin_add_creates_object(self, admin_client: Client) -> None:
         url: str = reverse("admin:astrophotography_meteorsmainpageconfig_add")
         data = {"bolid_chance": "10.5", "bolid_interval": "5"}
-        response = admin_client.post(url, data)
+        response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
         if response.status_code == 200:
             form = response.context_data.get("adminform")
             errors = form.form.errors if form else "No form errors found"

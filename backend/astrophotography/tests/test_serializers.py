@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import MagicMock, patch
 
 import pytest
 from psycopg2.extras import DateRange
@@ -9,6 +10,7 @@ from astrophotography.serializers import (
     AstroImageSerializer,
     AstroImageSerializerList,
     AstroImageThumbnailSerializer,
+    MainPageBackgroundImageSerializer,
     MainPageLocationSerializer,
     MeteorsMainPageConfigSerializer,
     PlaceSerializer,
@@ -19,6 +21,8 @@ from astrophotography.tests.factories import (
     MainPageLocationFactory,
     PlaceFactory,
 )
+from common.tests.image_helpers import jpeg_field
+from core.tasks import process_image_task
 
 
 @pytest.mark.django_db
@@ -133,16 +137,46 @@ class TestAstroImageSerializers:
         """Serializers should omit dead thumbnail paths instead of exposing them."""
         place = PlaceFactory()
         image = AstroImageFactory(place=place)
+        process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
 
-        assert image.thumbnail is not None
-        image.thumbnail.storage.delete(str(image.thumbnail.name))
+        variant = image.variants.get(role="thumbnail")
+        variant.file.storage.delete(str(variant.file.name))
 
         list_data = AstroImageSerializerList(image).data
         thumb_data = AstroImageThumbnailSerializer(image).data
 
         assert list_data["thumbnail_url"] is None
         assert thumb_data["thumbnail_url"] is None
+
+    def test_list_serializers_return_small_source_thumbnail_variant(self) -> None:
+        """Small originals generate thumbnail at source width, not the default 560 width."""
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(original=jpeg_field("small-thumb.jpg", size=(100, 100)))
+        process_image_task("astrophotography", "AstroImage", image.pk)
+        image.refresh_from_db()
+        thumbnail = image.variants.get(role="thumbnail", width=100)
+
+        list_data = AstroImageSerializerList(image).data
+        thumb_data = AstroImageThumbnailSerializer(image).data
+
+        assert list_data["thumbnail_url"] == thumbnail.file.url
+        assert thumb_data["thumbnail_url"] == thumbnail.file.url
+
+
+class TestMainPageBackgroundImageSerializer:
+    def test_url_uses_available_hero_variant_url(self) -> None:
+        background = MagicMock()
+        background.get_available_variant_url.return_value = "/media/backgrounds/hero.webp"
+        serializer = MainPageBackgroundImageSerializer()
+
+        assert serializer.get_url(background) == "/media/backgrounds/hero.webp"
+        background.get_available_variant_url.assert_called_once_with(
+            "hero",
+            preferred_width=2560,
+        )
+        background.get_hero_variant.assert_not_called()
+        background.get_image_url.assert_not_called()
 
 
 @pytest.mark.django_db

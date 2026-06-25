@@ -9,12 +9,14 @@ from parler.models import TranslatableModel, TranslatedFields
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.contenttypes.fields import GenericRelation
 from django.db import IntegrityError, models
 from django.utils.translation import gettext_lazy as _
 
-from common.mixins import ImageProcessingModelMixin
-from common.types import ImageProcessingOperation, ImageSpec
-from core.models import LandingPageSettings, SingletonModel
+from common.types import ImageSpec, ImageVariantSource, ImageVariantSpec, ViewportWidths
+from common.utils.image import get_available_image_url
+from core.mixins import ImageVariantModelMixin
+from core.models import ImageVariant, SingletonModel
 from core.tasks import process_image_task
 from translation.mixins import AutomatedTranslationModelMixin
 
@@ -23,15 +25,12 @@ logger = logging.getLogger(__name__)
 USER_IMAGE_FIELD_MAPPINGS: dict[str, dict[str, str]] = {
     "avatar": {
         "cropped": "avatar_cropped",
-        "webp": "avatar_webp",
     },
     "about_me_image": {
         "cropped": "about_me_image_cropped",
-        "webp": "about_me_image_webp",
     },
     "about_me_image2": {
         "cropped": "about_me_image2_cropped",
-        "webp": "about_me_image2_webp",
     },
 }
 
@@ -54,7 +53,7 @@ class UserManager(TranslatableManager, BaseUserManager):
 
 
 class User(
-    ImageProcessingModelMixin,
+    ImageVariantModelMixin,
     AutomatedTranslationModelMixin,
     TranslatableModel,
     AbstractUser,
@@ -72,6 +71,14 @@ class User(
     # Avatar and about_me images are visible but not portfolio photography —
     # 35% quality gives good fidelity at significantly smaller file sizes.
     webp_quality: int = 35
+    image_variant_specs = (
+        ImageVariantSpec(
+            role="original_format",
+            viewport_widths=ViewportWidths.fixed(2560),
+            quality=35,
+            label="Profile image display candidate",
+        ),
+    )
 
     username = None  # type: ignore[assignment]  # Remove username field - use email instead
     email = models.EmailField(_("email address"), unique=True)
@@ -101,14 +108,6 @@ class User(
         verbose_name=_("Avatar cropped"),
         help_text=_("Cropped avatar managed by the admin cropper."),
     )
-    avatar_webp = models.ImageField(
-        upload_to="avatars/",
-        null=True,
-        blank=True,
-        editable=False,
-        verbose_name=_("Avatar WebP"),
-        help_text=_("Derived WebP avatar generated from the source avatar."),
-    )
     about_me_image = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
     about_me_image_cropped = models.ImageField(
         upload_to="about_me_images/",
@@ -116,14 +115,6 @@ class User(
         blank=True,
         verbose_name=_("About Me Image cropped"),
         help_text=_("Cropped portrait managed by the admin cropper."),
-    )
-    about_me_image_webp = models.ImageField(
-        upload_to="about_me_images/",
-        null=True,
-        blank=True,
-        editable=False,
-        verbose_name=_("About Me Image WebP"),
-        help_text=_("Derived WebP portrait generated from the source about_me_image."),
     )
     about_me_image2 = models.ImageField(upload_to="about_me_images/", null=True, blank=True)
     about_me_image2_cropped = models.ImageField(
@@ -133,13 +124,10 @@ class User(
         verbose_name=_("About Me Image 2 cropped"),
         help_text=_("Cropped portrait managed by the admin cropper."),
     )
-    about_me_image2_webp = models.ImageField(
-        upload_to="about_me_images/",
-        null=True,
-        blank=True,
-        editable=False,
-        verbose_name=_("About Me Image 2 WebP"),
-        help_text=_("Derived WebP portrait generated from the source about_me_image2."),
+    variants = GenericRelation(
+        ImageVariant,
+        content_type_field="content_type",
+        object_id_field="object_id",
     )
 
     translations = TranslatedFields(
@@ -209,11 +197,8 @@ class User(
 
     @classmethod
     def get_cropped_field_name(cls, source_field_name: str) -> str:
+        # TODO: for removal?
         return USER_IMAGE_FIELD_MAPPINGS[source_field_name]["cropped"]
-
-    @classmethod
-    def get_webp_field_name(cls, source_field_name: str) -> str:
-        return USER_IMAGE_FIELD_MAPPINGS[source_field_name]["webp"]
 
     def get_effective_image_field(self, source_field_name: str) -> Any:
         cropped_field_name = self.get_cropped_field_name(source_field_name)
@@ -222,27 +207,45 @@ class User(
             return cropped_field
         return getattr(self, source_field_name)
 
-    def _get_serving_image_url(self, source_field_name: str, webp_field_name: str) -> str:
-        """Return the source or WebP URL according to the admin serving toggle."""
+    def get_serving_image_url(self, source_field_name: str) -> str:
+        """Return the generated original_format URL with a source-image safety fallback."""
         effective_source_field: Any = self.get_effective_image_field(source_field_name)
-        settings_obj: LandingPageSettings | None = LandingPageSettings.get_current()
-        if settings_obj and settings_obj.serve_webp_images:
-            serving_field = getattr(self, webp_field_name) or effective_source_field
-        else:
-            serving_field = effective_source_field
+        source_width = effective_source_field.width if effective_source_field else None
+        serving_field = (
+            self.get_variant_file(
+                "original_format",
+                source_width,
+                source_name=source_field_name,
+            )
+            if source_width
+            else None
+        )
         if serving_field:
             try:
                 return str(serving_field.url)
             except ValueError:
                 pass
-        return ""
+
+        source_url = get_available_image_url(effective_source_field)
+        if source_url:
+            logger.warning(
+                "Falling back to source image because original_format variant is missing",
+                extra={
+                    "model": self._meta.label,
+                    "pk": str(self.pk),
+                    "source_field_name": source_field_name,
+                },
+            )
+        return source_url
 
     def get_avatar_spec(self) -> ImageSpec:
-        """Return dimensions and quality for the avatar field."""
+        """Return dimensions and quality for the avatar field.
+        TODO: for removal?"""
         return settings.IMAGE_OPTIMIZATION_SPECS["AVATAR"]
 
     def get_portrait_spec(self) -> ImageSpec:
-        """Return dimensions and quality for portrait-style fields."""
+        """Return dimensions and quality for portrait-style fields.
+        TODO: for removal?"""
         return settings.IMAGE_OPTIMIZATION_SPECS["PORTRAIT"]
 
     # Domain Logic Methods
@@ -257,7 +260,7 @@ class User(
 
     def get_avatar_url(self) -> str:
         """Get avatar URL or default placeholder."""
-        url = self._get_serving_image_url("avatar", "avatar_webp")
+        url = self.get_serving_image_url("avatar")
         if not url:
             return "/static/images/default-avatar.png"
 
@@ -288,24 +291,24 @@ class User(
         """Alias for get_full_name() for template convenience."""
         return self.get_full_name()
 
-    def get_image_processing_operations(
+    def get_image_variant_sources(
         self, changed_field_names: list[str] | None = None
-    ) -> list[ImageProcessingOperation]:
+    ) -> list[ImageVariantSource]:
         field_names = changed_field_names or list(USER_IMAGE_FIELD_MAPPINGS.keys())
-        operations: list[ImageProcessingOperation] = []
+        sources: list[ImageVariantSource] = []
         for field_name in field_names:
             if field_name not in USER_IMAGE_FIELD_MAPPINGS:
                 continue
-            spec = self.get_avatar_spec() if field_name == "avatar" else self.get_portrait_spec()
-            operations.append(
-                ImageProcessingOperation(
+            upload_dir = "avatars" if field_name == "avatar" else "about_me_images"
+            sources.append(
+                ImageVariantSource(
                     field_name=field_name,
                     source_image=self.get_effective_image_field(field_name),
-                    webp_field_name=self.get_webp_field_name(field_name),
-                    spec=spec,
+                    upload_dir=upload_dir,
+                    role_namespace=field_name,
                 )
             )
-        return operations
+        return sources
 
 
 class Profile(AutomatedTranslationModelMixin, TranslatableModel):

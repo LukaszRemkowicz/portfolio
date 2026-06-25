@@ -26,7 +26,7 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from common.constants import FALLBACK_URL_SLUG
-from common.types import ImageSpec, ImageVariantSpec
+from common.types import ImageVariantSpec, ViewportWidths
 from core.models import BaseImage, LandingPageSettings, SingletonModel
 from translation.mixins import AutomatedTranslationModelMixin
 from translation.services import TranslationService
@@ -423,25 +423,35 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
     image_variant_specs = (
         ImageVariantSpec(
             role="original_format",
-            widths=(1920,),
+            viewport_widths=ViewportWidths.fixed(1920),
             quality=90,
-            label="Legacy original_webp equivalent",
+            label="Astrophotography full-image display candidate matching legacy original_webp",
         ),
         ImageVariantSpec(
             role="thumbnail",
-            widths=(560,),
+            viewport_widths=ViewportWidths.fixed(560),
             quality=100,
-            label="Legacy thumbnail field equivalent for gallery thumbnails",
+            label="Astrophotography thumbnail candidate",
         ),
         ImageVariantSpec(
             role="card",
-            widths=(320, 560, 840, 1120),
+            viewport_widths=ViewportWidths(
+                mobile=320,
+                tablet=560,
+                desktop=840,
+                wide=1120,
+            ),
             quality=90,
             label="Astrophotography card/grid candidates",
         ),
         ImageVariantSpec(
             role="detail",
-            widths=(1280, 1920, 2560),
+            viewport_widths=ViewportWidths(
+                mobile=1280,
+                tablet=1280,
+                desktop=1920,
+                wide=2560,
+            ),
             quality=90,
             label="Astrophotography detail display candidates",
         ),
@@ -630,25 +640,15 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
 class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
     """Images used as full-page backgrounds on the main portal."""
 
-    # Homepage backgrounds should stay visibly sharper than generic gallery assets.
-    webp_quality = 95
-    max_dimension = 2560
     image_variant_specs = (
         ImageVariantSpec(
-            role="original_format",
-            widths=(2560,),
-            quality=95,
-            label="Legacy original_webp equivalent for homepage backgrounds",
-        ),
-        ImageVariantSpec(
-            role="thumbnail",
-            widths=(560,),
-            quality=100,
-            label="Legacy thumbnail field equivalent for admin/background previews",
-        ),
-        ImageVariantSpec(
             role="hero",
-            widths=(1280, 1920, 2560),
+            viewport_widths=ViewportWidths(
+                mobile=1280,
+                tablet=1280,
+                desktop=1920,
+                wide=2560,
+            ),
             quality=95,
             label="Homepage background hero candidates",
         ),
@@ -681,14 +681,15 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
         verbose_name_plural = _("Main Page Background Images")
         ordering = ["-created_at"]
 
-    def get_original_spec(self) -> ImageSpec:
-        """Use the background-specific quality and dimension settings."""
-        return ImageSpec(dimension=self.max_dimension, quality=self.webp_quality)
-
     @property
     def base_upload_dir(self) -> str:
         """Store all background image variants under the backgrounds directory."""
         return "backgrounds"
+
+    def get_hero_variant(self) -> tuple[str, int]:
+        """Return the default hero variant role and desktop width."""
+        hero_spec = next(spec for spec in self.get_image_variant_specs() if spec.role == "hero")
+        return hero_spec.role, hero_spec.viewport_widths.desktop
 
     def clean(self):
         """Enforce that the name is required for the default language."""

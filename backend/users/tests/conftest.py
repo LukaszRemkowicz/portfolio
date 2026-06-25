@@ -2,6 +2,7 @@ from typing import Any
 
 import pytest
 
+from users.models import User
 from users.tests.factories import UserFactory
 
 
@@ -13,6 +14,12 @@ def user(db: Any) -> Any:  # noqa: ARG001
     """
 
     return UserFactory()
+
+
+@pytest.fixture
+def superuser(db: Any) -> User:  # noqa: ARG001
+    """Create the singleton admin user."""
+    return UserFactory.create_superuser()
 
 
 @pytest.fixture

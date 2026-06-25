@@ -1,4 +1,5 @@
 import logging
+import mimetypes
 
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny
@@ -12,6 +13,7 @@ from django.utils.decorators import method_decorator
 
 from astrophotography.models import AstroImage
 from common.decorators.cache import cache_response
+from common.utils.signing import generate_signed_url_params
 from core.models import LandingPageSettings
 
 from .models import ShopProduct, ShopSettings
@@ -88,36 +90,34 @@ class ShopProductViewSet(viewsets.ReadOnlyModelViewSet):
 class ShopAstroImageLookupView(APIView):
     """
     Dedicated lookup view FOR THE SHOP only.
-    Prioritizes the thumbnail field for fast cropping sources.
+    Returns the original AstroImage source for the admin cropper.
     This is isolated to avoid touching the shared gallery/astrophotography API.
     """
 
     authentication_classes: list[type] = []
     permission_classes = [AllowAny]
-    queryset = AstroImage.objects.all().only("pk", "thumbnail", "original", "original_webp", "slug")
+    queryset = AstroImage.objects.all().only("pk", "original", "slug")
 
     def _get_lookup_url(self, request: Request, image: AstroImage) -> str:
-        if image.thumbnail:
-            return request.build_absolute_uri(image.thumbnail.url)
+        if not image.original:
+            return ""
 
-        if image.original:
-            logger.info(
-                "Shop image lookup fell back to AstroImage original image",
-                extra={"image_id": image.pk},
-            )
-            return request.build_absolute_uri(image.original.url)
-
-        logger.info(
-            "Shop image lookup fell back to secure AstroImage serve route",
-            extra={"image_id": image.pk, "slug": image.slug},
+        url_path = reverse(
+            "admin-astroimage-secure-media",
+            kwargs={"pk": str(image.pk), "field_name": "original"},
         )
-        url_path = reverse("secure-image-file", kwargs={"slug": image.slug})
-        return request.build_absolute_uri(url_path)
+        signature_id = f"admin_media_astrophotography_astroimage_{image.pk}_original"
+        params = generate_signed_url_params(
+            signature_id,
+            expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION,
+        )
+        return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
 
     def get(self, request: Request) -> Response:
         """
         Return the serving URL for a single AstroImage by its ID.
-        Prioritizes the thumbnail for fast cropping.
+        Uses the original source because the admin cropper should not crop
+        from a compressed display variant.
         """
         id_param: str | None = request.query_params.get("id")
         if not id_param:
@@ -127,4 +127,15 @@ class ShopAstroImageLookupView(APIView):
         except (AstroImage.DoesNotExist, ValueError):
             return Response({"error": "Image not found"}, status=404)
 
-        return Response({"url": self._get_lookup_url(request, image)})
+        url = self._get_lookup_url(request, image)
+        if not url:
+            return Response({"error": "Original image field is empty"}, status=404)
+        source_name = str(image.original.name or "")
+        mime_type = mimetypes.guess_type(source_name)[0] or "image/jpeg"
+        return Response(
+            {
+                "url": url,
+                "source_name": source_name,
+                "mime_type": mime_type,
+            }
+        )

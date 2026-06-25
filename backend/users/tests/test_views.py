@@ -3,6 +3,8 @@
 Tests for users views
 """
 
+from unittest.mock import patch
+
 import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -11,7 +13,9 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from core.tests.factories import LandingPageSettingsFactory
+from common.tests.image_helpers import jpeg_field
+from core.tasks import process_image_task
+from core.tests.factories import ImageVariantFactory
 from users.tests.factories import AstroProfileFactory, ProgrammingProfileFactory, UserFactory
 
 User = get_user_model()
@@ -185,25 +189,15 @@ def test_profile_endpoint_returns_404_when_no_user(api_client: APIClient) -> Non
 
 
 # ---------------------------------------------------------------------------
-# WebP toggle integration tests
+# Generated-variant integration tests
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
-def test_profile_avatar_serves_webp_url_when_toggle_enabled(api_client: APIClient) -> None:
-    """Integration: profile endpoint returns a .webp avatar URL when serve_webp_images=True.
-
-    We simulate a post-conversion state by writing the field names directly to the
-    DB (bypassing save() to avoid running PIL), then flip the toggle and assert
-    the serializer picks the .webp path.
-    """
-    user = UserFactory()
-    # Simulate converted state: source in avatar, derived output in avatar_webp.
-    User.objects.filter(pk=user.pk).update(
-        avatar="avatars/photo_legacy.jpg",
-        avatar_webp="avatars/photo.webp",
-    )
-    LandingPageSettingsFactory(serve_webp_images=True)
+def test_profile_avatar_serves_generated_variant_url(api_client: APIClient) -> None:
+    """Integration: profile endpoint returns the generated original_format URL."""
+    user = UserFactory(avatar=jpeg_field("photo_legacy.jpg", size=(800, 800)))
+    process_image_task("users", "User", user.pk, ["avatar"])
 
     url = reverse("users:profile-profile")
     response = api_client.get(url)
@@ -211,24 +205,54 @@ def test_profile_avatar_serves_webp_url_when_toggle_enabled(api_client: APIClien
     assert response.status_code == status.HTTP_200_OK
     avatar_url: str = response.data["avatar"]
     assert avatar_url, "avatar URL should not be empty"
-    assert ".webp" in avatar_url, f"Expected .webp URL when toggle is ON, got: {avatar_url}"
-    assert "?v=" in avatar_url, f"Expected versioned URL when toggle is ON, got: {avatar_url}"
+    assert ".webp" in avatar_url, f"Expected generated variant URL, got: {avatar_url}"
+    assert "?v=" in avatar_url, f"Expected versioned URL, got: {avatar_url}"
 
 
 @pytest.mark.django_db
-def test_profile_avatar_serves_legacy_url_when_toggle_disabled(api_client: APIClient) -> None:
-    """Integration: profile endpoint returns the legacy .jpg avatar URL when
-    serve_webp_images=False.
-
-    Mirrors the above test with the toggle OFF — the serializer must fall back
-    to the source path even though a derived WebP file exists.
-    """
-    user = UserFactory()
-    User.objects.filter(pk=user.pk).update(
-        avatar="avatars/photo_legacy.jpg",
-        avatar_webp="avatars/photo.webp",
+def test_profile_image_fields_return_stored_variant_urls(api_client: APIClient) -> None:
+    with patch("users.models.process_image_task.delay_on_commit"):
+        user = UserFactory(
+            avatar=jpeg_field("avatar.jpg", size=(800, 800)),
+            about_me_image=jpeg_field("about-me.jpg", size=(1200, 800)),
+            about_me_image2=jpeg_field("about-me-2.jpg", size=(1200, 800)),
+        )
+    avatar = ImageVariantFactory(
+        image=user,
+        file__filename="avatar-original-format.webp",
+        role="avatar__original_format",
+        width=800,
+        height=800,
     )
-    LandingPageSettingsFactory(serve_webp_images=False)
+    about_me = ImageVariantFactory(
+        image=user,
+        file__filename="about-me-original-format.webp",
+        role="about_me_image__original_format",
+        width=1200,
+        height=800,
+    )
+    about_me2 = ImageVariantFactory(
+        image=user,
+        file__filename="about-me-2-original-format.webp",
+        role="about_me_image2__original_format",
+        width=1200,
+        height=800,
+    )
+
+    response = api_client.get(reverse("users:profile-profile"))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert avatar.file.url in response.data["avatar"]
+    assert about_me.file.url in response.data["about_me_image"]
+    assert about_me2.file.url in response.data["about_me_image2"]
+
+
+@pytest.mark.django_db
+def test_profile_avatar_falls_back_to_source_when_variant_missing(api_client: APIClient) -> None:
+    """Integration: profile endpoint falls back to the uploaded source when variants are missing."""
+    user = UserFactory(avatar=jpeg_field("photo_legacy.jpg", size=(800, 800)))
+    process_image_task("users", "User", user.pk, ["avatar"])
+    user.variants.all().delete()
 
     url = reverse("users:profile-profile")
     response = api_client.get(url)
@@ -236,5 +260,5 @@ def test_profile_avatar_serves_legacy_url_when_toggle_disabled(api_client: APICl
     assert response.status_code == status.HTTP_200_OK
     avatar_url: str = response.data["avatar"]
     assert avatar_url, "avatar URL should not be empty"
-    assert ".jpg" in avatar_url, f"Expected .jpg URL when toggle is OFF, got: {avatar_url}"
-    assert "?v=" in avatar_url, f"Expected versioned URL when toggle is OFF, got: {avatar_url}"
+    assert ".jpg" in avatar_url, f"Expected source URL fallback, got: {avatar_url}"
+    assert "?v=" in avatar_url, f"Expected versioned URL, got: {avatar_url}"

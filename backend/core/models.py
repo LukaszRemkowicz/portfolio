@@ -4,26 +4,21 @@ from typing import Any, ClassVar
 
 from parler.models import TranslatableModel
 
-from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.core.files.base import ContentFile
 from django.db import models
 from django.db.models.fields.files import ImageFieldFile
 from django.utils.translation import gettext_lazy as _
 
-from common.mixins import ImageProcessingModelMixin
-from common.types import ImageProcessingOperation, ImageSpec, ImageVariantSpec
+from common.types import ImageVariantSource, ImageVariantSpec
 from common.utils.image import (
     IMAGE_FORMAT,
-    build_image_thumbnail,
-    build_image_with_given_width,
     delete_file_from_storage,
     file_exists_in_storage,
-    has_output_image_extension,
     seeded_image_upload_to,
 )
+from core.mixins import ImageVariantModelMixin
 from core.tasks import process_image_task
 
 logger = logging.getLogger(__name__)
@@ -55,11 +50,12 @@ class ImageVariant(models.Model):
         on_delete=models.CASCADE,
         help_text=_("Concrete image model that owns this variant."),
     )
-    object_id = models.UUIDField(
-        help_text=_("Primary key of the concrete image object that owns this variant.")
+    object_id = models.CharField(
+        max_length=64,
+        help_text=_("Primary key of the concrete image object that owns this variant."),
     )
     image = GenericForeignKey("content_type", "object_id")
-    file = models.FileField(
+    file = models.ImageField(
         blank=True,
         editable=False,
         upload_to="",
@@ -123,7 +119,7 @@ class ImageVariant(models.Model):
         return super().delete(*args, **kwargs)
 
 
-class BaseImage(ImageProcessingModelMixin, TranslatableModel):
+class BaseImage(ImageVariantModelMixin, TranslatableModel):
     """Base abstract model for images"""
 
     id = models.UUIDField(
@@ -138,17 +134,6 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
         editable=False,
         verbose_name=_("Original Image Source"),
         help_text=_("Uploaded source image for the next BaseImage contract."),
-    )
-    original_webp = models.ImageField(
-        upload_to=seeded_image_upload_to("base_upload_dir", "webp"),
-        blank=True,
-        null=True,
-        editable=False,
-        verbose_name=_("Original Image WebP"),
-        help_text=_(
-            "TODO: Derived WebP image kept during the ImageVariant rollout. "
-            "Remove after generated variants are the public serving path."
-        ),
     )
     # Translations moved to concrete subclasses because BaseImage is abstract.
     # See AstroImage and ProjectImage.
@@ -170,23 +155,7 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
         object_id_field="object_id",
     )
 
-    # Subclasses override this to control WebP compression level.
-    # AstroImage/ProjectImage keep 90 (photography portfolio); backgrounds/user images
-    # use lower values set on those concrete classes.
-    webp_quality: int = 90
-    max_dimension: int | None = None
-    dimension_percentage: int | None = None
     image_variant_specs: ClassVar[tuple[ImageVariantSpec, ...]] = ()
-
-    def get_original_spec(self) -> ImageSpec:
-        """Default specification provider for the main source field."""
-        key = "LANDSCAPE" if self.webp_quality >= 90 else "PORTRAIT"
-        spec = settings.IMAGE_OPTIMIZATION_SPECS[key]
-        return ImageSpec(
-            dimension=spec.dimension,
-            quality=spec.quality,
-            dimension_percentage=self.dimension_percentage,
-        )
 
     class Meta:
         abstract = True
@@ -201,20 +170,23 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
         self, is_new: bool, source_changed: bool, existing_source_name: str
     ) -> None:
         """Ensure the uploaded file was actually saved to storage, with recovery logic."""
-        if not (source_changed and existing_source_name and self.original):
+        source_field = self.original
+        if not (source_changed and existing_source_name and source_field):
             return
 
-        if not file_exists_in_storage(self.original):
+        if not file_exists_in_storage(source_field):
             if (
                 existing_source_name
-                and existing_source_name != str(self.original.name or "")
+                and existing_source_name != str(source_field.name or "")
                 and file_exists_in_storage(
-                    self.original.field.attr_class(self, self.original.field, existing_source_name)
+                    source_field.field.attr_class(  # type: ignore[attr-defined]
+                        self, source_field.field, existing_source_name
+                    )
                 )
             ):
-                self.original.name = existing_source_name
+                source_field.name = existing_source_name
             else:
-                source_name = str(self.original.name or "")
+                source_name = str(source_field.name or "")
                 logger.error(
                     "Image file missing from storage immediately after save",
                     extra={
@@ -238,8 +210,8 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
     def _dispatch_image_processing(
         self, is_new: bool, source_changed: bool, update_fields: Any
     ) -> None:
-        """Trigger the background celery task to process the image (WebP + thumbnails)."""
-        source_field = self.original_field
+        """Trigger the background celery task to process thumbnails and variants."""
+        source_field = self.original
         if (is_new or source_changed) and source_field and not update_fields:
             logger.info(
                 "Dispatching shared image-processing task for BaseImage",
@@ -255,7 +227,7 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
                 self._meta.app_label,
                 self._meta.model_name,
                 str(self.pk),
-                [self.original_field_name],
+                [source_field.field.name],
             )
 
     def _cleanup_old_files(self, file_names_to_delete: set[str]) -> None:
@@ -305,50 +277,13 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
         self._dispatch_image_processing(is_new, effective_source_changed, update_fields)
         self._cleanup_old_files(stale_file_names)
 
-    def _synchronize_source_fields(self, previous_source_name: str, is_new: bool) -> None:
-        """Update derived-field state from the current original source before save.
-
-        If the source changed, clear stale thumbnail/WebP data.
-        If the source itself is a WebP file, mirror it into ``original_webp``.
-        """
-        source_field = self.original_field
-        if not source_field:
-            return
-
-        uploaded_name = str(getattr(source_field, "name", "") or "")
-        if not uploaded_name:
-            return
-
-        source_is_pending_upload = (
-            bool(source_field) and getattr(source_field, "_committed", True) is False
-        )
-        source_updated = is_new or source_is_pending_upload or uploaded_name != previous_source_name
-
-        self.original = source_field
-        if has_output_image_extension(uploaded_name):
-            self.original_webp = source_field
-        elif source_updated:
-            self.original_webp = None
-
-        if source_updated:
-            self.thumbnail = None
-
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Persist the model and coordinate source synchronization, processing, and cleanup."""
         is_new = self._state.adding
-        previous_source = self.source_tracker.previous(self.original_field_name) if self.pk else ""
+        source_field_name = self.original.field.name
+        previous_source = self.source_tracker.previous(source_field_name) if self.pk else ""
         existing_source_name = str(getattr(previous_source, "name", previous_source) or "")
-        previous_file_names = {
-            file_name
-            for file_name in (
-                existing_source_name,
-                str(getattr(self.original_webp_field, "name", "") or ""),
-                str(getattr(self.thumbnail_field, "name", "") or ""),
-            )
-            if file_name
-        }
-        if not kwargs.get("update_fields"):
-            self._synchronize_source_fields(existing_source_name, is_new)
+        previous_file_names = {existing_source_name} if existing_source_name else set()
 
         current_source_name = str(getattr(self.original, "name", "") or "")
         source_changed = bool(is_new or current_source_name != existing_source_name)
@@ -362,262 +297,70 @@ class BaseImage(ImageProcessingModelMixin, TranslatableModel):
             update_fields=kwargs.get("update_fields"),
         )
 
-    def get_serving_path(self) -> Any:
-        """Return the image field to serve based on the serve_webp_images Admin toggle.
+    def get_original_image_url(self) -> str | None:
+        """Return the original source URL when it exists in storage."""
+        if self.original and file_exists_in_storage(self.original):
+            return str(self.original.url)
+        return None
 
-        When serve_webp_images=True -> serve the WebP asset.
-        When serve_webp_images=False -> serve the original asset.
-        """
-        settings_obj: LandingPageSettings | None = LandingPageSettings.get_current()
-        if settings_obj and settings_obj.serve_webp_images:
-            return self.original_webp_field or self.original_field
-        return self.original_field
+    def get_image_url(self, role: str, width: int) -> str | None:
+        """Return the generated variant URL or fall back to the original source URL."""
+        variant_url: str | None = self.get_variant_url(role, width)
+        if variant_url:
+            return variant_url
 
-    def get_serving_url(self) -> str:
-        """Return the URL string of the image to serve."""
-        serving_field: Any = self.get_serving_path()
-        if serving_field:
-            try:
-                if file_exists_in_storage(serving_field):
-                    return str(serving_field.url)
-            except (OSError, ValueError):
-                logger.warning(
-                    "Failed to resolve serving URL for image field %r",
-                    getattr(serving_field, "name", None),
-                    exc_info=True,
-                )
-        return ""
-
-    @property
-    def original_field(self) -> ImageFieldFile | None:
-        """Return the original asset."""
-        original: ImageFieldFile | None = self.original
-        return original
-
-    @property
-    def original_field_name(self) -> str:
-        """Return the original field name."""
-        return "original"
-
-    @property
-    def original_webp_field(self) -> ImageFieldFile | None:
-        """Return the derived WebP asset."""
-        original_webp: ImageFieldFile | None = self.original_webp
-        return original_webp
-
-    @property
-    def original_webp_field_name(self) -> str:
-        """Return the derived WebP field name."""
-        return "original_webp"
-
-    @property
-    def thumbnail_field(self) -> Any:
-        """Return the thumbnail asset."""
-        return self.thumbnail
-
-    @property
-    def thumbnail_field_name(self) -> str:
-        """Return the thumbnail field name."""
-        return "thumbnail"
+        original_url: str | None = self.get_original_image_url()
+        if original_url:
+            logger.warning(
+                "Falling back to original source image because variant is missing",
+                extra={
+                    "model": self._meta.label,
+                    "pk": str(self.pk),
+                    "role": role,
+                    "source_name": str(getattr(self.original, "name", "") or ""),
+                },
+            )
+            return original_url
+        logger.error(
+            "Image variant is missing and original source image is unavailable",
+            extra={
+                "model": self._meta.label,
+                "pk": str(self.pk),
+                "role": role,
+                "width": width,
+                "source_name": str(getattr(self.original, "name", "") or ""),
+            },
+        )
+        return None
 
     def __str__(self) -> str:
         name = self.safe_translation_getter("name", any_language=True)
         return name if name else str(self.id)
 
-    def make_thumbnail(self, image: Any, size: tuple[int, int] | None = None) -> ContentFile:
-        """Generate a WebP thumbnail using the configured thumbnail spec."""
-        spec = settings.IMAGE_OPTIMIZATION_SPECS["THUMBNAIL"]
-        target_size = size or (spec.dimension, spec.dimension)
-        return build_image_thumbnail(image, size=target_size)
-
-    def get_image_variant_specs(self) -> tuple[ImageVariantSpec, ...]:
-        """Return responsive variant specs for this image model."""
-        return self.image_variant_specs
-
-    def generate_image_variants_or_none(
-        self, *, force: bool = False
-    ) -> models.QuerySet[ImageVariant] | None:
-        """Synchronize responsive variant files with the current model specs.
-
-        Default sync is incremental: remove stale variant rows and generate only
-        missing role/width files. ``force=True`` deletes all existing variants and
-        rebuilds every candidate supported by the current source image.
-        """
-        specs: tuple[ImageVariantSpec, ...] = self.get_image_variant_specs()
-        source: Any = self.image_variant_source_field
-        if not specs or not source:
-            if not self.pk:
-                return None
-            stale_variants = self.variants.all()
-            if stale_variants.exists():
-                stale_variants.delete()
-                empty_variants: models.QuerySet[ImageVariant] = self.variants.none()
-                return empty_variants
-            return None
-
-        if force:
-            self.variants.all().delete()
-            return self._generate_image_variants_for_specs(specs)
-
-        variants_to_generate: tuple[ImageVariantSpec, ...]
-        variants_to_delete: models.QuerySet[ImageVariant]
-        variants_to_generate, variants_to_delete = self._get_image_variant_sync_plan(specs)
-        if not variants_to_generate and not variants_to_delete.exists():
-            return None
-
-        variants_to_delete.delete()
-        return self._generate_image_variants_for_specs(variants_to_generate)
-
-    def _get_image_variant_sync_plan(
-        self, specs: tuple[ImageVariantSpec, ...]
-    ) -> tuple[tuple[ImageVariantSpec, ...], "models.QuerySet[ImageVariant]"]:
-        """Plan variant sync against specs supported by the current source image.
-
-        Returns role/width candidates missing from valid existing rows, plus
-        existing rows whose role/width is no longer expected or whose file is empty.
-        """
-        expected_specs = self._get_expected_image_variant_specs(specs)
-        expected_keys = {(spec.role, width) for spec in expected_specs for width in spec.widths}
-        existing_variants = list(self.variants.all())
-        valid_existing_keys = {
-            (variant.role, variant.width)
-            for variant in existing_variants
-            if (variant.role, variant.width) in expected_keys and variant.file.name
-        }
-        variant_ids_to_delete = [
-            variant.pk
-            for variant in existing_variants
-            if (variant.role, variant.width) not in expected_keys or not variant.file.name
-        ]
-        missing_keys = expected_keys - valid_existing_keys
-        variants_to_generate = tuple(
-            ImageVariantSpec(
-                role=spec.role,
-                widths=tuple(width for width in spec.widths if (spec.role, width) in missing_keys),
-                quality=spec.quality,
-                label=spec.label,
+    def get_original_image(self) -> ImageFieldFile | None:
+        """Return the stored image file that should seed generated variants."""
+        if file_exists_in_storage(self.original):
+            return self.original  # type: ignore[no-any-return]  # Django ImageField descriptor.
+        if self.original:
+            logger.error(
+                "Original image file is missing from storage",
+                extra={
+                    "model": self._meta.label,
+                    "pk": str(self.pk),
+                    "source_name": str(getattr(self.original, "name", "") or ""),
+                },
             )
-            for spec in expected_specs
-        )
-        variants_to_delete: models.QuerySet[ImageVariant] = self.variants.filter(
-            pk__in=variant_ids_to_delete
-        )
-        return (
-            tuple(spec for spec in variants_to_generate if spec.widths),
-            variants_to_delete,
-        )
-
-    def _get_expected_image_variant_specs(
-        self, specs: tuple[ImageVariantSpec, ...]
-    ) -> tuple[ImageVariantSpec, ...]:
-        """Return configured variant specs that the current source can generate."""
-        source_width = self._get_source_width()
-        if source_width is None:
-            return ()
-        return tuple(
-            ImageVariantSpec(
-                role=spec.role,
-                widths=tuple(width for width in spec.widths if width <= source_width),
-                quality=spec.quality,
-                label=spec.label,
-            )
-            for spec in specs
-        )
-
-    def _generate_image_variants_for_specs(
-        self, specs: tuple[ImageVariantSpec, ...]
-    ) -> models.QuerySet[ImageVariant]:
-        """Create missing variant files and rows for explicit role/width specs.
-
-        Each generated project-format file is saved through ``ImageVariant.file``, which also
-        persists the variant row. Returns a queryset filtered to rows created by
-        this call; invalid or too-large source images simply produce no row.
-        """
-        generated_variant_ids: list[uuid.UUID] = []
-        source: Any = self.image_variant_source_field
-        if not source:
-            empty_variants: models.QuerySet[ImageVariant] = self.variants.none()
-            return empty_variants
-
-        for spec in specs:
-            for width in spec.widths:
-                with source.open("rb") as opened_source:
-                    result: tuple[ContentFile, int, int] | None = build_image_with_given_width(
-                        opened_source,
-                        width=width,
-                        quality=spec.quality,
-                        filename_prefix=f"{spec.role}_{width}_",
-                    )
-
-                if result is None:
-                    continue
-
-                content, generated_width, generated_height = result
-                variant: ImageVariant = ImageVariant(
-                    image=self,
-                    role=spec.role,
-                    width=generated_width,
-                    height=generated_height,
-                    mime_type=IMAGE_FORMAT.mime_type,
-                )
-                variant.file.save(
-                    f"{self.base_upload_dir}/{spec.role}/{content.name}",
-                    content,
-                )
-                generated_variant_ids.append(variant.pk)
-
-        generated_variants: models.QuerySet[ImageVariant] = self.variants.filter(
-            pk__in=generated_variant_ids
-        )
-        return generated_variants
-
-    def _get_source_width(self) -> int | None:
-        source = self.image_variant_source_field
-        if not source:
-            return None
-
-        return source.width
-
-    @property
-    def image_variant_source_field(self) -> ImageFieldFile | None:
-        """Return the stored image file that should seed generated variants.
-
-        The canonical upload source is preferred. During the ImageVariant rollout,
-        production also has legacy rows where ``original`` still points at a removed
-        PNG while ``original_webp`` is the surviving generated file that has been
-        served publicly. Variant backfill must use that surviving file instead of
-        treating the row as unrecoverable.
-        """
-        if file_exists_in_storage(self.original_field):
-            return self.original_field
-        if file_exists_in_storage(self.original_webp_field):
-            return self.original_webp_field
-        return self.original_field
-
-    def get_thumbnail_url(self) -> str | None:
-        """Get thumbnail URL only when the thumbnail file exists."""
-        if self.thumbnail:
-            try:
-                if file_exists_in_storage(self.thumbnail):
-                    return self.thumbnail.url  # type: ignore[no-any-return]
-            except (OSError, ValueError):
-                return None
         return None
 
-    def get_image_processing_operations(
-        self, changed_field_names: list[str] | None = None
-    ) -> list[ImageProcessingOperation]:
-        """Describe the image-processing workflow for this model instance."""
+    def get_image_variant_sources(
+        self, _changed_field_names: list[str] | None = None
+    ) -> list[ImageVariantSource]:
+        """Return the single original image source used by BaseImage variants."""
         return [
-            ImageProcessingOperation(
-                field_name=self.original_field_name,
-                source_image=self.original_field,
-                webp_field_name=self.original_webp_field_name,
-                spec=self.get_original_spec(),
-                original_field_name=self.original_field_name,
-                thumbnail_field_name=self.thumbnail_field_name,
-                thumbnail_source_image=self.original_field,
-                thumbnail_generator=self.make_thumbnail,
+            ImageVariantSource(
+                field_name=self.original.field.name,
+                source_image=self.get_original_image(),
+                upload_dir=self.base_upload_dir,
             )
         ]
 
@@ -659,15 +402,6 @@ class LandingPageSettings(SingletonModel):
         default=True, verbose_name=_("Last Images Section Enabled")
     )
     shop_enabled = models.BooleanField(default=False, verbose_name=_("Shop Section Enabled"))
-    serve_webp_images = models.BooleanField(
-        default=False,
-        verbose_name=_("Serve WebP Images"),
-        help_text=_(
-            "When enabled, serves WebP-converted images. "
-            "Disable to fall back to the original legacy images for rollback. "
-            "Will be removed in future."
-        ),
-    )
     latest_filters = models.ManyToManyField(
         "astrophotography.Tag",
         blank=True,

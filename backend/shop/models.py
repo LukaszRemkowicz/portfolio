@@ -1,3 +1,4 @@
+import logging
 import uuid
 from typing import Any
 
@@ -6,19 +7,21 @@ from model_utils import FieldTracker
 from parler.managers import TranslatableManager
 from parler.models import TranslatableModel, TranslatedFields
 
-from django.conf import settings
+from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from common.mixins import ImageProcessingModelMixin
-from common.types import ImageProcessingOperation, ImageSpec
-from common.utils.image import get_available_image_url
-from core.models import SingletonModel
+from common.types import ImageVariantSource, ImageVariantSpec, ViewportWidths
+from common.utils.image import file_exists_in_storage, get_available_image_url
+from core.mixins import ImageVariantModelMixin
+from core.models import ImageVariant, SingletonModel
 from core.tasks import process_image_task
 from translation.mixins import AutomatedTranslationModelMixin
 
+logger = logging.getLogger(__name__)
 
-class ShopProduct(AutomatedTranslationModelMixin, TranslatableModel):
+
+class ShopProduct(ImageVariantModelMixin, AutomatedTranslationModelMixin, TranslatableModel):
     """
     A product or item sold in the shop section of the portfolio.
 
@@ -36,7 +39,21 @@ class ShopProduct(AutomatedTranslationModelMixin, TranslatableModel):
     # Translation trigger fields
     translation_service_method = "translate_shop_product"
     translation_trigger_fields = ["title", "description"]
-    image_tracker = FieldTracker(fields=["image", "thumbnail_cropped"])
+    image_variant_specs = (
+        ImageVariantSpec(
+            role="original_format",
+            viewport_widths=ViewportWidths.fixed(560),
+            quality=90,
+            label="Shop product display candidate",
+        ),
+        ImageVariantSpec(
+            role="thumbnail",
+            viewport_widths=ViewportWidths.fixed(560),
+            quality=90,
+            label="Shop product card thumbnail candidate",
+        ),
+    )
+    image_tracker = FieldTracker(fields=["image", "image_cropped"])
 
     image = models.ForeignKey(
         "astrophotography.AstroImage",
@@ -77,14 +94,20 @@ class ShopProduct(AutomatedTranslationModelMixin, TranslatableModel):
         verbose_name=_("Currency"),
         help_text=_("ISO 4217 currency code, e.g. USD, EUR, PLN."),
     )
-    thumbnail_cropped = models.ImageField(
+    image_cropped = models.ImageField(
         upload_to="shop/products/cropped/",
         null=True,
         blank=True,
-        verbose_name=_("Thumbnail (Cropped)"),
+        db_column="thumbnail_cropped",
+        verbose_name=_("Image (Cropped)"),
         help_text=_(
-            "Crop of the image specifically meant for the shop list card. Output of the FK cropper."
+            "Crop of the selected original image. Used as the source for generated shop variants."
         ),
+    )
+    variants = GenericRelation(
+        ImageVariant,
+        content_type_field="content_type",
+        object_id_field="object_id",
     )
 
     external_url = models.URLField(
@@ -107,7 +130,7 @@ class ShopProduct(AutomatedTranslationModelMixin, TranslatableModel):
         help_text=_("Only active products are shown in the public shop."),
     )
 
-    objects = TranslatableManager()
+    objects = TranslatableManager()  # type: ignore[django-manager-missing]
 
     class Meta:
         verbose_name = _("Shop Product")
@@ -120,29 +143,70 @@ class ShopProduct(AutomatedTranslationModelMixin, TranslatableModel):
         title = self.safe_translation_getter("title", any_language=True)
         return title if title else str(self.id)
 
-    def get_thumbnail_spec(self) -> ImageSpec:
-        """
-        Return the specification for the shop product thumbnail.
-        Matches the 4:3 shop-card crop used by the admin FK cropper.
-        """
-        return ImageSpec(dimension=560, quality=90, aspect_ratio=4 / 3)
+    def _get_product_image_source(self) -> Any:
+        """Return the manual crop used for product public rendering."""
+        return getattr(self, "image_cropped", None)
 
-    def get_thumbnail(self) -> str:
-        """
-        Return the primary display image for the shop product.
-        Prioritizes the manually cropped thumbnail, then the linked
-        AstroImage's standard generated thumbnail, then fails over to CDN.
-        """
-        cropped_url = get_available_image_url(self.thumbnail_cropped)
+    def _get_product_variant_source(self) -> Any:
+        """Return the preferred source image for generated product variants."""
+        source_image = self._get_product_image_source()
+        if source_image:
+            return source_image
+
+        astro_image = getattr(self, "image", None)
+        if astro_image is not None:
+            return getattr(astro_image, "original", None)
+
+        return None
+
+    def get_image_url(self, role: str, width: int) -> str | None:
+        """Return the best available product image URL following crop and AstroImage fallbacks."""
+        variant_url: str | None = self.get_variant_url(role, width)
+        if variant_url:
+            return variant_url
+
+        source_image = self._get_product_image_source()
+        cropped_url = get_available_image_url(source_image)
         if cropped_url:
+            logger.info(
+                "Falling back to product cropped source image because variant is missing",
+                extra={
+                    "model": self._meta.label,
+                    "pk": str(self.pk),
+                    "role": role,
+                    "width": width,
+                    "source_name": str(getattr(source_image, "name", "") or ""),
+                },
+            )
             return cropped_url
 
-        if self.image_id:
-            thumbnail_url = get_available_image_url(self.image.thumbnail)
-            if thumbnail_url:
-                return thumbnail_url
+        astro_image = getattr(self, "image", None)
+        if astro_image is not None:
+            astro_thumbnail_url = astro_image.get_image_url("thumbnail", width)
+            if astro_thumbnail_url:
+                logger.info(
+                    "Falling back to linked AstroImage thumbnail variant"
+                    " because product crop is unavailable",
+                    extra={
+                        "model": self._meta.label,
+                        "pk": str(self.pk),
+                        "role": role,
+                        "width": width,
+                        "source_pk": str(astro_image.pk),
+                    },
+                )
+                return str(astro_thumbnail_url)
 
-        return self.thumbnail_url or ""
+        logger.error(
+            "Image variant is missing for requested product role and width",
+            extra={
+                "model": self._meta.label,
+                "pk": str(self.pk),
+                "role": role,
+                "width": width,
+            },
+        )
+        return None
 
     # ------------------------------------------------------------------
     # Save logic
@@ -151,26 +215,71 @@ class ShopProduct(AutomatedTranslationModelMixin, TranslatableModel):
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Clear stale manual crops and trigger translations when relevant."""
         image_changed: bool = self.image_tracker.has_changed("image")
-        crop_changed: bool = self.image_tracker.has_changed("thumbnail_cropped")
+        crop_changed: bool = self.image_tracker.has_changed("image_cropped")
         update_fields = kwargs.get("update_fields")
+        image_update_fields = {"image", "image_cropped"}
+        should_process_images = bool(image_changed or crop_changed) and (
+            update_fields is None or bool(image_update_fields.intersection(set(update_fields)))
+        )
 
         if image_changed and not crop_changed:
-            self.thumbnail_cropped = None
+            self.image_cropped = None
+            if update_fields is not None:
+                kwargs["update_fields"] = set(update_fields) | {"image_cropped"}
 
         super().save(*args, **kwargs)
+        if should_process_images:
+            process_image_task.delay_on_commit(
+                self._meta.app_label,
+                self._meta.model_name,
+                self.pk,
+                sorted(image_update_fields),
+            )
         if not update_fields or any(
             field in update_fields for field in self.translation_trigger_fields
         ):
             self.trigger_translations()
 
+    def get_image_variant_sources(
+        self, _changed_field_names: list[str] | None = None
+    ) -> list[ImageVariantSource]:
+        """Return the image source that should produce product variants."""
+        source_image = self._get_product_variant_source()
+        field_name = "image_cropped" if self._get_product_image_source() else "image"
+
+        return [
+            ImageVariantSource(
+                field_name=field_name,
+                source_image=source_image,
+                upload_dir="shop/products/cropped",
+            )
+        ]
+
 
 class ShopSettings(
-    ImageProcessingModelMixin, AutomatedTranslationModelMixin, TranslatableModel, SingletonModel
+    ImageVariantModelMixin,
+    AutomatedTranslationModelMixin,
+    TranslatableModel,
+    SingletonModel,
 ):
     """
     Singleton model to store global settings for the shop page.
     """
 
+    image_variant_specs = (
+        ImageVariantSpec(
+            role="original_format",
+            viewport_widths=ViewportWidths.fixed(1920),
+            quality=90,
+            label="Shop background original-format display candidate",
+        ),
+        ImageVariantSpec(
+            role="background",
+            viewport_widths=ViewportWidths.fixed(1920),
+            quality=90,
+            label="Shop background display candidate",
+        ),
+    )
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
     translation_service_method = "translate_shop_settings"
@@ -191,13 +300,10 @@ class ShopSettings(
         verbose_name=_("Background Cropped"),
         help_text=_("Cropped background image managed by the admin image cropper."),
     )
-
-    image_webp = models.ImageField(
-        upload_to="shop/backgrounds/",
-        null=True,
-        blank=True,
-        verbose_name=_("Background WebP"),
-        help_text=_("Auto-generated WebP version of the background."),
+    variants = GenericRelation(
+        ImageVariant,
+        content_type_field="content_type",
+        object_id_field="object_id",
     )
 
     translations = TranslatedFields(
@@ -238,13 +344,6 @@ class ShopSettings(
         title = self.safe_translation_getter("title", any_language=True)
         return title if title else str(_("Shop Settings"))
 
-    @staticmethod
-    def get_image_spec() -> ImageSpec:
-        """Return the same 16:9 1920px shop background spec used previously."""
-        return settings.IMAGE_OPTIMIZATION_SPECS.get(
-            "LANDSCAPE_16_9", ImageSpec(dimension=1920, quality=90, aspect_ratio=16 / 9)
-        )
-
     def save(self, *args: Any, **kwargs: Any) -> None:
         """
         1. Reset `image_cropped` when the source background changes independently.
@@ -255,18 +354,24 @@ class ShopSettings(
         source_changed: bool = self.image_tracker.has_changed("image")
         cropped_changed: bool = self.image_tracker.has_changed("image_cropped")
         update_fields = kwargs.get("update_fields")
+        image_update_fields = {"image", "image_cropped"}
+        should_process_images = bool(source_changed or cropped_changed) and (
+            update_fields is None or bool(image_update_fields.intersection(set(update_fields)))
+        )
 
         if source_changed and not cropped_changed:
             self.image_cropped = None
+            if update_fields is not None:
+                kwargs["update_fields"] = set(update_fields) | {"image_cropped"}
 
         super().save(*args, **kwargs)
 
-        if (source_changed or cropped_changed) and not update_fields:
+        if should_process_images:
             process_image_task.delay_on_commit(
                 self._meta.app_label,
                 self._meta.model_name,
                 self.pk,
-                ["image"],
+                sorted(image_update_fields),
             )
 
         if not update_fields or any(
@@ -274,23 +379,52 @@ class ShopSettings(
         ):
             self.trigger_translations()
 
-    def get_serving_url(self) -> str:
-        """Return the best available public background URL in derived-first order."""
-        return (
-            get_available_image_url(self.image_webp)
-            or get_available_image_url(self.image_cropped)
-            or get_available_image_url(self.image)
+    def get_background_image_url(self) -> str | None:
+        """Return the generated background URL."""
+        background_spec = next(
+            spec for spec in self.image_variant_specs if spec.role == "background"
         )
+        width = background_spec.viewport_widths.as_tuple()[-1]
+        return self.get_image_url("background", width)
 
-    def get_image_processing_operations(
+    def get_image_url(self, role: str, width: int) -> str | None:
+        """Return the generated variant URL or fall back to the background source URL."""
+        variant_url: str | None = self.get_variant_url(role, width)
+        if variant_url:
+            return variant_url
+
+        source_image = getattr(self, "image_cropped", None) or getattr(self, "image", None)
+        if source_image and file_exists_in_storage(source_image):
+            logger.warning(
+                "Falling back to background source image because variant is missing",
+                extra={
+                    "model": self._meta.label,
+                    "pk": str(self.pk),
+                    "role": role,
+                    "source_name": str(getattr(source_image, "name", "") or ""),
+                },
+            )
+            return str(source_image.url)
+        logger.error(
+            "Image variant is missing and background source image is unavailable",
+            extra={
+                "model": self._meta.label,
+                "pk": str(self.pk),
+                "role": role,
+                "width": width,
+                "source_name": str(getattr(source_image, "name", "") or ""),
+            },
+        )
+        return None
+
+    def get_image_variant_sources(
         self, _changed_field_names: list[str] | None = None
-    ) -> list[ImageProcessingOperation]:
+    ) -> list[ImageVariantSource]:
+        source_image = getattr(self, "image_cropped", None) or getattr(self, "image", None)
         return [
-            ImageProcessingOperation(
+            ImageVariantSource(
                 field_name="image",
-                source_image=self.image_cropped if self.image_cropped else self.image,
-                webp_field_name="image_webp",
-                spec=self.get_image_spec(),
-                clear_field_on_failed_conversion=True,
+                source_image=source_image,
+                upload_dir="shop/backgrounds",
             )
         ]

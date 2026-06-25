@@ -362,7 +362,7 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
-# Image Optimization Settings
+# Image Optimization Settings. #TODO: legacy
 IMAGE_OPTIMIZATION_SPECS = {
     "AVATAR": ImageSpec(dimension=280, quality=10),
     "PORTRAIT": ImageSpec(dimension=800, quality=35),
@@ -371,6 +371,9 @@ IMAGE_OPTIMIZATION_SPECS = {
     "DEFAULT": ImageSpec(dimension=1200, quality=75),
     "LANDSCAPE_16_9": ImageSpec(dimension=1920, quality=90, aspect_ratio=16 / 9),
 }
+
+
+SHOP_SETTINGS_ADMIN_CROPPER_CONFIG = ImageSpec(dimension=1920, quality=90)
 
 # TODO: add it somewhere else
 USER_ADMIN_CROPPER_FIELD_CONFIGS = (
@@ -381,8 +384,8 @@ USER_ADMIN_CROPPER_FIELD_CONFIGS = (
         target_field_name="avatar_cropped",
         target_input_id="id_avatar_cropped",
         preview_shape=CropperPreviewShape.CIRCLE,
-        spec_method="get_avatar_spec",
         crop_aspect_ratio=1.0,
+        spec=IMAGE_OPTIMIZATION_SPECS["AVATAR"],
     ),
     CropperFieldConfig(
         field_name="about_me_image",
@@ -391,8 +394,8 @@ USER_ADMIN_CROPPER_FIELD_CONFIGS = (
         target_field_name="about_me_image_cropped",
         target_input_id="id_about_me_image_cropped",
         preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
-        spec_method="get_portrait_spec",
         crop_aspect_ratio=1.0,
+        spec=IMAGE_OPTIMIZATION_SPECS["PORTRAIT"],
     ),
     CropperFieldConfig(
         field_name="about_me_image2",
@@ -401,8 +404,8 @@ USER_ADMIN_CROPPER_FIELD_CONFIGS = (
         target_field_name="about_me_image2_cropped",
         target_input_id="id_about_me_image2_cropped",
         preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
-        spec_method="get_portrait_spec",
         crop_aspect_ratio=1.0,
+        spec=IMAGE_OPTIMIZATION_SPECS["PORTRAIT"],
     ),
 )
 

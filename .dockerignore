@@ -31,6 +31,14 @@ staticfiles/
 backend/media/
 backend/staticfiles/
 
+# Local data, logs, and generated diagnostics
+backups/
+logs/
+tmp/
+screenshots/
+*.dump
+*.sql
+
 # Frontend artifacts
 node_modules/
 frontend/node_modules/

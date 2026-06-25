@@ -8,9 +8,9 @@ from inbox.tests.factories import ContactMessageFactory
 class TestInboxModels:
     def test_contact_message_str(self):
         """Verify ContactMessage string representation"""
-        contact_message = ContactMessageFactory()
+        message = ContactMessageFactory()
         expected_str = (
-            f"{contact_message.name} - {contact_message.subject} "
-            f"({contact_message.created_at.strftime('%Y-%m-%d %H:%M')})"
+            f"{message.name} - {message.subject} "
+            f"({message.created_at.strftime('%Y-%m-%d %H:%M')})"
         )
-        assert str(contact_message) == expected_str
+        assert str(message) == expected_str

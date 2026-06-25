@@ -39,6 +39,8 @@
     const state = {
         image: null,
         imageName: "",
+        sourceFileName: "",
+        sourceMimeType: "image/png",
         loadRequestId: 0,
         dirty: false,
         pointerId: null,
@@ -56,6 +58,8 @@
         outputHeight: canvas.height,
         fkCache: new Map(),
         lastSourceValue: "",
+        loadingSourceValue: "",
+        failedSourceValue: "",
     };
 
     function getSourceSelect() {
@@ -216,16 +220,33 @@
     // 6. Reset the transform so the newly loaded source starts centered and properly scaled.
     // 7. Update the source label and status text.
     // 8. On error, clear the image-related state and show a user-facing failure status.
-    function loadImageFromUrl(url, imageName) {
+    function getImageExtension(mimeType, fallbackName) {
+        const fallbackMatch = String(fallbackName || "").match(/\.([a-z0-9]+)$/i);
+        const fallbackExtension = fallbackMatch ? fallbackMatch[1].toLowerCase() : "png";
+        const mimeExtensions = {
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/webp": "webp",
+        };
+        return mimeExtensions[mimeType] || fallbackExtension;
+    }
+
+    function loadImageFromUrl(url, imageName, pk, sourceFileName, sourceMimeType) {
         state.loadRequestId += 1;
         const requestId = state.loadRequestId;
+        state.loadingSourceValue = pk || "";
+        state.failedSourceValue = "";
         const image = new Image();
         image.onload = function() {
             if (requestId !== state.loadRequestId) {
                 return;
             }
+            state.loadingSourceValue = "";
+            state.failedSourceValue = "";
             state.image = image;
             state.imageName = imageName;
+            state.sourceFileName = sourceFileName || imageName;
+            state.sourceMimeType = sourceMimeType || "image/png";
             state.dirty = false;
             resetTransform();
             setSourceLabel(imageName);
@@ -237,7 +258,16 @@
             }
             state.image = null;
             state.imageName = "";
+            state.sourceFileName = "";
+            state.sourceMimeType = "image/png";
             state.dirty = false;
+            state.loadingSourceValue = "";
+            state.failedSourceValue = pk || state.lastSourceValue;
+            for (const [cachedPk, cachedSource] of state.fkCache.entries()) {
+                if (cachedSource.url === url) {
+                    state.fkCache.delete(cachedPk);
+                }
+            }
             setStatus("Unable to load remote image");
             drawPreview();
         };
@@ -261,19 +291,40 @@
             state.image = null;
             state.imageName = "";
             state.dirty = false;
+            state.loadingSourceValue = "";
+            state.failedSourceValue = "";
             setStatus("Ready");
             setSourceLabel("");
             drawPreview();
             return;
         }
 
+        if (state.failedSourceValue === pk) {
+            setStatus("Unable to load selected AstroImage original image.");
+            setSourceLabel(name);
+            drawPreview();
+            return;
+        }
+
+        if (state.loadingSourceValue === pk) {
+            return;
+        }
+
         if (state.fkCache.has(pk)) {
             setStatus("Loading from cache...");
-            loadImageFromUrl(state.fkCache.get(pk), name);
+            const cachedSource = state.fkCache.get(pk);
+            loadImageFromUrl(
+                cachedSource.url,
+                name,
+                pk,
+                cachedSource.sourceName,
+                cachedSource.mimeType
+            );
             return;
         }
 
         setStatus("Resolving AstroImage source...");
+        state.loadingSourceValue = pk;
         const baseUrl = config.lookup_url || "/image-urls/";
         const fetchUrl = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "id=" + encodeURIComponent(pk);
 
@@ -285,15 +336,35 @@
                 return res.json();
             })
             .then(data => {
+                if (state.lastSourceValue !== pk) {
+                    return;
+                }
                 if (data && data.url) {
-                    state.fkCache.set(pk, data.url);
+                    state.fkCache.set(pk, {
+                        url: data.url,
+                        sourceName: data.source_name || name,
+                        mimeType: data.mime_type || "image/png",
+                    });
                     setStatus("Loading source...");
-                    loadImageFromUrl(data.url, name);
+                    loadImageFromUrl(
+                        data.url,
+                        name,
+                        pk,
+                        data.source_name || name,
+                        data.mime_type || "image/png"
+                    );
                 } else {
+                    state.loadingSourceValue = "";
+                    state.failedSourceValue = pk;
                     setStatus("Failed to resolve AstroImage URL.");
                 }
             })
             .catch(() => {
+                if (state.lastSourceValue !== pk) {
+                    return;
+                }
+                state.loadingSourceValue = "";
+                state.failedSourceValue = pk;
                 setStatus("API error fetching image.");
             });
     }
@@ -316,10 +387,16 @@
         }
 
         const currentValue = sourceSelect.value || "";
-        if (currentValue === state.lastSourceValue && state.image) {
+        if (
+            currentValue === state.lastSourceValue
+            && (state.image || state.loadingSourceValue === currentValue || state.failedSourceValue === currentValue)
+        ) {
             return;
         }
 
+        if (currentValue !== state.lastSourceValue) {
+            state.failedSourceValue = "";
+        }
         state.lastSourceValue = currentValue;
         const selectedOption = sourceSelect.options[sourceSelect.selectedIndex];
         const name = selectedOption ? selectedOption.text : "Remote Image #" + currentValue;
@@ -350,7 +427,7 @@
         cropperRoot.style.display = panelVisible || triggerVisible ? "" : "none";
     }
 
-    // Export the currently visible crop area to a PNG file object.
+    // Export the currently visible crop area to a file matching the source image type.
     // Step by step:
     // 1. If there is no image loaded, resolve with null because there is nothing to export.
     // 2. Create an off-screen canvas sized to the backend-requested output dimensions.
@@ -358,7 +435,7 @@
     // 4. Convert the preview-space transform into export-space coordinates by scaling the
     //    rendered width, height, and offsets.
     // 5. Draw the same visible image region into the export canvas at full output size.
-    // 6. Convert that canvas into a PNG blob.
+    // 6. Convert that canvas into a same-format blob where the browser supports it.
     // 7. Wrap the blob in a File object with a stable generated name so it can be assigned
     //    to the hidden file input used by Django admin.
     function exportCroppedFile() {
@@ -394,9 +471,17 @@
                     reject(new Error("Crop export failed"));
                     return;
                 }
-                const stem = (state.imageName || config.field_name).replace(/\.[^.]+$/, "");
-                resolve(new File([blob], stem + "-cropped.png", { type: "image/png" }));
-            }, "image/png");
+                const sourceName = state.sourceFileName || state.imageName || config.field_name;
+                const stem = sourceName.split("/").pop().replace(/\.[^.]+$/, "");
+                const extension = getImageExtension(state.sourceMimeType, sourceName);
+                resolve(
+                    new File(
+                        [blob],
+                        stem + "-cropped." + extension,
+                        { type: state.sourceMimeType }
+                    )
+                );
+            }, state.sourceMimeType, 0.92);
         });
     }
 
