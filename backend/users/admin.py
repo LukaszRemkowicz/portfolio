@@ -14,6 +14,7 @@ from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
+from common.types import ImageSpec
 from translation.mixins import (
     AutomatedTranslationAdminMixin,
     DynamicParlerStyleMixin,
@@ -22,7 +23,7 @@ from translation.mixins import (
 )
 
 from .models import Profile
-from .types import CropperFieldConfig
+from .types import CropperFieldConfig, CropperPreviewShape
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -111,7 +112,38 @@ class UserAdmin(  # type: ignore[misc]
 
     @property
     def cropper_field_configs(self) -> tuple[CropperFieldConfig, ...]:
-        return settings.USER_ADMIN_CROPPER_FIELD_CONFIGS
+        return (
+            CropperFieldConfig(
+                field_name="avatar",
+                label=_("Avatar"),
+                input_id="id_avatar",
+                target_field_name="avatar_cropped",
+                target_input_id="id_avatar_cropped",
+                preview_shape=CropperPreviewShape.CIRCLE,
+                crop_aspect_ratio=1.0,
+                spec=ImageSpec(dimension=280, quality=10),
+            ),
+            CropperFieldConfig(
+                field_name="about_me_image",
+                label=_("About me image"),
+                input_id="id_about_me_image",
+                target_field_name="about_me_image_cropped",
+                target_input_id="id_about_me_image_cropped",
+                preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
+                crop_aspect_ratio=1.0,
+                spec=ImageSpec(dimension=800, quality=35),
+            ),
+            CropperFieldConfig(
+                field_name="about_me_image2",
+                label=_("About me image 2"),
+                input_id="id_about_me_image2",
+                target_field_name="about_me_image2_cropped",
+                target_input_id="id_about_me_image2_cropped",
+                preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
+                crop_aspect_ratio=1.0,
+                spec=ImageSpec(dimension=800, quality=35),
+            ),
+        )
 
     def get_fieldsets(self, request: HttpRequest, obj: models.Model | None = None):
         """Dynamically add translation_status to Personal info on default language tab."""

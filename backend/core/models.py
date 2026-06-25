@@ -138,17 +138,6 @@ class BaseImage(ImageVariantModelMixin, TranslatableModel):
     # Translations moved to concrete subclasses because BaseImage is abstract.
     # See AstroImage and ProjectImage.
 
-    thumbnail = models.ImageField(
-        upload_to=seeded_image_upload_to("base_upload_dir", "thumbnail"),
-        blank=True,
-        null=True,
-        editable=False,
-        verbose_name=_("Thumbnail"),
-        help_text=_(
-            "TODO: Legacy thumbnail field kept during the ImageVariant rollout. "
-            "Remove after thumbnail variants are the public serving path."
-        ),
-    )
     variants = GenericRelation(
         ImageVariant,
         content_type_field="content_type",

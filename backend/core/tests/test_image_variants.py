@@ -4,11 +4,9 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 from PIL import Image
 
-from django.core.files.base import ContentFile
-
 from astrophotography.serializers import AstroImageSerializerList
 from astrophotography.tests.factories import AstroImageFactory, MainPageBackgroundImageFactory
-from common.tests.image_helpers import NamedBytesIO, jpeg_field
+from common.tests.image_helpers import jpeg_field
 from common.types import ImageVariantSource, ImageVariantSpec, ViewportWidths
 from core.mixins import ImageVariantModelMixin
 from core.models import BaseImage, ImageVariant
@@ -134,64 +132,86 @@ class TestImageVariantMixinCompatibility:
             return ()
 
     def test_make_thumbnail_compatibility_method_lives_on_variant_mixin(self) -> None:
+        assert "thumbnail" not in BaseImage._meta.fields_map
+        assert "thumbnail" not in {field.name for field in BaseImage._meta.fields}
         assert "make_thumbnail" in ImageVariantModelMixin.__dict__
         assert "make_thumbnail" not in BaseImage.__dict__
 
-    def test_make_thumbnail_uses_fixed_thumbnail_variant_spec_width(self) -> None:
-        image_file = NamedBytesIO(
-            jpeg_field("legacy-thumbnail.jpg", size=(1200, 800)).read(),
-            "legacy-thumbnail.jpg",
+    def test_make_thumbnail_creates_fixed_thumbnail_variant_spec_width(self) -> None:
+        owner = self.ImageOwner()
+        source = ImageVariantSource(
+            field_name="original",
+            source_image=MagicMock(),
+            upload_dir="images",
         )
-        image_owner = self.ImageOwner()
+        owner.get_image_variant_sources = MagicMock(  # type: ignore[method-assign]
+            return_value=[source]
+        )
+        variants = MagicMock()
+        owner.variants = variants
+        generated = MagicMock()
+        generated.count.return_value = 1
+        owner._generate_image_variants_for_source = MagicMock(  # type: ignore[method-assign]
+            return_value=generated
+        )
 
-        thumbnails = ImageVariantModelMixin.make_thumbnail(image_owner, image_file)
+        assert owner.make_thumbnail() is True
 
-        assert len(thumbnails) == 1
-        with Image.open(BytesIO(thumbnails[0].read())) as generated:
-            assert generated.size == (560, 373)
-        assert thumbnails[0].name.startswith("thumbnail_560_")
-        assert thumbnails[0].name.endswith(".webp")
+        variants.filter.assert_called_once_with(role__in={"thumbnail"}, width__in={560})
+        variants.filter.return_value.delete.assert_called_once_with()
+        owner._generate_image_variants_for_source.assert_called_once_with(
+            source,
+            (("thumbnail", 560, 100),),
+        )
 
-    def test_make_thumbnail_uses_all_thumbnail_variant_spec_widths(self) -> None:
-        image_file = MagicMock()
-        image_owner = self.ResponsiveThumbnailOwner()
+    def test_make_thumbnail_creates_all_thumbnail_variant_spec_widths(self) -> None:
+        owner = self.ResponsiveThumbnailOwner()
+        source = ImageVariantSource(
+            field_name="original",
+            source_image=MagicMock(),
+            upload_dir="images",
+        )
+        owner.get_image_variant_sources = MagicMock(  # type: ignore[method-assign]
+            return_value=[source]
+        )
+        variants = MagicMock()
+        owner.variants = variants
+        generated = MagicMock()
+        generated.count.return_value = 4
+        owner._generate_image_variants_for_source = MagicMock(  # type: ignore[method-assign]
+            return_value=generated
+        )
 
-        generated_by_width = {
-            320: ContentFile(b"generated-320", name="thumbnail_320_test.webp"),
-            560: ContentFile(b"generated-560", name="thumbnail_560_test.webp"),
-            840: ContentFile(b"generated-840", name="thumbnail_840_test.webp"),
-            1120: ContentFile(b"generated-1120", name="thumbnail_1120_test.webp"),
-        }
+        assert owner.make_thumbnail() is True
 
-        def build_result(*_args, width: int, **_kwargs):
-            return generated_by_width[width], width, round(width * 2 / 3)
+        variants.filter.assert_called_once_with(
+            role__in={"thumbnail"},
+            width__in={320, 560, 840, 1120},
+        )
+        variants.filter.return_value.delete.assert_called_once_with()
+        owner._generate_image_variants_for_source.assert_called_once_with(
+            source,
+            (
+                ("thumbnail", 320, 100),
+                ("thumbnail", 560, 100),
+                ("thumbnail", 840, 100),
+                ("thumbnail", 1120, 100),
+            ),
+        )
 
-        with patch(
-            "core.mixins.build_image_with_given_width",
-            side_effect=build_result,
-        ) as build_image:
-            thumbnails = ImageVariantModelMixin.make_thumbnail(image_owner, image_file)
+    def test_make_thumbnail_returns_false_without_thumbnail_variant_spec(self) -> None:
+        owner = self.NoThumbnailOwner()
+        owner.get_image_variant_sources = MagicMock(  # type: ignore[method-assign]
+            return_value=[
+                ImageVariantSource(
+                    field_name="original",
+                    source_image=MagicMock(),
+                    upload_dir="images",
+                )
+            ]
+        )
 
-        assert thumbnails == [
-            generated_by_width[320],
-            generated_by_width[560],
-            generated_by_width[840],
-            generated_by_width[1120],
-        ]
-        assert not hasattr(ImageVariantModelMixin, "_get_processable_image_width")
-        assert [call.kwargs["width"] for call in build_image.call_args_list] == [
-            320,
-            560,
-            840,
-            1120,
-        ]
-        assert {call.kwargs["quality"] for call in build_image.call_args_list} == {100}
-
-    def test_make_thumbnail_requires_thumbnail_variant_spec(self) -> None:
-        image_owner = self.NoThumbnailOwner()
-
-        with pytest.raises(ValueError, match="Thumbnail variant spec is required"):
-            ImageVariantModelMixin.make_thumbnail(image_owner, MagicMock())
+        assert owner.make_thumbnail() is False
 
 
 @pytest.mark.django_db

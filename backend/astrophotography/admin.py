@@ -15,6 +15,7 @@ from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.utils import translation
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
 from core.widgets import (
@@ -270,7 +271,7 @@ class AstroImageAdmin(
         "get_name",
         "capture_date",
         "place",
-        "has_thumbnail",
+        "has_thumbnail_variant",
         "tag_list",
     )
     list_display_links = ("get_name",)
@@ -291,7 +292,7 @@ class AstroImageAdmin(
         qs = super().get_queryset(request)
         annotated_qs = (
             qs.select_related("place")
-            .prefetch_related("tags")
+            .prefetch_related("tags", "variants")
             .annotate(
                 admin_row_number=Window(
                     expression=RowNumber(),
@@ -328,7 +329,7 @@ class AstroImageAdmin(
         "tripod__model",
     )
 
-    readonly_fields = ("created_at", "updated_at", "thumbnail")
+    readonly_fields = ("thumbnail_variant_preview", "created_at", "updated_at")
 
     ordering = ("-created_at", "-pk")
 
@@ -348,7 +349,7 @@ class AstroImageAdmin(
         (
             _("Media"),
             {
-                "fields": ("original_upload", "thumbnail"),
+                "fields": ("original_upload", "thumbnail_variant_preview"),
             },
         ),
         (
@@ -494,9 +495,41 @@ class AstroImageAdmin(
     def tag_list(self, obj: AstroImage) -> str:
         return ", ".join(tag.name for tag in obj.tags.all())
 
-    @admin.display(boolean=True, description="Has Thumbnail")
-    def has_thumbnail(self, obj: AstroImage) -> bool:
-        return bool(obj.thumbnail)
+    @admin.display(description=_("Thumbnail Variant"))
+    def thumbnail_variant_preview(self, obj: AstroImage) -> str:
+        if not obj or not obj.pk:
+            return str(_("Not generated yet"))
+
+        thumbnail_url = obj.get_available_variant_url("thumbnail", preferred_width=560)
+        if not thumbnail_url:
+            return str(_("Not generated yet"))
+
+        filename = thumbnail_url.rsplit("/", 1)[-1]
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener">{}</a>',
+            thumbnail_url,
+            filename,
+        )
+
+    @admin.display(boolean=True, description="Has Thumbnail Variants")
+    def has_thumbnail_variant(self, obj: AstroImage) -> bool:
+        expected_widths: set[int] = set()
+        for source in obj.get_image_variant_sources():
+            expected_widths.update(
+                width
+                for role, width, _quality in obj._get_expected_image_variant_targets(source)
+                if role == "thumbnail"
+            )
+
+        if not expected_widths:
+            return False
+
+        generated_widths = set(
+            obj.variants.filter(role="thumbnail", width__in=expected_widths)
+            .exclude(file="")
+            .values_list("width", flat=True)
+        )
+        return expected_widths.issubset(generated_widths)
 
     secure_preview_url_name = "admin-astroimage-secure-media"
 

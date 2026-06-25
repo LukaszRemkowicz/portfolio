@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
+from common.types import ImageSpec
 from common.utils.signing import generate_signed_url_params
 from translation.mixins import (
     AutomatedTranslationAdminMixin,
@@ -112,7 +113,7 @@ class ShopProductAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
             target_input_id="id_image_cropped",
             preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
             crop_aspect_ratio=4 / 3,
-            spec=settings.IMAGE_OPTIMIZATION_SPECS["THUMBNAIL"],
+            spec=ImageSpec(dimension=560, quality=100),
         )
 
     @property
@@ -250,7 +251,7 @@ class ShopSettingsAdmin(
                 target_input_id="id_image_cropped",
                 preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
                 crop_aspect_ratio=16 / 9,
-                spec=settings.SHOP_SETTINGS_ADMIN_CROPPER_CONFIG,
+                spec=ImageSpec(dimension=1920, quality=90),
             ),
         )
 
