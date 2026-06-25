@@ -14,7 +14,7 @@ Current implementation covers two admin integrations:
 - `users.User`
   - source-field cropper for `avatar`, `about_me_image`, and `about_me_image2`
 - `shop.ShopProduct`
-  - foreign-key-driven cropper for `image -> thumbnail_cropped`
+  - foreign-key-driven cropper for `image -> image_cropped`
 
 The user cropper is a single reusable sidebar widget that can switch between multiple source fields.
 
@@ -40,7 +40,7 @@ For `users.User`:
 
 For `shop.ShopProduct`:
 - `image` is the selected `AstroImage` foreign key source
-- `thumbnail_cropped` is the persisted cropped upload used as the product thumbnail source of truth
+- `image_cropped` is the persisted cropped upload used as the product variant source of truth
 
 ### Derived image generation
 After save, the existing async image pipeline still runs:
@@ -171,7 +171,7 @@ The admin template then renders:
 - `target_field_name`
 - `target_input_id`
 
-That lets the browser widget resolve the currently selected `AstroImage` and write the cropped result into `thumbnail_cropped`.
+That lets the browser widget resolve the currently selected `AstroImage` and write the cropped result into `image_cropped`.
 
 ### Sidebar placement
 The widget is mounted in the right sidebar under the standard admin submit/history block.

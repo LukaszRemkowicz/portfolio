@@ -93,10 +93,11 @@ def safe_serve(request, path, document_root=None, show_indexes=False):
         "backgrounds/",
         "avatars/",
         "about_me_images/",
+        "images/",
         "thumbnails/",
         "shop/",
     )
-    blocked_prefixes = ("logs/", "images/")
+    blocked_prefixes = ("logs/",)
 
     if host != settings.ADMIN_DOMAIN:
         raise Http404()

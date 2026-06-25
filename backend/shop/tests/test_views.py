@@ -1,5 +1,6 @@
 import uuid
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 import pytest
 from rest_framework import status
@@ -9,8 +10,8 @@ from django.core.cache import cache
 from django.urls import reverse
 
 from astrophotography.tests.factories import AstroImageFactory
-from common.tests.image_helpers import _png_field
-from core.tests.factories import LandingPageSettingsFactory
+from common.tests.image_helpers import jpeg_field, png_field
+from core.tests.factories import ImageVariantFactory, LandingPageSettingsFactory
 from shop.models import ShopSettings
 from shop.tests.factories import InactiveShopProductFactory, ShopProductFactory
 
@@ -57,11 +58,145 @@ class TestShopProductListView:
         assert "external_url" in item
         assert "created_at" in item
 
+    def test_list_product_uses_product_thumbnail_variant(self, api_client: APIClient) -> None:
+        product = ShopProductFactory(
+            image=None,
+            image_cropped=png_field("product-crop.png", size=(1200, 800)),
+            thumbnail_url="",
+        )
+        thumbnail = ImageVariantFactory(
+            image=product,
+            file__filename="product-thumbnail.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
+        )
+
+        response = api_client.get(reverse(SHOP_PRODUCT_LIST_URL))
+
+        assert response.status_code == status.HTTP_200_OK
+        item = next(
+            payload
+            for payload in response.data["products"]
+            if str(payload["id"]) == str(product.pk)
+        )
+        assert thumbnail.file.url in item["thumbnail_url"]
+
+    def test_list_product_falls_back_to_image_cropped_when_variant_missing(
+        self, api_client: APIClient
+    ) -> None:
+        product = ShopProductFactory(
+            image_cropped=png_field("product-crop.png", size=(560, 420)),
+            image=None,
+        )
+        product.variants.all().delete()
+
+        response = api_client.get(reverse(SHOP_PRODUCT_LIST_URL))
+
+        assert response.status_code == status.HTTP_200_OK
+        item = next(
+            payload
+            for payload in response.data["products"]
+            if str(payload["id"]) == str(product.pk)
+        )
+        assert "product-crop" in item["thumbnail_url"]
+
+    def test_list_product_falls_back_to_astroimage_thumbnail_when_crop_missing(
+        self, api_client: APIClient
+    ) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            astro_image = AstroImageFactory(
+                original=jpeg_field("astro-original.jpg", size=(1200, 800))
+            )
+        astro_variant = ImageVariantFactory(
+            image=astro_image,
+            file__filename="astro-shop-thumb.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
+        )
+        product = ShopProductFactory(image=astro_image, image_cropped=None)
+        product.variants.all().delete()
+
+        response = api_client.get(reverse(SHOP_PRODUCT_LIST_URL))
+
+        assert response.status_code == status.HTTP_200_OK
+        item = next(
+            payload
+            for payload in response.data["products"]
+            if str(payload["id"]) == str(product.pk)
+        )
+        assert item["thumbnail_url"] == f"http://testserver{astro_variant.file.url}"
+
+    def test_list_product_falls_back_to_astroimage_original_when_thumbnail_missing(
+        self, api_client: APIClient
+    ) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            astro_image = AstroImageFactory(
+                original=jpeg_field("astro-original.jpg", size=(1200, 800))
+            )
+        product = ShopProductFactory(image=astro_image, image_cropped=None)
+        product.variants.all().delete()
+        astro_image.variants.all().delete()
+
+        response = api_client.get(reverse(SHOP_PRODUCT_LIST_URL))
+
+        assert response.status_code == status.HTTP_200_OK
+        item = next(
+            payload
+            for payload in response.data["products"]
+            if str(payload["id"]) == str(product.pk)
+        )
+        assert item["thumbnail_url"] == f"http://testserver{astro_image.original.url}"
+
+    def test_list_product_ignores_requested_image_width(self, api_client: APIClient) -> None:
+        product = ShopProductFactory(image_cropped=png_field("product-crop.png", size=(900, 600)))
+        ImageVariantFactory(
+            image=product,
+            file__filename="product-thumbnail-320.webp",
+            role="thumbnail",
+            width=320,
+            height=213,
+        )
+        large_variant = ImageVariantFactory(
+            image=product,
+            file__filename="product-thumbnail-560.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
+        )
+
+        small_response = api_client.get(
+            reverse(SHOP_PRODUCT_LIST_URL),
+            {"role": "thumbnail", "width": 320},
+        )
+        large_response = api_client.get(
+            reverse(SHOP_PRODUCT_LIST_URL),
+            {"role": "thumbnail", "width": 560},
+        )
+
+        assert small_response.status_code == status.HTTP_200_OK
+        assert large_response.status_code == status.HTTP_200_OK
+        small_item = next(
+            payload
+            for payload in small_response.data["products"]
+            if str(payload["id"]) == str(product.pk)
+        )
+        large_item = next(
+            payload
+            for payload in large_response.data["products"]
+            if str(payload["id"]) == str(product.pk)
+        )
+        assert large_variant.file.url in large_item["thumbnail_url"]
+        assert large_variant.file.url in small_item["thumbnail_url"]
+        assert small_item["thumbnail_url"] == large_item["thumbnail_url"]
+
     def test_list_includes_shop_settings_copy(self, api_client: APIClient) -> None:
         ShopProductFactory()
-        shop_settings = ShopSettings.objects.create(
-            image=_png_field("shop-background.png", size=(1920, 1080))
-        )
+        with patch("shop.models.process_image_task.delay_on_commit"):
+            shop_settings = ShopSettings.objects.create(
+                image=png_field("shop-background.png", size=(1920, 1080))
+            )
         shop_settings.set_current_language("en")
         shop_settings.title = "Collect the night sky in print."
         shop_settings.description = "<p>Discover selected astrophotography images.</p>"
@@ -72,6 +207,37 @@ class TestShopProductListView:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["title"] == "Collect the night sky in print."
         assert response.data["description"] == "<p>Discover selected astrophotography images.</p>"
+
+    def test_list_serves_generated_shop_background_variant(self, api_client: APIClient) -> None:
+        ShopProductFactory()
+        with patch("shop.models.process_image_task.delay_on_commit"):
+            shop_settings = ShopSettings.objects.create(
+                image=png_field("shop-background.png", size=(1920, 1080))
+            )
+        background_variant = ImageVariantFactory(
+            image=shop_settings,
+            file__filename="shop-background-variant.webp",
+            role="background",
+            width=1920,
+            height=1080,
+        )
+
+        response = api_client.get(reverse(SHOP_PRODUCT_LIST_URL), {"lang": "en"})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert urlparse(response.data["background_url"]).path == background_variant.file.url
+
+    def test_list_falls_back_to_source_background_when_variant_missing(
+        self, api_client: APIClient
+    ) -> None:
+        ShopProductFactory()
+        with patch("shop.models.process_image_task.delay_on_commit"):
+            ShopSettings.objects.create(image=png_field("shop-background.png", size=(1920, 1080)))
+
+        response = api_client.get(reverse(SHOP_PRODUCT_LIST_URL), {"lang": "en"})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert ".png" in response.data["background_url"]
 
     def test_list_response_is_cached(self, api_client: APIClient) -> None:
         ShopProductFactory()
@@ -136,7 +302,7 @@ class TestShopProductListView:
     def test_list_cache_is_invalidated_on_shop_settings_update(self, api_client: APIClient) -> None:
         ShopProductFactory()
         shop_settings = ShopSettings.objects.create(
-            image=_png_field("shop-background.png", size=(1920, 1080))
+            image=png_field("shop-background.png", size=(1920, 1080))
         )
         shop_settings.set_current_language("en")
         shop_settings.title = "Collect the night sky in print."
@@ -213,6 +379,100 @@ class TestShopProductDetailView:
         assert response.status_code == status.HTTP_200_OK
         assert str(response.data["id"]) == str(product.pk)
 
+    def test_detail_ignores_requested_image_width(self, api_client: APIClient) -> None:
+        product = ShopProductFactory(
+            is_active=True,
+            image_cropped=png_field("product-crop.png", size=(900, 600)),
+        )
+        ImageVariantFactory(
+            image=product,
+            file__filename="product-detail-thumbnail-320.webp",
+            role="thumbnail",
+            width=320,
+            height=213,
+        )
+        large_variant = ImageVariantFactory(
+            image=product,
+            file__filename="product-detail-thumbnail-560.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
+        )
+        detail_url = reverse(SHOP_PRODUCT_DETAIL_URL, kwargs={"pk": product.pk})
+
+        small_response = api_client.get(detail_url, {"role": "thumbnail", "width": 320})
+        large_response = api_client.get(detail_url, {"role": "thumbnail", "width": 560})
+
+        assert small_response.status_code == status.HTTP_200_OK
+        assert large_response.status_code == status.HTTP_200_OK
+        assert large_variant.file.url in small_response.data["thumbnail_url"]
+        assert large_variant.file.url in large_response.data["thumbnail_url"]
+        assert small_response.data["thumbnail_url"] == large_response.data["thumbnail_url"]
+
+    def test_detail_falls_back_to_image_cropped_when_variant_missing(
+        self, api_client: APIClient
+    ) -> None:
+        product = ShopProductFactory(
+            is_active=True,
+            image_cropped=png_field("product-crop.png", size=(560, 420)),
+            image=None,
+        )
+        product.variants.all().delete()
+        detail_url = reverse(SHOP_PRODUCT_DETAIL_URL, kwargs={"pk": product.pk})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert "product-crop" in response.data["thumbnail_url"]
+
+    def test_detail_falls_back_to_astroimage_thumbnail_when_crop_missing(
+        self, api_client: APIClient
+    ) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            astro_image = AstroImageFactory(
+                original=jpeg_field("astro-original.jpg", size=(1200, 800))
+            )
+        astro_variant = ImageVariantFactory(
+            image=astro_image,
+            file__filename="astro-shop-detail.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
+        )
+        product = ShopProductFactory(
+            is_active=True,
+            image=astro_image,
+            image_cropped=None,
+        )
+        product.variants.all().delete()
+        detail_url = reverse(SHOP_PRODUCT_DETAIL_URL, kwargs={"pk": product.pk})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["thumbnail_url"] == f"http://testserver{astro_variant.file.url}"
+
+    def test_detail_falls_back_to_astroimage_original_when_thumbnail_missing(
+        self, api_client: APIClient
+    ) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            astro_image = AstroImageFactory(
+                original=jpeg_field("astro-original.jpg", size=(1200, 800))
+            )
+        product = ShopProductFactory(
+            is_active=True,
+            image=astro_image,
+            image_cropped=None,
+        )
+        product.variants.all().delete()
+        astro_image.variants.all().delete()
+        detail_url = reverse(SHOP_PRODUCT_DETAIL_URL, kwargs={"pk": product.pk})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["thumbnail_url"] == f"http://testserver{astro_image.original.url}"
+
     def test_detail_returns_404_for_unknown_id(self, api_client: APIClient) -> None:
         response = api_client.get(reverse(SHOP_PRODUCT_DETAIL_URL, kwargs={"pk": uuid.uuid4()}))
 
@@ -279,15 +539,43 @@ class TestShopProductDetailView:
 
 @pytest.mark.django_db
 class TestShopAstroImageLookupView:
-    def test_lookup_returns_thumbnail_url_when_available(self, api_client: APIClient) -> None:
-        image = AstroImageFactory()
-        image.thumbnail = _png_field("lookup-thumb.png", size=(560, 560))
-        image.save(update_fields=["thumbnail"])
+    def test_lookup_returns_signed_original_url_for_admin_cropper(
+        self, api_client: APIClient
+    ) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(original=jpeg_field("lookup-thumb.jpg", size=(1200, 800)))
+        ImageVariantFactory(
+            image=image,
+            file__filename="lookup-thumb.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
+        )
 
-        response = api_client.get(reverse("shop-image-lookup"), {"id": image.pk})
+        response = api_client.get(
+            reverse("shop-image-lookup"),
+            {"id": image.pk},
+        )
 
         assert response.status_code == status.HTTP_200_OK
-        assert "lookup-thumb" in response.data["url"]
+        parsed_url = urlparse(response.data["url"])
+        assert parsed_url.path == (
+            f"/v1/admin/media/astrophotography/astroimage/{image.pk}/original/"
+        )
+        assert "s=" in parsed_url.query
+        assert "e=" in parsed_url.query
+
+    def test_lookup_returns_404_when_original_field_is_empty(self, api_client: APIClient) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(original=None)
+
+        response = api_client.get(
+            reverse("shop-image-lookup"),
+            {"id": image.pk},
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.data["error"] == "Original image field is empty"
 
     def test_lookup_returns_404_for_unknown_id(self, api_client: APIClient) -> None:
         response = api_client.get(reverse("shop-image-lookup"), {"id": uuid.uuid4()})

@@ -16,7 +16,7 @@ add_header X-Frame-Options "DENY" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
 # Restrict powerful browser features by default
-add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), unload=(self)" always;
 
 # Avoid disclosing nginx in headers
 add_header Server "" always;

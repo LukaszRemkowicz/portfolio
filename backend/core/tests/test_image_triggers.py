@@ -4,12 +4,12 @@ from unittest.mock import patch
 import pytest
 from PIL import Image
 
-from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from astrophotography.forms import MainPageBackgroundImageForm
 from astrophotography.tests.factories import MainPageBackgroundImageFactory
-from common.tests.image_helpers import _jpeg_field
+from common.tests.image_helpers import jpeg_field
+from core.tasks import process_image_task
 
 
 @pytest.mark.django_db
@@ -17,12 +17,12 @@ class TestBaseImageAsyncTrigger:
     def test_save_triggers_background_task_and_skips_sync_conversion(self):
         """
         Verify that saving a BaseImage (via MainPageBackgroundImage)
-        triggers the Celery task and does NOT populate original_webp synchronously.
+        triggers the Celery task and does NOT populate variants synchronously.
         """
         with patch("core.models.process_image_task.delay_on_commit") as mock_delay:
             # build() does not call save()
             img = MainPageBackgroundImageFactory.build()
-            img.original = _jpeg_field("new_upload.jpg")
+            img.original = jpeg_field("new_upload.jpg")
             img.save()
 
             # Assert task was triggered with correct args
@@ -33,9 +33,9 @@ class TestBaseImageAsyncTrigger:
             assert args[1] == "mainpagebackgroundimage"
             assert args[3] == ["original"]
 
-            # Assert original_webp is STILL EMPTY (conversion hasn't happened yet)
+            # Assert variants are STILL EMPTY (processing hasn't happened yet)
             img.refresh_from_db()
-            assert not img.original_webp
+            assert img.variants.count() == 0
             assert img.original
 
     def test_form_is_invalid_for_existing_row_when_current_image_is_missing(self):
@@ -86,36 +86,35 @@ class TestBaseImageAsyncTrigger:
 
     def test_metadata_only_save_preserves_existing_derived_assets(self):
         """
-        Metadata-only saves must not clear canonical derived files when the source is unchanged.
+        Metadata-only saves must not clear generated variants when the source is unchanged.
         """
         with patch("core.models.process_image_task.delay_on_commit"):
             img = MainPageBackgroundImageFactory()
 
-        img.original_webp.save("existing-derived.webp", ContentFile(b"webp"), save=True)
-        img.thumbnail.save("existing-thumb.webp", ContentFile(b"thumb"), save=True)
-        original_webp_name = str(img.original_webp.name)
-        thumbnail_name = str(img.thumbnail.name)
+        process_image_task("astrophotography", "MainPageBackgroundImage", img.pk)
+        img.refresh_from_db()
+        variant_names = {variant.file.name for variant in img.variants.all()}
 
         img.name = "Updated background title"
         img.save()
         img.refresh_from_db()
 
-        assert str(img.original_webp.name) == original_webp_name
-        assert str(img.thumbnail.name) == thumbnail_name
+        assert {variant.file.name for variant in img.variants.all()} == variant_names
 
     def test_replacing_source_removes_old_derived_files(self):
         """
-        Replacing the source image must delete the previous derived WebP and thumbnail files.
+        Replacing the source image must delete previous generated variant files.
         """
         with patch("core.models.process_image_task.delay_on_commit"):
-            img = MainPageBackgroundImageFactory()
+            img = MainPageBackgroundImageFactory(
+                original=jpeg_field("background-original.jpg", size=(2600, 1734))
+            )
 
-        img.original_webp.save("old-derived.webp", ContentFile(b"webp"), save=True)
-        img.thumbnail.save("old-thumb.webp", ContentFile(b"thumb"), save=True)
-        old_webp_name = str(img.original_webp.name)
-        old_thumbnail_name = str(img.thumbnail.name)
-        assert img.original_webp.storage.exists(old_webp_name)
-        assert img.thumbnail.storage.exists(old_thumbnail_name)
+        process_image_task("astrophotography", "MainPageBackgroundImage", img.pk)
+        img.refresh_from_db()
+        old_variant_names = {variant.file.name for variant in img.variants.all()}
+        assert old_variant_names
+        assert all(img.original.storage.exists(name) for name in old_variant_names)
 
         image_io = BytesIO()
         Image.new("RGB", (64, 64), color="teal").save(image_io, "PNG")
@@ -127,11 +126,8 @@ class TestBaseImageAsyncTrigger:
         with patch("core.models.process_image_task.delay_on_commit"):
             img.original = replacement
             img.save()
+        process_image_task("astrophotography", "MainPageBackgroundImage", img.pk, ["original"])
         img.refresh_from_db()
 
-        assert not img.original.storage.exists(old_webp_name)
-        assert not img.original.storage.exists(old_thumbnail_name)
-        if img.original_webp:
-            assert str(img.original_webp.name) != old_webp_name
-        if img.thumbnail:
-            assert str(img.thumbnail.name) != old_thumbnail_name
+        assert all(not img.original.storage.exists(name) for name in old_variant_names)
+        assert old_variant_names.isdisjoint({variant.file.name for variant in img.variants.all()})

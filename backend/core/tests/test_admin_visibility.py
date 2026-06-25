@@ -1,5 +1,6 @@
 import uuid
 from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
 from bs4 import BeautifulSoup
@@ -131,8 +132,9 @@ def test_image_variant_admin_numbers_oldest_first_while_showing_newest_first() -
 def test_image_variant_admin_can_filter_by_astroimage() -> None:
     admin_instance = ImageVariantAdmin(ImageVariant, AdminSite())
     request = RequestFactory().get("/")
-    selected_image = AstroImageFactory(name="Selected image")
-    other_image = AstroImageFactory(name="Other image")
+    with patch("core.models.process_image_task.delay_on_commit"):
+        selected_image = AstroImageFactory(name="Selected image")
+        other_image = AstroImageFactory(name="Other image")
     request.GET = request.GET.copy()
     request.GET["astroimage"] = str(selected_image.pk)
     selected_variant = ImageVariant.objects.create(

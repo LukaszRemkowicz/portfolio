@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from PIL import Image
 
-from common.tests.image_helpers import NamedBytesIO, _jpeg_field, _png_field
+from common.tests.image_helpers import NamedBytesIO, jpeg_field, png_field
 from common.utils import image as image_utils
 from common.utils.image import (
     IMAGE_FORMAT,
@@ -82,7 +82,7 @@ class TestConvertToWebp:
 
     def test_successful_jpeg_conversion(self):
         """A valid JPEG should return (original_name, ContentFile)."""
-        result = convert_to_project_image_format(_jpeg_field("images/photo.jpg"))
+        result = convert_to_project_image_format(jpeg_field("images/photo.jpg"))
 
         assert result is not None
         original_name, webp_content = result
@@ -96,7 +96,7 @@ class TestConvertToWebp:
 
     def test_output_filename_strips_original_extension(self):
         """Output filename should swap the original extension for .webp."""
-        result = convert_to_project_image_format(_png_field("uploads/banner.png"))
+        result = convert_to_project_image_format(png_field("uploads/banner.png"))
 
         assert result is not None
         _, webp_content = result
@@ -105,13 +105,13 @@ class TestConvertToWebp:
 
     def test_custom_quality_is_accepted(self):
         """A custom quality value should not raise and should produce output."""
-        result = convert_to_project_image_format(_jpeg_field(), quality=50)
+        result = convert_to_project_image_format(jpeg_field(), quality=50)
         assert result is not None
 
     def test_dimension_percentage_scales_from_original_size(self):
         """A percentage should scale width and height directly from the original image."""
         result = convert_to_project_image_format(
-            _jpeg_field("images/large-photo.jpg", size=(2000, 2000)),
+            jpeg_field("images/large-photo.jpg", size=(2000, 2000)),
             dimension_percentage=50,
         )
 
@@ -124,7 +124,7 @@ class TestConvertToWebp:
     def test_dimension_percentage_overrides_max_dimension(self):
         """Percentage scaling should take precedence over max_dimension when both are set."""
         result = convert_to_project_image_format(
-            _jpeg_field("images/large-photo.jpg", size=(2000, 2000)),
+            jpeg_field("images/large-photo.jpg", size=(2000, 2000)),
             max_dimension=1200,
             dimension_percentage=50,
         )
@@ -137,7 +137,7 @@ class TestConvertToWebp:
 
     def test_rgba_png_is_converted(self):
         """An RGBA image (transparent PNG) should convert without error."""
-        result = convert_to_project_image_format(_png_field("icon.png", mode="RGBA"))
+        result = convert_to_project_image_format(png_field("icon.png", mode="RGBA"))
         assert result is not None
         _, webp_content = result
         webp_content.seek(0)
@@ -187,7 +187,7 @@ class TestBuildImageThumbnail:
 
     def test_builds_seeded_webp_thumbnail(self):
         thumbnail = build_image_thumbnail(
-            _jpeg_field("images/photo.jpg", size=(1600, 1200)),
+            jpeg_field("images/photo.jpg", size=(1600, 1200)),
             size=(400, 400),
         )
 
@@ -202,7 +202,7 @@ class TestBuildImageThumbnail:
 
     def test_flattens_transparent_png_to_rgb(self):
         thumbnail = build_image_thumbnail(
-            _png_field("images/icon.png", mode="RGBA", size=(300, 300)),
+            png_field("images/icon.png", mode="RGBA", size=(300, 300)),
             size=(150, 150),
         )
 
@@ -216,7 +216,7 @@ class TestBuildImageWithGivenWidth:
 
     def test_builds_webp_at_requested_width(self):
         result = build_image_with_given_width(
-            _jpeg_field("images/photo.jpg", size=(1200, 800)),
+            jpeg_field("images/photo.jpg", size=(1200, 800)),
             width=560,
             quality=90,
             filename_prefix="card_560_",
@@ -249,7 +249,7 @@ class TestBuildImageWithGivenWidth:
 
         with pytest.raises(RuntimeError, match="boom"):
             build_image_with_given_width(
-                _jpeg_field("images/photo.jpg", size=(1200, 800)),
+                jpeg_field("images/photo.jpg", size=(1200, 800)),
                 width=560,
                 quality=90,
                 filename_prefix="card_560_",

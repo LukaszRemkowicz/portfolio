@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from common.types import ImageVariantSpec, ViewportWidths
 from core.models import BaseImage
 from translation.mixins import AutomatedTranslationModelMixin
 
@@ -38,6 +39,14 @@ class ProjectImage(AutomatedTranslationModelMixin, BaseImage):
     """Model for programming project images"""
 
     source_tracker = FieldTracker(fields=["original"])
+    image_variant_specs = (
+        ImageVariantSpec(
+            role="original_format",
+            viewport_widths=ViewportWidths.fixed(2560),
+            quality=90,
+            label="Programming project image display candidate",
+        ),
+    )
 
     # Translation trigger fields
     translation_service_method = "translate_project_image"

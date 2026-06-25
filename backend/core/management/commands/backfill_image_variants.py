@@ -1,14 +1,18 @@
-"""Backfill responsive BaseImage variants for existing stored images."""
+"""Backfill responsive image variants for configured variant-producing models."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from django.core.management.base import BaseCommand
+from django.core.exceptions import ValidationError
+from django.core.management.base import BaseCommand, CommandError
+from django.db.models.fields.files import FieldFile
 
 from astrophotography.models import AstroImage, MainPageBackgroundImage
+from common.utils.image import file_exists_in_storage
 from programming.models import ProjectImage
+from shop.models import ShopProduct, ShopSettings
 
 
 @dataclass(frozen=True)
@@ -30,12 +34,14 @@ SyncStatus = Literal["needed", "complete", "error"]
 
 
 class Command(BaseCommand):
-    help = "Generate missing responsive image variants for BaseImage subclasses."
+    help = "Generate missing responsive image variants for variant-producing models."
 
     targets = (
         VariantBackfillTarget("AstroImage", AstroImage),
         VariantBackfillTarget("MainPageBackgroundImage", MainPageBackgroundImage),
         VariantBackfillTarget("ProjectImage", ProjectImage),
+        VariantBackfillTarget("ShopProduct", ShopProduct),
+        VariantBackfillTarget("ShopSettings", ShopSettings),
     )
 
     def add_arguments(self, parser) -> None:
@@ -59,17 +65,21 @@ class Command(BaseCommand):
             nargs="+",
             help="Backfill only the listed BaseImage objects by primary key.",
         )
+        parser.add_argument(
+            "-silent",
+            "--silent",
+            action="store_true",
+            help="Report source-file errors but do not fail the command process.",
+        )
 
     def handle(self, *args, **options) -> None:  # noqa: ARG002
         force: bool = options["force"]
         dry_run: bool = options["dry_run"]
+        silent: bool = options["silent"]
         target_ids = self._get_target_ids(
             object_id=options.get("object_id"),
             object_ids=options.get("object_ids"),
         )
-
-        if target_ids == "invalid":
-            return
 
         self._announce_mode(force=force, dry_run=dry_run)
         totals = VariantBackfillTotals()
@@ -85,13 +95,17 @@ class Command(BaseCommand):
 
         self._report_missing_target_ids(target_ids=target_ids, totals=totals)
         self._report_totals(totals)
+        if totals.errors and not silent:
+            raise CommandError(
+                "Image variant backfill failed. "
+                f"Resolve {totals.errors} source-file error(s) and rerun the command."
+            )
 
     def _get_target_ids(
         self, *, object_id: str | None, object_ids: list[str] | None
-    ) -> list[str] | None | Literal["invalid"]:
+    ) -> list[str] | None:
         if object_id and object_ids:
-            self.stderr.write(self.style.ERROR("Use either --object-id or --object-ids, not both."))
-            return "invalid"
+            raise CommandError("Use either --object-id or --object-ids, not both.")
         return [object_id] if object_id else object_ids
 
     def _announce_mode(self, *, force: bool, dry_run: bool) -> None:
@@ -111,7 +125,10 @@ class Command(BaseCommand):
     ) -> None:
         queryset = target.model.objects.all()
         if target_ids is not None:
-            queryset = queryset.filter(pk__in=target_ids)
+            try:
+                queryset = queryset.filter(pk__in=target_ids)
+            except (ValueError, ValidationError):
+                queryset = queryset.none()
 
         count = queryset.count()
         totals.matched_any = totals.matched_any or bool(count)
@@ -140,7 +157,7 @@ class Command(BaseCommand):
 
         self.stderr.write(
             self.style.ERROR(
-                f"No BaseImage objects found for requested ids: {', '.join(target_ids)}"
+                f"No matching objects found for requested ids: {', '.join(target_ids)}"
             )
         )
         totals.errors += 1
@@ -156,6 +173,15 @@ class Command(BaseCommand):
         )
 
     def _backfill_object(self, obj: Any, *, force: bool, dry_run: bool) -> BackfillStatus:
+        if not self._has_image_variants_relation(obj):
+            self._report_missing_source_path(obj, "missing generic variants relation")
+            return "error"
+
+        missing_source_path = self._get_missing_source_path(obj)
+        if missing_source_path:
+            self._report_missing_source_path(obj, missing_source_path)
+            return "error"
+
         skip_reason = self._get_skip_reason(obj)
         if skip_reason:
             self.stdout.write(f"  [SKIP] {obj} - {skip_reason}")
@@ -175,40 +201,71 @@ class Command(BaseCommand):
 
         return self._generate_object_variants(obj, force=force)
 
-    @staticmethod
-    def _get_skip_reason(obj: Any) -> str:
-        specs = obj.get_image_variant_specs()
-        if not specs:
-            return "no variant roles configured"
-        if not obj.original_field:
+    def _get_skip_reason(self, obj: Any) -> str:
+        if not self._get_source_image(obj):
             return "no source image"
         return ""
 
+    @staticmethod
+    def _has_image_variants_relation(obj: Any) -> bool:
+        return hasattr(obj, "variants")
+
+    def _get_source_image(self, obj: Any) -> FieldFile | None:
+        if not hasattr(obj, "get_image_variant_sources"):
+            return None
+        for source in obj.get_image_variant_sources():
+            if source.source_image:
+                return source.source_image  # type: ignore[no-any-return]
+
+            fallback_source = getattr(obj, source.field_name, None)
+            if isinstance(fallback_source, FieldFile):
+                return fallback_source
+        return None
+
+    def _get_missing_source_path(self, obj: Any) -> str:
+        source_image = self._get_source_image(obj)
+        if not source_image:
+            return ""
+        if file_exists_in_storage(source_image):
+            return ""
+        return str(getattr(source_image, "name", "") or "")
+
     def _get_object_sync_status(self, obj: Any) -> SyncStatus:
         try:
-            specs = obj.get_image_variant_specs()
-            variants_to_generate, variants_to_delete = obj._get_image_variant_sync_plan(specs)
+            pending_sync = obj.has_pending_image_variant_sync()
         except FileNotFoundError as exc:
             self._report_missing_source_file(obj, exc)
             return "error"
+        except (OSError, ValueError) as exc:
+            self._report_source_error(obj, exc)
+            return "error"
 
-        if variants_to_generate or variants_to_delete.exists():
+        if pending_sync:
             return "needed"
         return "complete"
 
     def _generate_object_variants(self, obj: Any, *, force: bool) -> BackfillStatus:
         try:
-            image_variants = obj.generate_image_variants_or_none(force=force)
-            if image_variants is None:
+            changed_variant_count = obj.sync_image_variants(force=force)
+            if changed_variant_count == 0:
                 return "skipped"
             return "generated"
         except FileNotFoundError as exc:
             return self._report_missing_source_file(obj, exc)
+        except (OSError, ValueError) as exc:
+            return self._report_source_error(obj, exc)
         except Exception as exc:
             self.stderr.write(self.style.ERROR(f"  [ERR ] {obj} - {exc}"))
             return "error"
 
     def _report_missing_source_file(self, obj: Any, exc: FileNotFoundError) -> BackfillStatus:
         missing_path = exc.filename or str(exc)
-        self.stderr.write(self.style.ERROR(f"  [ERR ] {obj} - missing source file: {missing_path}"))
+        self._report_missing_source_path(obj, missing_path)
         return "error"
+
+    def _report_source_error(self, obj: Any, exc: Exception) -> BackfillStatus:
+        self.stderr.write(self.style.ERROR(f"  [ERR ] {obj} - source image error: {exc}"))
+        return "error"
+
+    def _report_missing_source_path(self, obj: Any, missing_path: str) -> None:
+        self.stderr.write(self.style.ERROR(f"  [ERR ] {obj} - missing source file: {missing_path}"))

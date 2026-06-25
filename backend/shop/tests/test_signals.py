@@ -9,7 +9,7 @@ when ShopProduct instances and their translations change.
 import pytest
 from pytest_mock import MockerFixture
 
-from common.tests.image_helpers import _png_field
+from common.tests.image_helpers import png_field
 from shop.models import ShopSettings
 from shop.tests.factories import ShopProductFactory
 
@@ -66,19 +66,19 @@ class TestShopSettingsSignals:
     def test_post_save_invalidates_shop_cache(self, mocker: MockerFixture):
         mock_cache = mocker.patch("shop.signals.CacheService.invalidate_shop_cache")
 
-        ShopSettings.objects.create(image=_png_field("shop-background.png"))
+        ShopSettings.objects.create(image=png_field("shop-background.png"))
 
         assert mock_cache.called
 
     def test_post_save_triggers_ssr_cache_invalidation(self, mocker: MockerFixture):
         mock_ssr = mocker.patch("shop.signals.invalidate_frontend_ssr_cache_task.delay_on_commit")
 
-        ShopSettings.objects.create(image=_png_field("shop-background.png"))
+        ShopSettings.objects.create(image=png_field("shop-background.png"))
 
         mock_ssr.assert_called_with(["shop"])
 
     def test_update_also_invalidates_cache(self, mocker: MockerFixture):
-        settings_obj = ShopSettings.objects.create(image=_png_field("shop-background.png"))
+        settings_obj = ShopSettings.objects.create(image=png_field("shop-background.png"))
         mock_cache = mocker.patch("shop.signals.CacheService.invalidate_shop_cache")
 
         settings_obj.set_current_language("en")

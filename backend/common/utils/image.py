@@ -49,6 +49,37 @@ def get_output_image_name(
     return seed_file_name(f"{filename_prefix}{source_stem}{output_format.extension}")
 
 
+def build_image_variant_file_path(
+    *,
+    upload_dir: str,
+    role: str,
+    filename: str,
+    role_namespace: str | None = None,
+) -> str:
+    """Build the storage path for a generated ImageVariant file.
+
+    The filename is already seeded before this helper is called. This function
+    only chooses the directory layout:
+    ``<upload_dir>/<role_namespace?>/<role>/<filename>``.
+
+    ``role`` may already be stored with a namespace prefix, such as
+    ``avatar__original_format``. The path uses the explicit ``role_namespace``
+    directory when one is available, then strips that namespace from the role
+    directory so storage paths stay readable and stable.
+    """
+    normalized_upload_dir = upload_dir.strip("/") or "images"
+
+    normalized_role = role.split("__", 1)[-1]
+    normalized_namespace = role_namespace.strip("/") if role_namespace else None
+
+    path_parts: list[str] = [normalized_upload_dir]
+    if normalized_namespace:
+        path_parts.append(normalized_namespace)
+    path_parts.append(normalized_role)
+
+    return f"{'/'.join(path_parts)}/{filename}"
+
+
 def get_available_image_url(image_field: FieldFile | None) -> str:
     """Return a file URL only when the field points to an existing stored file.
 
@@ -173,7 +204,10 @@ def build_image_with_given_width(
     except (OSError, ValueError, UnidentifiedImageError):
         return None
 
-    img = _flatten_image_to_rgb(img)
+    if img.mode == "RGBA" or (img.mode == "P" and "transparency" in img.info):
+        img = img.convert("RGBA")
+    else:
+        img = img.convert("RGB")
     if img.width < width:
         return None
 

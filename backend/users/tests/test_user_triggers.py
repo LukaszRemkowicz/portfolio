@@ -1,6 +1,6 @@
 import pytest
 
-from common.tests.image_helpers import _jpeg_field
+from common.tests.image_helpers import jpeg_field
 from users.tests.factories import UserFactory
 
 
@@ -12,7 +12,7 @@ class TestUserAsyncTrigger:
         """
         user = UserFactory.create_superuser()
         mock_delay = mocker.patch("users.models.process_image_task.delay_on_commit")
-        user.avatar = _jpeg_field("new.jpg")
+        user.avatar = jpeg_field("new.jpg")
         user.save()
 
         mock_delay.assert_called_once_with("users", "user", user.pk, ["avatar"])

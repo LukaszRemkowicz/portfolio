@@ -2,20 +2,23 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from django.db import models
-
-from common.types import ImageProcessingOperation
+from common.types import ImageVariantSource, ImageVariantSpec
 
 
-class ImageProcessingCapable(Protocol):
-    """Typing contract for models that participate in shared image processing."""
+class ImageVariantSyncCapable(Protocol):
+    """Typing contract for models that participate in ImageVariant syncing."""
 
-    def get_image_processing_operations(
+    def get_image_variant_sources(
         self, changed_field_names: list[str] | None = None
-    ) -> list[ImageProcessingOperation]: ...
+    ) -> list[ImageVariantSource]: ...
 
-    def generate_image_variants_or_none(
-        self, *, force: bool = False
-    ) -> models.QuerySet[Any] | None: ...
+    def get_image_variant_specs(self) -> tuple[ImageVariantSpec, ...]: ...
+
+    def sync_image_variants(
+        self,
+        changed_field_names: list[str] | None = None,
+        *,
+        force: bool = False,
+    ) -> int: ...
 
     def save(self, *args: Any, **kwargs: Any) -> None: ...

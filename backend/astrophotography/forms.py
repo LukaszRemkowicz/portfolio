@@ -35,7 +35,7 @@ class BaseImageSourceUploadFormMixin:
             self._init_secure_original_widget(current_source)
 
     def _get_current_source_field(self: SupportsBaseImageUploadForm) -> Any:
-        return self.instance.original_field
+        return self.instance.original
 
     def _init_secure_original_widget(
         self: SupportsBaseImageUploadForm, current_source: Any

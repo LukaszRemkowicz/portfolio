@@ -28,7 +28,7 @@ class ShopProductSerializer(TranslatedSerializerMixin, TranslatableModelSerializ
         """
         Return the absolute thumbnail URL for the product.
         """
-        url = instance.get_thumbnail()
+        url = instance.get_image_url("thumbnail", 560) or instance.thumbnail_url
         if not url:
             return None
 
@@ -66,8 +66,8 @@ class ShopSettingsSerializer(TranslatedSerializerMixin, serializers.ModelSeriali
     def get_description(self, instance: ShopSettings) -> str:
         return self.get_translation(instance, "description")
 
-    def get_background_url(self, instance: ShopSettings) -> str:
-        url = instance.get_serving_url()
+    def get_background_url(self, instance: ShopSettings) -> str | None:
+        url = instance.get_background_image_url()
         request = self.context.get("request")
         if url and request and url.startswith("/"):
             absolute_url = str(request.build_absolute_uri(url))

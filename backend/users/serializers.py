@@ -42,8 +42,8 @@ class UserSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
             return ""
         return str(int(obj.updated_at.timestamp()))
 
-    def _build_url(self, obj: User, source_field_name: str, webp_field_name: str) -> str:
-        relative_url: str = obj._get_serving_image_url(source_field_name, webp_field_name)
+    def _build_url(self, obj: User, source_field_name: str) -> str:
+        relative_url: str = obj.get_serving_image_url(source_field_name)
         request = self.context.get("request")
         if relative_url and request:
             absolute_url = str(request.build_absolute_uri(relative_url))
@@ -52,13 +52,13 @@ class UserSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
         return relative_url
 
     def get_avatar(self, obj: User) -> str:
-        return self._build_url(obj, "avatar", "avatar_webp")
+        return self._build_url(obj, "avatar")
 
     def get_about_me_image(self, obj: User) -> str:
-        return self._build_url(obj, "about_me_image", "about_me_image_webp")
+        return self._build_url(obj, "about_me_image")
 
     def get_about_me_image2(self, obj: User) -> str:
-        return self._build_url(obj, "about_me_image2", "about_me_image2_webp")
+        return self._build_url(obj, "about_me_image2")
 
     def to_representation(self, instance: User) -> dict:
         data = super().to_representation(instance)

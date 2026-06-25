@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
+from common.utils.signing import generate_signed_url_params
 from translation.mixins import (
     AutomatedTranslationAdminMixin,
     DynamicParlerStyleMixin,
@@ -73,7 +74,7 @@ class ShopProductAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
             {
                 "fields": (
                     "image",
-                    "thumbnail_cropped",
+                    "image_cropped",
                 ),
             },
         ),
@@ -107,12 +108,11 @@ class ShopProductAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
             field_name="image",
             label=_("Product Source Image"),
             input_id="id_image",
-            target_field_name="thumbnail_cropped",
-            target_input_id="id_thumbnail_cropped",
+            target_field_name="image_cropped",
+            target_input_id="id_image_cropped",
             preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
-            spec_method="get_thumbnail_spec",
             crop_aspect_ratio=4 / 3,
-            output_dimension=560,
+            spec=settings.IMAGE_OPTIMIZATION_SPECS["THUMBNAIL"],
         )
 
     @property
@@ -122,18 +122,23 @@ class ShopProductAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
 
     @staticmethod
     def _get_source_image_url(request: HttpRequest, obj: ShopProduct) -> str:
-        """Return the absolute AstroImage thumbnail URL used as the cropper source."""
-        if not obj.image or not obj.image.thumbnail:
+        """Return the signed AstroImage original URL used as the cropper source."""
+        if not obj.image:
             return ""
 
-        try:
-            return request.build_absolute_uri(obj.image.thumbnail.url)
-        except (ValueError, AttributeError):
-            logger.warning(
-                "Unable to build shop cropper source thumbnail URL",
-                extra={"product_id": str(obj.pk)},
-            )
+        if not obj.image.original:
             return ""
+
+        url_path = reverse(
+            "admin-astroimage-secure-media",
+            kwargs={"pk": str(obj.image.pk), "field_name": "original"},
+        )
+        signature_id = f"admin_media_astrophotography_astroimage_{obj.image.pk}_original"
+        params = generate_signed_url_params(
+            signature_id,
+            expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION,
+        )
+        return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
 
     def _build_fk_cropper_payload(
         self,
@@ -143,13 +148,7 @@ class ShopProductAdmin(DynamicParlerStyleMixin, TranslatableAdmin):
         """Build the JSON-ready payload consumed by the shop FK cropper widget."""
         lookup_url = reverse("shop-image-lookup")
         config = self.product_thumbnail_cropper_config
-        output_dimension = config.output_dimension
-        if output_dimension is None:
-            logger.warning(
-                "Shop cropper config missing output dimension; using default square",
-                extra={"field_name": config.field_name},
-            )
-            output_dimension = 560
+        output_dimension = config.spec.dimension
         output_width = output_dimension
         output_height = round(output_dimension / config.crop_aspect_ratio)
         source_image_url = self._get_source_image_url(request, obj) if obj else ""
@@ -223,14 +222,13 @@ class ShopSettingsAdmin(
                 "fields": (
                     "image",
                     "image_cropped",
-                    "image_webp",
                     "updated_at",
                 ),
             },
         ),
     )
 
-    readonly_fields = ("translation_status", "image_webp", "updated_at")
+    readonly_fields = ("translation_status", "updated_at")
 
     @property
     def change_form_template(self) -> str:
@@ -251,8 +249,8 @@ class ShopSettingsAdmin(
                 target_field_name="image_cropped",
                 target_input_id="id_image_cropped",
                 preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
-                spec_method="get_image_spec",
                 crop_aspect_ratio=16 / 9,
+                spec=settings.SHOP_SETTINGS_ADMIN_CROPPER_CONFIG,
             ),
         )
 
@@ -314,14 +312,14 @@ class ShopSettingsAdmin(
                 except ValueError:
                     current_image_url = ""
 
-            spec = getattr(obj if obj else self.model, field_config.spec_method)()
+            output_dimension = field_config.spec.dimension
             crop_aspect_ratio = field_config.crop_aspect_ratio or 1.0
             if crop_aspect_ratio >= 1:
-                output_width = spec.dimension
-                output_height = round(spec.dimension / crop_aspect_ratio)
+                output_width = output_dimension
+                output_height = round(output_dimension / crop_aspect_ratio)
             else:
-                output_width = round(spec.dimension * crop_aspect_ratio)
-                output_height = spec.dimension
+                output_width = round(output_dimension * crop_aspect_ratio)
+                output_height = output_dimension
 
             cropper_fields.append(
                 {

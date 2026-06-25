@@ -1,22 +1,34 @@
+import inspect
 from unittest.mock import patch
 
 import pytest
 
 from astrophotography.tests.factories import MainPageBackgroundImageFactory
+from common.tests.image_helpers import jpeg_field
+from core import tasks
+from core.models import ImageVariant
 from core.tasks import process_image_task, run_shared_image_processing
+
+
+def test_shared_image_processing_does_not_delegate_to_common_wrapper() -> None:
+    task_source = inspect.getsource(tasks.run_shared_image_processing)
+
+    assert "process_image_operations" not in task_source
 
 
 @pytest.mark.django_db
 class TestProcessImageTask:
-    def test_process_image_task_converts_to_webp(self):
+    def test_process_image_task_generates_original_format_variant(self):
         """
         GIVEN an instance with a JPEG path
         WHEN process_image_task is called
-        THEN the canonical original/original_webp fields should be populated.
+        THEN the primary generated hero variant should be populated.
         """
         # Prevent automatic task execution during factory creation for this test
         with patch("core.models.process_image_task.delay_on_commit"):
-            img = MainPageBackgroundImageFactory()
+            img = MainPageBackgroundImageFactory(
+                original=jpeg_field("background.jpg", size=(2600, 1734))
+            )
 
         # Now manually call the task
         process_image_task("astrophotography", "MainPageBackgroundImage", img.pk)
@@ -24,8 +36,9 @@ class TestProcessImageTask:
         img.refresh_from_db()
         assert img.original
         assert img.original.name.endswith(".jpg")
-        assert img.original_webp
-        assert img.original_webp.name.endswith(".webp")
+        hero = img.variants.get(role="hero", width=2560)
+        assert isinstance(hero, ImageVariant)
+        assert hero.file.name.endswith(".webp")
 
     def test_run_shared_image_processing_logs_and_returns_when_model_missing(self, mocker) -> None:
         error_mock = mocker.patch("core.tasks.logger.error")

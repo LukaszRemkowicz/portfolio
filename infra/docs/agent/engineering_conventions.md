@@ -11,6 +11,24 @@ Use this file for style and implementation guidance. Use `AGENTS.md` for routing
 
 - Read relevant docs or code before editing.
 - Make minimal, targeted changes.
+- For small tasks, prefer exact file/function inspection and narrow searches over
+  broad repository scans or full diffs. If the user points to a precise file,
+  function, or method, start there and only expand search to direct callers,
+  tests, and documented contracts.
+- Before showing or relying on a diff, check whether the file already contains
+  unrelated work. Prefer targeted line ranges or narrowly scoped diffs so review
+  context stays small.
+- Keep context use proportional to risk. Start with the smallest useful source
+  of truth, then expand when behavior, safety, or uncertainty requires it.
+- Prefer `rg -n "exact_symbol"` and targeted `sed -n 'start,endp'` reads over
+  broad searches and whole-file reads. Use broad searches only when ownership or
+  call sites are genuinely unknown.
+- Avoid full repository diffs for small changes. Prefer `git diff --stat`,
+  `git diff -- <specific-file>`, or targeted line reads around the edited
+  function. If a touched file already has unrelated changes, avoid presenting the
+  whole file diff as task context.
+- Do not reread routed docs repeatedly in the same task unless the work changes
+  area or the previous context is no longer reliable.
 - Prefer small, clear functions over clever abstractions.
 - Avoid heavy new dependencies unless there is a clear payoff.
 - Use `docker compose`, not `docker-compose`.

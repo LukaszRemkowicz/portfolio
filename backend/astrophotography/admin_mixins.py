@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 
 from common.utils.signing import generate_signed_url_params
+from core.models import ImageVariant
 
 
 class SecureAdminSidebarPreviewMixin:
@@ -71,3 +72,29 @@ class SecureAdminSidebarPreviewMixin:
         return super().changeform_view(  # type: ignore[misc, no-any-return]
             request, object_id, form_url, extra_context
         )
+
+
+class IgnoreImageVariantCascadeDeletePermissionMixin:
+    """Allow deleting image owners without separately granting ImageVariant deletion.
+
+    ImageVariant rows are generated implementation detail for image-owning models.
+    When deleting an AstroImage or background image from admin, Django's delete
+    confirmation collects cascade targets and would otherwise require explicit
+    delete permission for the related ImageVariant model too. This mixin keeps
+    the cascade visible in the confirmation tree while removing that derived-model
+    permission from the blocking set.
+    """
+
+    def get_deleted_objects(self, objs, request):
+        (
+            deleted_objects,
+            model_count,
+            perms_needed,
+            protected,
+        ) = super().get_deleted_objects(  # type: ignore[misc]
+            objs, request
+        )
+        if perms_needed:
+            perms_needed.discard(str(ImageVariant._meta.verbose_name))
+            perms_needed.discard(str(ImageVariant._meta.verbose_name_plural))
+        return deleted_objects, model_count, perms_needed, protected
