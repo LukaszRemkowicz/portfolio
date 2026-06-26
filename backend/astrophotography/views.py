@@ -253,18 +253,23 @@ class ImageURLViewSet(ViewSet):
     def list(self, request: Request) -> Response:
         """
         Returns {slug: signed_url} mapping for requested images.
-        Supports query param 'ids' (comma-separated list of PKs).
+        Requires query param 'ids' (comma-separated list of PKs).
         """
-        queryset: QuerySet[AstroImage] = self.queryset.all()
-
-        # Filter by IDs if provided
         ids_param: str | None = request.query_params.get("ids")
-        if ids_param:
-            # Split comma-separated UUIDs
-            ids: list[str] = [x.strip() for x in ids_param.split(",") if x.strip()]
-            if ids:
-                queryset = queryset.filter(pk__in=ids)
+        if ids_param is None:
+            return Response(
+                {"detail": "Query parameter 'ids' is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
+        ids: list[str] = [x.strip() for x in ids_param.split(",") if x.strip()]
+        if not ids:
+            return Response(
+                {"detail": "Query parameter 'ids' must include at least one image id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        queryset: QuerySet[AstroImage] = self.queryset.filter(pk__in=ids)
         url_mapping: dict[str, str] = {}
 
         for image in queryset:
