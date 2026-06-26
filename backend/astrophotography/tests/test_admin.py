@@ -40,6 +40,7 @@ from astrophotography.tests.factories import (
 )
 from common.tests.image_helpers import jpeg_field
 from core.tasks import process_image_task
+from core.tests.factories import ImageVariantFactory
 from core.widgets import ThemedRangeWidget
 from users.models import User
 
@@ -77,6 +78,57 @@ class TestAstroImageAdmin:
         assert response.status_code == 200
         admin_instance = AstroImageAdmin(AstroImage, site)
         assert "display_number" in admin_instance.get_list_display(None)
+
+    def test_admin_thumbnail_indicator_requires_all_spec_widths(self) -> None:
+        image = AstroImageFactory(original=jpeg_field("admin-thumbnail.jpg", size=(1200, 800)))
+        image.variants.all().delete()
+        admin_instance = AstroImageAdmin(AstroImage, site)
+
+        assert admin_instance.has_thumbnail_variant(image) is False
+
+        ImageVariantFactory(
+            image=image,
+            role="thumbnail",
+            width=320,
+            file__filename="admin-wrong-width-thumb.webp",
+        )
+
+        assert admin_instance.has_thumbnail_variant(image) is False
+
+        ImageVariantFactory(
+            image=image,
+            role="thumbnail",
+            width=560,
+            file__filename="admin-thumb.webp",
+        )
+
+        assert admin_instance.has_thumbnail_variant(image) is True
+
+    def test_media_fieldset_includes_thumbnail_variant_preview(self) -> None:
+        admin_instance = AstroImageAdmin(AstroImage, site)
+
+        assert "thumbnail_variant_preview" in admin_instance.readonly_fields
+        assert any(
+            str(title) == "Media" and "thumbnail_variant_preview" in options["fields"]
+            for title, options in admin_instance.fieldsets
+        )
+
+    def test_thumbnail_variant_preview_links_generated_thumbnail(self) -> None:
+        image = AstroImageFactory(original=jpeg_field("admin-media.jpg", size=(1200, 800)))
+        image.variants.all().delete()
+        ImageVariantFactory(
+            image=image,
+            role="thumbnail",
+            width=560,
+            file__filename="admin-media-thumb.webp",
+        )
+        admin_instance = AstroImageAdmin(AstroImage, site)
+
+        preview = str(admin_instance.thumbnail_variant_preview(image))
+
+        assert "admin-media-thumb" in preview
+        assert ".webp" in preview
+        assert "<a " in preview
 
     def test_admin_list_numbers_are_reversed_while_order_stays_newest_added_first(
         self, admin_user: User

@@ -10,8 +10,6 @@ from common.celery import CommitAwareTask
 
 logger = logging.getLogger(__name__)
 
-# TODO only update? what with save?
-
 
 def run_shared_image_processing(
     app_label: str,

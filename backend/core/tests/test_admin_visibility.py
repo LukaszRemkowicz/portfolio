@@ -9,6 +9,7 @@ from jazzmin.templatetags.jazzmin import get_side_menu
 from django.conf import settings
 from django.contrib.admin.sites import AdminSite
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.base import ContentFile
 from django.template import Context
 from django.test import RequestFactory
 from django.urls import reverse
@@ -66,6 +67,12 @@ def test_image_variant_admin_list_columns_are_compact() -> None:
     )
     assert admin_instance.list_display_links == ("order_number", "filename")
     assert admin_instance.ordering == ("-created_at", "-id")
+
+
+def test_image_variant_admin_allows_manual_deletion() -> None:
+    admin_instance = ImageVariantAdmin(ImageVariant, AdminSite())
+
+    assert admin_instance.has_delete_permission(request=None) is True
 
 
 def test_image_variant_admin_displays_filename_and_dimensions() -> None:
@@ -157,6 +164,44 @@ def test_image_variant_admin_can_filter_by_astroimage() -> None:
     queryset = admin_instance.get_queryset(request)
 
     assert list(queryset) == [selected_variant]
+
+
+@pytest.mark.django_db
+def test_image_variant_admin_delete_selected_removes_variant_file(admin_client) -> None:
+    with patch("core.models.process_image_task.delay_on_commit"):
+        owner = AstroImageFactory()
+    variant = ImageVariant.objects.create(
+        image=owner,
+        role="admin_delete_probe",
+        width=1,
+        height=1,
+        mime_type="image/webp",
+    )
+    variant.file.save("admin-delete-probe.webp", ContentFile(b"variant"), save=True)
+    storage = variant.file.storage
+    variant_name = variant.file.name
+
+    assert storage.exists(variant_name)
+
+    confirmation_response = admin_client.post(
+        reverse("admin:core_imagevariant_changelist"),
+        {"action": "delete_selected", "_selected_action": [str(variant.pk)]},
+    )
+    assert confirmation_response.status_code == 200
+
+    delete_response = admin_client.post(
+        reverse("admin:core_imagevariant_changelist"),
+        {
+            "action": "delete_selected",
+            "_selected_action": [str(variant.pk)],
+            "post": "yes",
+        },
+        follow=True,
+    )
+
+    assert delete_response.status_code == 200
+    assert not ImageVariant.objects.filter(pk=variant.pk).exists()
+    assert not storage.exists(variant_name)
 
 
 @pytest.mark.django_db

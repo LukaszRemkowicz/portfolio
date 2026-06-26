@@ -4,16 +4,16 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 from PIL import Image
 
-from django.core.files.base import ContentFile
-
 from astrophotography.serializers import AstroImageSerializerList
 from astrophotography.tests.factories import AstroImageFactory, MainPageBackgroundImageFactory
-from common.tests.image_helpers import NamedBytesIO, jpeg_field
+from common.tests.image_helpers import jpeg_field
 from common.types import ImageVariantSource, ImageVariantSpec, ViewportWidths
 from core.mixins import ImageVariantModelMixin
 from core.models import BaseImage, ImageVariant
 from core.tasks import process_image_task
 from programming.tests.factories import ProjectImageFactory
+from shop.models import ShopSettings
+from shop.tests.factories import ShopProductFactory
 from users.tests.factories import UserFactory
 
 
@@ -23,6 +23,7 @@ def _stored_webp_size(image, name: str) -> tuple[int, int]:
             return generated.size
 
 
+@pytest.mark.django_db
 class TestImageVariantFileDeletion:
     def test_delete_file_uses_field_file_delete_without_model_save(self) -> None:
         variant = ImageVariant()
@@ -33,6 +34,139 @@ class TestImageVariantFileDeletion:
         variant.delete_file()
 
         file_mock.delete.assert_called_once_with(save=False)
+
+    def test_parent_instance_delete_removes_variant_files(self) -> None:
+        image = AstroImageFactory(original=jpeg_field("owner-delete.jpg", size=(1200, 800)))
+        variant = ImageVariant.objects.create(
+            image=image,
+            role="cleanup_probe",
+            width=1,
+            height=1,
+            mime_type="image/webp",
+        )
+        variant.file.save("owner-instance-delete.webp", jpeg_field("variant.jpg"), save=True)
+        storage = variant.file.storage
+        variant_name = variant.file.name
+
+        assert storage.exists(variant_name)
+
+        image.delete()
+
+        assert not storage.exists(variant_name)
+
+    @pytest.mark.parametrize(
+        "owner_factory",
+        [
+            lambda: AstroImageFactory(original=jpeg_field("owner-astro.jpg", size=(1200, 800))),
+            lambda: MainPageBackgroundImageFactory(
+                original=jpeg_field("owner-background.jpg", size=(1200, 800))
+            ),
+            lambda: ProjectImageFactory(original=jpeg_field("owner-project.jpg", size=(1200, 800))),
+            ShopProductFactory,
+            lambda: ShopSettings.objects.create(
+                title="Shop",
+                image=jpeg_field("owner-shop-settings.jpg", size=(1200, 800)),
+            ),
+            lambda: UserFactory(avatar=jpeg_field("owner-user.jpg", size=(800, 800))),
+        ],
+    )
+    def test_parent_queryset_delete_removes_variant_files(self, owner_factory) -> None:
+        owner = owner_factory()
+        variant = ImageVariant.objects.create(
+            image=owner,
+            role="cleanup_probe",
+            width=1,
+            height=1,
+            mime_type="image/webp",
+        )
+        variant.file.save("owner-queryset-delete.webp", jpeg_field("variant.jpg"), save=True)
+        storage = variant.file.storage
+        variant_name = variant.file.name
+
+        assert storage.exists(variant_name)
+
+        type(owner).objects.filter(pk=owner.pk).delete()
+
+        assert not storage.exists(variant_name)
+
+
+@pytest.mark.django_db
+class TestImageVariantCacheInvalidation:
+    def test_astroimage_variant_save_invalidates_gallery_travel_and_ssr_cache(self, mocker) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(original=jpeg_field("variant-cache.jpg", size=(1200, 800)))
+        mock_invalidate_astro = mocker.patch(
+            "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
+        )
+        mock_invalidate_travel = mocker.patch(
+            "astrophotography.signals.CacheService.invalidate_travel_cache"
+        )
+        mock_invalidate_ssr = mocker.patch(
+            "astrophotography.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
+        )
+
+        ImageVariant.objects.create(
+            image=image,
+            role="thumbnail",
+            width=560,
+            height=373,
+            mime_type="image/webp",
+        )
+
+        mock_invalidate_astro.assert_called_once_with()
+        mock_invalidate_travel.assert_called_once_with()
+        mock_invalidate_ssr.assert_called_once_with(["latest-astro-images", "travel-highlights"])
+
+    def test_astroimage_variant_delete_invalidates_gallery_travel_and_ssr_cache(
+        self, mocker
+    ) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(original=jpeg_field("variant-cache-delete.jpg"))
+        variant = ImageVariant.objects.create(
+            image=image,
+            role="thumbnail",
+            width=560,
+            height=373,
+            mime_type="image/webp",
+        )
+        mock_invalidate_astro = mocker.patch(
+            "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
+        )
+        mock_invalidate_travel = mocker.patch(
+            "astrophotography.signals.CacheService.invalidate_travel_cache"
+        )
+        mock_invalidate_ssr = mocker.patch(
+            "astrophotography.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
+        )
+
+        variant.delete()
+
+        mock_invalidate_astro.assert_called_once_with()
+        mock_invalidate_travel.assert_called_once_with()
+        mock_invalidate_ssr.assert_called_once_with(["latest-astro-images", "travel-highlights"])
+
+    def test_background_variant_save_invalidates_background_ssr_cache(self, mocker) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = MainPageBackgroundImageFactory(
+                original=jpeg_field("background-cache.jpg", size=(1200, 800))
+            )
+        mock_invalidate_astro = mocker.patch(
+            "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
+        )
+        mock_invalidate_ssr = mocker.patch(
+            "astrophotography.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
+        )
+
+        ImageVariant.objects.create(
+            image=image,
+            role="hero",
+            width=1920,
+            height=1080,
+            mime_type="image/webp",
+        )
+
+        mock_invalidate_astro.assert_called_once_with()
+        mock_invalidate_ssr.assert_called_once_with(["background"])
 
 
 class TestImageVariantSpec:
@@ -134,64 +268,86 @@ class TestImageVariantMixinCompatibility:
             return ()
 
     def test_make_thumbnail_compatibility_method_lives_on_variant_mixin(self) -> None:
+        assert "thumbnail" not in BaseImage._meta.fields_map
+        assert "thumbnail" not in {field.name for field in BaseImage._meta.fields}
         assert "make_thumbnail" in ImageVariantModelMixin.__dict__
         assert "make_thumbnail" not in BaseImage.__dict__
 
-    def test_make_thumbnail_uses_fixed_thumbnail_variant_spec_width(self) -> None:
-        image_file = NamedBytesIO(
-            jpeg_field("legacy-thumbnail.jpg", size=(1200, 800)).read(),
-            "legacy-thumbnail.jpg",
+    def test_make_thumbnail_creates_fixed_thumbnail_variant_spec_width(self) -> None:
+        owner = self.ImageOwner()
+        source = ImageVariantSource(
+            field_name="original",
+            source_image=MagicMock(),
+            upload_dir="images",
         )
-        image_owner = self.ImageOwner()
+        owner.get_image_variant_sources = MagicMock(  # type: ignore[method-assign]
+            return_value=[source]
+        )
+        variants = MagicMock()
+        owner.variants = variants
+        generated = MagicMock()
+        generated.count.return_value = 1
+        owner._generate_image_variants_for_source = MagicMock(  # type: ignore[method-assign]
+            return_value=generated
+        )
 
-        thumbnails = ImageVariantModelMixin.make_thumbnail(image_owner, image_file)
+        assert owner.make_thumbnail() is True
 
-        assert len(thumbnails) == 1
-        with Image.open(BytesIO(thumbnails[0].read())) as generated:
-            assert generated.size == (560, 373)
-        assert thumbnails[0].name.startswith("thumbnail_560_")
-        assert thumbnails[0].name.endswith(".webp")
+        variants.filter.assert_called_once_with(role__in={"thumbnail"}, width__in={560})
+        variants.filter.return_value.delete.assert_called_once_with()
+        owner._generate_image_variants_for_source.assert_called_once_with(
+            source,
+            (("thumbnail", 560, 100),),
+        )
 
-    def test_make_thumbnail_uses_all_thumbnail_variant_spec_widths(self) -> None:
-        image_file = MagicMock()
-        image_owner = self.ResponsiveThumbnailOwner()
+    def test_make_thumbnail_creates_all_thumbnail_variant_spec_widths(self) -> None:
+        owner = self.ResponsiveThumbnailOwner()
+        source = ImageVariantSource(
+            field_name="original",
+            source_image=MagicMock(),
+            upload_dir="images",
+        )
+        owner.get_image_variant_sources = MagicMock(  # type: ignore[method-assign]
+            return_value=[source]
+        )
+        variants = MagicMock()
+        owner.variants = variants
+        generated = MagicMock()
+        generated.count.return_value = 4
+        owner._generate_image_variants_for_source = MagicMock(  # type: ignore[method-assign]
+            return_value=generated
+        )
 
-        generated_by_width = {
-            320: ContentFile(b"generated-320", name="thumbnail_320_test.webp"),
-            560: ContentFile(b"generated-560", name="thumbnail_560_test.webp"),
-            840: ContentFile(b"generated-840", name="thumbnail_840_test.webp"),
-            1120: ContentFile(b"generated-1120", name="thumbnail_1120_test.webp"),
-        }
+        assert owner.make_thumbnail() is True
 
-        def build_result(*_args, width: int, **_kwargs):
-            return generated_by_width[width], width, round(width * 2 / 3)
+        variants.filter.assert_called_once_with(
+            role__in={"thumbnail"},
+            width__in={320, 560, 840, 1120},
+        )
+        variants.filter.return_value.delete.assert_called_once_with()
+        owner._generate_image_variants_for_source.assert_called_once_with(
+            source,
+            (
+                ("thumbnail", 320, 100),
+                ("thumbnail", 560, 100),
+                ("thumbnail", 840, 100),
+                ("thumbnail", 1120, 100),
+            ),
+        )
 
-        with patch(
-            "core.mixins.build_image_with_given_width",
-            side_effect=build_result,
-        ) as build_image:
-            thumbnails = ImageVariantModelMixin.make_thumbnail(image_owner, image_file)
+    def test_make_thumbnail_returns_false_without_thumbnail_variant_spec(self) -> None:
+        owner = self.NoThumbnailOwner()
+        owner.get_image_variant_sources = MagicMock(  # type: ignore[method-assign]
+            return_value=[
+                ImageVariantSource(
+                    field_name="original",
+                    source_image=MagicMock(),
+                    upload_dir="images",
+                )
+            ]
+        )
 
-        assert thumbnails == [
-            generated_by_width[320],
-            generated_by_width[560],
-            generated_by_width[840],
-            generated_by_width[1120],
-        ]
-        assert not hasattr(ImageVariantModelMixin, "_get_processable_image_width")
-        assert [call.kwargs["width"] for call in build_image.call_args_list] == [
-            320,
-            560,
-            840,
-            1120,
-        ]
-        assert {call.kwargs["quality"] for call in build_image.call_args_list} == {100}
-
-    def test_make_thumbnail_requires_thumbnail_variant_spec(self) -> None:
-        image_owner = self.NoThumbnailOwner()
-
-        with pytest.raises(ValueError, match="Thumbnail variant spec is required"):
-            ImageVariantModelMixin.make_thumbnail(image_owner, MagicMock())
+        assert owner.make_thumbnail() is False
 
 
 @pytest.mark.django_db
