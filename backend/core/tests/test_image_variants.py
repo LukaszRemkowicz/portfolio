@@ -12,6 +12,8 @@ from core.mixins import ImageVariantModelMixin
 from core.models import BaseImage, ImageVariant
 from core.tasks import process_image_task
 from programming.tests.factories import ProjectImageFactory
+from shop.models import ShopSettings
+from shop.tests.factories import ShopProductFactory
 from users.tests.factories import UserFactory
 
 
@@ -21,6 +23,7 @@ def _stored_webp_size(image, name: str) -> tuple[int, int]:
             return generated.size
 
 
+@pytest.mark.django_db
 class TestImageVariantFileDeletion:
     def test_delete_file_uses_field_file_delete_without_model_save(self) -> None:
         variant = ImageVariant()
@@ -31,6 +34,60 @@ class TestImageVariantFileDeletion:
         variant.delete_file()
 
         file_mock.delete.assert_called_once_with(save=False)
+
+    def test_parent_instance_delete_removes_variant_files(self) -> None:
+        image = AstroImageFactory(original=jpeg_field("owner-delete.jpg", size=(1200, 800)))
+        variant = ImageVariant.objects.create(
+            image=image,
+            role="cleanup_probe",
+            width=1,
+            height=1,
+            mime_type="image/webp",
+        )
+        variant.file.save("owner-instance-delete.webp", jpeg_field("variant.jpg"), save=True)
+        storage = variant.file.storage
+        variant_name = variant.file.name
+
+        assert storage.exists(variant_name)
+
+        image.delete()
+
+        assert not storage.exists(variant_name)
+
+    @pytest.mark.parametrize(
+        "owner_factory",
+        [
+            lambda: AstroImageFactory(original=jpeg_field("owner-astro.jpg", size=(1200, 800))),
+            lambda: MainPageBackgroundImageFactory(
+                original=jpeg_field("owner-background.jpg", size=(1200, 800))
+            ),
+            lambda: ProjectImageFactory(original=jpeg_field("owner-project.jpg", size=(1200, 800))),
+            ShopProductFactory,
+            lambda: ShopSettings.objects.create(
+                title="Shop",
+                image=jpeg_field("owner-shop-settings.jpg", size=(1200, 800)),
+            ),
+            lambda: UserFactory(avatar=jpeg_field("owner-user.jpg", size=(800, 800))),
+        ],
+    )
+    def test_parent_queryset_delete_removes_variant_files(self, owner_factory) -> None:
+        owner = owner_factory()
+        variant = ImageVariant.objects.create(
+            image=owner,
+            role="cleanup_probe",
+            width=1,
+            height=1,
+            mime_type="image/webp",
+        )
+        variant.file.save("owner-queryset-delete.webp", jpeg_field("variant.jpg"), save=True)
+        storage = variant.file.storage
+        variant_name = variant.file.name
+
+        assert storage.exists(variant_name)
+
+        type(owner).objects.filter(pk=owner.pk).delete()
+
+        assert not storage.exists(variant_name)
 
 
 class TestImageVariantSpec:
