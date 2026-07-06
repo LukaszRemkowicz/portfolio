@@ -6,13 +6,11 @@ Tests for users models
 import pytest
 from pytest_mock import MockerFixture
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.utils import timezone
 
 from common.tests.image_helpers import jpeg_field, png_field
-from common.types import ImageSpec
 from users.models import Profile
 from users.tests.factories import ProgrammingProfileFactory, UserFactory
 
@@ -166,18 +164,6 @@ class TestUserDomainMethods:
         """Test has_complete_profile returns False when incomplete."""
         user.bio = ""
         assert user.has_complete_profile() is False
-
-    def test_get_avatar_spec(self, user: User):
-        """Test that get_avatar_spec returns the correct spec from settings."""
-        spec = user.get_avatar_spec()
-        assert isinstance(spec, ImageSpec)
-        assert spec == settings.IMAGE_OPTIMIZATION_SPECS["AVATAR"]
-
-    def test_get_portrait_spec(self, user: User):
-        """Test that get_portrait_spec returns the correct spec from settings."""
-        spec = user.get_portrait_spec()
-        assert isinstance(spec, ImageSpec)
-        assert spec == settings.IMAGE_OPTIMIZATION_SPECS["PORTRAIT"]
 
 
 @pytest.mark.django_db

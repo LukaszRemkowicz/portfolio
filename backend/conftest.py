@@ -43,11 +43,11 @@ def global_translation_mock():
     This prevents IntegrityErrors and slow tests on the host.
     """
 
-    with patch("translation.mixins.translate_instance_task.delay") as mock_delay:
+    with patch("translation.mixins.translate_instance_task.apply_async") as mock_apply_async:
 
         def mock_task_result(*args, **kwargs):  # noqa: ARG001
             return SimpleNamespace(id=str(uuid.uuid4()))
 
-        # Generate a unique ID for every call to delay()
-        mock_delay.side_effect = mock_task_result
-        yield mock_delay
+        # Generate a unique ID for every call if a test reads the async result.
+        mock_apply_async.side_effect = mock_task_result
+        yield mock_apply_async

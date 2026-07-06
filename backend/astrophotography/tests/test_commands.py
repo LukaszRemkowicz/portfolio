@@ -46,7 +46,7 @@ class TestFixParlerLanguageCodesCommand:
         translation_model.objects.filter(master=place, language_code="en").delete()
         translation_model.objects.create(master=place, language_code="en-us", name="Tatras")
 
-        astro_image = AstroImageFactory(place=place, thumbnail=None)
+        astro_image = AstroImageFactory(place=place)
         astro_translation_model = AstroImage._parler_meta.root_model
         astro_translation_model.objects.filter(master=astro_image, language_code="en").delete()
         astro_translation_model.objects.create(

@@ -102,6 +102,11 @@ TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/release
 TAG=v1.2.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.sh
 ```
 
+Production release refreshes the Nginx bot blocklist before migrations. If the
+download fails, release stops instead of silently deploying with an empty
+blocklist. Use `ALLOW_EMPTY_NGINX_BLOCKLIST=true` only as an explicit emergency
+bypass.
+
 For test-only GHCR tags that are not SemVer-like:
 
 ```bash

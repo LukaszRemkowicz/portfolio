@@ -249,13 +249,13 @@ fi
 if [[ "${DRY_RUN}" == true ]]; then
   echo "🧾 DRY RUN: would reload Nginx config"
 else
-  echo "🔄 [DEPLOY] [3/5] Reloading Nginx configuration..."
+  echo "🔄 [DEPLOY] [3/5] Validating and reloading Nginx configuration..."
   RELOAD_SUCCESS=false
   MAX_RELOAD_RETRIES=5
   for ((i=1; i<=MAX_RELOAD_RETRIES; i++)); do
     # check if container is running before attempting exec
     if [[ "$("${COMPOSE[@]}" ps nginx --format '{{.Status}}')" == *"Up"* ]]; then
-      if "${COMPOSE[@]}" exec -T "nginx" nginx -s reload; then
+      if "${COMPOSE[@]}" exec -T "nginx" nginx -t && "${COMPOSE[@]}" exec -T "nginx" nginx -s reload; then
         echo "✅ Nginx config reloaded successfully"
         RELOAD_SUCCESS=true
         break

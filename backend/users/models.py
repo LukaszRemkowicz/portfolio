@@ -7,13 +7,12 @@ from model_utils import FieldTracker
 from parler.managers import TranslatableManager
 from parler.models import TranslatableModel, TranslatedFields
 
-from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db import IntegrityError, models
 from django.utils.translation import gettext_lazy as _
 
-from common.types import ImageSpec, ImageVariantSource, ImageVariantSpec, ViewportWidths
+from common.types import ImageVariantSource, ImageVariantSpec, ViewportWidths
 from common.utils.image import get_available_image_url
 from core.mixins import ImageVariantModelMixin
 from core.models import ImageVariant, SingletonModel
@@ -195,13 +194,8 @@ class User(
         except IntegrityError as exc:
             raise ValueError("Failed to save user. Only one user is allowed.") from exc
 
-    @classmethod
-    def get_cropped_field_name(cls, source_field_name: str) -> str:
-        # TODO: for removal?
-        return USER_IMAGE_FIELD_MAPPINGS[source_field_name]["cropped"]
-
     def get_effective_image_field(self, source_field_name: str) -> Any:
-        cropped_field_name = self.get_cropped_field_name(source_field_name)
+        cropped_field_name = USER_IMAGE_FIELD_MAPPINGS[source_field_name]["cropped"]
         cropped_field = getattr(self, cropped_field_name)
         if cropped_field:
             return cropped_field
@@ -237,16 +231,6 @@ class User(
                 },
             )
         return source_url
-
-    def get_avatar_spec(self) -> ImageSpec:
-        """Return dimensions and quality for the avatar field.
-        TODO: for removal?"""
-        return settings.IMAGE_OPTIMIZATION_SPECS["AVATAR"]
-
-    def get_portrait_spec(self) -> ImageSpec:
-        """Return dimensions and quality for portrait-style fields.
-        TODO: for removal?"""
-        return settings.IMAGE_OPTIMIZATION_SPECS["PORTRAIT"]
 
     # Domain Logic Methods
 

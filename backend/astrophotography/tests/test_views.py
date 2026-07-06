@@ -45,6 +45,7 @@ TRAVEL_BY_COUNTRY_PLACE_DATE_URL_NAME: str = "astroimages:travel-by-country-plac
 CELESTIAL_CATEGORIES_URL_NAME: str = "astroimages:celestial-object-categories"
 TAGS_LIST_URL_NAME: str = "astroimages:tags-list"
 SECURE_IMAGE_SERVE_URL_NAME: str = "astroimages:secure-image-serve"
+IMAGE_URLS_LIST_URL_NAME: str = "image-urls-list"
 
 
 @pytest.mark.django_db
@@ -378,6 +379,64 @@ class TestBackgroundMainPageView:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["url"] is None
+
+
+@pytest.mark.django_db
+class TestImageURLViewSet:
+    def test_list_without_ids_returns_bad_request(self, api_client: APIClient) -> None:
+        """Omitted ids must fail loudly instead of signing every image in the table."""
+        AstroImageFactory()
+
+        response: Response = api_client.get(reverse(IMAGE_URLS_LIST_URL_NAME))
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {"detail": "Query parameter 'ids' is required."}
+
+    def test_list_with_empty_ids_returns_bad_request(self, api_client: APIClient) -> None:
+        """Empty ids must fail loudly instead of signing every image in the table."""
+        AstroImageFactory()
+
+        response: Response = api_client.get(f"{reverse(IMAGE_URLS_LIST_URL_NAME)}?ids=")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {
+            "detail": "Query parameter 'ids' must include at least one image id."
+        }
+
+    def test_list_with_ids_keeps_signed_url_mapping_default(self, api_client: APIClient) -> None:
+        """Existing FE callers should keep receiving id-to-signed-url mappings by default."""
+        image = AstroImageFactory()
+
+        response: Response = api_client.get(
+            reverse(IMAGE_URLS_LIST_URL_NAME),
+            {"ids": str(image.pk)},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert set(response.data) == {str(image.pk)}
+        assert response.data[str(image.pk)].startswith("http://testserver/image-files/")
+        assert "?s=" in response.data[str(image.pk)]
+
+    def test_role_and_size_params_keep_signed_url_mapping(self, api_client: APIClient) -> None:
+        """Variant params must not change the legacy signed URL response shape."""
+        image = AstroImageFactory()
+        ImageVariantFactory(
+            image=image,
+            file__filename="andromeda-card-tablet.webp",
+            role="card",
+            width=560,
+            height=373,
+        )
+
+        response: Response = api_client.get(
+            reverse(IMAGE_URLS_LIST_URL_NAME),
+            {"ids": str(image.pk), "role": "card", "size": "tablet"},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert set(response.data) == {str(image.pk)}
+        assert response.data[str(image.pk)].startswith("http://testserver/image-files/")
+        assert "?s=" in response.data[str(image.pk)]
 
 
 @pytest.mark.django_db

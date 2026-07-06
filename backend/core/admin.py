@@ -81,7 +81,7 @@ class ImageVariantChangeList(ChangeList):
 
 @admin.register(ImageVariant)
 class ImageVariantAdmin(admin.ModelAdmin):
-    """Read-only inspection for generated responsive image variant rows."""
+    """Inspection and manual cleanup for generated responsive image variant rows."""
 
     change_list_template = "admin/core/imagevariant/change_list.html"
     list_display = (
@@ -114,7 +114,7 @@ class ImageVariantAdmin(admin.ModelAdmin):
         return True
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        return True
 
     def get_queryset(self, request):
         queryset = (

@@ -9,13 +9,10 @@ from pytest_mock import MockerFixture
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.http import QueryDict
-from django.test import override_settings
 from django.urls import reverse
 
-from common.types import ImageSpec
 from users.admin import UserAdmin
 from users.tests.factories import UserFactory
-from users.types import CropperFieldConfig, CropperPreviewShape
 
 User = get_user_model()
 
@@ -111,44 +108,6 @@ class TestUserAdmin:
         assert cropper["fields"][1]["target_field_name"] == "about_me_image_cropped"
         assert cropper["fields"][1]["output_width"] == 800
         assert cropper["fields"][1]["output_height"] == 800
-
-    @override_settings(
-        USER_ADMIN_CROPPER_FIELD_CONFIGS=(
-            CropperFieldConfig(
-                field_name="avatar",
-                label="Avatar Override",
-                input_id="id_avatar",
-                target_field_name="avatar_cropped",
-                target_input_id="id_avatar_cropped",
-                preview_shape=CropperPreviewShape.CIRCLE,
-                crop_aspect_ratio=1.0,
-                spec=ImageSpec(dimension=280, quality=10),
-            ),
-        )
-    )
-    def test_change_view_uses_cropper_field_configs_from_settings(self, mocker: MockerFixture):
-        user = UserFactory.create_superuser()
-        request = MockRequest(user=user)
-
-        captured = {}
-
-        def fake_change_view(self, request, object_id, form_url="", extra_context=None):
-            captured["extra_context"] = extra_context
-            return "ok"
-
-        mocker.patch.object(
-            UserAdmin.__mro__[5],
-            "change_view",
-            fake_change_view,
-        )
-
-        response = self.admin.change_view(request, str(user.pk))
-
-        assert response == "ok"
-        cropper = captured["extra_context"]["admin_image_cropper"]
-        assert [field["field_name"] for field in cropper["fields"]] == ["avatar"]
-        assert cropper["fields"][0]["label"] == "Avatar Override"
-        assert cropper["fields"][0]["target_field_name"] == "avatar_cropped"
 
 
 @pytest.mark.django_db

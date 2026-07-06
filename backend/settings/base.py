@@ -10,9 +10,6 @@ from sentry_sdk.integrations.django import DjangoIntegration
 
 from django.utils.translation import gettext_lazy as _
 
-from common.types import ImageSpec
-from users.types import CropperFieldConfig, CropperPreviewShape
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -361,54 +358,6 @@ FILE_UPLOAD_PERMISSIONS = 0o644
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-
-# Image Optimization Settings. #TODO: legacy
-IMAGE_OPTIMIZATION_SPECS = {
-    "AVATAR": ImageSpec(dimension=280, quality=10),
-    "PORTRAIT": ImageSpec(dimension=800, quality=35),
-    "LANDSCAPE": ImageSpec(dimension=1920, quality=90),
-    "THUMBNAIL": ImageSpec(dimension=560, quality=100),
-    "DEFAULT": ImageSpec(dimension=1200, quality=75),
-    "LANDSCAPE_16_9": ImageSpec(dimension=1920, quality=90, aspect_ratio=16 / 9),
-}
-
-
-SHOP_SETTINGS_ADMIN_CROPPER_CONFIG = ImageSpec(dimension=1920, quality=90)
-
-# TODO: add it somewhere else
-USER_ADMIN_CROPPER_FIELD_CONFIGS = (
-    CropperFieldConfig(
-        field_name="avatar",
-        label=_("Avatar"),
-        input_id="id_avatar",
-        target_field_name="avatar_cropped",
-        target_input_id="id_avatar_cropped",
-        preview_shape=CropperPreviewShape.CIRCLE,
-        crop_aspect_ratio=1.0,
-        spec=IMAGE_OPTIMIZATION_SPECS["AVATAR"],
-    ),
-    CropperFieldConfig(
-        field_name="about_me_image",
-        label=_("About me image"),
-        input_id="id_about_me_image",
-        target_field_name="about_me_image_cropped",
-        target_input_id="id_about_me_image_cropped",
-        preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
-        crop_aspect_ratio=1.0,
-        spec=IMAGE_OPTIMIZATION_SPECS["PORTRAIT"],
-    ),
-    CropperFieldConfig(
-        field_name="about_me_image2",
-        label=_("About me image 2"),
-        input_id="id_about_me_image2",
-        target_field_name="about_me_image2_cropped",
-        target_input_id="id_about_me_image2_cropped",
-        preview_shape=CropperPreviewShape.ROUNDED_SQUARE,
-        crop_aspect_ratio=1.0,
-        spec=IMAGE_OPTIMIZATION_SPECS["PORTRAIT"],
-    ),
-)
-
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
