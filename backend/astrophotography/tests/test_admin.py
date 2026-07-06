@@ -1,4 +1,3 @@
-import uuid
 from datetime import date
 from io import BytesIO
 from unittest.mock import MagicMock
@@ -47,6 +46,16 @@ from users.models import User
 # Django's test client returns _MonkeyPatchedWSGIResponse, which behaves like
 # HttpResponse in these tests. The targeted assignment ignores suppress only the
 # "Expected type 'HttpResponse', got '_MonkeyPatchedWSGIResponse'" mismatch.
+
+
+def translation_apply_async_kwargs(call) -> dict:
+    """Return task kwargs passed through Celery apply_async."""
+    return call.kwargs["kwargs"]
+
+
+def only_translation_apply_async_kwargs(mock_translate_task: MagicMock) -> dict:
+    mock_translate_task.apply_async.assert_called_once()
+    return translation_apply_async_kwargs(mock_translate_task.apply_async.call_args)
 
 
 @pytest.mark.django_db
@@ -542,11 +551,6 @@ class TestPlaceAdmin:
         """Test that creating a new Place via Admin triggers translation task."""
 
         with override_settings(DEFAULT_APP_LANGUAGE="en"):
-            # Use mocker.MagicMock instead of importing MagicMock
-            mock_translate_task.delay.side_effect = lambda *_args, **_kwargs: mocker.MagicMock(
-                id=str(uuid.uuid4())
-            )
-
             response: HttpResponse = admin_client.post(  # type: ignore[assignment]
                 self.ADD_URL,
                 {"name": "New Test Place", "country": "US", "_save": "Save"},
@@ -559,9 +563,7 @@ class TestPlaceAdmin:
 
         # Verify task was dispatched
         # We expect one call for 'pl' (since 'en' is default)
-        mock_translate_task.delay.assert_called_once()
-
-        args, kwargs = mock_translate_task.delay.call_args
+        kwargs = only_translation_apply_async_kwargs(mock_translate_task)
         assert kwargs["model_name"] == "astrophotography.Place"
         assert kwargs["instance_pk"] == place.pk
         assert kwargs["language_code"] == "pl"
@@ -577,10 +579,6 @@ class TestPlaceAdmin:
         """Test that updating Place name via Admin triggers translation task."""
 
         with override_settings(DEFAULT_APP_LANGUAGE="en"):
-            mock_translate_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
-                id=str(uuid.uuid4())
-            )
-
             # 1. Create initial place
             place: Place = PlaceFactory(name="Greece", country="GR")
 
@@ -591,9 +589,7 @@ class TestPlaceAdmin:
         assert response.status_code == 302
 
         # Verify task dispatched
-        mock_translate_task.delay.assert_called_once()
-
-        args, kwargs = mock_translate_task.delay.call_args
+        kwargs = only_translation_apply_async_kwargs(mock_translate_task)
         assert kwargs["model_name"] == "astrophotography.Place"
         assert kwargs["instance_pk"] == place.pk
         assert kwargs["language_code"] == "pl"
@@ -603,9 +599,6 @@ class TestPlaceAdmin:
         self, admin_client: Client, mock_translate_task: MagicMock
     ) -> None:
         """Test that translation is triggered when target language differs from BASE."""
-
-        # Mock the task to return a proper task ID
-        mock_translate_task.delay.return_value.id = str(uuid.uuid4())
 
         # 1. Create initial place with English (BASE) and Polish translation
         place: Place = PlaceFactory(name="Italy", country="IT")
@@ -630,7 +623,7 @@ class TestPlaceAdmin:
         assert response.status_code == 302
 
         # Verify task WAS NOT called because name did not change
-        mock_translate_task.delay.assert_not_called()
+        mock_translate_task.apply_async.assert_not_called()
 
     def test_country_field_is_translated(self, admin_client: Client) -> None:
         """
@@ -680,10 +673,6 @@ class TestMainPageBackgroundImageAdminActions:
         mock_get_available_languages: MagicMock,
     ) -> None:
         with override_settings(DEFAULT_APP_LANGUAGE="en"):
-            mock_translate_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
-                id=str(uuid.uuid4())
-            )
-
             img: Image.Image = Image.new("RGB", (1, 1), color="red")
             img_io: BytesIO = BytesIO()
             img.save(img_io, format="PNG")
@@ -702,8 +691,7 @@ class TestMainPageBackgroundImageAdminActions:
             translations__name="Test Background"
         )
 
-        mock_translate_task.delay.assert_called_once()
-        args, kwargs = mock_translate_task.delay.call_args
+        kwargs = only_translation_apply_async_kwargs(mock_translate_task)
         assert kwargs["model_name"] == "astrophotography.MainPageBackgroundImage"
         assert kwargs["instance_pk"] == bg.pk
         assert kwargs["language_code"] == "pl"
@@ -719,10 +707,6 @@ class TestMainPageBackgroundImageAdminActions:
         """Test that updating MainPageBackgroundImage name via Admin triggers translation task."""
 
         with override_settings(DEFAULT_APP_LANGUAGE="en"):
-            mock_translate_task.delay.side_effect = lambda *args, **kwargs: mocker.MagicMock(
-                id=str(uuid.uuid4())
-            )
-
             bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Old Name")
 
             url: str = reverse(self.CHANGE_URL_NAME, args=[bg.pk])
@@ -731,8 +715,7 @@ class TestMainPageBackgroundImageAdminActions:
             response: HttpResponse = admin_client.post(url, data)  # type: ignore[assignment]
         assert response.status_code == 302
 
-        mock_translate_task.delay.assert_called_once()
-        args, kwargs = mock_translate_task.delay.call_args
+        kwargs = only_translation_apply_async_kwargs(mock_translate_task)
         assert kwargs["model_name"] == "astrophotography.MainPageBackgroundImage"
         assert kwargs["instance_pk"] == bg.pk
         assert kwargs["language_code"] == "pl"
@@ -742,8 +725,6 @@ class TestMainPageBackgroundImageAdminActions:
         self, admin_client: Client, mock_translate_task: MagicMock
     ) -> None:
         """Test that translation is NOT triggered when the name doesn't change."""
-
-        mock_translate_task.delay.return_value.id = str(uuid.uuid4())
 
         bg: MainPageBackgroundImage = MainPageBackgroundImageFactory(name="Test BG")
 
@@ -775,7 +756,7 @@ class TestMainPageBackgroundImageAdminActions:
             errors = form.form.errors if form else "No form errors found"
             pytest.fail(f"Form submission failed with errors: {errors}")
         assert response.status_code == 302
-        assert mock_translate_task.delay.call_count == 0
+        assert mock_translate_task.apply_async.call_count == 0
 
 
 @pytest.mark.django_db
@@ -888,7 +869,7 @@ class TestMainPageLocationAdmin:
         """
         place = PlaceFactory()
         # Reset mock after Place creation to ignore translate_place calls
-        mock_translate_task.delay.reset_mock()
+        mock_translate_task.apply_async.reset_mock()
 
         url = reverse("admin:astrophotography_mainpagelocation_add")
         data = {
@@ -906,13 +887,16 @@ class TestMainPageLocationAdmin:
         assert response.status_code == 302
 
         # Check if task was called with correct parameters
-        assert mock_translate_task.delay.called
+        assert mock_translate_task.apply_async.called
         # Find the call for 'pl'
         pl_call = next(
-            c for c in mock_translate_task.delay.call_args_list if c.kwargs["language_code"] == "pl"
+            c
+            for c in mock_translate_task.apply_async.call_args_list
+            if translation_apply_async_kwargs(c)["language_code"] == "pl"
         )
-        assert pl_call.kwargs["method_name"] == "translate_main_page_location"
-        assert pl_call.kwargs["model_name"] == "astrophotography.MainPageLocation"
+        pl_kwargs = translation_apply_async_kwargs(pl_call)
+        assert pl_kwargs["method_name"] == "translate_main_page_location"
+        assert pl_kwargs["model_name"] == "astrophotography.MainPageLocation"
 
     def test_admin_add_page_loads(self, admin_client: Client) -> None:
         """GET /admin/astrophotography/mainpagelocation/add/ must return 200."""
@@ -937,7 +921,7 @@ class TestMainPageLocationAdmin:
         explicit id that the sequence hasn't advanced past yet.
         """
         place: Place = PlaceFactory()
-        mock_translate_task.delay.reset_mock()
+        mock_translate_task.apply_async.reset_mock()
 
         url: str = reverse("admin:astrophotography_mainpagelocation_add")
         data: dict = {
@@ -977,7 +961,7 @@ class TestMainPageLocationAdmin:
 
         # First object — inserted via factory so it has a concrete id in the DB.
         existing: MainPageLocation = MainPageLocationFactory(place=place)
-        mock_translate_task.delay.reset_mock()
+        mock_translate_task.apply_async.reset_mock()
 
         url: str = reverse("admin:astrophotography_mainpagelocation_add")
         data: dict = {

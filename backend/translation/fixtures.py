@@ -17,7 +17,7 @@ def mock_translate_task(mocker: MockerFixture) -> MagicMock:
         return MockTaskResult(str(uuid.uuid4()))
 
     mock = mocker.patch("translation.mixins.translate_instance_task")
-    mock.delay.side_effect = mock_task_result
+    mock.apply_async.side_effect = mock_task_result
     return mock
 
 
