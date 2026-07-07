@@ -15,7 +15,22 @@ class TestShopProductSerializerContract:
         serializer = ShopProductSerializer()
 
         assert serializer.get_thumbnail_url(product) == "/media/shop/product.webp"
-        product.get_image_url.assert_called_once_with("thumbnail", 560)
+        product.get_image_url.assert_called_once_with(role="thumbnail", width=560)
+
+    def test_thumbnail_url_uses_requested_size(self) -> None:
+        request = MagicMock()
+        request.query_params = {"size": "840"}
+        request.build_absolute_uri.side_effect = lambda url: f"https://api.example.com{url}"
+        product = MagicMock()
+        product.get_image_url.return_value = "/media/shop/product.webp"
+        product.thumbnail_url = "https://cdn.example.com/thumb.webp"
+        serializer = ShopProductSerializer(context={"request": request})
+
+        assert (
+            serializer.get_thumbnail_url(product)
+            == "https://api.example.com/media/shop/product.webp"
+        )
+        product.get_image_url.assert_called_once_with(role="thumbnail", width=840)
 
 
 @pytest.mark.django_db

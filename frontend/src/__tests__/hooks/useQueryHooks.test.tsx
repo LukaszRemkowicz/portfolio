@@ -12,12 +12,17 @@ import { useProjects } from '../../hooks/useProjects';
 import { useTravelHighlights } from '../../hooks/useTravelHighlights';
 import { useTravelHighlightDetail } from '../../hooks/useTravelHighlightDetail';
 import { useImageUrls } from '../../hooks/useImageUrls';
+import { useShopProducts } from '../../hooks/useShopProducts';
 
 describe('TanStack Query Hooks', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (globalThis as { __TEST_I18N_LANGUAGE__?: string }).__TEST_I18N_LANGUAGE__ =
       'en';
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 1280,
+    });
   });
 
   afterEach(() => {
@@ -29,7 +34,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useProfile());
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['profile', 'en'],
+        queryKey: ['profile', 'en', 1920],
         queryFn: expect.any(Function),
       })
     );
@@ -39,7 +44,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useBackground());
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['background', 'en'],
+        queryKey: ['background', 'en', 1920],
         queryFn: expect.any(Function),
       })
     );
@@ -59,7 +64,11 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useAstroImages({ filter: 'filter', tag: 'tag' }));
     expect(useInfiniteQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['astro-images', 'en', { filter: 'filter', tag: 'tag' }],
+        queryKey: [
+          'astro-images',
+          'en',
+          { filter: 'filter', tag: 'tag', size: 840 },
+        ],
         queryFn: expect.any(Function),
         initialPageParam: 1,
         getNextPageParam: expect.any(Function),
@@ -71,7 +80,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useAstroImages({ page: 2 }));
     expect(useInfiniteQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['astro-images', 'en', { page: 2 }],
+        queryKey: ['astro-images', 'en', { page: 2, size: 840 }],
         queryFn: expect.any(Function),
         initialPageParam: 2,
         getNextPageParam: expect.any(Function),
@@ -93,7 +102,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useLatestAstroImages());
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['latest-astro-images', 'en'],
+        queryKey: ['latest-astro-images', 'en', 840],
         queryFn: expect.any(Function),
       })
     );
@@ -133,7 +142,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useTravelHighlights());
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['travel-highlights', 'en'],
+        queryKey: ['travel-highlights', 'en', 840],
         queryFn: expect.any(Function),
       })
     );
@@ -143,7 +152,7 @@ describe('TanStack Query Hooks', () => {
     renderHook(() => useTravelHighlightDetail('italy', 'rome', '2023-05'));
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['travel-highlight', 'en', 'italy', 'rome', '2023-05'],
+        queryKey: ['travel-highlight', 'en', 'italy', 'rome', '2023-05', 840],
         queryFn: expect.any(Function),
       })
     );
@@ -154,6 +163,16 @@ describe('TanStack Query Hooks', () => {
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['image-urls', 'en', '1'],
+        queryFn: expect.any(Function),
+      })
+    );
+  });
+
+  it('useShopProducts calls useQuery with correct options', () => {
+    renderHook(() => useShopProducts());
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['shop-products', 840],
         queryFn: expect.any(Function),
       })
     );
@@ -170,22 +189,22 @@ describe('TanStack Query Hooks', () => {
 
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['profile', 'pl'],
+        queryKey: ['profile', 'pl', 1920],
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['background', 'pl'],
+        queryKey: ['background', 'pl', 1920],
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['latest-astro-images', 'pl'],
+        queryKey: ['latest-astro-images', 'pl', 840],
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['travel-highlights', 'pl'],
+        queryKey: ['travel-highlights', 'pl', 840],
       })
     );
   });

@@ -248,6 +248,32 @@ def test_profile_image_fields_return_stored_variant_urls(api_client: APIClient) 
 
 
 @pytest.mark.django_db
+def test_profile_image_fields_respect_requested_size(api_client: APIClient) -> None:
+    with patch("users.models.process_image_task.delay_on_commit"):
+        user: User = UserFactory(avatar=jpeg_field("avatar.jpg", size=(1200, 1200)))
+    requested_avatar = ImageVariantFactory(
+        image=user,
+        file__filename="avatar-640.webp",
+        role="avatar__original_format",
+        width=640,
+        height=640,
+    )
+    default_avatar = ImageVariantFactory(
+        image=user,
+        file__filename="avatar-1200.webp",
+        role="avatar__original_format",
+        width=1200,
+        height=1200,
+    )
+
+    response = api_client.get(reverse("users:profile-profile"), {"size": "640"})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert requested_avatar.file.url in response.data["avatar"]
+    assert default_avatar.file.url not in response.data["avatar"]
+
+
+@pytest.mark.django_db
 def test_profile_avatar_falls_back_to_source_when_variant_missing(api_client: APIClient) -> None:
     """Integration: profile endpoint falls back to the uploaded source when variants are missing."""
     user = UserFactory(avatar=jpeg_field("photo_legacy.jpg", size=(800, 800)))

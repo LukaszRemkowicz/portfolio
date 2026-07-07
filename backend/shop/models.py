@@ -161,7 +161,10 @@ class ShopProduct(ImageVariantModelMixin, AutomatedTranslationModelMixin, Transl
 
     def get_image_url(self, role: str, width: int) -> str | None:
         """Return the best available product image URL following crop and AstroImage fallbacks."""
-        variant_url: str | None = self.get_variant_url(role, width)
+        variant_url: str | None = self.get_available_variant_url(
+            role,
+            preferred_width=width,
+        )
         if variant_url:
             return variant_url
 
@@ -389,7 +392,10 @@ class ShopSettings(
 
     def get_image_url(self, role: str, width: int) -> str | None:
         """Return the generated variant URL or fall back to the background source URL."""
-        variant_url: str | None = self.get_variant_url(role, width)
+        variant_url: str | None = self.get_available_variant_url(
+            role,
+            preferred_width=width,
+        )
         if variant_url:
             return variant_url
 

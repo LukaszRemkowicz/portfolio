@@ -185,6 +185,7 @@ export interface FilterParams {
   travel?: string;
   limit?: number;
   page?: number;
+  size?: number;
 }
 
 export type FilterType = string;

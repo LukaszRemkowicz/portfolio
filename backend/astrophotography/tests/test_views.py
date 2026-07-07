@@ -77,6 +77,55 @@ class TestAstroImageViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["results"][0]["thumbnail_url"] == thumbnail.file.url
 
+    def test_list_astro_images_respects_requested_thumbnail_size(
+        self, api_client: APIClient
+    ) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(original=jpeg_field("gallery-wide.jpg", size=(1600, 1000)))
+        requested_thumbnail = ImageVariantFactory(
+            image=image,
+            file__filename="gallery-thumbnail-840.webp",
+            role="thumbnail",
+            width=840,
+            height=525,
+        )
+
+        response: Response = api_client.get(
+            reverse(ASTROIMAGE_LIST_URL_NAME),
+            {"size": "840"},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["results"][0]["thumbnail_url"] == requested_thumbnail.file.url
+
+    def test_list_astro_images_invalid_size_uses_thumbnail_default(
+        self, api_client: APIClient
+    ) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(original=jpeg_field("gallery-default.jpg", size=(1200, 800)))
+        thumbnail = ImageVariantFactory(
+            image=image,
+            file__filename="gallery-default-thumbnail.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
+        )
+        ImageVariantFactory(
+            image=image,
+            file__filename="gallery-default-large.webp",
+            role="thumbnail",
+            width=840,
+            height=525,
+        )
+
+        response: Response = api_client.get(
+            reverse(ASTROIMAGE_LIST_URL_NAME),
+            {"size": "wide"},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["results"][0]["thumbnail_url"] == thumbnail.file.url
+
     def test_retrieve_astro_image(self, api_client: APIClient, astro_image: AstroImage) -> None:
         """Test retrieving a single image via the router generated URL"""
         # Detail lookup is now by slug

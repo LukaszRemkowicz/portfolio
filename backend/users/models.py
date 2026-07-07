@@ -201,19 +201,31 @@ class User(
             return cropped_field
         return getattr(self, source_field_name)
 
-    def get_serving_image_url(self, source_field_name: str) -> str:
+    def get_serving_image_url(
+        self,
+        source_field_name: str,
+        preferred_width: int | None = None,
+    ) -> str:
         """Return the generated original_format URL with a source-image safety fallback."""
         effective_source_field: Any = self.get_effective_image_field(source_field_name)
         source_width = effective_source_field.width if effective_source_field else None
-        serving_field = (
-            self.get_variant_file(
+        if preferred_width is not None:
+            serving_url = self.get_available_variant_url(
+                "original_format",
+                preferred_width=preferred_width,
+                source_name=source_field_name,
+            )
+            if serving_url:
+                return serving_url
+
+        serving_field = None
+        if source_width:
+            serving_field = self.get_variant_file(
                 "original_format",
                 source_width,
                 source_name=source_field_name,
             )
-            if source_width
-            else None
-        )
+
         if serving_field:
             try:
                 return str(serving_field.url)

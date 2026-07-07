@@ -6,6 +6,7 @@ import { normalizeAstroImages } from '../api/media';
 import { DataTransport, resolveDataTransport } from '../api/transport';
 import { AstroImage } from '../types';
 import type { AxiosInstance } from 'axios';
+import { useImageVariantSize } from './useImageVariantSize';
 
 export interface ExtendedAstroImage extends AstroImage {
   url?: string;
@@ -25,18 +26,25 @@ export const fetchTravelHighlightDetail = async ({
   countrySlug,
   placeSlug,
   dateSlug,
+  imageSize = 840,
   clientOrTransport = api,
 }: {
   countrySlug: string;
   placeSlug: string;
   dateSlug: string;
+  imageSize?: number;
   clientOrTransport?: AxiosInstance | DataTransport;
 }): Promise<TravelHighlightDetail> => {
   const transport = resolveDataTransport(clientOrTransport);
-  const data = await transport.get<TravelHighlightDetail>({
-    browser: `${BFF_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`,
-    server: `${API_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`,
-  });
+  const data = await transport.get<TravelHighlightDetail>(
+    {
+      browser: `${BFF_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`,
+      server: `${API_ROUTES.travelBySlug}${countrySlug}/${placeSlug}/${dateSlug}/`,
+    },
+    {
+      size: imageSize,
+    }
+  );
   if (!data || typeof data !== 'object') {
     throw new Error('Invalid API response structure');
   }
@@ -67,14 +75,23 @@ export const useTravelHighlightDetail = (
 ) => {
   const { i18n } = useTranslation();
   const language = (i18n.language || 'en').split('-')[0];
+  const imageSize = useImageVariantSize();
 
   return useQuery<TravelHighlightDetail, Error>({
-    queryKey: ['travel-highlight', language, countrySlug, placeSlug, dateSlug],
+    queryKey: [
+      'travel-highlight',
+      language,
+      countrySlug,
+      placeSlug,
+      dateSlug,
+      imageSize,
+    ],
     queryFn: () =>
       fetchTravelHighlightDetail({
         countrySlug: countrySlug!,
         placeSlug: placeSlug!,
         dateSlug: dateSlug!,
+        imageSize,
       }),
     enabled: !!countrySlug && !!placeSlug && !!dateSlug,
     staleTime: 5 * 60 * 1000,

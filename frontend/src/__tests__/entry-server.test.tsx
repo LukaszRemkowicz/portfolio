@@ -99,16 +99,16 @@ jest.mock('../api/api', () => ({
 
 jest.mock('../api/services', () => ({
   fetchSettings: (client?: unknown) => mockFetchSettings(client),
-  fetchProfile: (client?: unknown) => mockFetchProfile(client),
-  fetchBackground: (client?: unknown) => mockFetchBackground(client),
-  fetchTravelHighlights: (client?: unknown) =>
-    mockFetchTravelHighlights(client),
-  fetchLatestAstroImages: (client?: unknown) =>
-    mockFetchLatestAstroImages(client),
+  fetchProfile: (...args: unknown[]) => mockFetchProfile(...args),
+  fetchBackground: (...args: unknown[]) => mockFetchBackground(...args),
+  fetchTravelHighlights: (...args: unknown[]) =>
+    mockFetchTravelHighlights(...args),
+  fetchLatestAstroImages: (...args: unknown[]) =>
+    mockFetchLatestAstroImages(...args),
   fetchCategories: (client?: unknown) => mockFetchCategories(client),
   fetchTags: (params?: unknown, client?: unknown) =>
     mockFetchTags(params, client),
-  fetchShopProducts: (client?: unknown) => mockFetchShopProducts(client),
+  fetchShopProducts: (...args: unknown[]) => mockFetchShopProducts(...args),
   fetchAstroImages: (params?: unknown, client?: unknown) =>
     mockFetchAstroImages(params, client),
   fetchAstroImageDetail: (slug?: unknown, client?: unknown) =>
@@ -177,10 +177,10 @@ describe('SSR entry server', () => {
       'req-1'
     );
     expect(mockFetchSettings).toHaveBeenCalledWith('mock-client');
-    expect(mockFetchProfile).toHaveBeenCalledWith('mock-client');
-    expect(mockFetchBackground).toHaveBeenCalledWith('mock-client');
-    expect(mockFetchTravelHighlights).toHaveBeenCalledWith('mock-client');
-    expect(mockFetchLatestAstroImages).toHaveBeenCalledWith('mock-client');
+    expect(mockFetchProfile).toHaveBeenCalledWith(1920, 'mock-client');
+    expect(mockFetchBackground).toHaveBeenCalledWith(1920, 'mock-client');
+    expect(mockFetchTravelHighlights).toHaveBeenCalledWith(840, 'mock-client');
+    expect(mockFetchLatestAstroImages).toHaveBeenCalledWith(840, 'mock-client');
     expect(mockFetchTravelHighlightDetail).not.toHaveBeenCalled();
     expect(mockFetchCategories).not.toHaveBeenCalled();
     expect(mockFetchTags).not.toHaveBeenCalled();
@@ -203,6 +203,7 @@ describe('SSR entry server', () => {
       countrySlug: 'poland',
       placeSlug: 'tatras',
       dateSlug: 'dec2025',
+      imageSize: 840,
       clientOrTransport: 'mock-client',
     });
   });
@@ -225,6 +226,7 @@ describe('SSR entry server', () => {
         filter: 'landscape',
         tag: 'moon',
         page: 1,
+        size: 840,
         limit: 24,
       },
       'mock-client'
@@ -242,6 +244,7 @@ describe('SSR entry server', () => {
     expect(mockFetchAstroImages).toHaveBeenCalledWith(
       {
         page: 2,
+        size: 840,
         limit: 24,
       },
       'mock-client'
@@ -251,7 +254,7 @@ describe('SSR entry server', () => {
   it('prefetches the shop catalog for the shop route', async () => {
     await render('/shop', 'en', 'https://portfolio.local', 'req-shop');
 
-    expect(mockFetchShopProducts).toHaveBeenCalledWith('mock-client');
+    expect(mockFetchShopProducts).toHaveBeenCalledWith(840, 'mock-client');
   });
 
   it('skips shop catalog prefetch when the shop feature is disabled', async () => {

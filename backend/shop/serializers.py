@@ -1,12 +1,16 @@
 from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
 
-from common.serializers import TranslatedSerializerMixin
+from common.serializers import ImageVariantSizeSerializerMixin, TranslatedSerializerMixin
 
 from .models import ShopProduct, ShopSettings
 
 
-class ShopProductSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
+class ShopProductSerializer(
+    ImageVariantSizeSerializerMixin,
+    TranslatedSerializerMixin,
+    TranslatableModelSerializer,
+):
     """
     Serializer for ShopProduct, exposing translated fields and image URLs.
 
@@ -28,7 +32,8 @@ class ShopProductSerializer(TranslatedSerializerMixin, TranslatableModelSerializ
         """
         Return the absolute thumbnail URL for the product.
         """
-        url = instance.get_image_url("thumbnail", 560) or instance.thumbnail_url
+        width = self.get_requested_variant_width(default_width=560)
+        url = instance.get_image_url(role="thumbnail", width=width) or instance.thumbnail_url
         if not url:
             return None
 
@@ -53,7 +58,11 @@ class ShopProductSerializer(TranslatedSerializerMixin, TranslatableModelSerializ
         ]
 
 
-class ShopSettingsSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+class ShopSettingsSerializer(
+    ImageVariantSizeSerializerMixin,
+    TranslatedSerializerMixin,
+    serializers.ModelSerializer,
+):
     """Serializer for the public textual shop settings shown on the storefront."""
 
     title = serializers.SerializerMethodField()
@@ -67,7 +76,8 @@ class ShopSettingsSerializer(TranslatedSerializerMixin, serializers.ModelSeriali
         return self.get_translation(instance, "description")
 
     def get_background_url(self, instance: ShopSettings) -> str | None:
-        url = instance.get_background_image_url()
+        width = self.get_requested_variant_width(default_width=1920)
+        url = instance.get_image_url(role="background", width=width)
         request = self.context.get("request")
         if url and request and url.startswith("/"):
             absolute_url = str(request.build_absolute_uri(url))

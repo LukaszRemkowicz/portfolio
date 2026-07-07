@@ -35,17 +35,46 @@ import {
 import { NotFoundError } from './errors';
 import { DataTransport, QueryParams, resolveDataTransport } from './transport';
 
+type ClientOrTransport = AxiosInstance | DataTransport;
+
+const resolveImageSizeArgs = (
+  imageSizeOrTransport: number | ClientOrTransport = api,
+  clientOrTransport: ClientOrTransport = api
+): {
+  imageSize?: number;
+  clientOrTransport: ClientOrTransport;
+} => {
+  if (typeof imageSizeOrTransport === 'number') {
+    return {
+      imageSize: imageSizeOrTransport,
+      clientOrTransport,
+    };
+  }
+
+  return {
+    clientOrTransport: imageSizeOrTransport,
+  };
+};
+
 /** Fetch and normalize the public user profile used across the site shell. */
 export const fetchProfile = async (
-  clientOrTransport: AxiosInstance | DataTransport = api
+  imageSizeOrTransport: number | ClientOrTransport = api,
+  fallbackTransport: ClientOrTransport = api
 ): Promise<UserProfile> => {
+  const { imageSize, clientOrTransport } = resolveImageSizeArgs(
+    imageSizeOrTransport,
+    fallbackTransport
+  );
   const transport = resolveDataTransport(clientOrTransport);
 
   try {
-    const data = await transport.get<UserProfile>({
-      browser: BFF_ROUTES.profile,
-      server: API_ROUTES.profile,
-    });
+    const data = await transport.get<UserProfile>(
+      {
+        browser: BFF_ROUTES.profile,
+        server: API_ROUTES.profile,
+      },
+      imageSize ? { size: imageSize } : undefined
+    );
 
     if (data) {
       return normalizeProfileMedia(data);
@@ -70,15 +99,23 @@ export const fetchProfile = async (
 
 /** Fetch the homepage background image URL, if configured. */
 export const fetchBackground = async (
-  clientOrTransport: AxiosInstance | DataTransport = api
+  imageSizeOrTransport: number | ClientOrTransport = api,
+  fallbackTransport: ClientOrTransport = api
 ): Promise<string | null> => {
+  const { imageSize, clientOrTransport } = resolveImageSizeArgs(
+    imageSizeOrTransport,
+    fallbackTransport
+  );
   const transport = resolveDataTransport(clientOrTransport);
 
   try {
-    const data = await transport.get<BackgroundImage>({
-      browser: BFF_ROUTES.background,
-      server: API_ROUTES.background,
-    });
+    const data = await transport.get<BackgroundImage>(
+      {
+        browser: BFF_ROUTES.background,
+        server: API_ROUTES.background,
+      },
+      imageSize ? { size: imageSize } : undefined
+    );
     if (data && data.url) {
       return transport.kind === 'browser' ? getMediaUrl(data.url) : data.url;
     }
@@ -129,13 +166,21 @@ export const fetchAstroImages = async (
 
 /** Fetch the latest homepage astro images used in the shared shell. */
 export const fetchLatestAstroImages = async (
-  clientOrTransport: AxiosInstance | DataTransport = api
+  imageSizeOrTransport: number | ClientOrTransport = api,
+  fallbackTransport: ClientOrTransport = api
 ): Promise<AstroImage[]> => {
+  const { imageSize, clientOrTransport } = resolveImageSizeArgs(
+    imageSizeOrTransport,
+    fallbackTransport
+  );
   const transport = resolveDataTransport(clientOrTransport);
-  const data = await transport.get<AstroImage[] | { results: AstroImage[] }>({
-    browser: `${BFF_ROUTES.astroImages}latest/`,
-    server: `${API_ROUTES.astroImages}latest/`,
-  });
+  const data = await transport.get<AstroImage[] | { results: AstroImage[] }>(
+    {
+      browser: `${BFF_ROUTES.astroImages}latest/`,
+      server: `${API_ROUTES.astroImages}latest/`,
+    },
+    imageSize ? { size: imageSize } : undefined
+  );
   const items = Array.isArray(data) ? data : data?.results || [];
   return normalizeAstroImages(items);
 };
@@ -232,14 +277,22 @@ export const fetchProjects = async (): Promise<Project[]> => {
 
 /** Fetch the public shop catalog, including storefront title/description and products. */
 export const fetchShopProducts = async (
-  clientOrTransport: AxiosInstance | DataTransport = api
+  imageSizeOrTransport: number | ClientOrTransport = api,
+  fallbackTransport: ClientOrTransport = api
 ): Promise<ShopCatalog> => {
+  const { imageSize, clientOrTransport } = resolveImageSizeArgs(
+    imageSizeOrTransport,
+    fallbackTransport
+  );
   const transport = resolveDataTransport(clientOrTransport);
 
-  const data = await transport.get<ShopCatalog>({
-    browser: BFF_ROUTES.shop,
-    server: API_ROUTES.shop,
-  });
+  const data = await transport.get<ShopCatalog>(
+    {
+      browser: BFF_ROUTES.shop,
+      server: API_ROUTES.shop,
+    },
+    imageSize ? { size: imageSize } : undefined
+  );
 
   return {
     title: data?.title || '',
@@ -251,13 +304,21 @@ export const fetchShopProducts = async (
 
 /** Fetch and normalize the travel highlights shown on the homepage. */
 export const fetchTravelHighlights = async (
-  clientOrTransport: AxiosInstance | DataTransport = api
+  imageSizeOrTransport: number | ClientOrTransport = api,
+  fallbackTransport: ClientOrTransport = api
 ): Promise<MainPageLocation[]> => {
+  const { imageSize, clientOrTransport } = resolveImageSizeArgs(
+    imageSizeOrTransport,
+    fallbackTransport
+  );
   const transport = resolveDataTransport(clientOrTransport);
-  const data = await transport.get<MainPageLocation[]>({
-    browser: BFF_ROUTES.travelHighlights,
-    server: API_ROUTES.travelHighlights,
-  });
+  const data = await transport.get<MainPageLocation[]>(
+    {
+      browser: BFF_ROUTES.travelHighlights,
+      server: API_ROUTES.travelHighlights,
+    },
+    imageSize ? { size: imageSize } : undefined
+  );
 
   if (Array.isArray(data)) {
     return data.map(normalizeTravelLocation);

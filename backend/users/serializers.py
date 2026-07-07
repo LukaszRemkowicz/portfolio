@@ -1,7 +1,7 @@
 # backend/users/serializers.py
 from rest_framework import serializers
 
-from common.serializers import TranslatedSerializerMixin
+from common.serializers import ImageVariantSizeSerializerMixin, TranslatedSerializerMixin
 
 from .models import Profile, User
 
@@ -28,7 +28,11 @@ class ProfileSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
         ]
 
 
-class UserSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+class UserSerializer(
+    ImageVariantSizeSerializerMixin,
+    TranslatedSerializerMixin,
+    serializers.ModelSerializer,
+):
     """Serializer for the User model profile with nested profiles"""
 
     profiles = ProfileSerializer(many=True, read_only=True)
@@ -43,7 +47,11 @@ class UserSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
         return str(int(obj.updated_at.timestamp()))
 
     def _build_url(self, obj: User, source_field_name: str) -> str:
-        relative_url: str = obj.get_serving_image_url(source_field_name)
+        width = self.get_requested_variant_width(default_width=2560)
+        relative_url: str = obj.get_serving_image_url(
+            source_field_name,
+            preferred_width=width,
+        )
         request = self.context.get("request")
         if relative_url and request:
             absolute_url = str(request.build_absolute_uri(relative_url))

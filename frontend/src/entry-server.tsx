@@ -58,6 +58,9 @@ export interface StreamRenderResult {
   abort: () => void;
 }
 
+const SSR_CARD_IMAGE_SIZE = 840;
+const SSR_HERO_IMAGE_SIZE = 1920;
+
 async function renderAppToString(element: React.ReactElement): Promise<string> {
   return new Promise((resolve, reject) => {
     let html = '';
@@ -170,29 +173,31 @@ async function prefetchRouteQueries(
   const commonPrefetches = [
     settingsPrefetch,
     prefetchQuerySafely(queryClient, {
-      queryKey: ['profile', language],
+      queryKey: ['profile', language, SSR_HERO_IMAGE_SIZE],
       queryFn: () =>
-        cachedShellQuery(SHELL_RESOURCES.profile, () => fetchProfile(client)),
+        cachedShellQuery(SHELL_RESOURCES.profile, () =>
+          fetchProfile(SSR_HERO_IMAGE_SIZE, client)
+        ),
     }),
     prefetchQuerySafely(queryClient, {
-      queryKey: ['background', language],
+      queryKey: ['background', language, SSR_HERO_IMAGE_SIZE],
       queryFn: () =>
         cachedShellQuery(SHELL_RESOURCES.background, () =>
-          fetchBackground(client)
+          fetchBackground(SSR_HERO_IMAGE_SIZE, client)
         ),
     }),
     prefetchQuerySafely(queryClient, {
-      queryKey: ['travel-highlights', language],
+      queryKey: ['travel-highlights', language, SSR_CARD_IMAGE_SIZE],
       queryFn: () =>
         cachedShellQuery(SHELL_RESOURCES.travelHighlights, () =>
-          fetchTravelHighlights(client)
+          fetchTravelHighlights(SSR_CARD_IMAGE_SIZE, client)
         ),
     }),
     prefetchQuerySafely(queryClient, {
-      queryKey: ['latest-astro-images', language],
+      queryKey: ['latest-astro-images', language, SSR_CARD_IMAGE_SIZE],
       queryFn: () =>
         cachedShellQuery(SHELL_RESOURCES.latestAstroImages, () =>
-          fetchLatestAstroImages(client)
+          fetchLatestAstroImages(SSR_CARD_IMAGE_SIZE, client)
         ),
     }),
   ];
@@ -217,8 +222,8 @@ async function prefetchRouteQueries(
     await Promise.all([
       ...commonPrefetches,
       prefetchQuerySafely(queryClient, {
-        queryKey: ['shop-products'],
-        queryFn: () => fetchShopProducts(client),
+        queryKey: ['shop-products', SSR_CARD_IMAGE_SIZE],
+        queryFn: () => fetchShopProducts(SSR_CARD_IMAGE_SIZE, client),
       }),
     ]);
     return {};
@@ -233,12 +238,20 @@ async function prefetchRouteQueries(
     await Promise.all([
       ...commonPrefetches,
       prefetchQuerySafely(queryClient, {
-        queryKey: ['travel-highlight', countrySlug, placeSlug, dateSlug],
+        queryKey: [
+          'travel-highlight',
+          language,
+          countrySlug,
+          placeSlug,
+          dateSlug,
+          SSR_CARD_IMAGE_SIZE,
+        ],
         queryFn: () =>
           fetchTravelHighlightDetail({
             countrySlug: countrySlug!,
             placeSlug: placeSlug!,
             dateSlug: dateSlug!,
+            imageSize: SSR_CARD_IMAGE_SIZE,
             clientOrTransport: client,
           }),
       }),
@@ -266,6 +279,7 @@ async function prefetchRouteQueries(
       ...(selectedFilter ? { filter: selectedFilter } : {}),
       ...(selectedTag ? { tag: selectedTag } : {}),
       ...(selectedPage ? { page: selectedPage } : {}),
+      size: SSR_CARD_IMAGE_SIZE,
     };
     const astroDetailPrefetch = astroSlug
       ? queryClient

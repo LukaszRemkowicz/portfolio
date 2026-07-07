@@ -2,6 +2,9 @@ import {
   fetchProfile,
   fetchBackground,
   fetchAstroImages,
+  fetchLatestAstroImages,
+  fetchTravelHighlights,
+  fetchShopProducts,
   fetchContact,
   fetchSettings,
 } from '../services';
@@ -101,6 +104,31 @@ describe('API Services', () => {
       expect(customClient.get).toHaveBeenCalledWith(API_ROUTES.profile);
       expect(result.first_name).toBe('Jane');
     });
+
+    it('should fetch profile with requested image size', async () => {
+      const mockProfile = {
+        first_name: 'John',
+        last_name: 'Doe',
+        avatar: '/media/avatars/avatar.jpg',
+        about_me_image: null,
+        about_me_image2: null,
+      };
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockProfile,
+      } as Response);
+
+      await fetchProfile(1920);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        `http://localhost${BFF_ROUTES.profile}?size=1920&lang=en`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
+    });
   });
 
   describe('fetchBackground', () => {
@@ -134,6 +162,25 @@ describe('API Services', () => {
       expect(result).toBe('/media/backgrounds/example.webp');
     });
 
+    it('should fetch background with requested image size', async () => {
+      const mockBackground = { url: '/media/backgrounds/example.webp' };
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockBackground,
+      } as Response);
+
+      await fetchBackground(1920);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        `http://localhost${BFF_ROUTES.background}?size=1920&lang=en`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
+    });
+
     it('should return null if API returns no URL', async () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
@@ -158,11 +205,14 @@ describe('API Services', () => {
         json: async () => mockImages,
       } as Response);
 
-      const params = { filter: 'Landscape' };
+      const params = {
+        filter: 'Landscape',
+        size: 840,
+      } as const;
       const result = await fetchAstroImages(params);
 
       expect(fetchMock).toHaveBeenCalledWith(
-        `http://localhost${BFF_ROUTES.astroImages}?filter=Landscape&lang=en`,
+        `http://localhost${BFF_ROUTES.astroImages}?filter=Landscape&size=840&lang=en`,
         {
           headers: {
             Accept: 'application/json',
@@ -172,6 +222,92 @@ describe('API Services', () => {
       expect(result.count).toBe(1);
       expect(result.results).toHaveLength(1);
       expect(result.results[0].name).toBe('Galaxy');
+    });
+  });
+
+  describe('fetchLatestAstroImages', () => {
+    it('should fetch latest astro images with requested image size', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [
+          { pk: 1, name: 'Galaxy', thumbnail_url: '/media/thumb.webp' },
+        ],
+      } as Response);
+
+      const result = await fetchLatestAstroImages(840);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        `http://localhost${BFF_ROUTES.astroImages}latest/?size=840&lang=en`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].thumbnail_url).toBe('/media/thumb.webp');
+    });
+  });
+
+  describe('fetchTravelHighlights', () => {
+    it('should fetch travel highlights with requested image size', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [
+          {
+            full_location: 'Norway',
+            slug: 'norway',
+            images: [{ pk: 1, thumbnail_url: '/media/travel.webp' }],
+          },
+        ],
+      } as Response);
+
+      const result = await fetchTravelHighlights(840);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        `http://localhost${BFF_ROUTES.travelHighlights}?size=840&lang=en`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].images[0].thumbnail_url).toBe('/media/travel.webp');
+    });
+  });
+
+  describe('fetchShopProducts', () => {
+    it('should fetch shop products with requested image size', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          title: 'Shop',
+          description: 'Catalog',
+          background_url: '/media/shop/background.webp',
+          products: [
+            {
+              id: '1',
+              title: 'Print',
+              description: 'Fine art print',
+              thumbnail_url: '/media/shop/print.webp',
+            },
+          ],
+        }),
+      } as Response);
+
+      const result = await fetchShopProducts(840);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        `http://localhost${BFF_ROUTES.shop}?size=840&lang=en`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
+      expect(result.products).toHaveLength(1);
+      expect(result.products[0].thumbnail_url).toBe('/media/shop/print.webp');
     });
   });
 
