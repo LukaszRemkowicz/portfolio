@@ -2,7 +2,7 @@ name: Publish Staging Images
 
 on:
   pull_request:
-    types: [labeled]
+    types: [labeled, synchronize]
 
 permissions:
   contents: read
@@ -18,7 +18,9 @@ env:
 jobs:
   publish-staging:
     name: Build and Push Staging Images
-    if: github.event.label.name == 'publish-staging'
+    if: >-
+      github.event.label.name == 'publish-staging' ||
+      contains(github.event.pull_request.labels.*.name, 'publish-staging')
     runs-on: ubuntu-latest
     environment: portfolio-registry
     steps:
@@ -71,23 +73,6 @@ jobs:
           cache-to: type=gha,mode=max
           tags: ${{ steps.meta_backend.outputs.tags }}
           labels: ${{ steps.meta_backend.outputs.labels }}
-
-      - name: Docker metadata for staging worker
-        id: meta_worker
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-worker
-          tags: |
-            type=raw,value=${{ env.STAGING_IMAGE_TAG }}
-
-      - name: Tag and push staging worker
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          docker buildx imagetools create \
-            --tag "${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-worker:${{ env.STAGING_IMAGE_TAG }}" \
-            "${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-be:${{ env.STAGING_IMAGE_TAG }}"
 
       - name: Docker metadata for staging frontend
         id: meta_frontend
@@ -156,10 +141,9 @@ jobs:
 
           Images:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-be:${{ env.STAGING_IMAGE_TAG }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-worker:${{ env.STAGING_IMAGE_TAG }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-fe:${{ env.STAGING_IMAGE_TAG }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-nginx:${{ env.STAGING_IMAGE_TAG }}
 
           Next VPS step:
-            TAG=${{ env.STAGING_IMAGE_TAG }} ENVIRONMENT=stage doppler run -- ./infra/scripts/release/prepare_staging_images.sh
+            doppler run -- ./infra/scripts/release/deploy_staging.sh
           MSG

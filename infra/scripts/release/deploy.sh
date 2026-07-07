@@ -149,7 +149,13 @@ echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
 
 # Only long-running services should be switched during deploy. One-shot jobs
 # like `release` are handled explicitly by release.sh earlier in the flow.
-DEPLOY_SERVICES=("be" "fe" "celery-worker" "nginx")
+if [[ "${ENV_SUFFIX}" == "stage" ]]; then
+  DEPLOY_SERVICES=("be" "fe" "nginx")
+  ON_DEMAND_SERVICES=("celery-worker")
+else
+  DEPLOY_SERVICES=("be" "fe" "celery-worker" "nginx")
+  ON_DEMAND_SERVICES=()
+fi
 
 # ------------------------------------------------------------------
 # Legacy Project Cleanup (One-time transition from implicit naming)
@@ -238,8 +244,17 @@ echo "✅ Images found. Proceeding with deployment."
 echo "🚀 [DEPLOY] [2/5] Switching containers to new images (TAG=$TAG)"
 if [[ "${DRY_RUN}" == true ]]; then
   echo "🧾 DRY RUN: would execute: ${COMPOSE[*]} up -d ${DEPLOY_SERVICES[*]}"
+  for svc in "${ON_DEMAND_SERVICES[@]}"; do
+    echo "🧾 DRY RUN: would stop on-demand service if running: ${svc}"
+  done
 else
   "${COMPOSE[@]}" up -d "${DEPLOY_SERVICES[@]}"
+  for svc in "${ON_DEMAND_SERVICES[@]}"; do
+    if "${COMPOSE[@]}" ps --services --status running 2>/dev/null | grep -q "^${svc}$"; then
+      echo "🛑 Stopping staging on-demand service: ${svc}"
+      "${COMPOSE[@]}" stop "${svc}"
+    fi
+  done
   SWITCHED_CONTAINERS=true
 fi
 

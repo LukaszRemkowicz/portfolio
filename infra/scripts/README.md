@@ -18,9 +18,11 @@ Release scripts manage **Staging** and **Production** deployments on a single VP
 
 - `release/build.sh` -> **builds Docker images** with environment prefixes and service suffixes (e.g. `production-be:v1.0.0`)
 - `release/prepare_images.sh` -> pulls production images from GHCR, retags them to the local runtime names, and removes the GHCR tag from the VPS
+- `release/prepare_staging_images.sh` -> pulls staging images from GHCR, retags them to the local runtime names, and removes the GHCR tag from the VPS
 - `release/release.sh` -> runs **one-shot release tasks** (migrations, collectstatic, etc.) targeting the correct environment services
 - `release/deploy.sh` -> performs the **deployment switch only** and updates environment-specific rollback state
-- `release/deploy_staging.sh` -> guided staging workflow with approval prompts between build, release, and deploy
+- `release/deploy_staging.sh` -> guided staging workflow with approval prompts between staging image preparation, release, and deploy
+- `release/manual_deploy_staging.sh` -> legacy guided staging workflow with approval prompts between VPS-local build, release, and deploy
 - `release/deploy_production.sh` -> guided production workflow with approval prompts between image preparation, release, and deploy
 
 ## 🔐 Environment Variables
@@ -34,11 +36,11 @@ These scripts **require** several variables to be set, typically via Doppler.
 4. `SITE_DOMAIN` and `API_DOMAIN`: Used for Nginx templates and frontend builds
 5. `ALLOWED_HOSTS`: Django security setting
 
-### 🏭 Production-only for GHCR image preparation
-- `GHCR_USERNAME`: registry username used by `prepare_images.sh`
+### 🏭 GHCR image preparation
+- `GHCR_USERNAME`: registry username used by `prepare_images.sh` and `prepare_staging_images.sh`
 - `GHCR_TOKEN`: registry token with package read access
-- `GHCR_REGISTRY`: registry host used by `prepare_images.sh` (defaults to `ghcr.io`)
-- `GHCR_NAMESPACE`: full image namespace used by `prepare_images.sh`
+- `GHCR_REGISTRY`: registry host used by image preparation scripts (defaults to `ghcr.io`)
+- `GHCR_NAMESPACE`: full image namespace used by image preparation scripts
 
 ### 🔐 Manual GHCR login and pull example
 
@@ -64,13 +66,73 @@ EMERGENCY=1 doppler run -- ./infra/scripts/release/build.sh
 
 ## 🧪 Staging Workflow
 
+Staging currently has two artifact paths:
+
+- **Legacy VPS-local path**: build the images on the VPS, then release and
+  deploy them locally.
+- **Registry publish path**: build the staging images in GitHub Actions and
+  push them to GHCR. This avoids stressing the VPS during image builds.
+
+### Registry-backed staging deploy
+
 Guided flow:
 
 ```bash
 doppler run -- ./infra/scripts/release/deploy_staging.sh
 ```
 
-Manual flow:
+Staging deploy does not start `celery-worker`. To run the staging worker on
+demand after images are prepared:
+
+```bash
+TAG=v0.0.0-STG ENVIRONMENT=stage doppler run -- docker compose -f docker-compose.common.yml -f docker-compose.stage.yml --profile manual-worker up -d celery-worker
+```
+
+Image preparation only, for debugging the registry pull step without running
+release/deploy:
+
+```bash
+doppler run -- ./infra/scripts/release/prepare_staging_images.sh
+```
+
+### Registry publish path
+
+To publish staging images without building them on the VPS:
+
+1. Open the pull request for the branch you want to publish.
+2. Add the PR label:
+
+```text
+publish-staging
+```
+
+The `Publish Staging Images` workflow builds the PR head SHA and pushes these
+constant staging tags to GHCR:
+
+```text
+stage-be:v0.0.0-STG
+stage-fe:v0.0.0-STG
+stage-nginx:v0.0.0-STG
+```
+
+`prepare_staging_images.sh` creates the local `stage-worker:v0.0.0-STG` tag
+from `stage-be:v0.0.0-STG`, matching production: worker and backend use the
+same backend artifact.
+
+If the PR branch is updated while the `publish-staging` label is still present,
+the workflow publishes the new PR head commit again. Remove the label to stop
+publishing future branch updates.
+
+### Legacy VPS-local build and deploy
+
+Use this only when the staging registry path is unavailable or you explicitly
+want to build on the VPS:
+
+```bash
+doppler run -- ./infra/scripts/release/manual_deploy_staging.sh
+```
+
+Manual legacy flow:
 
 ```bash
 TAG=v1.0.0-test ENVIRONMENT=stage doppler run -- ./infra/scripts/release/build.sh
@@ -134,7 +196,7 @@ TAG=v1.1.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.
 - Images follow `${ENVIRONMENT}-<service>:${TAG}`
 
 ### 📥 Artifact Source
-- Staging uses locally built images from `build.sh`
+- Staging normally uses CI-published GHCR images from the `publish-staging` PR label workflow and `prepare_staging_images.sh`; the legacy local-build path remains available through `manual_deploy_staging.sh`
 - Production uses `prepare_images.sh` to pull GHCR images, retag them locally, and remove the GHCR tag so only the local runtime names remain
 
 ### 🧾 Compose File Overrides
@@ -190,7 +252,7 @@ For production, run:
 TAG=v1.2.0 doppler run -- ./infra/scripts/release/prepare_images.sh
 ```
 
-For staging, run `build.sh` first for the same `ENVIRONMENT` and `TAG`, then rerun `release.sh`.
+For staging, run `deploy_staging.sh`. The registry-backed staging scripts own the fixed `v0.0.0-STG` image tag. If you are intentionally using the legacy VPS-local path, run `build.sh` first instead.
 
 ### 💾 Backup scripts
 
