@@ -89,29 +89,29 @@ class TestAstroImageAdmin:
         assert "display_number" in admin_instance.get_list_display(None)
 
     def test_admin_thumbnail_indicator_requires_all_spec_widths(self) -> None:
-        image = AstroImageFactory(original=jpeg_field("admin-thumbnail.jpg", size=(1200, 800)))
-        image.variants.all().delete()
+        astroimage = AstroImageFactory(original=jpeg_field("admin-thumbnail.jpg", size=(1200, 800)))
+        astroimage.variants.all().delete()
         admin_instance = AstroImageAdmin(AstroImage, site)
 
-        assert admin_instance.has_thumbnail_variant(image) is False
+        assert admin_instance.has_thumbnail_variant(astroimage) is False
 
         ImageVariantFactory(
-            image=image,
+            owner=astroimage,
             role="thumbnail",
             width=320,
             file__filename="admin-wrong-width-thumb.webp",
         )
 
-        assert admin_instance.has_thumbnail_variant(image) is False
+        assert admin_instance.has_thumbnail_variant(astroimage) is False
 
         ImageVariantFactory(
-            image=image,
+            owner=astroimage,
             role="thumbnail",
             width=560,
             file__filename="admin-thumb.webp",
         )
 
-        assert admin_instance.has_thumbnail_variant(image) is True
+        assert admin_instance.has_thumbnail_variant(astroimage) is True
 
     def test_media_fieldset_includes_thumbnail_variant_preview(self) -> None:
         admin_instance = AstroImageAdmin(AstroImage, site)
@@ -126,7 +126,7 @@ class TestAstroImageAdmin:
         image = AstroImageFactory(original=jpeg_field("admin-media.jpg", size=(1200, 800)))
         image.variants.all().delete()
         ImageVariantFactory(
-            image=image,
+            owner=image,
             role="thumbnail",
             width=560,
             file__filename="admin-media-thumb.webp",

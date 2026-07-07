@@ -30,7 +30,7 @@ from astrophotography.utils import get_celestial_categories
 from common.constants import FALLBACK_URL_SLUG
 from common.tests.image_helpers import jpeg_field
 from common.utils.signing import generate_signed_url_params
-from core.models import LandingPageSettings
+from core.models import ImageVariant, LandingPageSettings
 from core.tasks import process_image_task
 from core.tests.factories import ImageVariantFactory
 
@@ -54,18 +54,21 @@ class TestAstroImageViewSet:
         """Test listing images via the router generated URL"""
         url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
         response: Response = api_client.get(url)
+        results: list[dict[str, Any]] = response.data["results"]
         assert response.status_code == status.HTTP_200_OK
         assert response.data["count"] == 1
         assert response.data["next"] is None
         assert response.data["previous"] is None
-        assert len(response.data["results"]) == 1
-        assert response.data["results"][0]["pk"] == str(astro_image.pk)
+        assert len(results) == 1
+        assert results[0]["pk"] == str(astro_image.pk)
 
     def test_list_astro_images_returns_thumbnail_variant_url(self, api_client: APIClient) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
-            image = AstroImageFactory(original=jpeg_field("gallery.jpg", size=(1200, 800)))
-        thumbnail = ImageVariantFactory(
-            image=image,
+            astroimage: AstroImage = AstroImageFactory(
+                original=jpeg_field("gallery.jpg", size=(1200, 800))
+            )
+        thumbnail: ImageVariant = ImageVariantFactory(
+            owner=astroimage,
             file__filename="gallery-thumbnail.webp",
             role="thumbnail",
             width=560,
@@ -73,17 +76,20 @@ class TestAstroImageViewSet:
         )
 
         response: Response = api_client.get(reverse(ASTROIMAGE_LIST_URL_NAME))
+        results: list[dict[str, Any]] = response.data["results"]
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["results"][0]["thumbnail_url"] == thumbnail.file.url
+        assert results[0]["thumbnail_url"] == thumbnail.file.url
 
     def test_list_astro_images_respects_requested_thumbnail_size(
         self, api_client: APIClient
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
-            image = AstroImageFactory(original=jpeg_field("gallery-wide.jpg", size=(1600, 1000)))
-        requested_thumbnail = ImageVariantFactory(
-            image=image,
+            astroimage: AstroImage = AstroImageFactory(
+                original=jpeg_field("gallery-wide.jpg", size=(1600, 1000))
+            )
+        requested_thumbnail: ImageVariant = ImageVariantFactory(
+            owner=astroimage,
             file__filename="gallery-thumbnail-840.webp",
             role="thumbnail",
             width=840,
@@ -94,24 +100,27 @@ class TestAstroImageViewSet:
             reverse(ASTROIMAGE_LIST_URL_NAME),
             {"size": "840"},
         )
+        results: list[dict[str, Any]] = response.data["results"]
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["results"][0]["thumbnail_url"] == requested_thumbnail.file.url
+        assert results[0]["thumbnail_url"] == requested_thumbnail.file.url
 
     def test_list_astro_images_invalid_size_uses_thumbnail_default(
         self, api_client: APIClient
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
-            image = AstroImageFactory(original=jpeg_field("gallery-default.jpg", size=(1200, 800)))
-        thumbnail = ImageVariantFactory(
-            image=image,
+            astroimage: AstroImage = AstroImageFactory(
+                original=jpeg_field("gallery-default.jpg", size=(1200, 800))
+            )
+        thumbnail: ImageVariant = ImageVariantFactory(
+            owner=astroimage,
             file__filename="gallery-default-thumbnail.webp",
             role="thumbnail",
             width=560,
             height=373,
         )
         ImageVariantFactory(
-            image=image,
+            owner=astroimage,
             file__filename="gallery-default-large.webp",
             role="thumbnail",
             width=840,
@@ -122,9 +131,10 @@ class TestAstroImageViewSet:
             reverse(ASTROIMAGE_LIST_URL_NAME),
             {"size": "wide"},
         )
+        results: list[dict[str, Any]] = response.data["results"]
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["results"][0]["thumbnail_url"] == thumbnail.file.url
+        assert results[0]["thumbnail_url"] == thumbnail.file.url
 
     def test_retrieve_astro_image(self, api_client: APIClient, astro_image: AstroImage) -> None:
         """Test retrieving a single image via the router generated URL"""
@@ -164,13 +174,13 @@ class TestAstroImageViewSet:
 
     def test_filter_astro_images_by_translated_tag(self, api_client: APIClient) -> None:
         """Test filtering images by a tag slug that exists only in a non-default language."""
-        image = AstroImageFactory(celestial_object="Deep Sky")
+        astroimage: AstroImage = AstroImageFactory(celestial_object="Deep Sky")
 
         # Manually create the Polish translation
-        tag = Tag.objects.create()  # Untranslated base model
+        tag: Tag = Tag.objects.create()  # Untranslated base model
         tag.create_translation("pl", name="Polski Tytuł", slug="polski-tytul")
 
-        image.tags.add(tag)
+        astroimage.tags.add(tag)
 
         url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
 
@@ -179,7 +189,7 @@ class TestAstroImageViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["count"] == 1
         assert len(response.data["results"]) == 1
-        assert response.data["results"][0]["pk"] == str(image.pk)
+        assert response.data["results"][0]["pk"] == str(astroimage.pk)
 
     def test_list_astro_images_is_paginated(self, api_client: APIClient) -> None:
         """The public gallery list should return paginated slices with navigation metadata."""
@@ -199,11 +209,11 @@ class TestAstroImageViewSet:
         self, api_client: APIClient
     ) -> None:
         """Gallery ordering should follow creation time so FE matches the latest uploads."""
-        older_upload = AstroImageFactory(
+        older_upload: AstroImage = AstroImageFactory(
             name="Older upload",
             capture_date=date(2026, 4, 22),
         )
-        newer_upload = AstroImageFactory(
+        newer_upload: AstroImage = AstroImageFactory(
             name="Newer upload",
             capture_date=date(2020, 1, 1),
         )
@@ -254,7 +264,7 @@ class TestAstroImageViewSet:
         self, api_client: APIClient
     ) -> None:
         """Page 2 should return only the second gallery slice, not accumulated results."""
-        base_date = date(2026, 1, 1)
+        base_date: date = date(2026, 1, 1)
         for index in range(50):
             AstroImageFactory(
                 name=f"Image {index}",
@@ -264,7 +274,7 @@ class TestAstroImageViewSet:
         url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
         response: Response = api_client.get(url, {"page": 2})
 
-        expected_pks = [
+        expected_pks: list[str] = [
             str(pk) for pk in AstroImage.objects.for_gallery({}).values_list("pk", flat=True)[24:48]
         ]
 
@@ -279,7 +289,7 @@ class TestAstroImageViewSet:
         self, api_client: APIClient
     ) -> None:
         """Page 2 with a filter should stay bounded to that filtered queryset."""
-        base_date = date(2026, 1, 1)
+        base_date: date = date(2026, 1, 1)
         for index in range(30):
             AstroImageFactory(
                 name=f"Deep Sky {index}",
@@ -296,7 +306,7 @@ class TestAstroImageViewSet:
         url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
         response: Response = api_client.get(url, {"page": 2, "filter": "Deep Sky"})
 
-        expected_pks = [
+        expected_pks: list[str] = [
             str(pk)
             for pk in AstroImage.objects.for_gallery({"filter": "Deep Sky"}).values_list(
                 "pk", flat=True
@@ -328,11 +338,11 @@ class TestBackgroundMainPageView:
     def test_list_background_image_uses_hero_variant_url(self, api_client: APIClient) -> None:
         """Background endpoint should serve the default generated hero variant URL."""
         with patch("core.models.process_image_task.delay_on_commit"):
-            background = MainPageBackgroundImageFactory(
+            background: MainPageBackgroundImage = MainPageBackgroundImageFactory(
                 original=jpeg_field("background.jpg", size=(2600, 1734))
             )
-        hero = ImageVariantFactory(
-            image=background,
+        hero: ImageVariant = ImageVariantFactory(
+            owner=background,
             file__filename="background-hero.webp",
             role="hero",
             width=2560,
@@ -348,11 +358,11 @@ class TestBackgroundMainPageView:
     def test_list_background_image_ignores_requested_variant(self, api_client: APIClient) -> None:
         """Background endpoint always serves the default hero variant for now."""
         with patch("core.models.process_image_task.delay_on_commit"):
-            background = MainPageBackgroundImageFactory(
+            background: MainPageBackgroundImage = MainPageBackgroundImageFactory(
                 original=jpeg_field("background.jpg", size=(2600, 1734))
             )
-        hero_default = ImageVariantFactory(
-            image=background,
+        hero_default: ImageVariant = ImageVariantFactory(
+            owner=background,
             file__filename="background-hero-default.webp",
             role="hero",
             width=2560,
@@ -400,7 +410,7 @@ class TestBackgroundMainPageView:
         self, api_client: APIClient
     ) -> None:
         """Public background API returns null when generated hero variants are missing."""
-        background = MainPageBackgroundImageFactory(
+        background: MainPageBackgroundImage = MainPageBackgroundImageFactory(
             original=jpeg_field("background.jpg", size=(2600, 1734))
         )
         background.variants.all().delete()
@@ -416,10 +426,10 @@ class TestBackgroundMainPageView:
     ) -> None:
         """Missing background source files should not crash the public endpoint."""
         with patch("core.models.process_image_task.delay_on_commit"):
-            background = MainPageBackgroundImageFactory(
+            background: MainPageBackgroundImage = MainPageBackgroundImageFactory(
                 original=jpeg_field("missing-background.jpg", size=(2600, 1734))
             )
-        missing_name = str(background.original.name)
+        missing_name: str = str(background.original.name)
         background.original.storage.delete(missing_name)
         background.variants.all().delete()
 
@@ -454,22 +464,22 @@ class TestImageURLViewSet:
 
     def test_list_with_single_id_keeps_signed_url_mapping(self, api_client: APIClient) -> None:
         """The list compatibility route may sign exactly one selected image."""
-        image = AstroImageFactory()
+        astroimage: AstroImage = AstroImageFactory()
 
         response: Response = api_client.get(
             reverse(IMAGE_URLS_LIST_URL_NAME),
-            {"ids": str(image.pk)},
+            {"ids": str(astroimage.pk)},
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert set(response.data) == {str(image.pk)}
-        assert response.data[str(image.pk)].startswith("http://testserver/image-files/")
-        assert "?s=" in response.data[str(image.pk)]
+        assert set(response.data) == {str(astroimage.pk)}
+        assert response.data[str(astroimage.pk)].startswith("http://testserver/image-files/")
+        assert "?s=" in response.data[str(astroimage.pk)]
 
     def test_list_with_multiple_ids_returns_bad_request(self, api_client: APIClient) -> None:
         """Batch signing must not expose protected URLs before user intent."""
-        first = AstroImageFactory()
-        second = AstroImageFactory()
+        first: AstroImage = AstroImageFactory()
+        second: AstroImage = AstroImageFactory()
 
         response: Response = api_client.get(
             reverse(IMAGE_URLS_LIST_URL_NAME),
@@ -483,9 +493,9 @@ class TestImageURLViewSet:
 
     def test_role_and_size_params_keep_signed_url_mapping(self, api_client: APIClient) -> None:
         """Variant params must not change the legacy signed URL response shape."""
-        image = AstroImageFactory()
+        astroimage: AstroImage = AstroImageFactory()
         ImageVariantFactory(
-            image=image,
+            owner=astroimage,
             file__filename="andromeda-card-tablet.webp",
             role="card",
             width=560,
@@ -494,13 +504,13 @@ class TestImageURLViewSet:
 
         response: Response = api_client.get(
             reverse(IMAGE_URLS_LIST_URL_NAME),
-            {"ids": str(image.pk), "role": "card", "size": "tablet"},
+            {"ids": str(astroimage.pk), "role": "card", "size": "tablet"},
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert set(response.data) == {str(image.pk)}
-        assert response.data[str(image.pk)].startswith("http://testserver/image-files/")
-        assert "?s=" in response.data[str(image.pk)]
+        assert set(response.data) == {str(astroimage.pk)}
+        assert response.data[str(astroimage.pk)].startswith("http://testserver/image-files/")
+        assert "?s=" in response.data[str(astroimage.pk)]
 
 
 @pytest.mark.django_db
@@ -562,9 +572,9 @@ class TestTravelHighlightsBySlugView:
 
         place: Place = PlaceFactory(name="High Tatras", country="PL")
         with patch("core.models.process_image_task.delay_on_commit"):
-            img: AstroImage = AstroImageFactory(place=place, name="Tatras 1")
-        thumbnail = ImageVariantFactory(
-            image=img,
+            astroimage: AstroImage = AstroImageFactory(place=place, name="Tatras 1")
+        thumbnail: ImageVariant = ImageVariantFactory(
+            owner=astroimage,
             file__filename="travel-thumbnail.webp",
             role="thumbnail",
             width=560,
@@ -575,7 +585,7 @@ class TestTravelHighlightsBySlugView:
             is_active=True,
             adventure_date=DateRange(date(2024, 1, 1), date(2024, 1, 31)),
         )
-        slider.images.add(img)
+        slider.images.add(astroimage)
 
         url: str = reverse(
             TRAVEL_BY_COUNTRY_PLACE_DATE_URL_NAME,
@@ -606,7 +616,7 @@ class TestTravelHighlightsBySlugView:
         )
         # Prevent automatic task execution during factory creation for this test
         with patch("core.models.process_image_task.delay_on_commit"):
-            img = AstroImageFactory(place=place)
+            img: AstroImage = AstroImageFactory(place=place)
 
         # Now manually call the task
         process_image_task("astrophotography", "AstroImage", img.pk)
@@ -674,7 +684,7 @@ class TestTravelHighlightsBySlugView:
         response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        data = response.json()
+        data: dict[str, Any] = response.json()
         assert data["place_slug"] == FALLBACK_URL_SLUG
 
     def test_two_adventures_same_place_accessible_by_date_slug(self, api_client: APIClient) -> None:
@@ -725,7 +735,9 @@ class TestTravelHighlightsBySlugView:
         response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        location_data = next(item for item in response.data if str(item["pk"]) == str(slider.pk))
+        location_data: dict[str, Any] = next(
+            item for item in response.data if str(item["pk"]) == str(slider.pk)
+        )
         assert location_data["date_slug"] == "jan2026"
 
     def test_missing_segments_fails(self, api_client: APIClient) -> None:
@@ -827,7 +839,7 @@ class TestTagsView:
         # 1. Without latest=true - should see both tags
         response: Response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
-        tags_data = {t["slug"]: t["name"] for t in response.data}
+        tags_data: dict[str, str] = {t["slug"]: t["name"] for t in response.data}
         assert "tag-1" in tags_data
         assert "tag-2" in tags_data
 
@@ -858,7 +870,7 @@ class TestTagTranslation:
         url: str = reverse(TAGS_LIST_URL_NAME)
 
         # 1. Default (English)
-        response = api_client.get(url)
+        response: Response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data[0]["name"] == "Landscape"
 
@@ -899,7 +911,7 @@ class TestAstroImageViewSetCountryPlaceFiltering:
         place_us: Place = PlaceFactory(country="US", name="Hawaii")
         place_us_2: Place = PlaceFactory(country="US", name="Alaska")
         image_h: AstroImage = AstroImageFactory(place=place_us)
-        _ = AstroImageFactory(place=place_us_2)
+        _: AstroImage = AstroImageFactory(place=place_us_2)
 
         url: str = reverse(ASTROIMAGE_LIST_URL_NAME)
 
@@ -932,10 +944,10 @@ class TestAstroImageSecureView:
     """
 
     def test_astro_image_secure_view_success(self, api_client: APIClient) -> None:
-        astro_image = AstroImageFactory(original__width=3000, original__height=2000)
+        astro_image: AstroImage = AstroImageFactory(original__width=3000, original__height=2000)
         process_image_task("astrophotography", "AstroImage", astro_image.pk)
         astro_image.refresh_from_db()
-        original_format = astro_image.variants.get(role="original_format")
+        original_format: ImageVariant = astro_image.variants.get(role="original_format")
         url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
         params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
 
@@ -949,11 +961,11 @@ class TestAstroImageSecureView:
         self, api_client: APIClient
     ) -> None:
         """The modal/lightbox endpoint must serve the canonical public asset."""
-        astro_image = AstroImageFactory(original__width=3000, original__height=2000)
+        astro_image: AstroImage = AstroImageFactory(original__width=3000, original__height=2000)
         process_image_task("astrophotography", "AstroImage", astro_image.pk)
         astro_image.refresh_from_db()
 
-        original_format = astro_image.variants.get(role="original_format")
+        original_format: ImageVariant = astro_image.variants.get(role="original_format")
 
         url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
         params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
@@ -969,19 +981,19 @@ class TestAstroImageSecureView:
         self, api_client: APIClient
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
-            astro_image = AstroImageFactory(original=jpeg_field("missing-source.jpg"))
-        original_name = astro_image.original.name
-        astro_image.original.storage.delete(original_name)
+            astroimage: AstroImage = AstroImageFactory(original=jpeg_field("missing-source.jpg"))
+        original_name: str = astroimage.original.name
+        astroimage.original.storage.delete(original_name)
         ImageVariantFactory(
-            image=astro_image,
+            owner=astroimage,
             file__filename="restored-original-format.webp",
             role="original_format",
             width=1920,
             height=1280,
         )
 
-        url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
-        params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
+        url: str = reverse("astroimages:secure-image-serve", args=[astroimage.slug])
+        params: dict[str, Any] = generate_signed_url_params(astroimage.slug)
 
         response: Response = api_client.get(url, params)
 
@@ -1020,7 +1032,7 @@ class TestAstroImageSecureView:
 class TestMainPageBackgroundImageSecureView:
     def test_background_list_returns_public_serving_url(self, api_client: APIClient) -> None:
         MainPageBackgroundImageFactory()
-        url = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
+        url: str = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
 
         with patch.object(
             MainPageBackgroundImage,
@@ -1046,7 +1058,7 @@ class TestAstroImageAdminSecureMediaView:
         )
         sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_original"
         params: dict[str, Any] = generate_signed_url_params(sig_id)
-        response = admin_client.get(url, params)
+        response: Response = admin_client.get(url, params)
         astro_image.refresh_from_db()
         assert response.status_code == status.HTTP_200_OK
         assert "X-Accel-Redirect" in response
@@ -1062,7 +1074,7 @@ class TestAstroImageAdminSecureMediaView:
         )
         sig_id: str = f"admin_media_astrophotography_astroimage_{astro_image.pk}_original"
         params: dict[str, Any] = generate_signed_url_params(sig_id)
-        response = api_client.get(url, params)
+        response: Response = api_client.get(url, params)
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_admin_secure_media_view_missing_signature_staff(
@@ -1072,5 +1084,5 @@ class TestAstroImageAdminSecureMediaView:
             "admin-astroimage-secure-media",
             kwargs={"pk": str(astro_image.pk), "field_name": "original"},
         )
-        response = admin_client.get(url)
+        response: Response = admin_client.get(url)
         assert response.status_code == status.HTTP_403_FORBIDDEN

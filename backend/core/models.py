@@ -54,7 +54,7 @@ class ImageVariant(models.Model):
         max_length=64,
         help_text=_("Primary key of the concrete image object that owns this variant."),
     )
-    image = GenericForeignKey("content_type", "object_id")
+    owner = GenericForeignKey("content_type", "object_id")
     file = models.ImageField(
         blank=True,
         editable=False,

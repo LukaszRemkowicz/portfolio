@@ -49,7 +49,7 @@ def invalidate_cache_for_image_variant_change(sender, instance: ImageVariant, **
     their owning image model, so owner-model signals are not enough to refresh
     API/SSR payloads that embed generated public URLs.
     """
-    owner = instance.image
+    owner = instance.owner
     if isinstance(owner, AstroImage):
         CacheService.invalidate_astrophotography_cache()
         CacheService.invalidate_travel_cache()

@@ -272,7 +272,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
                 role_namespace=source.role_namespace,
             )
             variant = ImageVariant(
-                image=self,
+                owner=self,
                 role=role,
                 width=generated_width,
                 height=generated_height,

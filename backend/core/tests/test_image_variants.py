@@ -38,7 +38,7 @@ class TestImageVariantFileDeletion:
     def test_parent_instance_delete_removes_variant_files(self) -> None:
         image = AstroImageFactory(original=jpeg_field("owner-delete.jpg", size=(1200, 800)))
         variant = ImageVariant.objects.create(
-            image=image,
+            owner=image,
             role="cleanup_probe",
             width=1,
             height=1,
@@ -73,7 +73,7 @@ class TestImageVariantFileDeletion:
     def test_parent_queryset_delete_removes_variant_files(self, owner_factory) -> None:
         owner = owner_factory()
         variant = ImageVariant.objects.create(
-            image=owner,
+            owner=owner,
             role="cleanup_probe",
             width=1,
             height=1,
@@ -106,7 +106,7 @@ class TestImageVariantCacheInvalidation:
         )
 
         ImageVariant.objects.create(
-            image=image,
+            owner=image,
             role="thumbnail",
             width=560,
             height=373,
@@ -123,7 +123,7 @@ class TestImageVariantCacheInvalidation:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(original=jpeg_field("variant-cache-delete.jpg"))
         variant = ImageVariant.objects.create(
-            image=image,
+            owner=image,
             role="thumbnail",
             width=560,
             height=373,
@@ -158,7 +158,7 @@ class TestImageVariantCacheInvalidation:
         )
 
         ImageVariant.objects.create(
-            image=image,
+            owner=image,
             role="hero",
             width=1920,
             height=1080,

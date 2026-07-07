@@ -65,7 +65,7 @@ class TestShopProductListView:
             thumbnail_url="",
         )
         thumbnail = ImageVariantFactory(
-            image=product,
+            owner=product,
             file__filename="product-thumbnail.webp",
             role="thumbnail",
             width=560,
@@ -109,7 +109,7 @@ class TestShopProductListView:
                 original=jpeg_field("astro-original.jpg", size=(1200, 800))
             )
         astro_variant = ImageVariantFactory(
-            image=astro_image,
+            owner=astro_image,
             file__filename="astro-shop-thumb.webp",
             role="thumbnail",
             width=560,
@@ -152,14 +152,14 @@ class TestShopProductListView:
     def test_list_product_ignores_requested_image_width(self, api_client: APIClient) -> None:
         product = ShopProductFactory(image_cropped=png_field("product-crop.png", size=(900, 600)))
         ImageVariantFactory(
-            image=product,
+            owner=product,
             file__filename="product-thumbnail-320.webp",
             role="thumbnail",
             width=320,
             height=213,
         )
         large_variant = ImageVariantFactory(
-            image=product,
+            owner=product,
             file__filename="product-thumbnail-560.webp",
             role="thumbnail",
             width=560,
@@ -215,7 +215,7 @@ class TestShopProductListView:
                 image=png_field("shop-background.png", size=(1920, 1080))
             )
         background_variant = ImageVariantFactory(
-            image=shop_settings,
+            owner=shop_settings,
             file__filename="shop-background-variant.webp",
             role="background",
             width=1920,
@@ -385,14 +385,14 @@ class TestShopProductDetailView:
             image_cropped=png_field("product-crop.png", size=(900, 600)),
         )
         ImageVariantFactory(
-            image=product,
+            owner=product,
             file__filename="product-detail-thumbnail-320.webp",
             role="thumbnail",
             width=320,
             height=213,
         )
         large_variant = ImageVariantFactory(
-            image=product,
+            owner=product,
             file__filename="product-detail-thumbnail-560.webp",
             role="thumbnail",
             width=560,
@@ -433,7 +433,7 @@ class TestShopProductDetailView:
                 original=jpeg_field("astro-original.jpg", size=(1200, 800))
             )
         astro_variant = ImageVariantFactory(
-            image=astro_image,
+            owner=astro_image,
             file__filename="astro-shop-detail.webp",
             role="thumbnail",
             width=560,
@@ -545,7 +545,7 @@ class TestShopAstroImageLookupView:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(original=jpeg_field("lookup-thumb.jpg", size=(1200, 800)))
         ImageVariantFactory(
-            image=image,
+            owner=image,
             file__filename="lookup-thumb.webp",
             role="thumbnail",
             width=560,
