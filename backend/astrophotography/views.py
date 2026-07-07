@@ -252,8 +252,8 @@ class ImageURLViewSet(ViewSet):
 
     def list(self, request: Request) -> Response:
         """
-        Returns {slug: signed_url} mapping for requested images.
-        Requires query param 'ids' (comma-separated list of PKs).
+        Returns a one-item {pk: signed_url} mapping for a selected image.
+        Requires query param 'ids' with exactly one PK.
         """
         ids_param: str | None = request.query_params.get("ids")
         if ids_param is None:
@@ -266,6 +266,11 @@ class ImageURLViewSet(ViewSet):
         if not ids:
             return Response(
                 {"detail": "Query parameter 'ids' must include at least one image id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(ids) != 1:
+            return Response(
+                {"detail": "Query parameter 'ids' may include exactly one image id."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

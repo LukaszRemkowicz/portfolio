@@ -18,14 +18,14 @@ describe('imageUrlService', () => {
     delete (global as { fetch?: typeof fetch }).fetch;
   });
 
-  it('uses frontend BFF route for image list in the browser', async () => {
+  it('uses frontend BFF route for one selected image id in the browser', async () => {
     const payload = { '1': 'http://be:8000/v1/images/test/serve/?s=abc&e=123' };
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => payload,
     } as Response);
 
-    const result = await fetchImageUrls(['1']);
+    const result = await fetchImageUrls('1');
 
     const expectedUrl = new URL(`${BFF_ROUTES.images}`, window.location.origin);
     expectedUrl.searchParams.set('ids', '1');
@@ -39,6 +39,14 @@ describe('imageUrlService', () => {
     expect(result).toEqual({
       '1': '/app/image-files/test/serve/?s=abc&e=123',
     });
+  });
+
+  it('rejects multiple selected image ids before fetching', async () => {
+    await expect(fetchImageUrls(['1', '2'])).rejects.toThrow(
+      'Signed image URL lookup accepts exactly one image id'
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('uses frontend BFF route for single image in the browser', async () => {

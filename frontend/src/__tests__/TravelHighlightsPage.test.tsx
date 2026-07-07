@@ -220,7 +220,7 @@ describe('TravelHighlightsPage', () => {
     expect(modal).toBeInTheDocument();
   });
 
-  test('fetches and uses full-resolution image URLs', async () => {
+  test('fetches a signed full-resolution URL only for the selected image', async () => {
     class SuccessfulImage {
       onload: null | (() => void) = null;
       onerror: null | (() => void) = null;
@@ -245,18 +245,19 @@ describe('TravelHighlightsPage', () => {
       ],
     };
 
-    const mockImageUrls = {
-      '1': 'https://cdn.example.com/full/aurora.jpg?s=signature',
-    };
-
     (useTravelHighlightDetail as jest.Mock).mockReturnValue({
       data: mockData,
       isLoading: false,
       error: null,
     });
-    (useImageUrls as jest.Mock).mockReturnValue({
-      data: mockImageUrls,
-    });
+    (useImageUrls as jest.Mock).mockImplementation(
+      (imageId?: string, enabled?: boolean) => ({
+        data:
+          imageId === '1' && enabled
+            ? { '1': 'https://cdn.example.com/full/aurora.jpg?s=signature' }
+            : {},
+      })
+    );
 
     await renderComponent();
 
@@ -266,15 +267,14 @@ describe('TravelHighlightsPage', () => {
       'src',
       expect.stringContaining('/thumbs/aurora.jpg')
     );
+    expect(useImageUrls).not.toHaveBeenCalledWith('1', true);
 
-    // 3. Open modal and check for FULL RES url
     await act(async () => {
       fireEvent.click(image);
     });
+    expect(useImageUrls).toHaveBeenCalledWith('1', true);
 
-    // Wait for the full resolution URL to appear
     await waitFor(async () => {
-      // Scope to modal to avoid confusion with thumbnail
       const modal = screen.getByTestId('image-modal');
       expect(modal).toBeInTheDocument();
 

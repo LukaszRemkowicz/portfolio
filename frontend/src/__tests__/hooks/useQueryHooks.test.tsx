@@ -149,11 +149,11 @@ describe('TanStack Query Hooks', () => {
     );
   });
 
-  it('useImageUrls calls useQuery with correct options', () => {
-    renderHook(() => useImageUrls(['1', '2']));
+  it('useImageUrls calls useQuery with one selected image id', () => {
+    renderHook(() => useImageUrls('1'));
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['image-urls', 'en', ['1', '2']],
+        queryKey: ['image-urls', 'en', '1'],
         queryFn: expect.any(Function),
       })
     );

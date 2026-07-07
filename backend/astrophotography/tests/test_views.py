@@ -403,8 +403,8 @@ class TestImageURLViewSet:
             "detail": "Query parameter 'ids' must include at least one image id."
         }
 
-    def test_list_with_ids_keeps_signed_url_mapping_default(self, api_client: APIClient) -> None:
-        """Existing FE callers should keep receiving id-to-signed-url mappings by default."""
+    def test_list_with_single_id_keeps_signed_url_mapping(self, api_client: APIClient) -> None:
+        """The list compatibility route may sign exactly one selected image."""
         image = AstroImageFactory()
 
         response: Response = api_client.get(
@@ -416,6 +416,21 @@ class TestImageURLViewSet:
         assert set(response.data) == {str(image.pk)}
         assert response.data[str(image.pk)].startswith("http://testserver/image-files/")
         assert "?s=" in response.data[str(image.pk)]
+
+    def test_list_with_multiple_ids_returns_bad_request(self, api_client: APIClient) -> None:
+        """Batch signing must not expose protected URLs before user intent."""
+        first = AstroImageFactory()
+        second = AstroImageFactory()
+
+        response: Response = api_client.get(
+            reverse(IMAGE_URLS_LIST_URL_NAME),
+            {"ids": f"{first.pk},{second.pk}"},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {
+            "detail": "Query parameter 'ids' may include exactly one image id."
+        }
 
     def test_role_and_size_params_keep_signed_url_mapping(self, api_client: APIClient) -> None:
         """Variant params must not change the legacy signed URL response shape."""

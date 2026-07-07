@@ -20,12 +20,16 @@ const normalizeImageUrlMap = (
     ])
   );
 
-/** Fetch signed URLs for a set of image identifiers. */
+/** Fetch the signed URL mapping for one selected image identifier. */
 export async function fetchImageUrls(
-  ids?: string[]
+  imageId?: string | string[] | null
 ): Promise<Record<string, string>> {
+  if (Array.isArray(imageId) || !imageId) {
+    throw new Error('Signed image URL lookup accepts exactly one image id');
+  }
+
   const useFrontendBff = typeof window !== 'undefined';
-  const query = ids && ids.length > 0 ? `?ids=${ids.join(',')}` : '';
+  const query = `?ids=${encodeURIComponent(imageId)}`;
 
   if (useFrontendBff) {
     const payload = await fetchBffJson<Record<string, string>>(

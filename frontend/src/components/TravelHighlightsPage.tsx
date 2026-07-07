@@ -55,31 +55,31 @@ const TravelHighlightsPage: React.FC = () => {
   const locationBackgroundImage = detailData?.background_image || null;
   const images = useMemo(() => detailData?.images || [], [detailData?.images]);
 
-  // Fetch full resolution URLs for all images
-  const imageIdsToFetch = useMemo(
-    () => images.map(img => img.pk.toString()),
-    [images]
-  );
+  const selectedImage = useMemo(() => {
+    if (!imgParam) return null;
+    return (
+      images.find(i => i.slug === imgParam || i.pk.toString() === imgParam) ||
+      null
+    );
+  }, [imgParam, images]);
+  const selectedImageId = selectedImage ? selectedImage.pk.toString() : null;
   const { data: imageUrls = {} } = useImageUrls(
-    imageIdsToFetch,
-    imageIdsToFetch.length > 0
+    selectedImageId,
+    Boolean(selectedImageId)
   );
 
   // Derive modal image from URL parameter
   const modalImage = useMemo(() => {
-    if (!imgParam) return null;
-    const found = images.find(
-      i => i.slug === imgParam || i.pk.toString() === imgParam
-    );
-    if (!found) return null;
+    if (!selectedImage) return null;
 
     // Enhance with full-res URL if available
-    const fullResUrl = imageUrls[found.pk.toString()] || imageUrls[found.slug];
+    const fullResUrl =
+      imageUrls[selectedImage.pk.toString()] || imageUrls[selectedImage.slug];
     return {
-      ...found,
-      url: fullResUrl || found.url || found.thumbnail_url,
+      ...selectedImage,
+      url: fullResUrl || selectedImage.url || selectedImage.thumbnail_url,
     };
-  }, [imgParam, images, imageUrls]);
+  }, [selectedImage, imageUrls]);
 
   const handleImageClick = (image: ExtendedAstroImage): void => {
     const nextParams = new URLSearchParams(searchParams);
