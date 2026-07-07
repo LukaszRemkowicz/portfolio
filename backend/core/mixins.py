@@ -3,7 +3,6 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from typing import Any, ClassVar, cast
 
-from django.core.files.base import ContentFile
 from django.db import models
 from django.db.models import QuerySet
 from django.db.models.base import ModelBase
@@ -54,34 +53,35 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
         """Return generated variant specs for this model."""
         return self.image_variant_specs
 
-    def make_thumbnail(self, image: Any, size: tuple[int, int] | None = None) -> list[ContentFile]:
-        """Generate thumbnail-compatible files using the variant generation path."""
-        thumbnail_spec: ImageVariantSpec | None = next(
-            (spec for spec in self.get_image_variant_specs() if spec.role == "thumbnail"),
-            None,
-        )
-        if thumbnail_spec is None:
-            raise ValueError("Thumbnail variant spec is required to generate thumbnails.")
+    def make_thumbnail(self) -> bool:
+        """Create thumbnail ImageVariant rows from configured model specs."""
+        created_count = 0
+        for source in self.get_image_variant_sources():
+            targets = self._get_thumbnail_variant_targets(source)
+            if not targets:
+                continue
+            target_roles = {role for role, _width, _quality in targets}
+            target_widths = {width for _role, width, _quality in targets}
+            cast(Any, self).variants.filter(
+                role__in=target_roles,
+                width__in=target_widths,
+            ).delete()
+            created_count += self._generate_image_variants_for_source(source, targets).count()
+        return created_count > 0
 
-        widths: tuple[int, ...] = (
-            (size[0],) if size is not None else thumbnail_spec.viewport_widths.as_tuple()
-        )
-        quality: int = thumbnail_spec.quality
-
-        contents: list[ContentFile] = []
-        for width in widths:
-            result = build_image_with_given_width(
-                image,
-                width=width,
-                quality=quality,
-                filename_prefix=f"thumbnail_{width}_",
+    def _get_thumbnail_variant_targets(
+        self,
+        source: ImageVariantSource,
+    ) -> tuple[ImageVariantTarget, ...]:
+        targets: list[ImageVariantTarget] = []
+        for spec in self.get_image_variant_specs():
+            if spec.role != "thumbnail":
+                continue
+            stored_role = self._build_variant_role(spec.role, source.role_namespace)
+            targets.extend(
+                (stored_role, width, spec.quality) for width in spec.viewport_widths.as_tuple()
             )
-            if result is None:
-                raise ValueError(f"Failed to generate thumbnail image for width {width}")
-
-            content, _generated_width, _generated_height = result
-            contents.append(content)
-        return contents
+        return tuple(targets)
 
     def sync_image_variants(
         self,

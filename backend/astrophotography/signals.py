@@ -20,6 +20,7 @@ from django.dispatch import receiver
 
 from common.tasks import invalidate_frontend_ssr_cache_task
 from core.cache_service import CacheService
+from core.models import ImageVariant
 
 from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Tag
 
@@ -38,6 +39,28 @@ def invalidate_astroimage_cache(sender, instance, **kwargs):
     """
     CacheService.invalidate_astrophotography_cache()
     invalidate_frontend_ssr_cache_task.delay_on_commit(["latest-astro-images", "travel-highlights"])
+
+
+@receiver([post_save, post_delete], sender=ImageVariant)
+def invalidate_cache_for_image_variant_change(sender, instance: ImageVariant, **kwargs) -> None:
+    """Clear public caches when generated image files change.
+
+    Variant rows are updated by async image processing/backfills without saving
+    their owning image model, so owner-model signals are not enough to refresh
+    API/SSR payloads that embed generated public URLs.
+    """
+    owner = instance.image
+    if isinstance(owner, AstroImage):
+        CacheService.invalidate_astrophotography_cache()
+        CacheService.invalidate_travel_cache()
+        invalidate_frontend_ssr_cache_task.delay_on_commit(
+            ["latest-astro-images", "travel-highlights"]
+        )
+        return
+
+    if isinstance(owner, MainPageBackgroundImage):
+        CacheService.invalidate_astrophotography_cache()
+        invalidate_frontend_ssr_cache_task.delay_on_commit(["background"])
 
 
 @receiver(pre_save, sender=AstroImage)

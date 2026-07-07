@@ -13,6 +13,7 @@ from astrophotography.models import AstroImage, MainPageBackgroundImage
 from common.utils.image import file_exists_in_storage
 from programming.models import ProjectImage
 from shop.models import ShopProduct, ShopSettings
+from users.models import User
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,7 @@ class Command(BaseCommand):
         VariantBackfillTarget("ProjectImage", ProjectImage),
         VariantBackfillTarget("ShopProduct", ShopProduct),
         VariantBackfillTarget("ShopSettings", ShopSettings),
+        VariantBackfillTarget("User", User),
     )
 
     def add_arguments(self, parser) -> None:

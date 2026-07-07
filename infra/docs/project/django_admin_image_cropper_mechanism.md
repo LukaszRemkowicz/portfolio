@@ -55,12 +55,10 @@ This means the cropper does not replace the existing backend image-processing ar
 
 ## Main Files
 
-### Backend config and types
+### Backend types
 - [backend/users/types.py](../../../backend/users/types.py)
   - `CropperFieldConfig`
   - `CropperPreviewShape`
-- [backend/settings/base.py](../../../backend/settings/base.py)
-  - `USER_ADMIN_CROPPER_FIELD_CONFIGS`
 
 ### Admin integration
 - [backend/users/admin.py](../../../backend/users/admin.py)
@@ -107,23 +105,26 @@ This means the cropper does not replace the existing backend image-processing ar
 - [backend/shop/tests/test_tasks.py](../../../backend/shop/tests/test_tasks.py)
   - shop image processing coverage
 
-## Settings-Backed Field Configuration
+## Admin-Owned Field Configuration
 
-### Why config lives in settings
-The user cropper field instances are defined in Django settings so admin does not own the configuration itself.
-
-Current setting:
-- `USER_ADMIN_CROPPER_FIELD_CONFIGS`
+### Why config lives in admin
+The cropper exists only for Django admin forms, so field instances and output specs live in the admin classes that render those forms.
 
 Each entry is a `CropperFieldConfig` with:
 - `field_name`
 - `label`
 - `input_id`
-- `spec_method`
+- `target_field_name`
+- `target_input_id`
+- `spec`
 - `preview_shape`
 - `crop_aspect_ratio`
 
-The shop cropper reuses the same `CropperFieldConfig` type, but its configuration currently lives directly in `ShopProductAdmin.fk_cropper_field_configs` because it targets a foreign key source and a separate upload field.
+User admin exposes these through `UserAdmin.cropper_field_configs`.
+
+Shop admin reuses the same `CropperFieldConfig` type:
+- `ShopProductAdmin.product_thumbnail_cropper_config`
+- `ShopSettingsAdmin.cropper_field_configs`
 
 ### Shape typing
 `preview_shape` is not a free string.
@@ -138,15 +139,23 @@ Admin serializes the enum value for the browser widget.
 - `avatar`
   - preview shape: `circle`
   - crop ratio: `1.0`
-  - output spec: `get_avatar_spec()`
+  - output spec: `ImageSpec(dimension=280, quality=10)`
 - `about_me_image`
   - preview shape: `rounded-square`
   - crop ratio: `1.0`
-  - output spec: `get_portrait_spec()`
+  - output spec: `ImageSpec(dimension=800, quality=35)`
 - `about_me_image2`
   - preview shape: `rounded-square`
   - crop ratio: `1.0`
-  - output spec: `get_portrait_spec()`
+  - output spec: `ImageSpec(dimension=800, quality=35)`
+- `ShopProduct.image`
+  - preview shape: `rounded-square`
+  - crop ratio: `4 / 3`
+  - output spec: `ImageSpec(dimension=560, quality=100)`
+- `ShopSettings.image`
+  - preview shape: `rounded-square`
+  - crop ratio: `16 / 9`
+  - output spec: `ImageSpec(dimension=1920, quality=90)`
 
 ## Admin Rendering Flow
 
@@ -154,9 +163,9 @@ Admin serializes the enum value for the browser widget.
 `UserAdmin.change_view()` does this:
 
 1. Loads the current `User` object.
-2. Iterates over `settings.USER_ADMIN_CROPPER_FIELD_CONFIGS`.
+2. Iterates over `UserAdmin.cropper_field_configs`.
 3. Reads the current source image name and URL from the model field.
-4. Resolves output size from the configured `spec_method`.
+4. Resolves output size from the configured `spec`.
 5. Pushes a normalized JSON-friendly structure into `extra_context["admin_image_cropper"]`.
 
 The admin template then renders:
@@ -271,18 +280,13 @@ Regression test:
 
 ## Image Spec Interaction
 
-The cropper config uses `spec_method` to resolve the effective output target:
+The cropper config stores an `ImageSpec` directly in each admin `CropperFieldConfig`.
 
-- `get_avatar_spec()`
-- `get_portrait_spec()`
-
-Those methods currently return `ImageSpec` objects from `settings.IMAGE_OPTIMIZATION_SPECS`.
-
-The cropper uses those specs indirectly to calculate:
+The cropper uses those specs to calculate:
 - `output_width`
 - `output_height`
 
-The async backend pipeline still uses the same model methods when creating derived WebP images.
+The async backend variant pipeline uses `ImageVariantSpec` on image models. Cropper `ImageSpec` values only control admin crop export size and quality.
 
 ## Important Constraints
 
@@ -355,9 +359,9 @@ Check:
 
 If a new model field should use the cropper:
 
-1. add a new `CropperFieldConfig` instance to `USER_ADMIN_CROPPER_FIELD_CONFIGS`
+1. add a new `CropperFieldConfig` instance to the relevant admin property
 2. make sure the admin form exposes a stable file input id
-3. ensure the model has a compatible image spec method
+3. choose an `ImageSpec` for admin crop export
 4. ensure admin-domain media serving allows that media path
 5. verify the existing async derivative pipeline supports the field, or extend it
 6. add admin and backend regression coverage
@@ -394,8 +398,7 @@ As of April 8, 2026:
 - reusable source-field cropper exists for `users.User`
 - reusable foreign-key cropper exists for `shop.ShopProduct`
 - field config type is centralized in `users/types.py`
-- cropper field instances are centralized in Django settings
-- shop cropper currently keeps its field config in admin
+- cropper field instances are owned by the relevant admin classes
 - shape is typed with `CropperPreviewShape`
 - admin-domain media serving bug for `about_me_images` is fixed
 - backend test suite is green

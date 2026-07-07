@@ -16,7 +16,7 @@ def main() -> int:
     for command in RELEASE_CONFIGURATION_COMMANDS:
         logger.info("Running release configuration step", extra={"command": command})
         subprocess.run(
-            (sys.executable, "manage.py", command, "--verbosity", "0"),
+            (sys.executable, "manage.py", command, "--verbosity", "0", "--silent"),
             check=True,
         )
 

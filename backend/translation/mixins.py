@@ -1,9 +1,10 @@
 import logging
+import uuid
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.db import models
+from django.db import models, transaction
 from django.forms import BaseModelForm, Media
 from django.http import HttpRequest
 from django.utils.safestring import mark_safe
@@ -156,14 +157,14 @@ class AutomatedTranslationModelMixin:
             status__in=[TranslationTask.Status.COMPLETED, TranslationTask.Status.FAILED],
         ).delete()
 
-        # Dispatch async task
-        task = translate_instance_task.delay(
-            model_name=obj._meta.label,  # type: ignore[attr-defined]
-            instance_pk=obj.pk,  # type: ignore[attr-defined]
-            language_code=lang_code,
-            method_name=method_name,
+        task_id = str(uuid.uuid4())
+        task_kwargs = {
+            "model_name": obj._meta.label,  # type: ignore[attr-defined]
+            "instance_pk": obj.pk,  # type: ignore[attr-defined]
+            "language_code": lang_code,
+            "method_name": method_name,
             **kwargs,
-        )
+        }
 
         # Create/Update TranslationTask record
         TranslationTask.objects.update_or_create(
@@ -172,11 +173,18 @@ class AutomatedTranslationModelMixin:
             language=lang_code,
             defaults={
                 "method": method_name,
-                "task_id": task.id,
+                "task_id": task_id,
                 "status": TranslationTask.Status.PENDING,
             },
         )
-        return task.id
+
+        transaction.on_commit(
+            lambda: translate_instance_task.apply_async(
+                kwargs=task_kwargs,
+                task_id=task_id,
+            )
+        )
+        return task_id
 
 
 class AutomatedTranslationAdminMixin:

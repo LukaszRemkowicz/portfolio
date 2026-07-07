@@ -1,5 +1,4 @@
 import json
-import os
 from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
@@ -8,16 +7,16 @@ import pytest
 from pytest_mock import MockerFixture
 from rest_framework import status
 
-from django.core.files.base import ContentFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.urls import reverse
 
 from astrophotography.models import MeteorsMainPageConfig
-from astrophotography.tests.factories import AstroImageFactory, MainPageBackgroundImageFactory
+from astrophotography.tests.factories import AstroImageFactory
 from common.tests.image_helpers import jpeg_field
+from core.management.commands.backfill_image_variants import Command as BackfillImageVariantsCommand
+from core.management.commands.regenerate_thumbnails import Command as RegenerateThumbnailsCommand
 from core.models import LandingPageSettings
-from programming.models import ProjectImage
 from programming.tests.factories import ProjectImageFactory
 from shop.models import ShopSettings
 from shop.tests.factories import ShopProductFactory
@@ -129,71 +128,40 @@ class TestClearCacheCommand:
 
 @pytest.mark.django_db
 class TestRegenerateThumbnailsCommand:
-    def test_regenerate_thumbnails_creates_missing_thumbnails(self, mocker: MockerFixture) -> None:
-        astro_image = AstroImageFactory()
-        background_image = MainPageBackgroundImageFactory()
-        type(astro_image).objects.filter(pk=astro_image.pk).update(thumbnail="")
-        type(background_image).objects.filter(pk=background_image.pk).update(thumbnail="")
-        astro_image.refresh_from_db()
-        background_image.refresh_from_db()
+    def test_command_does_not_inherit_variant_backfill_command(self) -> None:
+        assert not issubclass(RegenerateThumbnailsCommand, BackfillImageVariantsCommand)
 
-        mocker.patch.object(ProjectImage.objects, "all", return_value=ProjectImage.objects.none())
+    def test_regenerates_thumbnail_variants_only(self) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(
+                original=jpeg_field("regenerate-thumbnail.jpg", size=(1200, 800)),
+            )
 
-        astro_thumb = ContentFile(b"astro-thumb", name="thumb_astro.webp")
-        background_thumb = ContentFile(b"background-thumb", name="thumb_background.webp")
+        image.sync_image_variants()
+        image.variants.filter(role="thumbnail").delete()
+        existing_card_count = image.variants.filter(role="card").count()
 
-        mocker.patch.object(type(astro_image), "make_thumbnail", return_value=[astro_thumb])
-        mocker.patch.object(
-            type(background_image), "make_thumbnail", return_value=[background_thumb]
-        )
+        call_command("regenerate_thumbnails", object_id=str(image.pk))
 
-        call_command("regenerate_thumbnails")
+        image.refresh_from_db()
+        thumbnail = image.variants.get(role="thumbnail", width=560)
+        assert thumbnail.height == 373
+        assert image.variants.filter(role="card").count() == existing_card_count
 
-        astro_image.refresh_from_db()
-        background_image.refresh_from_db()
+    def test_force_rebuilds_existing_thumbnail_variant(self) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(
+                original=jpeg_field("force-thumbnail.jpg", size=(1200, 800)),
+            )
 
-        assert astro_image.thumbnail
-        assert os.path.basename(astro_image.thumbnail.name).startswith("thumb_")
-        assert astro_image.thumbnail.name.endswith(".webp")
-        assert background_image.thumbnail
-        assert os.path.basename(background_image.thumbnail.name).startswith("thumb_")
-        assert background_image.thumbnail.name.endswith(".webp")
+        image.sync_image_variants()
+        old_thumbnail_name = image.variants.get(role="thumbnail", width=560).file.name
 
-    def test_regenerate_thumbnails_skips_existing_without_force(
-        self, mocker: MockerFixture
-    ) -> None:
-        astro_image = AstroImageFactory()
-        astro_image.thumbnail.save(
-            "existing_thumb.webp",
-            ContentFile(b"existing-thumb", name="existing_thumb.webp"),
-            save=True,
-        )
-        mock_make_thumbnail = mocker.patch.object(type(astro_image), "make_thumbnail")
-        output = StringIO()
-        original_thumbnail_name = astro_image.thumbnail.name
+        call_command("regenerate_thumbnails", object_id=str(image.pk), force=True)
 
-        call_command("regenerate_thumbnails", stdout=output)
-
-        astro_image.refresh_from_db()
-        mock_make_thumbnail.assert_not_called()
-        assert "Thumbnail exists" in output.getvalue()
-        assert astro_image.thumbnail.name == original_thumbnail_name
-
-    def test_regenerate_thumbnails_force_rebuilds_existing(self, mocker: MockerFixture) -> None:
-        astro_image = AstroImageFactory()
-        astro_image.thumbnail.save(
-            "existing_thumb.webp",
-            ContentFile(b"existing-thumb", name="existing_thumb.webp"),
-            save=True,
-        )
-        regenerated_thumb = ContentFile(b"regenerated-thumb", name="regenerated_thumb.webp")
-        mocker.patch.object(type(astro_image), "make_thumbnail", return_value=[regenerated_thumb])
-
-        call_command("regenerate_thumbnails", force=True)
-
-        astro_image.refresh_from_db()
-        assert os.path.basename(astro_image.thumbnail.name).startswith("regenerated_thumb")
-        assert astro_image.thumbnail.name.endswith(".webp")
+        image.refresh_from_db()
+        new_thumbnail_name = image.variants.get(role="thumbnail", width=560).file.name
+        assert new_thumbnail_name != old_thumbnail_name
 
 
 @pytest.mark.django_db
@@ -239,6 +207,28 @@ class TestBackfillImageVariantsCommand:
         original_format = image.variants.get(role="original_format", width=900)
         assert original_format.height == 600
         assert original_format.file.name.startswith("programming/original_format/")
+
+    def test_generates_user_profile_variants(self) -> None:
+        with patch("users.models.process_image_task.delay_on_commit"):
+            user = UserFactory(
+                avatar=jpeg_field("avatar-backfill.jpg", size=(800, 800)),
+                about_me_image=jpeg_field("about-me-backfill.jpg", size=(1200, 800)),
+                about_me_image2=jpeg_field("about-me-2-backfill.jpg", size=(900, 600)),
+            )
+
+        assert user.variants.count() == 0
+
+        call_command("backfill_image_variants", object_id=str(user.pk))
+
+        user.refresh_from_db()
+        avatar = user.variants.get(role="avatar__original_format", width=800)
+        portrait = user.variants.get(role="about_me_image__original_format", width=1200)
+        second_portrait = user.variants.get(role="about_me_image2__original_format", width=900)
+        assert avatar.file.name.startswith("avatars/avatar/original_format/")
+        assert portrait.file.name.startswith("about_me_images/about_me_image/original_format/")
+        assert second_portrait.file.name.startswith(
+            "about_me_images/about_me_image2/original_format/"
+        )
 
     def test_generates_new_thumbnail_spec_for_existing_variant_rows(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):

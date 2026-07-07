@@ -112,11 +112,11 @@ class TestAutomatedTranslationAdminMixin:
             m.id = str(uuid.uuid4())
             return m
 
-        mock_translate_task.delay.side_effect = side_effect
+        mock_translate_task.apply_async.side_effect = side_effect
 
         place = PlaceFactory()
         # Reset mocks after factory creation to test save_model in isolation
-        mock_translate_task.delay.reset_mock()
+        mock_translate_task.apply_async.reset_mock()
         TranslationTask.objects.all().delete()
 
         admin_instance = MockAdmin()
@@ -127,7 +127,7 @@ class TestAutomatedTranslationAdminMixin:
 
         # Verify task calls
         # 'en' is default (skipped), 'pl' and 'es' should be called
-        assert mock_translate_task.delay.call_count == 2
+        assert mock_translate_task.apply_async.call_count == 2
 
         # Verify TranslationTask records created
         tasks = TranslationTask.objects.filter(object_id=place.pk)

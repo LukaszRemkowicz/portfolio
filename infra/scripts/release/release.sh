@@ -240,7 +240,10 @@ fi
 if [[ "${ENV_SUFFIX}" == "prod" ]]; then
   echo "🛡️ [RELEASE] Downloading Nginx bot blocklist..."
   if ! "${COMPOSE[@]}" run --rm "nginx-blocklist-init"; then
-    echo "⚠️ WARNING: Blocklist download failed. Nginx will start with an empty list."
+    echo "❌ ERROR: Nginx bot blocklist initialization failed." >&2
+    echo "👉 Refusing to continue with a silently disabled bot blocklist." >&2
+    echo "👉 Set ALLOW_EMPTY_NGINX_BLOCKLIST=true only for an explicit emergency bypass." >&2
+    exit 1
   fi
 
   BACKUP_DIR="${BACKUP_DIR:-/var/backups/portfolio/pre_release/prod}"
