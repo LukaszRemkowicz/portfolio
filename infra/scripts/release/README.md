@@ -10,9 +10,11 @@ This folder contains:
 
 - [build.sh](./build.sh)
 - [prepare_images.sh](./prepare_images.sh)
+- [prepare_staging_images.sh](./prepare_staging_images.sh)
 - [release.sh](./release.sh)
 - [deploy.sh](./deploy.sh)
 - [deploy_staging.sh](./deploy_staging.sh)
+- [manual_deploy_staging.sh](./manual_deploy_staging.sh)
 - [deploy_production.sh](./deploy_production.sh)
 
 ## 📖 Use The Shared Runbook For
