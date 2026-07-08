@@ -161,6 +161,12 @@ async function consumeStream(stream: PassThrough): Promise<string> {
   return html;
 }
 
+function dehydratedQueryKeys(result: {
+  dehydratedState: { queries: Array<{ queryKey: unknown }> };
+}): unknown[] {
+  return result.dehydratedState.queries.map(query => query.queryKey);
+}
+
 describe('SSR entry server', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -189,6 +195,26 @@ describe('SSR entry server', () => {
       'pl',
       'https://portfolio.local'
     );
+  });
+
+  it('dehydrates only homepage shell queries', async () => {
+    const result = await render(
+      '/',
+      'en',
+      'https://portfolio.local',
+      'req-home'
+    );
+
+    expect(dehydratedQueryKeys(result)).toEqual(
+      expect.arrayContaining([
+        ['settings', 'en'],
+        ['profile', 'en', 1920],
+        ['background', 'en', 1920],
+        ['travel-highlights', 'en', 840],
+        ['latest-astro-images', 'en', 840],
+      ])
+    );
+    expect(result.dehydratedState.queries).toHaveLength(5);
   });
 
   it('prefetches travel detail data for travel routes', async () => {
@@ -230,6 +256,32 @@ describe('SSR entry server', () => {
         limit: 24,
       },
       'mock-client'
+    );
+  });
+
+  it('dehydrates gallery route queries without signed image URLs', async () => {
+    const result = await render(
+      '/astrophotography?filter=landscape&tag=moon',
+      'en',
+      'https://portfolio.local',
+      'req-gallery-payload'
+    );
+
+    expect(dehydratedQueryKeys(result)).toEqual(
+      expect.arrayContaining([
+        ['settings', 'en'],
+        ['profile', 'en', 1920],
+        ['background', 'en', 1920],
+        ['travel-highlights', 'en', 840],
+        ['latest-astro-images', 'en', 840],
+        ['categories'],
+        ['tags', 'en', 'landscape'],
+        ['astro-images', 'en', { filter: 'landscape', tag: 'moon', size: 840 }],
+      ])
+    );
+    expect(result.dehydratedState.queries).toHaveLength(8);
+    expect(dehydratedQueryKeys(result)).not.toContainEqual(
+      expect.arrayContaining(['image-urls'])
     );
   });
 

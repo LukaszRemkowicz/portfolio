@@ -17,7 +17,7 @@ from shop.tests.factories import ShopProductFactory
 from users.tests.factories import UserFactory
 
 
-def _stored_webp_size(image, name: str) -> tuple[int, int]:
+def _stored_output_image_size(image, name: str) -> tuple[int, int]:
     with image.original.storage.open(name, "rb") as stored_file:
         with Image.open(BytesIO(stored_file.read())) as generated:
             return generated.size
@@ -352,7 +352,7 @@ class TestImageVariantMixinCompatibility:
 
 @pytest.mark.django_db
 class TestBaseImageVariants:
-    def test_process_image_task_generates_astroimage_original_format_variant_like_legacy_webp(
+    def test_process_image_task_generates_astroimage_original_format_variant(
         self,
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -368,7 +368,7 @@ class TestBaseImageVariants:
         assert original_format.height == 1280
         assert original_format.mime_type == "image/webp"
         assert original_format.file.name.startswith("images/original_format/")
-        assert _stored_webp_size(image, original_format.file.name) == (1920, 1280)
+        assert _stored_output_image_size(image, original_format.file.name) == (1920, 1280)
 
     def test_process_image_task_generates_responsive_variants_preserving_aspect_ratio(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -392,7 +392,7 @@ class TestBaseImageVariants:
         assert all(variant.file.name.startswith("images/card/") for variant in card_variants)
 
         for variant in card_variants:
-            assert _stored_webp_size(image, variant.file.name) == (
+            assert _stored_output_image_size(image, variant.file.name) == (
                 variant.width,
                 variant.height,
             )

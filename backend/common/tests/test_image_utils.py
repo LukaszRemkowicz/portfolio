@@ -27,7 +27,7 @@ from common.utils.image import (
 class TestImageOutputFormat:
     """Tests for the centralized generated-image output contract."""
 
-    def test_webp_output_contract_groups_encoder_extension_and_mime_type(self):
+    def test_output_contract_groups_encoder_extension_and_mime_type(self):
         assert IMAGE_FORMAT.pillow_format == "WEBP"
         assert IMAGE_FORMAT.extension == ".webp"
         assert IMAGE_FORMAT.mime_type == "image/webp"
@@ -44,7 +44,7 @@ class TestImageOutputFormat:
         assert output_name.endswith(IMAGE_FORMAT.extension)
 
 
-class TestConvertToWebp:
+class TestConvertToProjectImageFormat:
     """Tests for convert_to_project_image_format()."""
 
     # --- guard cases ---
@@ -59,14 +59,14 @@ class TestConvertToWebp:
         empty.__bool__ = MagicMock(return_value=False)
         assert convert_to_project_image_format(empty) is None
 
-    def test_returns_none_if_already_webp(self):
-        """If the field name ends in .webp, no conversion occurs."""
+    def test_returns_none_if_already_output_format(self):
+        """If the field name uses the output extension, no conversion occurs."""
         field = MagicMock()
         field.__bool__ = MagicMock(return_value=True)
         field.name = "images/photo.webp"
         assert convert_to_project_image_format(field) is None
 
-    def test_returns_none_if_already_webp_uppercase(self):
+    def test_returns_none_if_already_output_format_uppercase(self):
         """Extension check must be case-insensitive."""
         field = MagicMock()
         field.__bool__ = MagicMock(return_value=True)
@@ -85,13 +85,13 @@ class TestConvertToWebp:
         result = convert_to_project_image_format(jpeg_field("images/photo.jpg"))
 
         assert result is not None
-        original_name, webp_content = result
+        original_name, output_content = result
         assert original_name == "photo.jpg"
-        assert webp_content.name.startswith("photo_")
-        assert webp_content.name.endswith(".webp")
+        assert output_content.name.startswith("photo_")
+        assert output_content.name.endswith(".webp")
 
-        webp_content.seek(0)
-        img = Image.open(webp_content)
+        output_content.seek(0)
+        img = Image.open(output_content)
         assert img.format == "WEBP"
 
     def test_output_filename_strips_original_extension(self):
@@ -99,9 +99,9 @@ class TestConvertToWebp:
         result = convert_to_project_image_format(png_field("uploads/banner.png"))
 
         assert result is not None
-        _, webp_content = result
-        assert webp_content.name.startswith("banner_")
-        assert webp_content.name.endswith(".webp")
+        _, output_content = result
+        assert output_content.name.startswith("banner_")
+        assert output_content.name.endswith(".webp")
 
     def test_custom_quality_is_accepted(self):
         """A custom quality value should not raise and should produce output."""
@@ -116,9 +116,9 @@ class TestConvertToWebp:
         )
 
         assert result is not None
-        _, webp_content = result
-        webp_content.seek(0)
-        img = Image.open(webp_content)
+        _, output_content = result
+        output_content.seek(0)
+        img = Image.open(output_content)
         assert img.size == (1000, 1000)
 
     def test_dimension_percentage_overrides_max_dimension(self):
@@ -130,18 +130,18 @@ class TestConvertToWebp:
         )
 
         assert result is not None
-        _, webp_content = result
-        webp_content.seek(0)
-        img = Image.open(webp_content)
+        _, output_content = result
+        output_content.seek(0)
+        img = Image.open(output_content)
         assert img.size == (1000, 1000)
 
     def test_rgba_png_is_converted(self):
         """An RGBA image (transparent PNG) should convert without error."""
         result = convert_to_project_image_format(png_field("icon.png", mode="RGBA"))
         assert result is not None
-        _, webp_content = result
-        webp_content.seek(0)
-        img = Image.open(webp_content)
+        _, output_content = result
+        output_content.seek(0)
+        img = Image.open(output_content)
         assert img.format == "WEBP"
 
 
@@ -185,7 +185,7 @@ class TestDeleteFileFromStorage:
 class TestBuildImageThumbnail:
     """Tests for build_image_thumbnail()."""
 
-    def test_builds_seeded_webp_thumbnail(self):
+    def test_builds_seeded_output_format_thumbnail(self):
         thumbnail = build_image_thumbnail(
             jpeg_field("images/photo.jpg", size=(1600, 1200)),
             size=(400, 400),
@@ -214,7 +214,7 @@ class TestBuildImageThumbnail:
 class TestBuildImageWithGivenWidth:
     """Tests for build_image_with_given_width()."""
 
-    def test_builds_webp_at_requested_width(self):
+    def test_builds_output_format_image_at_requested_width(self):
         result = build_image_with_given_width(
             jpeg_field("images/photo.jpg", size=(1200, 800)),
             width=560,

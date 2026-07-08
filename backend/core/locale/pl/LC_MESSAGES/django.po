@@ -58,8 +58,8 @@ msgid "File"
 msgstr "Plik"
 
 #: core/models.py
-msgid "Generated WebP file stored for this variant."
-msgstr "Wygenerowany plik WebP zapisany dla tego wariantu."
+msgid "Generated project-format file stored for this variant."
+msgstr "Wygenerowany plik w formacie projektu zapisany dla tego wariantu."
 
 #: core/models.py
 msgid "Role"

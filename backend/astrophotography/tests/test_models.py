@@ -123,8 +123,8 @@ class TestAstroImageModel:
 
         assert image.get_image_url("thumbnail", 560) == image.original.url
 
-    def test_original_format_variant_is_configured_like_legacy_original_webp(self):
-        """AstroImage original_format should match the old original_webp target."""
+    def test_original_format_variant_is_configured_as_project_format_display_candidate(self):
+        """AstroImage original_format should use project-format naming."""
         image: AstroImage = AstroImageFactory()
         original_format_spec = next(
             spec for spec in image.get_image_variant_specs() if spec.role == "original_format"
@@ -132,6 +132,7 @@ class TestAstroImageModel:
 
         assert original_format_spec.viewport_widths.as_tuple() == (1920,)
         assert original_format_spec.quality == 90
+        assert "webp" not in original_format_spec.label.lower()
         assert not hasattr(image, "webp_quality")
         assert not hasattr(image, "max_dimension")
         assert not hasattr(image, "dimension_percentage")

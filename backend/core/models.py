@@ -60,7 +60,7 @@ class ImageVariant(models.Model):
         editable=False,
         upload_to="",
         verbose_name=_("File"),
-        help_text=_("Generated WebP file stored for this variant."),
+        help_text=_("Generated project-format file stored for this variant."),
     )
     role = models.CharField(
         max_length=32,

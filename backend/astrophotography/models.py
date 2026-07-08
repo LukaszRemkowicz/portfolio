@@ -425,7 +425,7 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
             role="original_format",
             viewport_widths=ViewportWidths.fixed(1920),
             quality=90,
-            label="Astrophotography full-image display candidate matching legacy original_webp",
+            label="Astrophotography project-format full-image display candidate",
         ),
         ImageVariantSpec(
             role="thumbnail",
