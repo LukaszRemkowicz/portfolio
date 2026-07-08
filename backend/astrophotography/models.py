@@ -645,7 +645,7 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
                 desktop=1920,
                 wide=2560,
             ),
-            quality=95,
+            quality=85,
             label="Homepage background hero candidates",
         ),
     )

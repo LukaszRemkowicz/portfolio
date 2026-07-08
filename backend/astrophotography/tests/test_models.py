@@ -165,7 +165,7 @@ class TestMainPageBackgroundImageModel:
 
         assert [spec.role for spec in specs] == ["hero"]
         assert hero_spec.viewport_widths.as_tuple() == (960, 1280, 1920, 2560)
-        assert hero_spec.quality == 95
+        assert hero_spec.quality == 85
         assert not hasattr(bg, "max_dimension")
         assert not hasattr(bg, "dimension_percentage")
 

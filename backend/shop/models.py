@@ -284,7 +284,7 @@ class ShopSettings(
                 desktop=1920,
                 wide=2560,
             ),
-            quality=95,
+            quality=85,
             label="Shop background display candidate",
         ),
     )
