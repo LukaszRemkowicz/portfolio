@@ -62,12 +62,12 @@ class TestAstroImageViewSet:
         assert len(results) == 1
         assert results[0]["pk"] == str(astro_image.pk)
 
-    def test_list_astro_images_returns_thumbnail_variant_url(self, api_client: APIClient) -> None:
+    def test_list_astro_images_returns_fallback_image(self, api_client: APIClient) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             astroimage: AstroImage = AstroImageFactory(
                 original=jpeg_field("gallery.jpg", size=(1200, 800))
             )
-        thumbnail: ImageVariant = ImageVariantFactory(
+        fallback: ImageVariant = ImageVariantFactory(
             owner=astroimage,
             file__filename="gallery-thumbnail.webp",
             role="thumbnail",
@@ -79,19 +79,32 @@ class TestAstroImageViewSet:
         results: list[dict[str, Any]] = response.data["results"]
 
         assert response.status_code == status.HTTP_200_OK
-        assert results[0]["thumbnail_url"] == thumbnail.file.url
+        assert "thumbnail_url" not in results[0]
+        assert results[0]["fallback_image"] == {
+            "url": fallback.file.url,
+            "width": 560,
+            "height": 373,
+            "mime_type": "image/webp",
+        }
 
-    def test_list_astro_images_respects_requested_thumbnail_size(
+    def test_list_astro_images_ignores_requested_size_for_fallback_image(
         self, api_client: APIClient
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             astroimage: AstroImage = AstroImageFactory(
                 original=jpeg_field("gallery-wide.jpg", size=(1600, 1000))
             )
-        requested_thumbnail: ImageVariant = ImageVariantFactory(
+        default_fallback: ImageVariant = ImageVariantFactory(
             owner=astroimage,
-            file__filename="gallery-thumbnail-840.webp",
+            file__filename="gallery-thumbnail-560.webp",
             role="thumbnail",
+            width=560,
+            height=350,
+        )
+        ImageVariantFactory(
+            owner=astroimage,
+            file__filename="gallery-detail-1280.webp",
+            role="detail",
             width=840,
             height=525,
         )
@@ -103,16 +116,16 @@ class TestAstroImageViewSet:
         results: list[dict[str, Any]] = response.data["results"]
 
         assert response.status_code == status.HTTP_200_OK
-        assert results[0]["thumbnail_url"] == requested_thumbnail.file.url
+        assert results[0]["fallback_image"]["url"] == default_fallback.file.url
 
-    def test_list_astro_images_invalid_size_uses_thumbnail_default(
+    def test_list_astro_images_invalid_size_uses_fallback_default(
         self, api_client: APIClient
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             astroimage: AstroImage = AstroImageFactory(
                 original=jpeg_field("gallery-default.jpg", size=(1200, 800))
             )
-        thumbnail: ImageVariant = ImageVariantFactory(
+        fallback: ImageVariant = ImageVariantFactory(
             owner=astroimage,
             file__filename="gallery-default-thumbnail.webp",
             role="thumbnail",
@@ -122,7 +135,7 @@ class TestAstroImageViewSet:
         ImageVariantFactory(
             owner=astroimage,
             file__filename="gallery-default-large.webp",
-            role="thumbnail",
+            role="detail",
             width=840,
             height=525,
         )
@@ -134,7 +147,7 @@ class TestAstroImageViewSet:
         results: list[dict[str, Any]] = response.data["results"]
 
         assert response.status_code == status.HTTP_200_OK
-        assert results[0]["thumbnail_url"] == thumbnail.file.url
+        assert results[0]["fallback_image"]["url"] == fallback.file.url
 
     def test_retrieve_astro_image(self, api_client: APIClient, astro_image: AstroImage) -> None:
         """Test retrieving a single image via the router generated URL"""
@@ -201,7 +214,7 @@ class TestAstroImageViewSet:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["count"] == 30
-        assert len(response.data["results"]) == 24
+        assert len(response.data["results"]) == 15
         assert response.data["previous"] is None
         assert "page=2" in response.data["next"]
 
@@ -275,12 +288,12 @@ class TestAstroImageViewSet:
         response: Response = api_client.get(url, {"page": 2})
 
         expected_pks: list[str] = [
-            str(pk) for pk in AstroImage.objects.for_gallery({}).values_list("pk", flat=True)[24:48]
+            str(pk) for pk in AstroImage.objects.for_gallery({}).values_list("pk", flat=True)[15:30]
         ]
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["count"] == 50
-        assert len(response.data["results"]) == 24
+        assert len(response.data["results"]) == 15
         assert response.data["next"] == "http://testserver/v1/astroimages/?page=3"
         assert response.data["previous"] == "http://testserver/v1/astroimages/"
         assert [item["pk"] for item in response.data["results"]] == expected_pks
@@ -310,12 +323,12 @@ class TestAstroImageViewSet:
             str(pk)
             for pk in AstroImage.objects.for_gallery({"filter": "Deep Sky"}).values_list(
                 "pk", flat=True
-            )[24:48]
+            )[15:30]
         ]
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["count"] == 30
-        assert len(response.data["results"]) == 6
+        assert len(response.data["results"]) == 15
         assert response.data["next"] is None
         assert response.data["previous"] == "http://testserver/v1/astroimages/?filter=Deep+Sky"
         assert [item["pk"] for item in response.data["results"]] == expected_pks
@@ -335,8 +348,8 @@ class TestAstroImageViewSet:
 
 @pytest.mark.django_db
 class TestBackgroundMainPageView:
-    def test_list_background_image_uses_hero_variant_url(self, api_client: APIClient) -> None:
-        """Background endpoint should serve the default generated hero variant URL."""
+    def test_list_background_image_uses_hero_fallback_image(self, api_client: APIClient) -> None:
+        """Background endpoint should serve the default generated hero variant candidate."""
         with patch("core.models.process_image_task.delay_on_commit"):
             background: MainPageBackgroundImage = MainPageBackgroundImageFactory(
                 original=jpeg_field("background.jpg", size=(2600, 1734))
@@ -353,7 +366,12 @@ class TestBackgroundMainPageView:
         response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["url"] == hero.file.url
+        assert response.data["fallback_image"] == {
+            "url": hero.file.url,
+            "width": 2560,
+            "height": 1707,
+            "mime_type": "image/webp",
+        }
 
     def test_list_background_image_ignores_requested_variant(self, api_client: APIClient) -> None:
         """Background endpoint always serves the default hero variant for now."""
@@ -373,7 +391,12 @@ class TestBackgroundMainPageView:
         response: Response = api_client.get(url, {"role": "hero", "width": 1280})
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["url"] == hero_default.file.url
+        assert response.data["fallback_image"] == {
+            "url": hero_default.file.url,
+            "width": 2560,
+            "height": 1707,
+            "mime_type": "image/webp",
+        }
 
     def test_list_background_image(self, api_client: APIClient) -> None:
         """Test retrieving the latest valid background image."""
@@ -381,19 +404,21 @@ class TestBackgroundMainPageView:
         MainPageBackgroundImageFactory()
 
         url: str = reverse(BACKGROUND_IMAGE_LIST_URL_NAME)
+        fallback_image = {
+            "url": "/media/backgrounds/older-valid.png",
+            "width": 2560,
+            "height": 1440,
+            "mime_type": "image/webp",
+        }
         with patch.object(
             MainPageBackgroundImage,
-            "get_available_variant_url",
-            side_effect=[
-                "",
-                "/media/backgrounds/older-valid.png",
-                "/media/backgrounds/older-valid.png",
-            ],
+            "get_variant_candidates",
+            side_effect=[[], [], [fallback_image], [fallback_image]],
         ):
             response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["url"] == "/media/backgrounds/older-valid.png"
+        assert response.data["fallback_image"]["url"] == "/media/backgrounds/older-valid.png"
 
     def test_list_background_image_empty(self, api_client: APIClient) -> None:
         """Test retrieving background when none exist"""
@@ -404,7 +429,8 @@ class TestBackgroundMainPageView:
         response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["url"] is None
+        assert response.data["fallback_image"] is None
+        assert response.data["variants"] == {"hero": []}
 
     def test_list_background_image_returns_null_when_hero_missing(
         self, api_client: APIClient
@@ -419,7 +445,8 @@ class TestBackgroundMainPageView:
         response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["url"] is None
+        assert response.data["fallback_image"] is None
+        assert response.data["variants"] == {"hero": []}
 
     def test_list_background_image_returns_null_when_source_is_missing(
         self, api_client: APIClient
@@ -437,7 +464,8 @@ class TestBackgroundMainPageView:
         response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["url"] is None
+        assert response.data["fallback_image"] is None
+        assert response.data["variants"] == {"hero": []}
 
 
 @pytest.mark.django_db
@@ -496,15 +524,15 @@ class TestImageURLViewSet:
         astroimage: AstroImage = AstroImageFactory()
         ImageVariantFactory(
             owner=astroimage,
-            file__filename="andromeda-card-tablet.webp",
-            role="card",
+            file__filename="andromeda-detail-tablet.webp",
+            role="detail",
             width=560,
             height=373,
         )
 
         response: Response = api_client.get(
             reverse(IMAGE_URLS_LIST_URL_NAME),
-            {"ids": str(astroimage.pk), "role": "card", "size": "tablet"},
+            {"ids": str(astroimage.pk), "role": "detail", "size": "tablet"},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -573,7 +601,7 @@ class TestTravelHighlightsBySlugView:
         place: Place = PlaceFactory(name="High Tatras", country="PL")
         with patch("core.models.process_image_task.delay_on_commit"):
             astroimage: AstroImage = AstroImageFactory(place=place, name="Tatras 1")
-        thumbnail: ImageVariant = ImageVariantFactory(
+        fallback: ImageVariant = ImageVariantFactory(
             owner=astroimage,
             file__filename="travel-thumbnail.webp",
             role="thumbnail",
@@ -603,7 +631,8 @@ class TestTravelHighlightsBySlugView:
         assert data["place"]["name"] == "High Tatras"
         assert len(data["images"]) == 1
         assert data["images"][0]["name"] == "Tatras 1"
-        assert data["images"][0]["thumbnail_url"] == thumbnail.file.url
+        assert "thumbnail_url" not in data["images"][0]
+        assert data["images"][0]["fallback_image"]["url"] == fallback.file.url
 
     def test_get_highlights_with_story(self, api_client: APIClient) -> None:
         """Test retrieving highlights with a story"""
@@ -1036,15 +1065,22 @@ class TestMainPageBackgroundImageSecureView:
 
         with patch.object(
             MainPageBackgroundImage,
-            "get_available_variant_url",
-            return_value="/media/backgrounds/example.png",
-        ) as get_available_variant_url:
+            "get_variant_candidates",
+            return_value=[
+                {
+                    "url": "/media/backgrounds/example.png",
+                    "width": 2560,
+                    "height": 1440,
+                    "mime_type": "image/webp",
+                }
+            ],
+        ) as get_variant_candidates:
             response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["url"] == "/media/backgrounds/example.png"
-        assert "/background-files/" not in response.data["url"]
-        get_available_variant_url.assert_any_call("hero", preferred_width=2560)
+        assert response.data["fallback_image"]["url"] == "/media/backgrounds/example.png"
+        assert "/background-files/" not in response.data["fallback_image"]["url"]
+        get_variant_candidates.assert_any_call("hero", preferred_width=2560)
 
 
 @pytest.mark.django_db

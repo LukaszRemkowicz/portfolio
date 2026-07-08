@@ -8,7 +8,7 @@ from django.db.models import QuerySet
 from django.db.models.base import ModelBase
 from django.db.models.fields.files import ImageFieldFile
 
-from common.types import ImageVariantSource, ImageVariantSpec
+from common.types import ImageVariantCandidate, ImageVariantSource, ImageVariantSpec
 from common.utils.image import (
     IMAGE_FORMAT,
     build_image_variant_file_path,
@@ -351,28 +351,57 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
             return str(image_file.url)
         return None
 
-    def get_available_variant_url(
+    def get_variant_candidates(
         self,
         role: str,
-        *,
         preferred_width: int | None = None,
-        source_name: str | None = None,
-    ) -> str | None:
-        """Return an existing variant URL for a role, preferring an exact width."""
-        if preferred_width is not None:
-            variant_url = self.get_variant_url(
-                role,
-                preferred_width,
-                source_name=source_name,
-            )
-            if variant_url:
-                return variant_url
+    ) -> list[ImageVariantCandidate]:
+        """
+        Return available variant candidates for one role.
 
-        stored_role = self._build_variant_role(role, source_name)
-        variants = (
-            cast(Any, self).variants.filter(role=stored_role).exclude(file="").order_by("-width")
+        Without ``preferred_width`` this returns all existing candidates sorted
+        by width. With ``preferred_width`` it returns a one-item list, preferring
+        an exact width and otherwise using the largest available candidate.
+        """
+        prefetched_variants = getattr(self, "_prefetched_objects_cache", {}).get("variants")
+        if prefetched_variants is not None:
+            variants = sorted(
+                (
+                    variant
+                    for variant in prefetched_variants
+                    if variant.role == role and variant.file
+                ),
+                key=lambda variant: variant.width,
+            )
+        else:
+            variants = list(
+                self.variants.filter(role=role)  # type: ignore[attr-defined]
+                .exclude(file="")
+                .order_by("width")
+            )
+
+        candidates: list[ImageVariantCandidate] = [
+            {
+                "url": str(variant.file.url),
+                "width": variant.width,
+                "height": variant.height,
+                "mime_type": variant.mime_type,
+            }
+            for variant in variants
+            if file_exists_in_storage(variant.file)
+        ]
+
+        if preferred_width is None:
+            return candidates
+
+        exact_candidate = next(
+            (candidate for candidate in candidates if candidate["width"] == preferred_width),
+            None,
         )
-        for variant in variants:
-            if file_exists_in_storage(variant.file):
-                return str(variant.file.url)
-        return None
+        if exact_candidate:
+            return [exact_candidate]
+
+        if candidates:
+            return [candidates[-1]]
+
+        return []

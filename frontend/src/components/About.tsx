@@ -60,9 +60,9 @@ const About: React.FC<AboutProps> = ({ profile }) => {
         <div className={styles.visual}>
           <div className={styles.glassCard}>
             <div className={styles.cardGradient}></div>
-            {profile?.about_me_image ? (
+            {profile?.about_me_image?.fallback_image?.url ? (
               <ImageWithFallback
-                src={profile.about_me_image}
+                src={profile.about_me_image.fallback_image.url}
                 alt='About me'
                 className={styles.aboutImage}
                 width={400}

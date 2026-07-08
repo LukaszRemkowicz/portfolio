@@ -35,7 +35,12 @@ describe('TravelHighlights Component', () => {
           {
             pk: 101,
             url: 'norway.jpg',
-            thumbnail_url: 'norway_thumb.jpg',
+            fallback_image: {
+              url: 'norway_thumb.jpg',
+              width: 560,
+              height: 373,
+              mime_type: 'image/webp',
+            },
             description: 'A beautiful fjord',
           },
         ],
@@ -79,8 +84,26 @@ describe('TravelHighlights Component', () => {
         },
         country_slug: 'multi',
         images: [
-          { url: 'img1.jpg', thumbnail_url: 'thumb1.jpg', description: '1' },
-          { url: 'img2.jpg', thumbnail_url: 'thumb2.jpg', description: '2' },
+          {
+            url: 'img1.jpg',
+            fallback_image: {
+              url: 'thumb1.jpg',
+              width: 560,
+              height: 373,
+              mime_type: 'image/webp',
+            },
+            description: '1',
+          },
+          {
+            url: 'img2.jpg',
+            fallback_image: {
+              url: 'thumb2.jpg',
+              width: 560,
+              height: 373,
+              mime_type: 'image/webp',
+            },
+            description: '2',
+          },
         ],
       },
     ];
@@ -135,7 +158,12 @@ describe('TravelHighlights Component', () => {
       images: [
         {
           url: `img-${index + 1}.jpg`,
-          thumbnail_url: `thumb-${index + 1}.jpg`,
+          fallback_image: {
+            url: `thumb-${index + 1}.jpg`,
+            width: 560,
+            height: 373,
+            mime_type: 'image/webp',
+          },
           description: `Description ${index + 1}`,
         },
       ],

@@ -134,9 +134,18 @@ def test_profile_endpoint_handles_empty_fields(api_client: APIClient) -> None:
     assert response.data["first_name"] == "Empty"
     assert response.data["last_name"] == "User"
     assert response.data["bio"] == ""
-    assert not response.data["avatar"]
-    assert not response.data["about_me_image"]
-    assert not response.data["about_me_image2"]
+    assert response.data["avatar"] == {
+        "fallback_image": None,
+        "variants": {"original_format": []},
+    }
+    assert response.data["about_me_image"] == {
+        "fallback_image": None,
+        "variants": {"original_format": []},
+    }
+    assert response.data["about_me_image2"] == {
+        "fallback_image": None,
+        "variants": {"original_format": []},
+    }
 
 
 @pytest.mark.django_db
@@ -154,20 +163,19 @@ def test_profile_endpoint_constructs_image_urls_correctly(api_client: APIClient)
 
 @pytest.mark.django_db
 def test_profile_endpoint_with_avatar(api_client: APIClient) -> None:
-    """Test that profile endpoint returns full URL for avatar"""
-    avatar_file: SimpleUploadedFile = SimpleUploadedFile(
-        "avatar.jpg", b"content", content_type="image/jpeg"
-    )
-    UserFactory(avatar=avatar_file)
+    """Test that profile endpoint returns empty candidates before variant sync."""
+    avatar_file: SimpleUploadedFile = jpeg_field("avatar.jpg", size=(800, 800))
+    with patch("users.models.process_image_task.delay_on_commit"):
+        UserFactory(avatar=avatar_file)
 
     url: str = reverse("users:profile-profile")
     response: Response = api_client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.data["avatar"] is not None
-    assert response.data["avatar"].startswith("http")
-    assert ".jpg" in response.data["avatar"]
-    assert "?v=" in response.data["avatar"]
+    assert response.data["avatar"] == {
+        "fallback_image": None,
+        "variants": {"original_format": []},
+    }
 
 
 @pytest.mark.django_db
@@ -203,7 +211,7 @@ def test_profile_endpoint_returns_404_when_no_user(api_client: APIClient) -> Non
 
 @pytest.mark.django_db
 def test_profile_avatar_serves_generated_variant_url(api_client: APIClient) -> None:
-    """Integration: profile endpoint returns the generated original_format URL."""
+    """Integration: profile endpoint returns the generated original_format candidate."""
     user: PortfolioUser = UserFactory(avatar=jpeg_field("photo_legacy.jpg", size=(800, 800)))
     process_image_task("users", "User", user.pk, ["avatar"])
 
@@ -211,10 +219,10 @@ def test_profile_avatar_serves_generated_variant_url(api_client: APIClient) -> N
     response: Response = api_client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
-    avatar_url: str = response.data["avatar"]
-    assert avatar_url, "avatar URL should not be empty"
-    assert ".webp" in avatar_url, f"Expected generated variant URL, got: {avatar_url}"
-    assert "?v=" in avatar_url, f"Expected versioned URL, got: {avatar_url}"
+    avatar = response.data["avatar"]
+    assert avatar["fallback_image"], "avatar fallback candidate should not be empty"
+    assert ".webp" in avatar["fallback_image"]["url"]
+    assert avatar["variants"]["original_format"] == [avatar["fallback_image"]]
 
 
 @pytest.mark.django_db
@@ -250,13 +258,13 @@ def test_profile_image_fields_return_stored_variant_urls(api_client: APIClient) 
     response: Response = api_client.get(reverse("users:profile-profile"))
 
     assert response.status_code == status.HTTP_200_OK
-    assert avatar.file.url in response.data["avatar"]
-    assert about_me.file.url in response.data["about_me_image"]
-    assert about_me2.file.url in response.data["about_me_image2"]
+    assert response.data["avatar"]["fallback_image"]["url"] == avatar.file.url
+    assert response.data["about_me_image"]["fallback_image"]["url"] == about_me.file.url
+    assert response.data["about_me_image2"]["fallback_image"]["url"] == about_me2.file.url
 
 
 @pytest.mark.django_db
-def test_profile_image_fields_respect_requested_size(api_client: APIClient) -> None:
+def test_profile_image_fields_ignore_requested_size(api_client: APIClient) -> None:
     with patch("users.models.process_image_task.delay_on_commit"):
         user: PortfolioUser = UserFactory(avatar=jpeg_field("avatar.jpg", size=(1200, 1200)))
     requested_avatar: ImageVariant = ImageVariantFactory(
@@ -277,13 +285,15 @@ def test_profile_image_fields_respect_requested_size(api_client: APIClient) -> N
     response: Response = api_client.get(reverse("users:profile-profile"), {"size": "640"})
 
     assert response.status_code == status.HTTP_200_OK
-    assert requested_avatar.file.url in response.data["avatar"]
-    assert default_avatar.file.url not in response.data["avatar"]
+    assert response.data["avatar"]["fallback_image"]["url"] == default_avatar.file.url
+    assert response.data["avatar"]["fallback_image"]["url"] != requested_avatar.file.url
 
 
 @pytest.mark.django_db
-def test_profile_avatar_falls_back_to_source_when_variant_missing(api_client: APIClient) -> None:
-    """Integration: profile endpoint falls back to the uploaded source when variants are missing."""
+def test_profile_avatar_returns_empty_candidates_when_variant_missing(
+    api_client: APIClient,
+) -> None:
+    """Integration: profile endpoint depends on generated variants."""
     user: PortfolioUser = UserFactory(avatar=jpeg_field("photo_legacy.jpg", size=(800, 800)))
     process_image_task("users", "User", user.pk, ["avatar"])
     user.variants.all().delete()
@@ -292,7 +302,7 @@ def test_profile_avatar_falls_back_to_source_when_variant_missing(api_client: AP
     response: Response = api_client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
-    avatar_url: str = response.data["avatar"]
-    assert avatar_url, "avatar URL should not be empty"
-    assert ".jpg" in avatar_url, f"Expected source URL fallback, got: {avatar_url}"
-    assert "?v=" in avatar_url, f"Expected versioned URL, got: {avatar_url}"
+    assert response.data["avatar"] == {
+        "fallback_image": None,
+        "variants": {"original_format": []},
+    }

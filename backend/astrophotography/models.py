@@ -289,6 +289,7 @@ class AstroImageQuerySet(TranslatableQuerySet):
                 "telescope",
                 "tracker",
                 "tripod",
+                "variants",
             )
             .all()
             .order_by("-created_at")
@@ -333,6 +334,7 @@ class AstroImageQuerySet(TranslatableQuerySet):
             "telescope",
             "tracker",
             "tripod",
+            "variants",
         )
 
         explicit_image_ids: list[int] = list(slider.images.values_list("id", flat=True))
@@ -432,17 +434,6 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
             viewport_widths=ViewportWidths.fixed(560),
             quality=100,
             label="Astrophotography thumbnail candidate",
-        ),
-        ImageVariantSpec(
-            role="card",
-            viewport_widths=ViewportWidths(
-                mobile=320,
-                tablet=560,
-                desktop=840,
-                wide=1120,
-            ),
-            quality=90,
-            label="Astrophotography card/grid candidates",
         ),
         ImageVariantSpec(
             role="detail",
@@ -713,20 +704,19 @@ class MainPageLocationQuerySet(TranslatableQuerySet):
 
     def active(self) -> Self:
         """Return only active locations."""
-        return cast(Self, self.filter(is_active=True))
+        return self.filter(is_active=True)  # type: ignore[no-any-return]
 
     def with_images(self) -> Self:
         """Prefetch related images for efficiency."""
-        return cast(Self, self.prefetch_related("images"))
+        return self.prefetch_related("images")  # type: ignore[no-any-return]
 
     def with_place(self) -> Self:
         """Select related place for efficiency."""
-        return cast(Self, self.select_related("place"))
+        return self.select_related("place")  # type: ignore[no-any-return]
 
     def ready_for_main_page(self) -> Self:
         """Return active locations with the relations needed by public serializers."""
-        return cast(
-            Self,
+        return (  # type: ignore[no-any-return]
             self.active()
             .with_place()
             .with_images()
@@ -736,8 +726,15 @@ class MainPageLocationQuerySet(TranslatableQuerySet):
                 "place__translations",
                 "background_image__translations",
             )
-            .prefetch_related("images__translations")
-            .order_by("-adventure_date"),
+            .prefetch_related(
+                "images__translations",
+                "images__place",
+                "images__place__translations",
+                "images__tags",
+                "images__tags__translations",
+                "images__variants",
+            )
+            .order_by("-adventure_date")
         )
 
     def by_slugs(self, country_slug: str, place_slug: str, date_slug: str) -> QuerySet:

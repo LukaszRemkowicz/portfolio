@@ -161,12 +161,12 @@ class ShopProduct(ImageVariantModelMixin, AutomatedTranslationModelMixin, Transl
 
     def get_image_url(self, role: str, width: int) -> str | None:
         """Return the best available product image URL following crop and AstroImage fallbacks."""
-        variant_url: str | None = self.get_available_variant_url(
+        fallback_image = self.get_variant_candidates(
             role,
             preferred_width=width,
         )
-        if variant_url:
-            return variant_url
+        if fallback_image:
+            return str(fallback_image[0]["url"])
 
         source_image = self._get_product_image_source()
         cropped_url = get_available_image_url(source_image)
@@ -278,8 +278,13 @@ class ShopSettings(
         ),
         ImageVariantSpec(
             role="background",
-            viewport_widths=ViewportWidths.fixed(1920),
-            quality=90,
+            viewport_widths=ViewportWidths(
+                mobile=1280,
+                tablet=1280,
+                desktop=1920,
+                wide=2560,
+            ),
+            quality=95,
             label="Shop background display candidate",
         ),
     )
@@ -387,17 +392,17 @@ class ShopSettings(
         background_spec = next(
             spec for spec in self.image_variant_specs if spec.role == "background"
         )
-        width = background_spec.viewport_widths.as_tuple()[-1]
+        width = background_spec.viewport_widths.wide
         return self.get_image_url("background", width)
 
     def get_image_url(self, role: str, width: int) -> str | None:
         """Return the generated variant URL or fall back to the background source URL."""
-        variant_url: str | None = self.get_available_variant_url(
+        fallback_image = self.get_variant_candidates(
             role,
             preferred_width=width,
         )
-        if variant_url:
-            return variant_url
+        if fallback_image:
+            return str(fallback_image[0]["url"])
 
         source_image = getattr(self, "image_cropped", None) or getattr(self, "image", None)
         if source_image and file_exists_in_storage(source_image):

@@ -5,7 +5,7 @@ from rest_framework.response import Response
 class AstroImagePagination(PageNumberPagination):
     """Gallery-specific pagination for the public astrophotography feed."""
 
-    page_size = 24
+    page_size = 15
     page_size_query_param = "limit"
     max_page_size = 48
 

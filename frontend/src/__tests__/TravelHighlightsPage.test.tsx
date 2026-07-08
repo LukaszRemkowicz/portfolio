@@ -107,7 +107,12 @@ describe('TravelHighlightsPage', () => {
           pk: 1,
           name: 'Aurora Borealis',
           url: '/aurora.jpg',
-          thumbnail_url: '/aurora_thumb.jpg',
+          fallback_image: {
+            url: '/aurora_thumb.jpg',
+            width: 560,
+            height: 373,
+            mime_type: 'image/webp',
+          },
           description: 'Green lights',
         },
       ],
@@ -240,7 +245,12 @@ describe('TravelHighlightsPage', () => {
           pk: 1,
           slug: 'aurora-borealis',
           name: 'Aurora',
-          thumbnail_url: '/thumbs/aurora.jpg',
+          fallback_image: {
+            url: '/thumbs/aurora.jpg',
+            width: 560,
+            height: 373,
+            mime_type: 'image/webp',
+          },
         },
       ],
     };

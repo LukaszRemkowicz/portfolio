@@ -41,7 +41,24 @@ describe('API Services', () => {
       const mockProfile = {
         first_name: 'John',
         last_name: 'Doe',
-        avatar: '/media/avatars/avatar.jpg',
+        avatar: {
+          fallback_image: {
+            url: '/media/avatars/avatar.jpg',
+            width: 800,
+            height: 800,
+            mime_type: 'image/webp',
+          },
+          variants: {
+            original_format: [
+              {
+                url: '/media/avatars/avatar.jpg',
+                width: 800,
+                height: 800,
+                mime_type: 'image/webp',
+              },
+            ],
+          },
+        },
         about_me_image: null,
         about_me_image2: null,
       };
@@ -62,7 +79,9 @@ describe('API Services', () => {
         }
       );
       expect(result.first_name).toBe('John');
-      expect(result.avatar).toBe('/media/avatars/avatar.jpg');
+      expect(result.avatar?.fallback_image?.url).toBe(
+        '/media/avatars/avatar.jpg'
+      );
     });
 
     it('should return fallback data on 404 for profile', async () => {
@@ -91,7 +110,24 @@ describe('API Services', () => {
       const mockProfile = {
         first_name: 'Jane',
         last_name: 'Doe',
-        avatar: '/media/avatars/avatar.jpg',
+        avatar: {
+          fallback_image: {
+            url: '/media/avatars/avatar.jpg',
+            width: 800,
+            height: 800,
+            mime_type: 'image/webp',
+          },
+          variants: {
+            original_format: [
+              {
+                url: '/media/avatars/avatar.jpg',
+                width: 800,
+                height: 800,
+                mime_type: 'image/webp',
+              },
+            ],
+          },
+        },
         about_me_image: null,
         about_me_image2: null,
       };
@@ -103,31 +139,6 @@ describe('API Services', () => {
 
       expect(customClient.get).toHaveBeenCalledWith(API_ROUTES.profile);
       expect(result.first_name).toBe('Jane');
-    });
-
-    it('should fetch profile with requested image size', async () => {
-      const mockProfile = {
-        first_name: 'John',
-        last_name: 'Doe',
-        avatar: '/media/avatars/avatar.jpg',
-        about_me_image: null,
-        about_me_image2: null,
-      };
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockProfile,
-      } as Response);
-
-      await fetchProfile(1920);
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        `http://localhost${BFF_ROUTES.profile}?size=1920&lang=en`,
-        {
-          headers: {
-            Accept: 'application/json',
-          },
-        }
-      );
     });
   });
 
@@ -143,7 +154,14 @@ describe('API Services', () => {
       expect(result).toBeNull();
     });
     it('should fetch background URL successfully', async () => {
-      const mockBackground = { url: '/media/backgrounds/example.webp' };
+      const mockBackground = {
+        fallback_image: {
+          url: '/media/backgrounds/example.webp',
+          width: 2560,
+          height: 1440,
+          mime_type: 'image/webp',
+        },
+      };
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => mockBackground,
@@ -162,29 +180,10 @@ describe('API Services', () => {
       expect(result).toBe('/media/backgrounds/example.webp');
     });
 
-    it('should fetch background with requested image size', async () => {
-      const mockBackground = { url: '/media/backgrounds/example.webp' };
+    it('should return null if API returns no fallback image', async () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
-        json: async () => mockBackground,
-      } as Response);
-
-      await fetchBackground(1920);
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        `http://localhost${BFF_ROUTES.background}?size=1920&lang=en`,
-        {
-          headers: {
-            Accept: 'application/json',
-          },
-        }
-      );
-    });
-
-    it('should return null if API returns no URL', async () => {
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: null }),
+        json: async () => ({ fallback_image: null, variants: { hero: [] } }),
       } as Response);
 
       const result = await fetchBackground();
@@ -207,12 +206,11 @@ describe('API Services', () => {
 
       const params = {
         filter: 'Landscape',
-        size: 840,
       } as const;
       const result = await fetchAstroImages(params);
 
       expect(fetchMock).toHaveBeenCalledWith(
-        `http://localhost${BFF_ROUTES.astroImages}?filter=Landscape&size=840&lang=en`,
+        `http://localhost${BFF_ROUTES.astroImages}?filter=Landscape&lang=en`,
         {
           headers: {
             Accept: 'application/json',
@@ -226,18 +224,27 @@ describe('API Services', () => {
   });
 
   describe('fetchLatestAstroImages', () => {
-    it('should fetch latest astro images with requested image size', async () => {
+    it('should fetch latest astro images without image size filtering', async () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => [
-          { pk: 1, name: 'Galaxy', thumbnail_url: '/media/thumb.webp' },
+          {
+            pk: 1,
+            name: 'Galaxy',
+            fallback_image: {
+              url: '/media/card.webp',
+              width: 560,
+              height: 373,
+              mime_type: 'image/webp',
+            },
+          },
         ],
       } as Response);
 
-      const result = await fetchLatestAstroImages(840);
+      const result = await fetchLatestAstroImages();
 
       expect(fetchMock).toHaveBeenCalledWith(
-        `http://localhost${BFF_ROUTES.astroImages}latest/?size=840&lang=en`,
+        `http://localhost${BFF_ROUTES.astroImages}latest/?lang=en`,
         {
           headers: {
             Accept: 'application/json',
@@ -245,27 +252,37 @@ describe('API Services', () => {
         }
       );
       expect(result).toHaveLength(1);
-      expect(result[0].thumbnail_url).toBe('/media/thumb.webp');
+      expect(result[0].fallback_image?.url).toBe('/media/card.webp');
     });
   });
 
   describe('fetchTravelHighlights', () => {
-    it('should fetch travel highlights with requested image size', async () => {
+    it('should fetch travel highlights without image size filtering', async () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => [
           {
             full_location: 'Norway',
             slug: 'norway',
-            images: [{ pk: 1, thumbnail_url: '/media/travel.webp' }],
+            images: [
+              {
+                pk: 1,
+                fallback_image: {
+                  url: '/media/travel-card.webp',
+                  width: 560,
+                  height: 373,
+                  mime_type: 'image/webp',
+                },
+              },
+            ],
           },
         ],
       } as Response);
 
-      const result = await fetchTravelHighlights(840);
+      const result = await fetchTravelHighlights();
 
       expect(fetchMock).toHaveBeenCalledWith(
-        `http://localhost${BFF_ROUTES.travelHighlights}?size=840&lang=en`,
+        `http://localhost${BFF_ROUTES.travelHighlights}?lang=en`,
         {
           headers: {
             Accept: 'application/json',
@@ -273,7 +290,9 @@ describe('API Services', () => {
         }
       );
       expect(result).toHaveLength(1);
-      expect(result[0].images[0].thumbnail_url).toBe('/media/travel.webp');
+      expect(result[0].images[0].fallback_image?.url).toBe(
+        '/media/travel-card.webp'
+      );
     });
   });
 
@@ -284,7 +303,22 @@ describe('API Services', () => {
         json: async () => ({
           title: 'Shop',
           description: 'Catalog',
-          background_url: '/media/shop/background.webp',
+          fallback_image: {
+            url: '/media/shop/background.webp',
+            width: 1920,
+            height: 1080,
+            mime_type: 'image/webp',
+          },
+          variants: {
+            background: [
+              {
+                url: '/media/shop/background-1280.webp',
+                width: 1280,
+                height: 720,
+                mime_type: 'image/webp',
+              },
+            ],
+          },
           products: [
             {
               id: '1',
@@ -296,10 +330,10 @@ describe('API Services', () => {
         }),
       } as Response);
 
-      const result = await fetchShopProducts(840);
+      const result = await fetchShopProducts();
 
       expect(fetchMock).toHaveBeenCalledWith(
-        `http://localhost${BFF_ROUTES.shop}?size=840&lang=en`,
+        `http://localhost${BFF_ROUTES.shop}?lang=en`,
         {
           headers: {
             Accept: 'application/json',
@@ -307,6 +341,10 @@ describe('API Services', () => {
         }
       );
       expect(result.products).toHaveLength(1);
+      expect(result.fallback_image?.url).toBe('/media/shop/background.webp');
+      expect(result.variants?.background[0].url).toBe(
+        '/media/shop/background-1280.webp'
+      );
       expect(result.products[0].thumbnail_url).toBe('/media/shop/print.webp');
     });
   });

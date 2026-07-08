@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 from PIL import Image
 
-from astrophotography.serializers import AstroImageSerializerList
+from astrophotography.serializers import AstroImageSerializer
 from astrophotography.tests.factories import AstroImageFactory, MainPageBackgroundImageFactory
 from common.tests.image_helpers import jpeg_field
 from common.types import ImageVariantSource, ImageVariantSpec, ViewportWidths
@@ -172,21 +172,21 @@ class TestImageVariantCacheInvalidation:
 class TestImageVariantSpec:
     def test_spec_names_variant_role_viewport_widths_quality_and_label(self) -> None:
         spec = ImageVariantSpec(
-            role="card",
+            role="detail",
             viewport_widths=ViewportWidths(
-                mobile=320,
-                tablet=560,
-                desktop=840,
-                wide=1120,
+                mobile=1280,
+                tablet=1280,
+                desktop=1920,
+                wide=2560,
             ),
             quality=90,
-            label="Astrophotography card/grid candidates",
+            label="Astrophotography detail display candidates",
         )
 
-        assert spec.role == "card"
-        assert spec.viewport_widths.as_tuple() == (320, 560, 840, 1120)
+        assert spec.role == "detail"
+        assert spec.viewport_widths.as_tuple() == (1280, 1920, 2560)
         assert spec.quality == 90
-        assert spec.label == "Astrophotography card/grid candidates"
+        assert spec.label == "Astrophotography detail display candidates"
 
     def test_viewport_widths_can_use_one_width_for_every_viewport(self) -> None:
         widths = ViewportWidths.fixed(560)
@@ -200,17 +200,17 @@ class TestImageVariantSpec:
 
     def test_spec_filters_target_widths_by_source_width(self) -> None:
         spec = ImageVariantSpec(
-            role="card",
+            role="detail",
             viewport_widths=ViewportWidths(
-                mobile=320,
-                tablet=560,
-                desktop=840,
-                wide=1120,
+                mobile=1280,
+                tablet=1280,
+                desktop=1920,
+                wide=2560,
             ),
             quality=90,
         )
 
-        assert spec.target_widths_for_source(900) == (320, 560, 840)
+        assert spec.target_widths_for_source(2000) == (1280, 1920)
 
     def test_required_spec_uses_source_width_when_source_is_smaller_than_targets(self) -> None:
         spec = ImageVariantSpec(
@@ -373,25 +373,24 @@ class TestBaseImageVariants:
     def test_process_image_task_generates_responsive_variants_preserving_aspect_ratio(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(
-                original=jpeg_field("nebula.jpg", size=(1200, 800)),
+                original=jpeg_field("nebula.jpg", size=(3000, 2000)),
             )
 
         process_image_task("astrophotography", "AstroImage", image.pk)
 
         image.refresh_from_db()
-        card_variants = list(image.variants.filter(role="card").order_by("width"))
         detail_variants = list(image.variants.filter(role="detail").order_by("width"))
         thumbnail_variant = image.variants.get(role="thumbnail")
-        assert [variant.width for variant in card_variants] == [320, 560, 840, 1120]
-        assert [variant.height for variant in card_variants] == [213, 373, 560, 747]
-        assert [variant.width for variant in detail_variants] == []
+        assert image.variants.filter(role="card").count() == 0
+        assert [variant.width for variant in detail_variants] == [1280, 1920, 2560]
+        assert [variant.height for variant in detail_variants] == [853, 1280, 1707]
         assert thumbnail_variant.width == 560
         assert thumbnail_variant.height == 373
         assert thumbnail_variant.file.name.startswith("images/thumbnail/")
-        assert {variant.mime_type for variant in card_variants} == {"image/webp"}
-        assert all(variant.file.name.startswith("images/card/") for variant in card_variants)
+        assert {variant.mime_type for variant in detail_variants} == {"image/webp"}
+        assert all(variant.file.name.startswith("images/detail/") for variant in detail_variants)
 
-        for variant in card_variants:
+        for variant in detail_variants:
             assert _stored_output_image_size(image, variant.file.name) == (
                 variant.width,
                 variant.height,
@@ -443,7 +442,7 @@ class TestBaseImageVariants:
 
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        first_names = {variant.file.name for variant in image.variants.filter(role="card")}
+        first_names = {variant.file.name for variant in image.variants.filter(role="thumbnail")}
 
         with patch("core.models.process_image_task.delay_on_commit"):
             image.original = jpeg_field("second.jpg", size=(1200, 800))
@@ -451,7 +450,7 @@ class TestBaseImageVariants:
 
         process_image_task("astrophotography", "AstroImage", image.pk, ["original"])
         image.refresh_from_db()
-        second_names = {variant.file.name for variant in image.variants.filter(role="card")}
+        second_names = {variant.file.name for variant in image.variants.filter(role="thumbnail")}
 
         assert second_names
         assert first_names.isdisjoint(second_names)
@@ -459,29 +458,28 @@ class TestBaseImageVariants:
     def test_generates_only_missing_variants_without_force(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(
-                original=jpeg_field("missing-only.jpg", size=(1200, 800)),
+                original=jpeg_field("missing-only.jpg", size=(3000, 2000)),
             )
 
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
         existing_by_width = {
             variant.width: variant.file.name
-            for variant in image.variants.filter(role="card").order_by("width")
+            for variant in image.variants.filter(role="detail").order_by("width")
         }
-        image.variants.filter(role="card", width=560).delete()
+        image.variants.filter(role="detail", width=1280).delete()
 
         changed_variant_count = image.sync_image_variants(force=False)
 
         image.refresh_from_db()
         updated_by_width = {
             variant.width: variant.file.name
-            for variant in image.variants.filter(role="card").order_by("width")
+            for variant in image.variants.filter(role="detail").order_by("width")
         }
         assert changed_variant_count == 1
-        assert updated_by_width[320] == existing_by_width[320]
-        assert updated_by_width[840] == existing_by_width[840]
-        assert updated_by_width[1120] == existing_by_width[1120]
-        assert updated_by_width[560] != existing_by_width[560]
+        assert updated_by_width[1920] == existing_by_width[1920]
+        assert updated_by_width[2560] == existing_by_width[2560]
+        assert updated_by_width[1280] != existing_by_width[1280]
 
     def test_has_pending_image_variant_sync_tracks_missing_and_stale_variants(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -575,26 +573,25 @@ class TestBaseImageVariants:
     def test_force_rebuilds_all_variants(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(
-                original=jpeg_field("force.jpg", size=(1200, 800)),
+                original=jpeg_field("force.jpg", size=(3000, 2000)),
             )
 
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        first_names = {variant.file.name for variant in image.variants.filter(role="card")}
+        first_names = {variant.file.name for variant in image.variants.filter(role="detail")}
 
         changed_variant_count = image.sync_image_variants(force=True)
 
         image.refresh_from_db()
-        second_names = {variant.file.name for variant in image.variants.filter(role="card")}
-        assert changed_variant_count >= 4
-        card_widths = [
-            variant.width for variant in image.variants.filter(role="card").order_by("width")
+        second_names = {variant.file.name for variant in image.variants.filter(role="detail")}
+        assert changed_variant_count >= 3
+        detail_widths = [
+            variant.width for variant in image.variants.filter(role="detail").order_by("width")
         ]
-        assert card_widths == [
-            320,
-            560,
-            840,
-            1120,
+        assert detail_widths == [
+            1280,
+            1920,
+            2560,
         ]
         assert first_names.isdisjoint(second_names)
         assert all(not image.original.storage.exists(name) for name in first_names)
@@ -622,12 +619,12 @@ class TestBaseImageVariants:
     def test_variant_instance_delete_removes_stored_file(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(
-                original=jpeg_field("delete-instance.jpg", size=(1200, 800)),
+                original=jpeg_field("delete-instance.jpg", size=(3000, 2000)),
             )
 
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        variant = image.variants.filter(role="card", width=320).get()
+        variant = image.variants.filter(role="detail", width=1280).get()
         variant_name = variant.file.name
 
         deleted_count, deleted_by_model = variant.delete()
@@ -640,18 +637,18 @@ class TestBaseImageVariants:
     def test_variant_queryset_delete_removes_stored_files(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(
-                original=jpeg_field("delete-files.jpg", size=(1200, 800)),
+                original=jpeg_field("delete-files.jpg", size=(3000, 2000)),
             )
 
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        variant_names = [variant.file.name for variant in image.variants.filter(role="card")]
+        variant_names = [variant.file.name for variant in image.variants.filter(role="detail")]
 
-        deleted_count, deleted_by_model = image.variants.filter(role="card").delete()
+        deleted_count, deleted_by_model = image.variants.filter(role="detail").delete()
 
-        assert deleted_count == 4
-        assert deleted_by_model == {"core.ImageVariant": 4}
-        assert image.variants.filter(role="card").count() == 0
+        assert deleted_count == 3
+        assert deleted_by_model == {"core.ImageVariant": 3}
+        assert image.variants.filter(role="detail").count() == 0
         assert all(not image.original.storage.exists(name) for name in variant_names)
 
     def test_project_image_specs_create_original_format_variant(self) -> None:
@@ -668,7 +665,7 @@ class TestBaseImageVariants:
         assert original_format.width == 1200
         assert original_format.height == 800
 
-    def test_list_serializer_keeps_legacy_thumbnail_url(self) -> None:
+    def test_list_serializer_exposes_fallback_image(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(
                 original=jpeg_field("thumbnail.jpg", size=(1200, 800)),
@@ -677,9 +674,11 @@ class TestBaseImageVariants:
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
 
-        data = AstroImageSerializerList(image).data
+        data = AstroImageSerializer(image).data
 
-        assert data["thumbnail_url"]
+        assert data["fallback_image"]
+        assert data["fallback_image"]["url"]
+        assert "thumbnail_url" not in data
         assert "image_variants" not in data
 
     def test_get_image_url_returns_generated_thumbnail_variant(self) -> None:
@@ -694,25 +693,35 @@ class TestBaseImageVariants:
 
         assert image.get_image_url("thumbnail", 560) == variant.file.url
 
-    def test_get_available_variant_url_prefers_exact_width_then_largest_existing_width(
+    def test_get_variant_candidates_prefers_exact_width_then_largest_existing_width(
         self,
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(
-                original=jpeg_field("available-card.jpg", size=(1200, 800)),
+                original=jpeg_field("available-detail.jpg", size=(3000, 2000)),
             )
 
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        exact_variant = image.variants.get(role="card", width=560)
-        largest_variant = image.variants.get(role="card", width=1120)
+        exact_variant = image.variants.get(role="detail", width=1280)
+        largest_variant = image.variants.get(role="detail", width=2560)
 
-        assert (
-            image.get_available_variant_url("card", preferred_width=560) == exact_variant.file.url
-        )
-        assert (
-            image.get_available_variant_url("card", preferred_width=999) == largest_variant.file.url
-        )
+        assert image.get_variant_candidates("detail", preferred_width=1280) == [
+            {
+                "url": exact_variant.file.url,
+                "width": exact_variant.width,
+                "height": exact_variant.height,
+                "mime_type": exact_variant.mime_type,
+            }
+        ]
+        assert image.get_variant_candidates("detail", preferred_width=2000) == [
+            {
+                "url": largest_variant.file.url,
+                "width": largest_variant.width,
+                "height": largest_variant.height,
+                "mime_type": largest_variant.mime_type,
+            }
+        ]
 
     def test_get_image_url_falls_back_when_thumbnail_variant_is_missing(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -744,6 +753,14 @@ class TestBaseImageVariants:
             user.get_variant_url("original_format", 800, source_name="avatar")
             == avatar_variant.file.url
         )
+        assert user.get_variant_candidates("avatar__original_format") == [
+            {
+                "url": avatar_variant.file.url,
+                "width": 800,
+                "height": 800,
+                "mime_type": "image/webp",
+            }
+        ]
         assert user.get_variant_url("original_format", 800) is None
 
         portrait_count = user.sync_image_variants(["about_me_image"], force=False)

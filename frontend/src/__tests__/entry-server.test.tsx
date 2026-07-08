@@ -10,7 +10,24 @@ const mockFetchSettings: jest.Mock = jest.fn(async () => ({
 const mockFetchProfile: jest.Mock = jest.fn(async () => ({
   first_name: 'Lukasz',
 }));
-const mockFetchBackground: jest.Mock = jest.fn(async () => '/background.webp');
+const mockFetchBackgroundImage: jest.Mock = jest.fn(async () => ({
+  fallback_image: {
+    url: '/background.webp',
+    width: 2560,
+    height: 1440,
+    mime_type: 'image/webp',
+  },
+  variants: {
+    hero: [
+      {
+        url: '/background-1920.webp',
+        width: 1920,
+        height: 1080,
+        mime_type: 'image/webp',
+      },
+    ],
+  },
+}));
 const mockFetchTravelHighlights: jest.Mock = jest.fn(async () => []);
 const mockFetchLatestAstroImages: jest.Mock = jest.fn(async () => []);
 const mockFetchCategories: jest.Mock = jest.fn(async () => []);
@@ -18,7 +35,6 @@ const mockFetchTags: jest.Mock = jest.fn(async () => []);
 const mockFetchShopProducts: jest.Mock = jest.fn(async () => ({
   title: '',
   description: '',
-  background_url: '',
   products: [],
 }));
 const mockFetchAstroImages: jest.Mock = jest.fn(async () => ({
@@ -100,7 +116,8 @@ jest.mock('../api/api', () => ({
 jest.mock('../api/services', () => ({
   fetchSettings: (client?: unknown) => mockFetchSettings(client),
   fetchProfile: (...args: unknown[]) => mockFetchProfile(...args),
-  fetchBackground: (...args: unknown[]) => mockFetchBackground(...args),
+  fetchBackgroundImage: (...args: unknown[]) =>
+    mockFetchBackgroundImage(...args),
   fetchTravelHighlights: (...args: unknown[]) =>
     mockFetchTravelHighlights(...args),
   fetchLatestAstroImages: (...args: unknown[]) =>
@@ -183,10 +200,10 @@ describe('SSR entry server', () => {
       'req-1'
     );
     expect(mockFetchSettings).toHaveBeenCalledWith('mock-client');
-    expect(mockFetchProfile).toHaveBeenCalledWith(1920, 'mock-client');
-    expect(mockFetchBackground).toHaveBeenCalledWith(1920, 'mock-client');
-    expect(mockFetchTravelHighlights).toHaveBeenCalledWith(840, 'mock-client');
-    expect(mockFetchLatestAstroImages).toHaveBeenCalledWith(840, 'mock-client');
+    expect(mockFetchProfile).toHaveBeenCalledWith('mock-client');
+    expect(mockFetchBackgroundImage).toHaveBeenCalledWith('mock-client');
+    expect(mockFetchTravelHighlights).toHaveBeenCalledWith('mock-client');
+    expect(mockFetchLatestAstroImages).toHaveBeenCalledWith('mock-client');
     expect(mockFetchTravelHighlightDetail).not.toHaveBeenCalled();
     expect(mockFetchCategories).not.toHaveBeenCalled();
     expect(mockFetchTags).not.toHaveBeenCalled();
@@ -208,10 +225,10 @@ describe('SSR entry server', () => {
     expect(dehydratedQueryKeys(result)).toEqual(
       expect.arrayContaining([
         ['settings', 'en'],
-        ['profile', 'en', 1920],
-        ['background', 'en', 1920],
-        ['travel-highlights', 'en', 840],
-        ['latest-astro-images', 'en', 840],
+        ['profile', 'en'],
+        ['background', 'en'],
+        ['travel-highlights', 'en'],
+        ['latest-astro-images', 'en'],
       ])
     );
     expect(result.dehydratedState.queries).toHaveLength(5);
@@ -229,7 +246,6 @@ describe('SSR entry server', () => {
       countrySlug: 'poland',
       placeSlug: 'tatras',
       dateSlug: 'dec2025',
-      imageSize: 840,
       clientOrTransport: 'mock-client',
     });
   });
@@ -252,8 +268,7 @@ describe('SSR entry server', () => {
         filter: 'landscape',
         tag: 'moon',
         page: 1,
-        size: 840,
-        limit: 24,
+        limit: 15,
       },
       'mock-client'
     );
@@ -270,13 +285,13 @@ describe('SSR entry server', () => {
     expect(dehydratedQueryKeys(result)).toEqual(
       expect.arrayContaining([
         ['settings', 'en'],
-        ['profile', 'en', 1920],
-        ['background', 'en', 1920],
-        ['travel-highlights', 'en', 840],
-        ['latest-astro-images', 'en', 840],
+        ['profile', 'en'],
+        ['background', 'en'],
+        ['travel-highlights', 'en'],
+        ['latest-astro-images', 'en'],
         ['categories'],
         ['tags', 'en', 'landscape'],
-        ['astro-images', 'en', { filter: 'landscape', tag: 'moon', size: 840 }],
+        ['astro-images', 'en', { filter: 'landscape', tag: 'moon' }],
       ])
     );
     expect(result.dehydratedState.queries).toHaveLength(8);
@@ -296,8 +311,7 @@ describe('SSR entry server', () => {
     expect(mockFetchAstroImages).toHaveBeenCalledWith(
       {
         page: 2,
-        size: 840,
-        limit: 24,
+        limit: 15,
       },
       'mock-client'
     );
@@ -306,7 +320,7 @@ describe('SSR entry server', () => {
   it('prefetches the shop catalog for the shop route', async () => {
     await render('/shop', 'en', 'https://portfolio.local', 'req-shop');
 
-    expect(mockFetchShopProducts).toHaveBeenCalledWith(840, 'mock-client');
+    expect(mockFetchShopProducts).toHaveBeenCalledWith('mock-client');
   });
 
   it('skips shop catalog prefetch when the shop feature is disabled', async () => {

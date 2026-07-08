@@ -225,7 +225,16 @@ class TestShopProductListView:
         response = api_client.get(reverse(SHOP_PRODUCT_LIST_URL), {"lang": "en"})
 
         assert response.status_code == status.HTTP_200_OK
-        assert urlparse(response.data["background_url"]).path == background_variant.file.url
+        assert urlparse(response.data["fallback_image"]["url"]).path == background_variant.file.url
+        assert response.data["fallback_image"]["width"] == 1920
+        assert response.data["variants"]["background"] == [
+            {
+                "url": response.data["fallback_image"]["url"],
+                "width": 1920,
+                "height": 1080,
+                "mime_type": "image/webp",
+            }
+        ]
 
     def test_list_falls_back_to_source_background_when_variant_missing(
         self, api_client: APIClient
@@ -237,7 +246,8 @@ class TestShopProductListView:
         response = api_client.get(reverse(SHOP_PRODUCT_LIST_URL), {"lang": "en"})
 
         assert response.status_code == status.HTTP_200_OK
-        assert ".png" in response.data["background_url"]
+        assert response.data["fallback_image"] is None
+        assert response.data["variants"] == {"background": []}
 
     def test_list_response_is_cached(self, api_client: APIClient) -> None:
         ShopProductFactory()

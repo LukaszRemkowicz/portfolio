@@ -67,9 +67,6 @@ class User(
     translation_service_method = "translate_user"
     translation_trigger_fields = ["short_description", "bio"]
 
-    # Avatar and about_me images are visible but not portfolio photography —
-    # 35% quality gives good fidelity at significantly smaller file sizes.
-    webp_quality: int = 35
     image_variant_specs = (
         ImageVariantSpec(
             role="original_format",
@@ -210,13 +207,12 @@ class User(
         effective_source_field: Any = self.get_effective_image_field(source_field_name)
         source_width = effective_source_field.width if effective_source_field else None
         if preferred_width is not None:
-            serving_url = self.get_available_variant_url(
-                "original_format",
+            fallback_image = self.get_variant_candidates(
+                self._build_variant_role("original_format", source_field_name),
                 preferred_width=preferred_width,
-                source_name=source_field_name,
             )
-            if serving_url:
-                return serving_url
+            if fallback_image:
+                return str(fallback_image[0]["url"])
 
         serving_field = None
         if source_width:

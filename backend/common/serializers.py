@@ -1,4 +1,3 @@
-import logging
 from typing import Any
 
 from rest_framework import serializers
@@ -8,8 +7,6 @@ from django.urls import reverse
 
 from common.utils.signing import generate_signed_url_params
 from translation.services import TranslationService
-
-logger = logging.getLogger(__name__)
 
 
 class SecureMediaURLMixin(serializers.Serializer):
@@ -28,24 +25,6 @@ class SecureMediaURLMixin(serializers.Serializer):
             resource_id, expiration_seconds=settings.SECURE_MEDIA_URL_EXPIRATION
         )
         return f"{request.build_absolute_uri(url_path)}?s={params['s']}&e={params['e']}"
-
-
-class ImageVariantSizeSerializerMixin(serializers.Serializer):
-    """Mixin for serializers that accept a preferred image variant width."""
-
-    def get_requested_variant_width(self, default_width: int) -> int:
-        request = self.context.get("request")
-        query_params = getattr(request, "query_params", {}) if request else {}
-        requested_size = query_params.get("size", default_width)
-
-        try:
-            return int(requested_size)
-        except (TypeError, ValueError):
-            logger.error(
-                "Invalid image variant size query parameter: %r",
-                requested_size,
-            )
-            return default_width
 
 
 class TranslatedSerializerMixin(serializers.Serializer):

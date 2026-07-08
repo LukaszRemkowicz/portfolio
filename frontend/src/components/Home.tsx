@@ -4,23 +4,32 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import styles from '../styles/components/App.module.css';
 import { HomeProps } from '../types';
-// - [x] Remove redundant `frontend_upstream` from `TEMPLATE.conf`
-// - [x] Finalize commit message and implementation plan alignment
-// - [x] Final Polish & Documentation
 import ShootingStars from './ShootingStars';
 import { APP_ROUTES } from '../api/constants';
 import ImageWithFallback from './common/ImageWithFallback';
 import ClientOnly from './common/ClientOnly';
+import {
+  buildResponsiveImageProps,
+  getCurrentHeroVariantWidth,
+} from '../utils/imageVariants';
 
 const Home: FC<HomeProps> = ({
   portraitUrl,
   shortDescription,
   backgroundUrl,
+  backgroundVariants,
 }) => {
   const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false);
 
   const displayDescription = shortDescription || t('hero.defaultDescription');
+  const responsiveBackgroundProps = buildResponsiveImageProps({
+    variants: backgroundVariants,
+    role: 'hero',
+    fallbackSrc: backgroundUrl || '',
+    preferredWidth: getCurrentHeroVariantWidth(),
+    sizes: '100vw',
+  });
 
   // SSR-safe check for already loaded images (e.g. from cache)
   useEffect(() => {
@@ -38,7 +47,7 @@ const Home: FC<HomeProps> = ({
       {backgroundUrl && (
         <>
           <img
-            src={backgroundUrl}
+            {...responsiveBackgroundProps}
             alt=''
             aria-hidden='true'
             data-testid='hero-background-image'

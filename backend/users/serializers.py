@@ -1,7 +1,8 @@
-# backend/users/serializers.py
+from typing import Any
+
 from rest_framework import serializers
 
-from common.serializers import ImageVariantSizeSerializerMixin, TranslatedSerializerMixin
+from common.serializers import TranslatedSerializerMixin
 
 from .models import Profile, User
 
@@ -29,7 +30,6 @@ class ProfileSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
 
 
 class UserSerializer(
-    ImageVariantSizeSerializerMixin,
     TranslatedSerializerMixin,
     serializers.ModelSerializer,
 ):
@@ -40,33 +40,24 @@ class UserSerializer(
     about_me_image = serializers.SerializerMethodField()
     about_me_image2 = serializers.SerializerMethodField()
 
-    def _build_media_version(self, obj: User) -> str:
-        """Return a stable cache-busting token for user media URLs."""
-        if not obj.updated_at:
-            return ""
-        return str(int(obj.updated_at.timestamp()))
+    def get_image_variants(self, obj: User, source_name: str) -> dict[str, Any]:
+        role = "original_format"
+        stored_role = obj._build_variant_role(role, source_name)
+        fallback_image = obj.get_variant_candidates(stored_role, preferred_width=2560)
 
-    def _build_url(self, obj: User, source_field_name: str) -> str:
-        width = self.get_requested_variant_width(default_width=2560)
-        relative_url: str = obj.get_serving_image_url(
-            source_field_name,
-            preferred_width=width,
-        )
-        request = self.context.get("request")
-        if relative_url and request:
-            absolute_url = str(request.build_absolute_uri(relative_url))
-            separator = "&" if "?" in absolute_url else "?"
-            return f"{absolute_url}{separator}v={self._build_media_version(obj)}"
-        return relative_url
+        return {
+            "fallback_image": fallback_image[0] if fallback_image else None,
+            "variants": {role: obj.get_variant_candidates(stored_role)},
+        }
 
-    def get_avatar(self, obj: User) -> str:
-        return self._build_url(obj, "avatar")
+    def get_avatar(self, obj: User) -> dict[str, Any]:
+        return self.get_image_variants(obj, source_name="avatar")
 
-    def get_about_me_image(self, obj: User) -> str:
-        return self._build_url(obj, "about_me_image")
+    def get_about_me_image(self, obj: User) -> dict[str, Any]:
+        return self.get_image_variants(obj, source_name="about_me_image")
 
-    def get_about_me_image2(self, obj: User) -> str:
-        return self._build_url(obj, "about_me_image2")
+    def get_about_me_image2(self, obj: User) -> dict[str, Any]:
+        return self.get_image_variants(obj, source_name="about_me_image2")
 
     def to_representation(self, instance: User) -> dict:
         data = super().to_representation(instance)

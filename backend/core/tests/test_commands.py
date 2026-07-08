@@ -139,14 +139,14 @@ class TestRegenerateThumbnailsCommand:
 
         image.sync_image_variants()
         image.variants.filter(role="thumbnail").delete()
-        existing_card_count = image.variants.filter(role="card").count()
+        existing_variant_count = image.variants.exclude(role="thumbnail").count()
 
         call_command("regenerate_thumbnails", object_id=str(image.pk))
 
         image.refresh_from_db()
         thumbnail = image.variants.get(role="thumbnail", width=560)
         assert thumbnail.height == 373
-        assert image.variants.filter(role="card").count() == existing_card_count
+        assert image.variants.exclude(role="thumbnail").count() == existing_variant_count
 
     def test_force_rebuilds_existing_thumbnail_variant(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -169,7 +169,7 @@ class TestBackfillImageVariantsCommand:
     def test_generates_missing_variants(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(
-                original=jpeg_field("backfill.jpg", size=(1200, 800)),
+                original=jpeg_field("backfill.jpg", size=(3000, 2000)),
             )
 
         assert image.variants.count() == 0
@@ -178,19 +178,18 @@ class TestBackfillImageVariantsCommand:
 
         image.refresh_from_db()
         original_format = image.variants.get(role="original_format")
-        card_widths = [
-            variant.width for variant in image.variants.filter(role="card").order_by("width")
+        detail_widths = [
+            variant.width for variant in image.variants.filter(role="detail").order_by("width")
         ]
         thumbnail_widths = [
             variant.width for variant in image.variants.filter(role="thumbnail").order_by("width")
         ]
-        assert card_widths == [
-            320,
-            560,
-            840,
-            1120,
+        assert detail_widths == [
+            1280,
+            1920,
+            2560,
         ]
-        assert original_format.width == 1200
+        assert original_format.width == 1920
         assert thumbnail_widths == [560]
 
     def test_generates_project_image_original_format_from_model_specs(self) -> None:
@@ -252,6 +251,7 @@ class TestBackfillImageVariantsCommand:
         assert original_format.width == 1200
         assert thumbnail_variant.height == 373
         assert thumbnail_variant.file.name.startswith("images/thumbnail/")
+        assert not image.variants.filter(role="card").exists()
 
     def test_generates_shop_product_thumbnail_from_linked_astroimage_original(self) -> None:
         with patch("shop.models.process_image_task.delay_on_commit"):

@@ -33,6 +33,7 @@ from astrophotography.tests.factories import (
 )
 from core.models import LandingPageSettings
 from core.tasks import process_image_task
+from core.tests.factories import ImageVariantFactory
 from translation.services import TranslationService
 
 
@@ -133,7 +134,6 @@ class TestAstroImageModel:
         assert original_format_spec.viewport_widths.as_tuple() == (1920,)
         assert original_format_spec.quality == 90
         assert "webp" not in original_format_spec.label.lower()
-        assert not hasattr(image, "webp_quality")
         assert not hasattr(image, "max_dimension")
         assert not hasattr(image, "dimension_percentage")
 
@@ -154,7 +154,6 @@ class TestMainPageBackgroundImageModel:
         assert [spec.role for spec in specs] == ["hero"]
         assert hero_spec.viewport_widths.as_tuple() == (1280, 1920, 2560)
         assert hero_spec.quality == 95
-        assert not hasattr(bg, "webp_quality")
         assert not hasattr(bg, "max_dimension")
         assert not hasattr(bg, "dimension_percentage")
 
@@ -293,6 +292,24 @@ class TestMainPageLocationModel:
         MainPageLocationFactory(place=place, adventure_date=date_range1)
         # Should NOT raise any error
         MainPageLocationFactory(place=place, adventure_date=date_range2)
+
+    def test_ready_for_main_page_prefetches_image_preview_serializer_relations(self) -> None:
+        place: Place = PlaceFactory(country="PL")
+        slider: MainPageLocation = MainPageLocationFactory(place=place)
+        image: AstroImage = AstroImageFactory(place=place)
+        tag: Tag = TagFactory(name="Travel")
+        image.tags.add(tag)
+        ImageVariantFactory(owner=image, role="thumbnail", width=560, height=373)
+        slider.images.add(image)
+
+        hydrated_slider = MainPageLocation.objects.ready_for_main_page().get(pk=slider.pk)
+        hydrated_image = list(hydrated_slider.images.all())[0]
+
+        assert "images" in hydrated_slider._prefetched_objects_cache
+        assert "translations" in hydrated_image._prefetched_objects_cache
+        assert "tags" in hydrated_image._prefetched_objects_cache
+        assert "variants" in hydrated_image._prefetched_objects_cache
+        assert "place" in hydrated_image._state.fields_cache
 
 
 @pytest.mark.django_db

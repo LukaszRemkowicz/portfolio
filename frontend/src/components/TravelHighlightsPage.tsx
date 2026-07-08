@@ -28,7 +28,7 @@ const TravelHighlightsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const imgParam = searchParams.get('img');
 
-  const { data: backgroundUrl } = useBackground();
+  const { data: background } = useBackground();
 
   // Redirect or show error if URL params are incomplete
   const hasIncompleteParams = !countrySlug || !placeSlug || !dateSlug;
@@ -77,7 +77,7 @@ const TravelHighlightsPage: React.FC = () => {
       imageUrls[selectedImage.pk.toString()] || imageUrls[selectedImage.slug];
     return {
       ...selectedImage,
-      url: fullResUrl || selectedImage.url || selectedImage.thumbnail_url,
+      url: fullResUrl || selectedImage.url || selectedImage.fallback_image?.url,
     };
   }, [selectedImage, imageUrls]);
 
@@ -148,10 +148,10 @@ const TravelHighlightsPage: React.FC = () => {
       <div
         className={styles.hero}
         style={
-          locationBackgroundImage || backgroundUrl
+          locationBackgroundImage || background?.fallback_image?.url
             ? {
                 backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${getMediaUrl(
-                  locationBackgroundImage || backgroundUrl
+                  locationBackgroundImage || background?.fallback_image?.url
                 )})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
@@ -243,12 +243,12 @@ const ViewerImage: React.FC<{
   image: ExtendedAstroImage;
   handleImageClick: (image: ExtendedAstroImage) => void;
 }> = ({ image, handleImageClick }) => {
-  const [hasError, setHasError] = React.useState(!image.thumbnail_url);
+  const [hasError, setHasError] = React.useState(!image.fallback_image?.url);
 
   return (
     <>
       <ImageWithFallback
-        src={image.thumbnail_url}
+        src={image.fallback_image?.url}
         alt={image.name}
         data-testid={`gallery-card-${image.slug}`}
         className={styles.viewerImage}

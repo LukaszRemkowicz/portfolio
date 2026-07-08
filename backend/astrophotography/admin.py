@@ -500,10 +500,11 @@ class AstroImageAdmin(
         if not obj or not obj.pk:
             return str(_("Not generated yet"))
 
-        thumbnail_url = obj.get_available_variant_url("thumbnail", preferred_width=560)
-        if not thumbnail_url:
+        fallback_image = obj.get_variant_candidates("thumbnail", preferred_width=560)
+        if not fallback_image:
             return str(_("Not generated yet"))
 
+        thumbnail_url = str(fallback_image[0]["url"])
         filename = thumbnail_url.rsplit("/", 1)[-1]
         return format_html(
             '<a href="{}" target="_blank" rel="noopener">{}</a>',

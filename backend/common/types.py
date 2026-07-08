@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import IO
+from typing import IO, TypedDict
 
 from django.db.models.fields.files import FieldFile, ImageFieldFile
 
@@ -76,6 +76,15 @@ class ImageVariantSpec:
 
 
 type ProcessableImageFile = IO[bytes] | FieldFile
+
+
+class ImageVariantCandidate(TypedDict):
+    """Public metadata for one generated image variant."""
+
+    url: str
+    width: int
+    height: int
+    mime_type: str
 
 
 @dataclass(frozen=True)

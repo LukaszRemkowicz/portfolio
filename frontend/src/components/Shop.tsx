@@ -1,4 +1,4 @@
-import { type FC } from 'react';
+import { type FC, useMemo } from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -10,6 +10,10 @@ import StarBackground from './StarBackground';
 import ShootingStars from './ShootingStars';
 import ClientOnly from './common/ClientOnly';
 import { sanitizeHtml, stripHtml } from '../utils/html';
+import {
+  buildResponsiveImageProps,
+  getCurrentHeroVariantWidth,
+} from '../utils/imageVariants';
 import styles from '../styles/components/Shop.module.css';
 import appStyles from '../styles/components/App.module.css';
 
@@ -19,7 +23,17 @@ const Shop: FC = () => {
   const products = data?.products ?? [];
   const title = data?.title || t('shop.title');
   const description = stripHtml(data?.description || '').trim();
-  const backgroundUrl = data?.background_url || '';
+  const responsiveBackgroundProps = useMemo(
+    () =>
+      buildResponsiveImageProps({
+        variants: data?.variants,
+        role: 'background',
+        fallbackSrc: data?.fallback_image?.url || '',
+        preferredWidth: getCurrentHeroVariantWidth(),
+        sizes: '100vw',
+      }),
+    [data?.fallback_image?.url, data?.variants]
+  );
   const fallbackDescription = t('shop.subtitle');
 
   return (
@@ -31,13 +45,18 @@ const Shop: FC = () => {
       />
       <StarBackground />
       <div className={styles.shopContainer}>
-        <div
-          className={styles.zodiacalBackground}
-          style={
-            backgroundUrl ? { backgroundImage: `url('${backgroundUrl}')` } : {}
-          }
-          aria-hidden='true'
-        />
+        {responsiveBackgroundProps.src ? (
+          <img
+            {...responsiveBackgroundProps}
+            alt=''
+            aria-hidden='true'
+            className={styles.zodiacalBackground}
+            loading='eager'
+            decoding='async'
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            {...({ fetchpriority: 'high' } as any)}
+          />
+        ) : null}
         <div
           style={{
             position: 'fixed',

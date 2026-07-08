@@ -1,13 +1,13 @@
 from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
 
-from common.serializers import ImageVariantSizeSerializerMixin, TranslatedSerializerMixin
+from common.serializers import TranslatedSerializerMixin
+from common.types import ImageVariantCandidate
 
 from .models import ShopProduct, ShopSettings
 
 
 class ShopProductSerializer(
-    ImageVariantSizeSerializerMixin,
     TranslatedSerializerMixin,
     TranslatableModelSerializer,
 ):
@@ -32,8 +32,7 @@ class ShopProductSerializer(
         """
         Return the absolute thumbnail URL for the product.
         """
-        width = self.get_requested_variant_width(default_width=560)
-        url = instance.get_image_url(role="thumbnail", width=width) or instance.thumbnail_url
+        url = instance.get_image_url(role="thumbnail", width=560) or instance.thumbnail_url
         if not url:
             return None
 
@@ -59,7 +58,6 @@ class ShopProductSerializer(
 
 
 class ShopSettingsSerializer(
-    ImageVariantSizeSerializerMixin,
     TranslatedSerializerMixin,
     serializers.ModelSerializer,
 ):
@@ -67,7 +65,8 @@ class ShopSettingsSerializer(
 
     title = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
-    background_url = serializers.SerializerMethodField()
+    fallback_image = serializers.SerializerMethodField()
+    variants = serializers.SerializerMethodField()
 
     def get_title(self, instance: ShopSettings) -> str:
         return self.get_translation(instance, "title")
@@ -75,21 +74,18 @@ class ShopSettingsSerializer(
     def get_description(self, instance: ShopSettings) -> str:
         return self.get_translation(instance, "description")
 
-    def get_background_url(self, instance: ShopSettings) -> str | None:
-        width = self.get_requested_variant_width(default_width=1920)
-        url = instance.get_image_url(role="background", width=width)
-        request = self.context.get("request")
-        if url and request and url.startswith("/"):
-            absolute_url = str(request.build_absolute_uri(url))
-            separator = "&" if "?" in absolute_url else "?"
-            version = str(int(instance.updated_at.timestamp())) if instance.updated_at else ""
-            return f"{absolute_url}{separator}v={version}" if version else absolute_url
-        return url
+    def get_fallback_image(self, instance: ShopSettings) -> ImageVariantCandidate | None:
+        fallback_image = instance.get_variant_candidates("background", preferred_width=2560)
+        return fallback_image[0] if fallback_image else None
+
+    def get_variants(self, instance: ShopSettings) -> dict[str, list[ImageVariantCandidate]]:
+        return {"background": instance.get_variant_candidates("background")}
 
     class Meta:
         model = ShopSettings
         fields = [
             "title",
             "description",
-            "background_url",
+            "fallback_image",
+            "variants",
         ]

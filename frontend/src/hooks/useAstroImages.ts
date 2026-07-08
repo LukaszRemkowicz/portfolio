@@ -2,9 +2,8 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { fetchAstroImages } from '../api/services';
 import { AstroImage, FilterParams, PaginatedResponse } from '../types';
-import { useImageVariantSize } from './useImageVariantSize';
 
-export const ASTRO_GALLERY_PAGE_SIZE = 24;
+export const ASTRO_GALLERY_PAGE_SIZE = 15;
 
 const getNextPageNumber = (
   nextUrl: string | null | undefined
@@ -30,13 +29,11 @@ const getNextPageNumber = (
 export const useAstroImages = (params: FilterParams = {}) => {
   const { i18n } = useTranslation();
   const language = (i18n.language || 'en').split('-')[0];
-  const imageSize = useImageVariantSize();
   const pageSize = params.limit ?? ASTRO_GALLERY_PAGE_SIZE;
   const initialPage = params.page ?? 1;
   const isPagedRequest = params.page !== undefined;
   const imageParams = {
     ...params,
-    size: params.size ?? imageSize,
   } satisfies FilterParams;
 
   const infiniteQuery = useInfiniteQuery<PaginatedResponse<AstroImage>, Error>({
