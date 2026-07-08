@@ -8,7 +8,12 @@ from django.db.models import QuerySet
 from django.db.models.base import ModelBase
 from django.db.models.fields.files import ImageFieldFile
 
-from common.types import ImageVariantCandidate, ImageVariantSource, ImageVariantSpec
+from common.types import (
+    ImageVariantCandidate,
+    ImageVariantPayload,
+    ImageVariantSource,
+    ImageVariantSpec,
+)
 from common.utils.image import (
     IMAGE_FORMAT,
     build_image_variant_file_path,
@@ -77,7 +82,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
         for spec in self.get_image_variant_specs():
             if spec.role != "thumbnail":
                 continue
-            stored_role = self._build_variant_role(spec.role, source.role_namespace)
+            stored_role = self.build_variant_role(spec.role, source.role_namespace)
             targets.extend(
                 (stored_role, width, spec.quality) for width in spec.viewport_widths.as_tuple()
             )
@@ -157,7 +162,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
         return deleted_count + generated_count
 
     @staticmethod
-    def _build_variant_role(role: str, source_name: str | None = None) -> str:
+    def build_variant_role(role: str, source_name: str | None = None) -> str:
         """Return the stored role key, optionally namespaced by source family."""
         if source_name:
             return f"{source_name}__{role}"
@@ -226,7 +231,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
 
         expected_targets: list[ImageVariantTarget] = []
         for spec in self.get_image_variant_specs():
-            stored_role = self._build_variant_role(spec.role, source.role_namespace)
+            stored_role = self.build_variant_role(spec.role, source.role_namespace)
             widths = spec.target_widths_for_source(
                 source_width,
                 required=spec.role in self.required_variant_roles,
@@ -320,7 +325,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
         source_name: str | None = None,
     ) -> ImageFieldFile | None:
         """Return one stored variant file by role, width, and optional source family."""
-        stored_role = self._build_variant_role(role, source_name)
+        stored_role = self.build_variant_role(role, source_name)
         variants = self.variants.filter(  # type: ignore[attr-defined]
             role=stored_role,
             width=width,
@@ -405,3 +410,31 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
             return [candidates[-1]]
 
         return []
+
+    def get_variant_payload(
+        self,
+        role: str,
+        *,
+        fallback_width: int,
+        response_role: str | None = None,
+    ) -> ImageVariantPayload:
+        """
+        Return serializer-ready fallback and responsive candidates for one role.
+
+        The candidate list is loaded once, then reused to pick the fallback image.
+        Missing generated variants intentionally return ``None`` and an empty
+        list, so public APIs do not hide variant pipeline failures with source
+        image fallbacks.
+        """
+        candidates = self.get_variant_candidates(role)
+        fallback_image = next(
+            (candidate for candidate in candidates if candidate["width"] == fallback_width),
+            None,
+        )
+        if fallback_image is None and candidates:
+            fallback_image = candidates[-1]
+
+        return {
+            "fallback_image": fallback_image,
+            "variants": {response_role or role: candidates},
+        }

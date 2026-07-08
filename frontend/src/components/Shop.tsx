@@ -4,16 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { APP_ROUTES } from '../api/constants';
 import { useShopProducts } from '../hooks/useShopProducts';
-import { getMediaUrl } from '../api/media';
 import SEO from './common/SEO';
 import StarBackground from './StarBackground';
 import ShootingStars from './ShootingStars';
 import ClientOnly from './common/ClientOnly';
 import { sanitizeHtml, stripHtml } from '../utils/html';
-import {
-  buildResponsiveImageProps,
-  getCurrentHeroVariantWidth,
-} from '../utils/imageVariants';
+import { buildResponsiveImageProps } from '../utils/imageVariants';
 import styles from '../styles/components/Shop.module.css';
 import appStyles from '../styles/components/App.module.css';
 
@@ -29,7 +25,6 @@ const Shop: FC = () => {
         variants: data?.variants,
         role: 'background',
         fallbackSrc: data?.fallback_image?.url || '',
-        preferredWidth: getCurrentHeroVariantWidth(),
         sizes: '100vw',
       }),
     [data?.fallback_image?.url, data?.variants]
@@ -106,15 +101,19 @@ const Shop: FC = () => {
               {products.map(product => (
                 <article key={product.id} className={styles.productCard}>
                   <div className={styles.productImage}>
-                    {product.thumbnail_url ? (
+                    {product.fallback_image?.url ? (
                       <img
-                        src={
-                          getMediaUrl(product.thumbnail_url) ??
-                          product.thumbnail_url
-                        }
+                        {...buildResponsiveImageProps({
+                          variants: product.variants,
+                          role: 'thumbnail',
+                          fallbackSrc: product.fallback_image.url,
+                          sizes:
+                            '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
+                        })}
                         alt=''
                         className={styles.productArtwork}
                         loading='lazy'
+                        decoding='async'
                         aria-hidden='true'
                       />
                     ) : null}

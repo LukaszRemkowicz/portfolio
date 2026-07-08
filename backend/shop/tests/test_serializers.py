@@ -1,36 +1,8 @@
-from unittest.mock import MagicMock
-
 import pytest
 
-from common.tests.image_helpers import png_field
+from core.tests.factories import ImageVariantFactory
 from shop.serializers import ShopProductSerializer
 from shop.tests.factories import ShopProductFactory
-
-
-class TestShopProductSerializerContract:
-    def test_thumbnail_url_uses_product_image_fallback_chain(self) -> None:
-        product = MagicMock()
-        product.get_image_url.return_value = "/media/shop/product.webp"
-        product.thumbnail_url = "https://cdn.example.com/thumb.webp"
-        serializer = ShopProductSerializer()
-
-        assert serializer.get_thumbnail_url(product) == "/media/shop/product.webp"
-        product.get_image_url.assert_called_once_with(role="thumbnail", width=560)
-
-    def test_thumbnail_url_ignores_requested_size(self) -> None:
-        request = MagicMock()
-        request.query_params = {"size": "840"}
-        request.build_absolute_uri.side_effect = lambda url: f"https://api.example.com{url}"
-        product = MagicMock()
-        product.get_image_url.return_value = "/media/shop/product.webp"
-        product.thumbnail_url = "https://cdn.example.com/thumb.webp"
-        serializer = ShopProductSerializer(context={"request": request})
-
-        assert (
-            serializer.get_thumbnail_url(product)
-            == "https://api.example.com/media/shop/product.webp"
-        )
-        product.get_image_url.assert_called_once_with(role="thumbnail", width=560)
 
 
 @pytest.mark.django_db
@@ -50,7 +22,8 @@ class TestShopProductSerializer:
             "id",
             "title",
             "description",
-            "thumbnail_url",
+            "fallback_image",
+            "variants",
             "price",
             "currency",
             "external_url",
@@ -58,29 +31,30 @@ class TestShopProductSerializer:
             "created_at",
         }
 
-    def test_thumbnail_url_with_cdn_fallback(self) -> None:
+    def test_missing_generated_variant_returns_null_fallback(self) -> None:
         product = ShopProductFactory(image=None, thumbnail_url="https://cdn.example.com/thumb.webp")
 
-        assert (
-            ShopProductSerializer(product).data["thumbnail_url"]
-            == "https://cdn.example.com/thumb.webp"
+        data = ShopProductSerializer(product).data
+
+        assert data["fallback_image"] is None
+        assert data["variants"] == {"thumbnail": []}
+
+    def test_fallback_image_prefers_generated_thumbnail_variant(self) -> None:
+        product = ShopProductFactory(thumbnail_url="https://cdn.example.com/thumb.webp")
+        variant = ImageVariantFactory(
+            owner=product,
+            file__filename="product-crop.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
         )
 
-    def test_thumbnail_url_prefers_local_product_variant(self) -> None:
-        product = ShopProductFactory(thumbnail_url="https://cdn.example.com/thumb.webp")
-        product.image_cropped = png_field("product-crop.png", size=(560, 560))
-        product.save()
+        data = ShopProductSerializer(product).data
 
-        assert "product-crop" in ShopProductSerializer(product).data["thumbnail_url"]
-
-    def test_serializer_builds_absolute_media_url(self) -> None:
-        request = MagicMock()
-        request.build_absolute_uri.side_effect = lambda url: f"https://admin.example.com{url}"
-
-        product = ShopProductFactory()
-        product.image_cropped = png_field("absolute-crop.png", size=(560, 560))
-        product.save()
-
-        serializer = ShopProductSerializer(product, context={"request": request})
-
-        assert serializer.data["thumbnail_url"].startswith("https://admin.example.com/")
+        assert data["fallback_image"] == {
+            "url": variant.file.url,
+            "width": 560,
+            "height": 373,
+            "mime_type": "image/webp",
+        }
+        assert data["variants"] == {"thumbnail": [data["fallback_image"]]}

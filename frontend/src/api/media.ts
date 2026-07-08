@@ -9,6 +9,7 @@ import { API_BASE_URL } from './routes';
 import type {
   AstroImage,
   BackgroundImage,
+  ImageVariantCandidate,
   ImageVariantsByRole,
   MainPageLocation,
   ProfileImage,
@@ -92,7 +93,7 @@ export const getMediaUrl = (path: string | null | undefined): string | null => {
   return `${API_BASE_URL}/${cleanPath}`;
 };
 
-const normalizeImageVariants = (
+export const normalizeImageVariants = (
   variants: ImageVariantsByRole | undefined
 ): ImageVariantsByRole | undefined => {
   if (!variants) return undefined;
@@ -110,12 +111,29 @@ const normalizeImageVariants = (
   );
 };
 
-const normalizeImageCandidate = <T extends { url: string }>(
+export const normalizeImageCandidate = <T extends { url: string }>(
   candidate: T | null | undefined
 ): T | undefined => {
   if (!candidate) return undefined;
   const url = getMediaUrl(candidate.url);
   return url ? { ...candidate, url } : undefined;
+};
+
+export const normalizeImageVariantPayload = <
+  T extends {
+    fallback_image?: ImageVariantCandidate | null;
+    variants?: ImageVariantsByRole;
+  },
+>(
+  image: T | null | undefined
+): T | null => {
+  if (!image?.fallback_image) return null;
+
+  return {
+    ...image,
+    fallback_image: normalizeImageCandidate(image.fallback_image),
+    variants: normalizeImageVariants(image.variants),
+  };
 };
 
 /** Normalize image fallback fields for an astro image payload. */
@@ -131,27 +149,11 @@ export const normalizeAstroImages = <T extends AstroImage>(images: T[]): T[] =>
 
 export const normalizeBackgroundImage = (
   image: BackgroundImage | null | undefined
-): BackgroundImage | null => {
-  if (!image?.fallback_image) return null;
-
-  return {
-    ...image,
-    fallback_image: normalizeImageCandidate(image.fallback_image),
-    variants: normalizeImageVariants(image.variants),
-  };
-};
+): BackgroundImage | null => normalizeImageVariantPayload(image);
 
 const normalizeProfileImage = (
   image: ProfileImage | null | undefined
-): ProfileImage | null => {
-  if (!image?.fallback_image) return null;
-
-  return {
-    ...image,
-    fallback_image: normalizeImageCandidate(image.fallback_image),
-    variants: normalizeImageVariants(image.variants),
-  };
-};
+): ProfileImage | null => normalizeImageVariantPayload(image);
 
 /** Normalize profile image fields returned by the backend. */
 export const normalizeProfileMedia = (profile: UserProfile): UserProfile => ({

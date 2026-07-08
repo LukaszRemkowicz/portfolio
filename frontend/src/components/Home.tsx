@@ -8,10 +8,7 @@ import ShootingStars from './ShootingStars';
 import { APP_ROUTES } from '../api/constants';
 import ImageWithFallback from './common/ImageWithFallback';
 import ClientOnly from './common/ClientOnly';
-import {
-  buildResponsiveImageProps,
-  getCurrentHeroVariantWidth,
-} from '../utils/imageVariants';
+import { buildResponsiveImageProps } from '../utils/imageVariants';
 
 const Home: FC<HomeProps> = ({
   portraitUrl,
@@ -27,7 +24,6 @@ const Home: FC<HomeProps> = ({
     variants: backgroundVariants,
     role: 'hero',
     fallbackSrc: backgroundUrl || '',
-    preferredWidth: getCurrentHeroVariantWidth(),
     sizes: '100vw',
   });
 

@@ -160,7 +160,8 @@ export interface ShopProduct {
   id: string;
   title: string;
   description: string;
-  thumbnail_url?: string;
+  fallback_image?: ImageVariantCandidate | null;
+  variants?: ImageVariantsByRole;
   external_url: string;
 }
 

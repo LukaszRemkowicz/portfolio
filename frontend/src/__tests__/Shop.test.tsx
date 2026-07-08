@@ -88,7 +88,22 @@ describe('Shop Component', () => {
             id: 'dragons',
             title: 'Fighting Dragons with the Egg',
             description: 'Mock description for the dragons.',
-            thumbnail_url: 'https://example.com/dragons.webp',
+            fallback_image: {
+              url: 'https://example.com/dragons.webp',
+              width: 560,
+              height: 373,
+              mime_type: 'image/webp',
+            },
+            variants: {
+              thumbnail: [
+                {
+                  url: 'https://example.com/dragons.webp',
+                  width: 560,
+                  height: 373,
+                  mime_type: 'image/webp',
+                },
+              ],
+            },
             external_url: 'https://example.com/products/dragons',
           },
         ],

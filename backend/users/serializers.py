@@ -1,8 +1,7 @@
-from typing import Any
-
 from rest_framework import serializers
 
 from common.serializers import TranslatedSerializerMixin
+from common.types import ImageVariantPayload
 
 from .models import Profile, User
 
@@ -40,23 +39,22 @@ class UserSerializer(
     about_me_image = serializers.SerializerMethodField()
     about_me_image2 = serializers.SerializerMethodField()
 
-    def get_image_variants(self, obj: User, source_name: str) -> dict[str, Any]:
+    def get_image_variants(self, obj: User, source_name: str) -> ImageVariantPayload:
         role = "original_format"
-        stored_role = obj._build_variant_role(role, source_name)
-        fallback_image = obj.get_variant_candidates(stored_role, preferred_width=2560)
+        stored_role = obj.build_variant_role(role, source_name)
+        return obj.get_variant_payload(
+            stored_role,
+            fallback_width=2560,
+            response_role=role,
+        )
 
-        return {
-            "fallback_image": fallback_image[0] if fallback_image else None,
-            "variants": {role: obj.get_variant_candidates(stored_role)},
-        }
-
-    def get_avatar(self, obj: User) -> dict[str, Any]:
+    def get_avatar(self, obj: User) -> ImageVariantPayload:
         return self.get_image_variants(obj, source_name="avatar")
 
-    def get_about_me_image(self, obj: User) -> dict[str, Any]:
+    def get_about_me_image(self, obj: User) -> ImageVariantPayload:
         return self.get_image_variants(obj, source_name="about_me_image")
 
-    def get_about_me_image2(self, obj: User) -> dict[str, Any]:
+    def get_about_me_image2(self, obj: User) -> ImageVariantPayload:
         return self.get_image_variants(obj, source_name="about_me_image2")
 
     def to_representation(self, instance: User) -> dict:

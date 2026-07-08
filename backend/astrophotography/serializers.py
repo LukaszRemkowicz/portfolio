@@ -9,7 +9,6 @@ from django.urls import reverse
 from django.utils import translation
 
 from common.serializers import TranslatedSerializerMixin
-from common.types import ImageVariantCandidate
 from common.utils.signing import generate_signed_url_params
 from translation.services import TranslationService
 
@@ -113,18 +112,9 @@ class AstroImageSerializer(AstroImageBaseSerializer):
     not fetch heavy images or modal-only fields.
     """
 
-    fallback_image = serializers.SerializerMethodField()
-    variants = serializers.SerializerMethodField()
-
-    def get_fallback_image(self, obj: AstroImage) -> ImageVariantCandidate | None:
-        fallback_image = obj.get_variant_candidates("thumbnail", preferred_width=560)
-        return fallback_image[0] if fallback_image else None
-
-    def get_variants(self, obj: AstroImage) -> dict[str, list[ImageVariantCandidate]]:
-        return {"thumbnail": obj.get_variant_candidates("thumbnail")}
-
     def to_representation(self, instance: AstroImage) -> dict[str, Any]:
         data = super().to_representation(instance)
+        data.update(instance.get_variant_payload("thumbnail", fallback_width=560))
         return self.translate_fields(
             data=data,
             instance=instance,
@@ -133,8 +123,6 @@ class AstroImageSerializer(AstroImageBaseSerializer):
 
     class Meta(AstroImageBaseSerializer.Meta):
         fields = AstroImageBaseSerializer.Meta.fields + [
-            "fallback_image",
-            "variants",
             "description",
         ]
 
@@ -145,7 +133,6 @@ class AstroImageDetailSerializer(AstroImageBaseSerializer):
     Includes full technical specs, equipment, and descriptions.
     """
 
-    fallback_image = serializers.SerializerMethodField()
     process = serializers.BooleanField(source="zoom")
     camera = serializers.StringRelatedField(many=True, read_only=True)
     lens = serializers.StringRelatedField(many=True, read_only=True)
@@ -153,13 +140,15 @@ class AstroImageDetailSerializer(AstroImageBaseSerializer):
     tracker = serializers.StringRelatedField(many=True, read_only=True)
     tripod = serializers.StringRelatedField(many=True, read_only=True)
 
-    def get_fallback_image(self, obj: AstroImage) -> ImageVariantCandidate | None:
-        fallback_image = obj.get_variant_candidates("thumbnail", preferred_width=560)
-        return fallback_image[0] if fallback_image else None
+    def to_representation(self, instance: AstroImage) -> dict[str, Any]:
+        data = super().to_representation(instance)
+        data["fallback_image"] = instance.get_variant_payload("thumbnail", fallback_width=560)[
+            "fallback_image"
+        ]
+        return data
 
     class Meta(AstroImageBaseSerializer.Meta):
         fields = AstroImageBaseSerializer.Meta.fields + [
-            "fallback_image",
             "process",
             "description",
             "camera",
@@ -174,19 +163,12 @@ class AstroImageDetailSerializer(AstroImageBaseSerializer):
 
 
 class MainPageBackgroundImageSerializer(serializers.ModelSerializer):
-    fallback_image = serializers.SerializerMethodField()
-    variants = serializers.SerializerMethodField()
-
-    def get_fallback_image(self, obj: MainPageBackgroundImage) -> ImageVariantCandidate | None:
-        fallback_image = obj.get_variant_candidates("hero", preferred_width=2560)
-        return fallback_image[0] if fallback_image else None
-
-    def get_variants(self, obj: MainPageBackgroundImage) -> dict[str, list[ImageVariantCandidate]]:
-        return {"hero": obj.get_variant_candidates("hero")}
+    def to_representation(self, instance: MainPageBackgroundImage) -> dict[str, Any]:
+        return instance.get_variant_payload("hero", fallback_width=2560)
 
     class Meta:
         model = MainPageBackgroundImage
-        fields = ["fallback_image", "variants"]
+        fields: list[str] = []
 
 
 class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):

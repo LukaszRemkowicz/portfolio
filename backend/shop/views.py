@@ -32,7 +32,7 @@ class ShopProductViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = (
         ShopProduct.objects.filter(is_active=True)
         .select_related("image")
-        .prefetch_related("translations")
+        .prefetch_related("translations", "variants")
         .order_by("-created_at")
     )
     serializer_class = ShopProductSerializer

@@ -410,10 +410,12 @@ class TestBackgroundMainPageView:
             "height": 1440,
             "mime_type": "image/webp",
         }
+        empty_payload = {"fallback_image": None, "variants": {"hero": []}}
+        valid_payload = {"fallback_image": fallback_image, "variants": {"hero": [fallback_image]}}
         with patch.object(
             MainPageBackgroundImage,
-            "get_variant_candidates",
-            side_effect=[[], [], [fallback_image], [fallback_image]],
+            "get_variant_payload",
+            side_effect=[empty_payload, valid_payload],
         ):
             response: Response = api_client.get(url)
 
@@ -1065,22 +1067,32 @@ class TestMainPageBackgroundImageSecureView:
 
         with patch.object(
             MainPageBackgroundImage,
-            "get_variant_candidates",
-            return_value=[
-                {
+            "get_variant_payload",
+            return_value={
+                "fallback_image": {
                     "url": "/media/backgrounds/example.png",
                     "width": 2560,
                     "height": 1440,
                     "mime_type": "image/webp",
-                }
-            ],
-        ) as get_variant_candidates:
+                },
+                "variants": {
+                    "hero": [
+                        {
+                            "url": "/media/backgrounds/example.png",
+                            "width": 2560,
+                            "height": 1440,
+                            "mime_type": "image/webp",
+                        }
+                    ]
+                },
+            },
+        ) as get_variant_payload:
             response: Response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["fallback_image"]["url"] == "/media/backgrounds/example.png"
         assert "/background-files/" not in response.data["fallback_image"]["url"]
-        get_variant_candidates.assert_any_call("hero", preferred_width=2560)
+        get_variant_payload.assert_any_call("hero", fallback_width=2560)
 
 
 @pytest.mark.django_db

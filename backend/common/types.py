@@ -87,6 +87,13 @@ class ImageVariantCandidate(TypedDict):
     mime_type: str
 
 
+class ImageVariantPayload(TypedDict):
+    """Public fallback and responsive candidates for one generated variant role."""
+
+    fallback_image: ImageVariantCandidate | None
+    variants: dict[str, list[ImageVariantCandidate]]
+
+
 @dataclass(frozen=True)
 class ImageVariantSource:
     """Describe one original/source image family used to generate variants.

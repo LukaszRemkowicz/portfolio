@@ -324,7 +324,22 @@ describe('API Services', () => {
               id: '1',
               title: 'Print',
               description: 'Fine art print',
-              thumbnail_url: '/media/shop/print.webp',
+              fallback_image: {
+                url: '/media/shop/print.webp',
+                width: 560,
+                height: 373,
+                mime_type: 'image/webp',
+              },
+              variants: {
+                thumbnail: [
+                  {
+                    url: '/media/shop/print-560.webp',
+                    width: 560,
+                    height: 373,
+                    mime_type: 'image/webp',
+                  },
+                ],
+              },
             },
           ],
         }),
@@ -345,7 +360,12 @@ describe('API Services', () => {
       expect(result.variants?.background[0].url).toBe(
         '/media/shop/background-1280.webp'
       );
-      expect(result.products[0].thumbnail_url).toBe('/media/shop/print.webp');
+      expect(result.products[0].fallback_image?.url).toBe(
+        '/media/shop/print.webp'
+      );
+      expect(result.products[0].variants?.thumbnail[0].url).toBe(
+        '/media/shop/print-560.webp'
+      );
     });
   });
 

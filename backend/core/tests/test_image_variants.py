@@ -723,6 +723,47 @@ class TestBaseImageVariants:
             }
         ]
 
+    def test_get_variant_payload_reuses_candidates_for_fallback_and_variants(self) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(
+                original=jpeg_field("variant-payload.jpg", size=(3000, 2000)),
+            )
+
+        process_image_task("astrophotography", "AstroImage", image.pk)
+        image.refresh_from_db()
+        exact_variant = image.variants.get(role="detail", width=1280)
+        largest_variant = image.variants.get(role="detail", width=2560)
+
+        exact_payload = image.get_variant_payload("detail", fallback_width=1280)
+        largest_payload = image.get_variant_payload("detail", fallback_width=2000)
+
+        assert exact_payload["fallback_image"] == {
+            "url": exact_variant.file.url,
+            "width": exact_variant.width,
+            "height": exact_variant.height,
+            "mime_type": exact_variant.mime_type,
+        }
+        assert largest_payload["fallback_image"] == {
+            "url": largest_variant.file.url,
+            "width": largest_variant.width,
+            "height": largest_variant.height,
+            "mime_type": largest_variant.mime_type,
+        }
+        assert exact_payload["variants"] == {"detail": image.get_variant_candidates("detail")}
+
+    def test_get_variant_payload_returns_empty_public_shape_when_variants_missing(
+        self,
+    ) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(
+                original=jpeg_field("missing-payload.jpg", size=(1200, 800)),
+            )
+
+        assert image.get_variant_payload("thumbnail", fallback_width=560) == {
+            "fallback_image": None,
+            "variants": {"thumbnail": []},
+        }
+
     def test_get_image_url_falls_back_when_thumbnail_variant_is_missing(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(
@@ -761,6 +802,28 @@ class TestBaseImageVariants:
                 "mime_type": "image/webp",
             }
         ]
+        assert user.get_variant_payload(
+            "avatar__original_format",
+            fallback_width=2560,
+            response_role="original_format",
+        ) == {
+            "fallback_image": {
+                "url": avatar_variant.file.url,
+                "width": 800,
+                "height": 800,
+                "mime_type": "image/webp",
+            },
+            "variants": {
+                "original_format": [
+                    {
+                        "url": avatar_variant.file.url,
+                        "width": 800,
+                        "height": 800,
+                        "mime_type": "image/webp",
+                    }
+                ]
+            },
+        }
         assert user.get_variant_url("original_format", 800) is None
 
         portrait_count = user.sync_image_variants(["about_me_image"], force=False)

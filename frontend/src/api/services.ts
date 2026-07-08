@@ -16,7 +16,7 @@ import {
   normalizeBackgroundImage,
   normalizeAstroImage,
   normalizeAstroImages,
-  getMediaUrl,
+  normalizeImageVariantPayload,
   normalizeProfileMedia,
   normalizeTravelLocation,
 } from './media';
@@ -235,7 +235,6 @@ export const fetchProjects = async (): Promise<Project[]> => {
   //     images: project.images.map(image => ({
   //       ...image,
   //       url: getMediaUrl(image.url) || '',
-  //       thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
   //     })),
   //   }));
   // }
@@ -257,24 +256,12 @@ export const fetchShopProducts = async (
   return {
     title: data?.title || '',
     description: data?.description || '',
-    fallback_image: data?.fallback_image
-      ? {
-          ...data.fallback_image,
-          url: getMediaUrl(data.fallback_image.url) || data.fallback_image.url,
-        }
-      : data?.fallback_image,
-    variants: data?.variants
-      ? Object.fromEntries(
-          Object.entries(data.variants).map(([role, candidates]) => [
-            role,
-            candidates.map(candidate => ({
-              ...candidate,
-              url: getMediaUrl(candidate.url) || candidate.url,
-            })),
-          ])
+    ...(normalizeImageVariantPayload(data) ?? {}),
+    products: Array.isArray(data?.products)
+      ? data.products.map(
+          product => normalizeImageVariantPayload(product) ?? product
         )
-      : undefined,
-    products: Array.isArray(data?.products) ? data.products : [],
+      : [],
   };
 };
 

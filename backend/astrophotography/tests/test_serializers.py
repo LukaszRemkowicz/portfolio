@@ -224,21 +224,33 @@ class TestAstroImageSerializers:
 
 
 class TestMainPageBackgroundImageSerializer:
-    def test_fallback_image_uses_hero_variant_candidate(self) -> None:
+    def test_serializer_uses_hero_variant_payload(self) -> None:
         background = MagicMock()
-        candidate = {
-            "url": "/media/backgrounds/hero.webp",
-            "width": 2560,
-            "height": 1440,
-            "mime_type": "image/webp",
+        payload = {
+            "fallback_image": {
+                "url": "/media/backgrounds/hero.webp",
+                "width": 2560,
+                "height": 1440,
+                "mime_type": "image/webp",
+            },
+            "variants": {
+                "hero": [
+                    {
+                        "url": "/media/backgrounds/hero.webp",
+                        "width": 2560,
+                        "height": 1440,
+                        "mime_type": "image/webp",
+                    }
+                ]
+            },
         }
-        background.get_variant_candidates.return_value = [candidate]
+        background.get_variant_payload.return_value = payload
         serializer = MainPageBackgroundImageSerializer()
 
-        assert serializer.get_fallback_image(background) == candidate
-        background.get_variant_candidates.assert_called_once_with(
+        assert serializer.to_representation(background) == payload
+        background.get_variant_payload.assert_called_once_with(
             "hero",
-            preferred_width=2560,
+            fallback_width=2560,
         )
 
     @pytest.mark.django_db

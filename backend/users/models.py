@@ -208,7 +208,7 @@ class User(
         source_width = effective_source_field.width if effective_source_field else None
         if preferred_width is not None:
             fallback_image = self.get_variant_candidates(
-                self._build_variant_role("original_format", source_field_name),
+                self.build_variant_role("original_format", source_field_name),
                 preferred_width=preferred_width,
             )
             if fallback_image:

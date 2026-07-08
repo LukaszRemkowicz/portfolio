@@ -31,10 +31,7 @@ import {
 import { getMediaUrl } from '../api/media';
 import { stripHtml, truncateText } from '../utils/html';
 import NotFoundPage from './NotFoundPage';
-import {
-  buildResponsiveImageProps,
-  getCurrentHeroVariantWidth,
-} from '../utils/imageVariants';
+import { buildResponsiveImageProps } from '../utils/imageVariants';
 
 interface GalleryReturnLocation {
   pathname: string;
@@ -200,7 +197,6 @@ const AstroGallery: React.FC = () => {
         variants: background?.variants,
         role: 'hero',
         fallbackSrc: background?.fallback_image?.url || ASSETS.galleryFallback,
-        preferredWidth: getCurrentHeroVariantWidth(),
         sizes: '100vw',
       }),
     [background?.fallback_image?.url, background?.variants]
