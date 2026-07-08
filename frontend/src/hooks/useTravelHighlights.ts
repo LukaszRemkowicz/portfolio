@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { fetchTravelHighlights } from '../api/services';
 import { MainPageLocation } from '../types';
+import { languageBoundShellQueryOptions } from './languageBoundShellQueryOptions';
 
 export const useTravelHighlights = (enabled = true) => {
   const { i18n } = useTranslation();
@@ -12,10 +13,6 @@ export const useTravelHighlights = (enabled = true) => {
     queryKey: ['travel-highlights', language],
     queryFn: () => fetchTravelHighlights(),
     enabled,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-    refetchOnWindowFocus: false,
+    ...languageBoundShellQueryOptions,
   });
 };

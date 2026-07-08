@@ -6,6 +6,7 @@ import { useSettings } from '../../hooks/useSettings';
 import { useAstroImages } from '../../hooks/useAstroImages';
 import { useAstroImageDetail } from '../../hooks/useAstroImageDetail';
 import { useLatestAstroImages } from '../../hooks/useLatestAstroImages';
+import { useLatestTags } from '../../hooks/useLatestTags';
 import { useCategories } from '../../hooks/useCategories';
 import { useTags } from '../../hooks/useTags';
 import { useProjects } from '../../hooks/useProjects';
@@ -142,6 +143,29 @@ describe('TanStack Query Hooks', () => {
         queryFn: expect.any(Function),
       })
     );
+  });
+
+  it('refetches language-bound shell queries when mounted after a language switch', () => {
+    renderHook(() => useProfile());
+    renderHook(() => useBackground());
+    renderHook(() => useLatestAstroImages());
+    renderHook(() => useLatestTags());
+    renderHook(() => useTravelHighlights());
+
+    for (const queryKey of [
+      ['profile', 'en'],
+      ['background', 'en'],
+      ['latest-astro-images', 'en'],
+      ['latest-tags', 'en'],
+      ['travel-highlights', 'en'],
+    ]) {
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey,
+          refetchOnMount: true,
+        })
+      );
+    }
   });
 
   it('useTravelHighlightDetail calls useQuery with correct options', () => {
