@@ -431,8 +431,13 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
         ),
         ImageVariantSpec(
             role="thumbnail",
-            viewport_widths=ViewportWidths.fixed(560),
-            quality=100,
+            viewport_widths=ViewportWidths(
+                mobile=320,
+                tablet=560,
+                desktop=560,
+                wide=560,
+            ),
+            quality=85,
             label="Astrophotography thumbnail candidate",
         ),
         ImageVariantSpec(
@@ -635,7 +640,7 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
         ImageVariantSpec(
             role="hero",
             viewport_widths=ViewportWidths(
-                mobile=1280,
+                mobile=960,
                 tablet=1280,
                 desktop=1920,
                 wide=2560,

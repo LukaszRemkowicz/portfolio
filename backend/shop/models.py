@@ -279,7 +279,7 @@ class ShopSettings(
         ImageVariantSpec(
             role="background",
             viewport_widths=ViewportWidths(
-                mobile=1280,
+                mobile=960,
                 tablet=1280,
                 desktop=1920,
                 wide=2560,

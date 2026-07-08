@@ -1,4 +1,4 @@
-import { test as base } from '@playwright/test';
+import { test as base, type Route } from '@playwright/test';
 
 // Define the type for our fixtures (we don't export specific values yet, just the auto-worker)
 type PortfolioFixtures = {
@@ -8,8 +8,7 @@ type PortfolioFixtures = {
 export const test = base.extend<PortfolioFixtures>({
   mockApi: [
     async ({ page }, use) => {
-      // Catch-all mock for API v1
-      await page.route('**/v1/**', async route => {
+      const fulfillMockApi = async (route: Route) => {
         const url = route.request().url();
 
         // 1. User Profile
@@ -97,7 +96,11 @@ export const test = base.extend<PortfolioFixtures>({
           contentType: 'application/json',
           body: JSON.stringify([]),
         });
-      });
+      };
+
+      // Catch-all mock for backend and browser BFF API calls.
+      await page.route('**/v1/**', fulfillMockApi);
+      await page.route('**/app/**', fulfillMockApi);
 
       await use();
     },

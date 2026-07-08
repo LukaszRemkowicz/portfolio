@@ -380,7 +380,7 @@ class TestBaseImageVariants:
 
         image.refresh_from_db()
         detail_variants = list(image.variants.filter(role="detail").order_by("width"))
-        thumbnail_variant = image.variants.get(role="thumbnail")
+        thumbnail_variant = image.variants.get(role="thumbnail", width=560)
         assert image.variants.filter(role="card").count() == 0
         assert [variant.width for variant in detail_variants] == [1280, 1920, 2560]
         assert [variant.height for variant in detail_variants] == [853, 1280, 1707]
@@ -428,6 +428,7 @@ class TestBaseImageVariants:
         ]
         original_format_count = image.variants.filter(role="original_format").count()
         assert hero_widths == [
+            960,
             1280,
             1920,
             2560,

@@ -43,6 +43,18 @@ class TestMainPageBackgroundImageVariantContract:
 
         assert bg.get_hero_variant() == ("hero", 1920)
 
+    def test_astro_image_thumbnail_variants_are_configured_for_responsive_cards(
+        self,
+    ) -> None:
+        """AstroImage thumbnails should give cards smaller browser candidates."""
+        image = AstroImage()
+        thumbnail_spec = next(
+            spec for spec in image.get_image_variant_specs() if spec.role == "thumbnail"
+        )
+
+        assert thumbnail_spec.viewport_widths.as_tuple() == (320, 560)
+        assert thumbnail_spec.quality == 85
+
 
 @pytest.mark.django_db
 class TestAstroImageModel:
@@ -117,7 +129,7 @@ class TestAstroImageModel:
         image: AstroImage = AstroImageFactory(original__width=1200, original__height=800)
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        variant = image.variants.get(role="thumbnail")
+        variant = image.variants.get(role="thumbnail", width=560)
 
         missing_name = str(variant.file.name)
         variant.file.storage.delete(missing_name)
@@ -152,7 +164,7 @@ class TestMainPageBackgroundImageModel:
         hero_spec = next(spec for spec in specs if spec.role == "hero")
 
         assert [spec.role for spec in specs] == ["hero"]
-        assert hero_spec.viewport_widths.as_tuple() == (1280, 1920, 2560)
+        assert hero_spec.viewport_widths.as_tuple() == (960, 1280, 1920, 2560)
         assert hero_spec.quality == 95
         assert not hasattr(bg, "max_dimension")
         assert not hasattr(bg, "dimension_percentage")

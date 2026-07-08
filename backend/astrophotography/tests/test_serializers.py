@@ -197,6 +197,10 @@ class TestAstroImageSerializers:
         }
         assert card_data["fallback_image"] == expected
         assert detail_data["fallback_image"] == expected
+        assert [variant["width"] for variant in card_data["variants"]["thumbnail"]] == [
+            320,
+            560,
+        ]
 
     def test_astro_image_serializer_exposes_thumbnail_variant_candidates(self) -> None:
         """Gallery card payloads should include thumbnail preview candidates."""

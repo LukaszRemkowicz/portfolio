@@ -73,7 +73,7 @@ class TestShopSettingsImageProcessing:
             settings_obj.variants.filter(role="background").order_by("width")
         )
         assert original_format.width == 1920
-        assert [variant.width for variant in background_variants] == [1280, 1920]
+        assert [variant.width for variant in background_variants] == [960, 1280, 1920]
         assert all(variant.file.name.endswith(".webp") for variant in background_variants)
         assert all("background-crop" in variant.file.name for variant in background_variants)
 
