@@ -1,0 +1,149 @@
+name: Publish Staging Images
+
+on:
+  pull_request:
+    types: [labeled, synchronize]
+
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: ${{ vars.IMAGE_NAMESPACE }}
+  STAGING_IMAGE_TAG: v0.0.0-STG
+
+jobs:
+  publish-staging:
+    name: Build and Push Staging Images
+    if: >-
+      github.event.label.name == 'publish-staging' ||
+      contains(github.event.pull_request.labels.*.name, 'publish-staging')
+    runs-on: ubuntu-latest
+    environment: portfolio-registry
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Show staging image tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Resolved staging image tag: ${STAGING_IMAGE_TAG}"
+          echo "Publishing staging images from PR #${{ github.event.pull_request.number }}"
+          echo "Head ref: ${{ github.event.pull_request.head.ref }}"
+          echo "Head SHA: ${{ github.event.pull_request.head.sha }}"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Docker metadata for staging backend
+        id: meta_backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-be
+          tags: |
+            type=raw,value=${{ env.STAGING_IMAGE_TAG }}
+
+      - name: Build and push staging backend
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/backend/Dockerfile
+          target: production
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta_backend.outputs.tags }}
+          labels: ${{ steps.meta_backend.outputs.labels }}
+
+      - name: Docker metadata for staging frontend
+        id: meta_frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-fe
+          tags: |
+            type=raw,value=${{ env.STAGING_IMAGE_TAG }}
+
+      - name: Build and push staging frontend
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          target: prod
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            SITE_DOMAIN=${{ vars.STAGING_SITE_DOMAIN || vars.SITE_DOMAIN }}
+            API_URL=https://${{ vars.STAGING_API_DOMAIN || vars.API_DOMAIN }}
+            GA_TRACKING_ID=${{ vars.GA_TRACKING_ID }}
+            ENABLE_GA=${{ vars.STAGING_ENABLE_GA || 'false' }}
+            SENTRY_DSN_FE=${{ secrets.SENTRY_DSN_FE }}
+            ENVIRONMENT=stage
+            ALLOWED_HOSTS=${{ vars.STAGING_ALLOWED_HOSTS || vars.ALLOWED_HOSTS }}
+            PROJECT_OWNER=${{ vars.PROJECT_OWNER }}
+          tags: ${{ steps.meta_frontend.outputs.tags }}
+          labels: ${{ steps.meta_frontend.outputs.labels }}
+
+      - name: Docker metadata for staging nginx
+        id: meta_nginx
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-nginx
+          tags: |
+            type=raw,value=${{ env.STAGING_IMAGE_TAG }}
+
+      - name: Build and push staging nginx
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/nginx/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta_nginx.outputs.tags }}
+          labels: ${{ steps.meta_nginx.outputs.labels }}
+
+      - name: Deployment handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat <<MSG
+          Staging images published.
+
+          Tag:
+            ${{ env.STAGING_IMAGE_TAG }}
+
+          Images:
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-be:${{ env.STAGING_IMAGE_TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-fe:${{ env.STAGING_IMAGE_TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-nginx:${{ env.STAGING_IMAGE_TAG }}
+
+          Next VPS step:
+            doppler run -- ./infra/scripts/release/deploy_staging.sh
+          MSG

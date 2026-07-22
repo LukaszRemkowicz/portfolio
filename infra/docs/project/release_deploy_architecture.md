@@ -41,10 +41,16 @@ There are two distinct artifact flows:
 
 ### Staging
 
-- built locally on the VPS
-- uses `infra/scripts/release/build.sh`
-- usually built from the branch currently being tested
-- does not depend on GHCR publication
+Staging supports two artifact paths:
+
+- legacy path: built locally on the VPS with `infra/scripts/release/build.sh`;
+- registry path: built in GitHub Actions by the `Publish Staging Images`
+  workflow, pushed to GHCR under the constant staging tag `v0.0.0-STG`, and
+  prepared on the VPS with `infra/scripts/release/prepare_staging_images.sh`.
+
+The registry path exists to avoid stressing the VPS while building the
+test/staging environment. The legacy VPS-local path remains available through
+`infra/scripts/release/manual_deploy_staging.sh`.
 
 ### Production
 
@@ -69,9 +75,11 @@ Release identity is derived from `VERSION` and Git tags.
 
 ## Artifact Sources
 
-### Staging artifact source
+### Staging artifact sources
 
-Staging artifacts are created locally by:
+#### Legacy VPS-local source
+
+Staging artifacts can still be created locally by:
 
 ```text
 infra/scripts/release/build.sh
@@ -90,6 +98,43 @@ This script:
   - current tag
   - previous tag
   - newly built tag
+
+#### CI registry publish source
+
+Staging artifacts can also be built outside the VPS by adding the
+`publish-staging` label to the pull request for the branch being tested.
+
+`.github/workflows/staging-image-publish.yml`:
+
+- runs on `pull_request` `labeled` and `synchronize` events;
+- only performs work when the PR has the `publish-staging` label;
+- checks out the PR head SHA, not the base branch;
+- publishes staging images to GHCR with the constant tag `v0.0.0-STG`;
+- republishes automatically on later branch updates while the label remains
+  present.
+
+Published staging artifacts:
+
+```text
+<registry>/<namespace>/stage-be:v0.0.0-STG
+<registry>/<namespace>/stage-fe:v0.0.0-STG
+<registry>/<namespace>/stage-nginx:v0.0.0-STG
+```
+
+On the VPS, `infra/scripts/release/prepare_staging_images.sh`:
+
+- owns the fixed `TAG=v0.0.0-STG` staging tag;
+- logs in to GHCR;
+- pulls staging images from GHCR;
+- tags them locally as:
+  - `stage-be:${TAG}`
+  - `stage-fe:${TAG}`
+  - `stage-nginx:${TAG}`
+- tags `stage-be:${TAG}` locally as `stage-worker:${TAG}` because the celery
+  worker runs the same backend artifact;
+- removes the GHCR tag locally after retagging so the VPS keeps only the
+  runtime-local names;
+- records pulled image digests under the staging state directory.
 
 ### Production artifact source
 
@@ -126,6 +171,7 @@ production-be:${TAG}
 production-fe:${TAG}
 production-nginx:${TAG}
 stage-be:${TAG}
+stage-worker:${TAG}
 stage-fe:${TAG}
 stage-nginx:${TAG}
 ```
@@ -293,7 +339,11 @@ It does not:
 Operator-facing wrappers coordinate the full flow with approval prompts between phases:
 
 - `infra/scripts/release/deploy_staging.sh`
+  - owns the fixed `TAG=v0.0.0-STG` staging tag
+  - runs `prepare_staging_images.sh` -> `release.sh` -> `deploy.sh`
+- `infra/scripts/release/manual_deploy_staging.sh`
   - default `TAG=v0.0.0-STG`
+  - legacy VPS-local build path
   - runs `build.sh` -> `release.sh` -> `deploy.sh`
 - `infra/scripts/release/deploy_production.sh`
   - requires `TAG`
@@ -319,7 +369,13 @@ prepare_images.sh -> release.sh -> deploy.sh
 while staging uses:
 
 ```text
-build.sh -> release.sh -> deploy.sh
+prepare_staging_images.sh -> release.sh -> deploy.sh
+```
+
+or, for the legacy VPS-local build path:
+
+```text
+manual_deploy_staging.sh
 ```
 
 ## Production Flow
@@ -340,14 +396,28 @@ There is no listener service or auto-deploy agent on the VPS.
 
 ## Staging Flow
 
-High-level staging flow:
+High-level staging registry deploy flow:
+
+1. open or update the pull request for the branch being tested
+2. add the `publish-staging` label
+3. GitHub Actions builds the PR head SHA
+4. GitHub Actions pushes the `v0.0.0-STG` staging images to GHCR
+5. on the VPS, run `deploy_staging.sh`
+
+`deploy_staging.sh` owns the fixed staging tag, prepares the registry images,
+runs `release.sh`, and then runs `deploy.sh`. Staging deploy switches only
+`be`, `fe`, and `nginx`; `celery-worker` is intentionally excluded and remains
+an on-demand service.
+
+High-level legacy staging flow:
 
 1. choose branch/tag/build target
-2. run `build.sh` for staging
-3. run `release.sh`
-4. run `deploy.sh`
+2. run `manual_deploy_staging.sh`, or manually run:
+   - `build.sh`
+   - `release.sh`
+   - `deploy.sh`
 
-Staging remains intentionally separate from the production registry flow.
+Staging remains intentionally separate from the production release-tag flow.
 
 ## Rollback Model
 
@@ -428,7 +498,8 @@ This is intentional because staging and production use different artifact source
 If future work touches release/deploy behavior, the main invariant to preserve is:
 
 - `release.sh` and `deploy.sh` consume local image names and explicit tags
-- staging gets those local images from `build.sh`
+- staging gets those local images from `prepare_staging_images.sh`, or from
+  `build.sh` through the legacy `manual_deploy_staging.sh` wrapper
 - production gets those local images from `prepare_images.sh`
 - compose remains runtime-focused
 - rollback remains explicit and tag-based
