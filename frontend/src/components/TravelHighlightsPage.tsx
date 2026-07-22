@@ -28,7 +28,7 @@ const TravelHighlightsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const imgParam = searchParams.get('img');
 
-  const { data: backgroundUrl } = useBackground();
+  const { data: background } = useBackground();
 
   // Redirect or show error if URL params are incomplete
   const hasIncompleteParams = !countrySlug || !placeSlug || !dateSlug;
@@ -55,31 +55,31 @@ const TravelHighlightsPage: React.FC = () => {
   const locationBackgroundImage = detailData?.background_image || null;
   const images = useMemo(() => detailData?.images || [], [detailData?.images]);
 
-  // Fetch full resolution URLs for all images
-  const imageIdsToFetch = useMemo(
-    () => images.map(img => img.pk.toString()),
-    [images]
-  );
+  const selectedImage = useMemo(() => {
+    if (!imgParam) return null;
+    return (
+      images.find(i => i.slug === imgParam || i.pk.toString() === imgParam) ||
+      null
+    );
+  }, [imgParam, images]);
+  const selectedImageId = selectedImage ? selectedImage.pk.toString() : null;
   const { data: imageUrls = {} } = useImageUrls(
-    imageIdsToFetch,
-    imageIdsToFetch.length > 0
+    selectedImageId,
+    Boolean(selectedImageId)
   );
 
   // Derive modal image from URL parameter
   const modalImage = useMemo(() => {
-    if (!imgParam) return null;
-    const found = images.find(
-      i => i.slug === imgParam || i.pk.toString() === imgParam
-    );
-    if (!found) return null;
+    if (!selectedImage) return null;
 
     // Enhance with full-res URL if available
-    const fullResUrl = imageUrls[found.pk.toString()] || imageUrls[found.slug];
+    const fullResUrl =
+      imageUrls[selectedImage.pk.toString()] || imageUrls[selectedImage.slug];
     return {
-      ...found,
-      url: fullResUrl || found.url || found.thumbnail_url,
+      ...selectedImage,
+      url: fullResUrl || selectedImage.url || selectedImage.fallback_image?.url,
     };
-  }, [imgParam, images, imageUrls]);
+  }, [selectedImage, imageUrls]);
 
   const handleImageClick = (image: ExtendedAstroImage): void => {
     const nextParams = new URLSearchParams(searchParams);
@@ -148,10 +148,10 @@ const TravelHighlightsPage: React.FC = () => {
       <div
         className={styles.hero}
         style={
-          locationBackgroundImage || backgroundUrl
+          locationBackgroundImage || background?.fallback_image?.url
             ? {
                 backgroundImage: `linear-gradient(rgba(2, 4, 10, 0.8), rgba(2, 4, 10, 0.8)), url(${getMediaUrl(
-                  locationBackgroundImage || backgroundUrl
+                  locationBackgroundImage || background?.fallback_image?.url
                 )})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
@@ -243,12 +243,12 @@ const ViewerImage: React.FC<{
   image: ExtendedAstroImage;
   handleImageClick: (image: ExtendedAstroImage) => void;
 }> = ({ image, handleImageClick }) => {
-  const [hasError, setHasError] = React.useState(!image.thumbnail_url);
+  const [hasError, setHasError] = React.useState(!image.fallback_image?.url);
 
   return (
     <>
       <ImageWithFallback
-        src={image.thumbnail_url}
+        src={image.fallback_image?.url}
         alt={image.name}
         data-testid={`gallery-card-${image.slug}`}
         className={styles.viewerImage}

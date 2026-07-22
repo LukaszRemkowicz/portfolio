@@ -54,7 +54,8 @@ class TestShopProductListView:
         item = response.data["products"][0]
         assert "title" in response.data
         assert "description" in response.data
-        assert "thumbnail_url" in item
+        assert "fallback_image" in item
+        assert "variants" in item
         assert "external_url" in item
         assert "created_at" in item
 
@@ -65,7 +66,7 @@ class TestShopProductListView:
             thumbnail_url="",
         )
         thumbnail = ImageVariantFactory(
-            image=product,
+            owner=product,
             file__filename="product-thumbnail.webp",
             role="thumbnail",
             width=560,
@@ -80,9 +81,15 @@ class TestShopProductListView:
             for payload in response.data["products"]
             if str(payload["id"]) == str(product.pk)
         )
-        assert thumbnail.file.url in item["thumbnail_url"]
+        assert item["fallback_image"] == {
+            "url": thumbnail.file.url,
+            "width": 560,
+            "height": 373,
+            "mime_type": "image/webp",
+        }
+        assert item["variants"] == {"thumbnail": [item["fallback_image"]]}
 
-    def test_list_product_falls_back_to_image_cropped_when_variant_missing(
+    def test_list_product_returns_null_image_when_variant_missing(
         self, api_client: APIClient
     ) -> None:
         product = ShopProductFactory(
@@ -99,17 +106,18 @@ class TestShopProductListView:
             for payload in response.data["products"]
             if str(payload["id"]) == str(product.pk)
         )
-        assert "product-crop" in item["thumbnail_url"]
+        assert item["fallback_image"] is None
+        assert item["variants"] == {"thumbnail": []}
 
-    def test_list_product_falls_back_to_astroimage_thumbnail_when_crop_missing(
+    def test_list_product_does_not_use_linked_astroimage_thumbnail_as_public_fallback(
         self, api_client: APIClient
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             astro_image = AstroImageFactory(
                 original=jpeg_field("astro-original.jpg", size=(1200, 800))
             )
-        astro_variant = ImageVariantFactory(
-            image=astro_image,
+        ImageVariantFactory(
+            owner=astro_image,
             file__filename="astro-shop-thumb.webp",
             role="thumbnail",
             width=560,
@@ -126,9 +134,10 @@ class TestShopProductListView:
             for payload in response.data["products"]
             if str(payload["id"]) == str(product.pk)
         )
-        assert item["thumbnail_url"] == f"http://testserver{astro_variant.file.url}"
+        assert item["fallback_image"] is None
+        assert item["variants"] == {"thumbnail": []}
 
-    def test_list_product_falls_back_to_astroimage_original_when_thumbnail_missing(
+    def test_list_product_does_not_use_astroimage_original_as_public_fallback(
         self, api_client: APIClient
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -147,19 +156,20 @@ class TestShopProductListView:
             for payload in response.data["products"]
             if str(payload["id"]) == str(product.pk)
         )
-        assert item["thumbnail_url"] == f"http://testserver{astro_image.original.url}"
+        assert item["fallback_image"] is None
+        assert item["variants"] == {"thumbnail": []}
 
     def test_list_product_ignores_requested_image_width(self, api_client: APIClient) -> None:
         product = ShopProductFactory(image_cropped=png_field("product-crop.png", size=(900, 600)))
         ImageVariantFactory(
-            image=product,
+            owner=product,
             file__filename="product-thumbnail-320.webp",
             role="thumbnail",
             width=320,
             height=213,
         )
         large_variant = ImageVariantFactory(
-            image=product,
+            owner=product,
             file__filename="product-thumbnail-560.webp",
             role="thumbnail",
             width=560,
@@ -187,9 +197,9 @@ class TestShopProductListView:
             for payload in large_response.data["products"]
             if str(payload["id"]) == str(product.pk)
         )
-        assert large_variant.file.url in large_item["thumbnail_url"]
-        assert large_variant.file.url in small_item["thumbnail_url"]
-        assert small_item["thumbnail_url"] == large_item["thumbnail_url"]
+        assert large_item["fallback_image"]["url"] == large_variant.file.url
+        assert small_item["fallback_image"]["url"] == large_variant.file.url
+        assert small_item["fallback_image"] == large_item["fallback_image"]
 
     def test_list_includes_shop_settings_copy(self, api_client: APIClient) -> None:
         ShopProductFactory()
@@ -215,7 +225,7 @@ class TestShopProductListView:
                 image=png_field("shop-background.png", size=(1920, 1080))
             )
         background_variant = ImageVariantFactory(
-            image=shop_settings,
+            owner=shop_settings,
             file__filename="shop-background-variant.webp",
             role="background",
             width=1920,
@@ -225,7 +235,16 @@ class TestShopProductListView:
         response = api_client.get(reverse(SHOP_PRODUCT_LIST_URL), {"lang": "en"})
 
         assert response.status_code == status.HTTP_200_OK
-        assert urlparse(response.data["background_url"]).path == background_variant.file.url
+        assert urlparse(response.data["fallback_image"]["url"]).path == background_variant.file.url
+        assert response.data["fallback_image"]["width"] == 1920
+        assert response.data["variants"]["background"] == [
+            {
+                "url": response.data["fallback_image"]["url"],
+                "width": 1920,
+                "height": 1080,
+                "mime_type": "image/webp",
+            }
+        ]
 
     def test_list_falls_back_to_source_background_when_variant_missing(
         self, api_client: APIClient
@@ -237,7 +256,8 @@ class TestShopProductListView:
         response = api_client.get(reverse(SHOP_PRODUCT_LIST_URL), {"lang": "en"})
 
         assert response.status_code == status.HTTP_200_OK
-        assert ".png" in response.data["background_url"]
+        assert response.data["fallback_image"] is None
+        assert response.data["variants"] == {"background": []}
 
     def test_list_response_is_cached(self, api_client: APIClient) -> None:
         ShopProductFactory()
@@ -385,14 +405,14 @@ class TestShopProductDetailView:
             image_cropped=png_field("product-crop.png", size=(900, 600)),
         )
         ImageVariantFactory(
-            image=product,
+            owner=product,
             file__filename="product-detail-thumbnail-320.webp",
             role="thumbnail",
             width=320,
             height=213,
         )
         large_variant = ImageVariantFactory(
-            image=product,
+            owner=product,
             file__filename="product-detail-thumbnail-560.webp",
             role="thumbnail",
             width=560,
@@ -405,13 +425,11 @@ class TestShopProductDetailView:
 
         assert small_response.status_code == status.HTTP_200_OK
         assert large_response.status_code == status.HTTP_200_OK
-        assert large_variant.file.url in small_response.data["thumbnail_url"]
-        assert large_variant.file.url in large_response.data["thumbnail_url"]
-        assert small_response.data["thumbnail_url"] == large_response.data["thumbnail_url"]
+        assert small_response.data["fallback_image"]["url"] == large_variant.file.url
+        assert large_response.data["fallback_image"]["url"] == large_variant.file.url
+        assert small_response.data["fallback_image"] == large_response.data["fallback_image"]
 
-    def test_detail_falls_back_to_image_cropped_when_variant_missing(
-        self, api_client: APIClient
-    ) -> None:
+    def test_detail_returns_null_image_when_variant_missing(self, api_client: APIClient) -> None:
         product = ShopProductFactory(
             is_active=True,
             image_cropped=png_field("product-crop.png", size=(560, 420)),
@@ -423,17 +441,18 @@ class TestShopProductDetailView:
         response = api_client.get(detail_url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert "product-crop" in response.data["thumbnail_url"]
+        assert response.data["fallback_image"] is None
+        assert response.data["variants"] == {"thumbnail": []}
 
-    def test_detail_falls_back_to_astroimage_thumbnail_when_crop_missing(
+    def test_detail_does_not_use_linked_astroimage_thumbnail_as_public_fallback(
         self, api_client: APIClient
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             astro_image = AstroImageFactory(
                 original=jpeg_field("astro-original.jpg", size=(1200, 800))
             )
-        astro_variant = ImageVariantFactory(
-            image=astro_image,
+        ImageVariantFactory(
+            owner=astro_image,
             file__filename="astro-shop-detail.webp",
             role="thumbnail",
             width=560,
@@ -450,9 +469,10 @@ class TestShopProductDetailView:
         response = api_client.get(detail_url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["thumbnail_url"] == f"http://testserver{astro_variant.file.url}"
+        assert response.data["fallback_image"] is None
+        assert response.data["variants"] == {"thumbnail": []}
 
-    def test_detail_falls_back_to_astroimage_original_when_thumbnail_missing(
+    def test_detail_does_not_use_astroimage_original_as_public_fallback(
         self, api_client: APIClient
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -471,7 +491,8 @@ class TestShopProductDetailView:
         response = api_client.get(detail_url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["thumbnail_url"] == f"http://testserver{astro_image.original.url}"
+        assert response.data["fallback_image"] is None
+        assert response.data["variants"] == {"thumbnail": []}
 
     def test_detail_returns_404_for_unknown_id(self, api_client: APIClient) -> None:
         response = api_client.get(reverse(SHOP_PRODUCT_DETAIL_URL, kwargs={"pk": uuid.uuid4()}))
@@ -545,7 +566,7 @@ class TestShopAstroImageLookupView:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(original=jpeg_field("lookup-thumb.jpg", size=(1200, 800)))
         ImageVariantFactory(
-            image=image,
+            owner=image,
             file__filename="lookup-thumb.webp",
             role="thumbnail",
             width=560,

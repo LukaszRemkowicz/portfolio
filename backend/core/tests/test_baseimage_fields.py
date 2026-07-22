@@ -4,6 +4,7 @@ from django.core.exceptions import FieldDoesNotExist
 
 from astrophotography.models import AstroImage, MainPageBackgroundImage
 from astrophotography.tests.factories import MainPageBackgroundImageFactory
+from core.models import ImageVariant
 from programming.models import ProjectImage
 
 
@@ -26,3 +27,9 @@ class TestBaseImageFields:
         image.original = "images/pending-upload.jpg"
 
         assert image.original.name == "images/pending-upload.jpg"
+
+    def test_imagevariant_file_help_text_uses_project_format_language(self) -> None:
+        field = ImageVariant._meta.get_field("file")
+
+        assert "project-format" in str(field.help_text)
+        assert "WebP" not in str(field.help_text)

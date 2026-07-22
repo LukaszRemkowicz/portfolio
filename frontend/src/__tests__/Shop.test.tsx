@@ -50,7 +50,6 @@ describe('Shop Component', () => {
       data: {
         title: '',
         description: '',
-        background_url: '',
         products: [],
       },
       isLoading: false,
@@ -68,13 +67,43 @@ describe('Shop Component', () => {
       data: {
         title: 'Collect the night sky in print.',
         description: 'Shop description from backend settings.',
-        background_url: 'https://example.com/background.webp',
+        fallback_image: {
+          url: 'https://example.com/background.webp',
+          width: 1920,
+          height: 1080,
+          mime_type: 'image/webp',
+        },
+        variants: {
+          background: [
+            {
+              url: 'https://example.com/background-1280.webp',
+              width: 1280,
+              height: 720,
+              mime_type: 'image/webp',
+            },
+          ],
+        },
         products: [
           {
             id: 'dragons',
             title: 'Fighting Dragons with the Egg',
             description: 'Mock description for the dragons.',
-            thumbnail_url: 'https://example.com/dragons.webp',
+            fallback_image: {
+              url: 'https://example.com/dragons.webp',
+              width: 560,
+              height: 373,
+              mime_type: 'image/webp',
+            },
+            variants: {
+              thumbnail: [
+                {
+                  url: 'https://example.com/dragons.webp',
+                  width: 560,
+                  height: 373,
+                  mime_type: 'image/webp',
+                },
+              ],
+            },
             external_url: 'https://example.com/products/dragons',
           },
         ],

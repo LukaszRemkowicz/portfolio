@@ -24,7 +24,7 @@ const HomePage: React.FC = () => {
     error: profileError,
   } = useProfile();
   const {
-    data: backgroundUrl,
+    data: background,
     isLoading: isBackgroundLoading,
     error: backgroundError,
   } = useBackground();
@@ -67,9 +67,10 @@ const HomePage: React.FC = () => {
       <Navbar transparent />
       <main className={styles.mainContent}>
         <Home
-          portraitUrl={profile?.avatar || ''}
+          portraitUrl={profile?.avatar?.fallback_image?.url || ''}
           shortDescription={profile?.short_description || ''}
-          backgroundUrl={backgroundUrl}
+          backgroundUrl={background?.fallback_image?.url}
+          backgroundVariants={background?.variants}
         />
         <Suspense
           fallback={

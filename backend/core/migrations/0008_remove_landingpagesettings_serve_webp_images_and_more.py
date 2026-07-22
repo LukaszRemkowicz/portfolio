@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
             field=models.ImageField(
                 blank=True,
                 editable=False,
-                help_text="Generated WebP file stored for this variant.",
+                help_text="Generated project-format file stored for this variant.",
                 upload_to="",
                 verbose_name="File",
             ),

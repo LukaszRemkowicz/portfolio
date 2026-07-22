@@ -1,32 +1,66 @@
 import { test, expect } from './fixtures';
+import type { Route } from '@playwright/test';
+
+const thumbnailPayload = (name: string) => ({
+  fallback_image: {
+    url: `https://example.test/images/${name}/thumbnail-560.webp`,
+    width: 560,
+    height: 373,
+    mime_type: 'image/webp',
+  },
+  variants: {
+    thumbnail: [
+      {
+        url: `https://example.test/images/${name}/thumbnail-320.webp`,
+        width: 320,
+        height: 213,
+        mime_type: 'image/webp',
+      },
+      {
+        url: `https://example.test/images/${name}/thumbnail-560.webp`,
+        width: 560,
+        height: 373,
+        mime_type: 'image/webp',
+      },
+    ],
+  },
+});
 
 test.describe('Gallery Page', () => {
   test.beforeEach(async ({ page }) => {
     // Override default empty image list with mock data for Gallery tests
-    await page.route('**/v1/astroimages/**', async route => {
+    const fulfillAstroImages = async (route: Route) => {
       const url = route.request().url();
       const images = [
         {
           pk: 1,
           name: 'Milky Way Arch',
           slug: 'milky-way-arch',
-          url: 'https://via.placeholder.com/800x600',
-          thumbnail_url: 'https://via.placeholder.com/200x150',
           description: 'Milky Way over mountains',
-          tags: ['Milky Way', 'mountains'],
+          tags: [
+            { name: 'Milky Way', slug: 'milky-way', count: 1 },
+            { name: 'Mountains', slug: 'mountains', count: 1 },
+          ],
           celestial_object: 'Milky Way',
           created_at: '2023-01-01',
+          place: { id: 1, name: 'Mountain Pass', country: 'Poland' },
+          process: true,
+          ...thumbnailPayload('milky-way-arch'),
         },
         {
           pk: 2,
           name: 'Orion Nebula',
           slug: 'orion-nebula',
-          url: 'https://via.placeholder.com/800x600',
-          thumbnail_url: 'https://via.placeholder.com/200x150',
           description: 'M42 Orion Nebula',
-          tags: ['Deep Sky', 'nebula'],
+          tags: [
+            { name: 'Deep Sky', slug: 'deep-sky', count: 1 },
+            { name: 'Nebula', slug: 'nebula', count: 1 },
+          ],
           celestial_object: 'Deep Sky',
           created_at: '2023-01-02',
+          place: { id: 2, name: 'Backyard', country: 'Poland' },
+          process: true,
+          ...thumbnailPayload('orion-nebula'),
         },
       ];
 
@@ -55,14 +89,14 @@ test.describe('Gallery Page', () => {
 
       if (tagFilter) {
         filteredImages = filteredImages.filter(img =>
-          img.tags.some(t => t.toLowerCase() === tagFilter.toLowerCase())
+          img.tags.some(t => t.slug.toLowerCase() === tagFilter.toLowerCase())
         );
       }
       if (catFilter) {
         filteredImages = filteredImages.filter(
           img =>
             img.celestial_object?.toLowerCase() === catFilter.toLowerCase() ||
-            img.tags.some(t => t.toLowerCase() === catFilter.toLowerCase())
+            img.tags.some(t => t.name.toLowerCase() === catFilter.toLowerCase())
         );
       }
 
@@ -71,7 +105,10 @@ test.describe('Gallery Page', () => {
         contentType: 'application/json',
         body: JSON.stringify(filteredImages),
       });
-    });
+    };
+
+    await page.route('**/v1/astroimages/**', fulfillAstroImages);
+    await page.route('**/app/astroimages/**', fulfillAstroImages);
 
     await page.goto('/astrophotography');
   });
@@ -83,6 +120,28 @@ test.describe('Gallery Page', () => {
     await expect(
       page.getByTestId('gallery-card-orion-nebula').first()
     ).toBeVisible();
+  });
+
+  test('should render gallery cards with responsive image candidates', async ({
+    page,
+  }) => {
+    const cardImage = page
+      .getByTestId('gallery-card-milky-way-arch')
+      .locator('img')
+      .first();
+
+    await expect(cardImage).toBeVisible();
+    await expect(cardImage).toHaveAttribute(
+      'srcset',
+      /thumbnail-320\.webp 320w/
+    );
+    await expect(cardImage).toHaveAttribute(
+      'srcset',
+      /thumbnail-560\.webp 560w/
+    );
+    await expect(cardImage).toHaveAttribute('sizes', /100vw/);
+    await expect(cardImage).toHaveAttribute('width', '560');
+    await expect(cardImage).toHaveAttribute('height', '373');
   });
 
   test('should filter images by selecting a category', async ({ page }) => {
@@ -104,7 +163,9 @@ test.describe('Gallery Page', () => {
     // Force click to deal with potential overlay components like hover elements
     await card.click();
 
-    await page.waitForURL(/\?img=/, { timeout: 10000 });
+    await page.waitForURL(/\/astrophotography\/milky-way-arch/, {
+      timeout: 10000,
+    });
 
     const modal = page.getByTestId('image-modal');
     await expect(modal).toBeVisible({ timeout: 10000 });
@@ -118,7 +179,7 @@ test.describe('Gallery Page', () => {
     page,
   }) => {
     // Direct navigation to image state
-    await page.goto('/astrophotography?img=2');
+    await page.goto('/astrophotography/orion-nebula');
 
     const modal = page.getByTestId('image-modal');
     await expect(modal).toBeVisible({ timeout: 10000 });

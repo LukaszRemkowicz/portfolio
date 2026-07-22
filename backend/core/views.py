@@ -169,7 +169,7 @@ class SecureMediaView(APIView):
         try:
             obj: Model = self.get_object()
             file_path: str = self.get_file_path(obj)
-        except (Http404, ObjectDoesNotExist):
+        except Http404, ObjectDoesNotExist:
             return render_404_error(request)
 
         if not file_path:

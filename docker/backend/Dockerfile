@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # portfolio-be/Dockerfile
-FROM python:3.13-slim AS base
+FROM python:3.14.6-slim AS base
 
 COPY --from=ghcr.io/astral-sh/uv:0.7.13 /uv /uvx /bin/
 

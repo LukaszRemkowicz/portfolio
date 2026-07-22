@@ -7,9 +7,8 @@ from pytest_mock import MockerFixture
 
 from astrophotography.models import Tag
 from astrophotography.serializers import (
+    AstroImageDetailSerializer,
     AstroImageSerializer,
-    AstroImageSerializerList,
-    AstroImageThumbnailSerializer,
     MainPageBackgroundImageSerializer,
     MainPageLocationSerializer,
     MeteorsMainPageConfigSerializer,
@@ -18,11 +17,13 @@ from astrophotography.serializers import (
 )
 from astrophotography.tests.factories import (
     AstroImageFactory,
+    MainPageBackgroundImageFactory,
     MainPageLocationFactory,
     PlaceFactory,
 )
 from common.tests.image_helpers import jpeg_field
 from core.tasks import process_image_task
+from core.tests.factories import ImageVariantFactory
 
 
 @pytest.mark.django_db
@@ -54,6 +55,15 @@ class TestEquipmentSerializers:
         except AssertionError as e:
             # If nested serializers (Camera, etc.) are broken, this MIGHT fail here too
             pytest.fail(f"AstroImageSerializer Configuration Error: {e}")
+
+    def test_astro_image_detail_serializer_configuration(self) -> None:
+
+        try:
+            serializer = AstroImageDetailSerializer()
+            # This will trigger field inspection for nested serializers too
+            _ = serializer.fields
+        except AssertionError as e:
+            pytest.fail(f"AstroImageDetailSerializer Configuration Error: {e}")
 
     def test_main_page_location_serializer_logic(self) -> None:
         """Test custom logic in MainPageLocationSerializer (adventure_date)"""
@@ -91,20 +101,22 @@ class TestAstroImageSerializers:
         image_zoom_true = AstroImageFactory(zoom=True, place=place)
         image_zoom_false = AstroImageFactory(zoom=False, place=place)
 
-        # Test AstroImageSerializer
-        data_zoom_true = AstroImageSerializer(image_zoom_true).data
-        data_zoom_false = AstroImageSerializer(image_zoom_false).data
+        # The public card serializer should not expose detail-only process state.
+        card_data = AstroImageSerializer(image_zoom_true).data
+        assert "process" not in card_data
+
+        # Detail payload maps zoom to process for modal/full-resolution behavior.
+        data_zoom_true = AstroImageDetailSerializer(image_zoom_true).data
+        data_zoom_false = AstroImageDetailSerializer(image_zoom_false).data
 
         assert "process" in data_zoom_true
         assert data_zoom_true["process"] is True
         assert data_zoom_false["process"] is False
         assert "zoom" not in data_zoom_true
 
-        # Test AstroImageSerializerList
-
     def test_serializer_consolidation_fields(self) -> None:
         """
-        Verify that AstroImageSerializerList is lightweight and AstroImageSerializer is detailed.
+        Verify that AstroImageSerializer is card-sized and AstroImageDetailSerializer is detailed.
         """
         place = PlaceFactory()
         image = AstroImageFactory(
@@ -115,68 +127,170 @@ class TestAstroImageSerializers:
             astrobin_url="https://astrobin.com/123",
         )
 
-        # List Serializer - Should NOT have heavy fields (except description)
-        list_data = AstroImageSerializerList(image).data
-        assert "description" in list_data
-        assert list_data["description"] == "Detailed Description"
-        assert "exposure_details" not in list_data
-        assert "processing_details" not in list_data
-        assert "astrobin_url" not in list_data
-        assert "camera" not in list_data  # Should not be present at all for list
+        # Card Serializer - Should NOT have heavy fields (except description)
+        card_data = AstroImageSerializer(image).data
+        assert "description" in card_data
+        assert card_data["description"] == "Detailed Description"
+        assert "fallback_image" in card_data
+        assert "variants" in card_data
+        assert "place" in card_data
+        assert "process" not in card_data
+        assert "exposure_details" not in card_data
+        assert "processing_details" not in card_data
+        assert "astrobin_url" not in card_data
+        assert "camera" not in card_data  # Should not be present at all for cards
 
-        # Detail Serializer - Should HAVE heavy fields
-        detail_data = AstroImageSerializer(image).data
+        # Detail Serializer - Should HAVE heavy fields and fallback, but no responsive variants
+        detail_data = AstroImageDetailSerializer(image).data
         assert "description" in detail_data
         assert detail_data["description"] == "Detailed Description"
+        assert "fallback_image" in detail_data
+        assert "variants" not in detail_data
         assert "exposure_details" in detail_data
         assert "processing_details" in detail_data
         assert "astrobin_url" in detail_data
         assert "camera" in detail_data
 
-    def test_list_serializers_omit_dead_thumbnail_urls(self) -> None:
-        """Serializers should omit dead thumbnail paths instead of exposing them."""
-        place = PlaceFactory()
-        image = AstroImageFactory(place=place)
-        process_image_task("astrophotography", "AstroImage", image.pk)
-        image.refresh_from_db()
-
-        variant = image.variants.get(role="thumbnail")
+    def test_image_serializers_omit_dead_fallback_images(self) -> None:
+        """Image serializers should omit dead fallback image paths instead of exposing them."""
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(place=PlaceFactory())
+        variant = ImageVariantFactory(
+            owner=image,
+            file__filename="dead-thumbnail.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
+        )
         variant.file.storage.delete(str(variant.file.name))
 
-        list_data = AstroImageSerializerList(image).data
-        thumb_data = AstroImageThumbnailSerializer(image).data
+        card_data = AstroImageSerializer(image).data
+        detail_data = AstroImageDetailSerializer(image).data
 
-        assert list_data["thumbnail_url"] is None
-        assert thumb_data["thumbnail_url"] is None
+        assert "thumbnail_url" not in card_data
+        assert "thumbnail_url" not in detail_data
+        assert card_data["fallback_image"] is None
+        assert detail_data["fallback_image"] is None
 
-    def test_list_serializers_return_small_source_thumbnail_variant(self) -> None:
-        """Small originals generate thumbnail at source width, not the default 560 width."""
+    def test_image_serializers_return_default_thumbnail_fallback_variant(self) -> None:
+        """Fallback image should keep the old default thumbnail width behavior."""
         with patch("core.models.process_image_task.delay_on_commit"):
-            image = AstroImageFactory(original=jpeg_field("small-thumb.jpg", size=(100, 100)))
+            image = AstroImageFactory(original=jpeg_field("card-fallback.jpg", size=(1200, 800)))
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        thumbnail = image.variants.get(role="thumbnail", width=100)
+        fallback = image.variants.get(role="thumbnail", width=560)
 
-        list_data = AstroImageSerializerList(image).data
-        thumb_data = AstroImageThumbnailSerializer(image).data
+        card_data = AstroImageSerializer(
+            image,
+            context={"request": MagicMock(query_params={"size": "840"})},
+        ).data
+        detail_data = AstroImageDetailSerializer(
+            image,
+            context={"request": MagicMock(query_params={"size": "840"})},
+        ).data
 
-        assert list_data["thumbnail_url"] == thumbnail.file.url
-        assert thumb_data["thumbnail_url"] == thumbnail.file.url
+        expected = {
+            "url": fallback.file.url,
+            "width": 560,
+            "height": 373,
+            "mime_type": "image/webp",
+        }
+        assert card_data["fallback_image"] == expected
+        assert detail_data["fallback_image"] == expected
+        assert [variant["width"] for variant in card_data["variants"]["thumbnail"]] == [
+            320,
+            560,
+        ]
+
+    def test_astro_image_serializer_exposes_thumbnail_variant_candidates(self) -> None:
+        """Gallery card payloads should include thumbnail preview candidates."""
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory()
+        thumbnail = ImageVariantFactory(
+            owner=image,
+            file__filename="andromeda-thumbnail-560.webp",
+            role="thumbnail",
+            width=560,
+            height=373,
+        )
+
+        data = AstroImageSerializer(image).data
+
+        assert "card" not in data["variants"]
+        assert data["variants"]["thumbnail"] == [
+            {
+                "url": thumbnail.file.url,
+                "width": 560,
+                "height": 373,
+                "mime_type": "image/webp",
+            },
+        ]
 
 
 class TestMainPageBackgroundImageSerializer:
-    def test_url_uses_available_hero_variant_url(self) -> None:
+    def test_serializer_uses_hero_variant_payload(self) -> None:
         background = MagicMock()
-        background.get_available_variant_url.return_value = "/media/backgrounds/hero.webp"
+        payload = {
+            "fallback_image": {
+                "url": "/media/backgrounds/hero.webp",
+                "width": 2560,
+                "height": 1440,
+                "mime_type": "image/webp",
+            },
+            "variants": {
+                "hero": [
+                    {
+                        "url": "/media/backgrounds/hero.webp",
+                        "width": 2560,
+                        "height": 1440,
+                        "mime_type": "image/webp",
+                    }
+                ]
+            },
+        }
+        background.get_variant_payload.return_value = payload
         serializer = MainPageBackgroundImageSerializer()
 
-        assert serializer.get_url(background) == "/media/backgrounds/hero.webp"
-        background.get_available_variant_url.assert_called_once_with(
+        assert serializer.to_representation(background) == payload
+        background.get_variant_payload.assert_called_once_with(
             "hero",
-            preferred_width=2560,
+            fallback_width=2560,
         )
-        background.get_hero_variant.assert_not_called()
-        background.get_image_url.assert_not_called()
+
+    @pytest.mark.django_db
+    def test_serializer_exposes_hero_variant_candidates(self) -> None:
+        background = MainPageBackgroundImageFactory()
+        hero_tablet = ImageVariantFactory(
+            owner=background,
+            file__filename="background-1280.webp",
+            role="hero",
+            width=1280,
+            height=720,
+        )
+        hero_desktop = ImageVariantFactory(
+            owner=background,
+            file__filename="background-1920.webp",
+            role="hero",
+            width=1920,
+            height=1080,
+        )
+
+        data = MainPageBackgroundImageSerializer(background).data
+
+        assert data["variants"]["hero"] == [
+            {
+                "url": hero_tablet.file.url,
+                "width": 1280,
+                "height": 720,
+                "mime_type": "image/webp",
+            },
+            {
+                "url": hero_desktop.file.url,
+                "width": 1920,
+                "height": 1080,
+                "mime_type": "image/webp",
+            },
+        ]
 
 
 @pytest.mark.django_db
@@ -236,7 +350,7 @@ class TestTranslationSerializers:
         )
 
         mock_translate = mocker.patch("translation.services.TranslationService.get_translation")
-        serializer = AstroImageSerializerList(instance, context={"request": request})
+        serializer = AstroImageSerializer(instance, context={"request": request})
         data = serializer.data
 
         assert data["name"] == "Original"
@@ -266,16 +380,16 @@ class TestTagTranslationSerializers:
         tag2 = Tag.objects.create(name="Galaxy")
         image.tags.add(tag1, tag2)
 
-        # Test AstroImageSerializer (Detail)
-        serializer = AstroImageSerializer(image, context={"request": request})
+        # Test AstroImageDetailSerializer
+        serializer = AstroImageDetailSerializer(image, context={"request": request})
         data = serializer.data
 
         assert "tags" in data
         assert any(t["name"] == "Translated Stars" for t in data["tags"])
         assert any(t["name"] == "Translated Galaxy" for t in data["tags"])
 
-        # Test AstroImageSerializerList
-        serializer_list = AstroImageSerializerList(image, context={"request": request})
+        # Test AstroImageSerializer
+        serializer_list = AstroImageSerializer(image, context={"request": request})
         data_list = serializer_list.data
 
         assert "tags" in data_list

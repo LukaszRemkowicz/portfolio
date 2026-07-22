@@ -69,11 +69,13 @@ class TestShopSettingsImageProcessing:
 
         settings_obj.refresh_from_db()
         original_format = settings_obj.variants.get(role="original_format")
-        background = settings_obj.variants.get(role="background")
+        background_variants = list(
+            settings_obj.variants.filter(role="background").order_by("width")
+        )
         assert original_format.width == 1920
-        assert background.width == 1920
-        assert background.file.name.endswith(".webp")
-        assert "background-crop" in background.file.name
+        assert [variant.width for variant in background_variants] == [960, 1280, 1920]
+        assert all(variant.file.name.endswith(".webp") for variant in background_variants)
+        assert all("background-crop" in variant.file.name for variant in background_variants)
 
     def test_process_task_clears_variants_when_no_source_image(self) -> None:
         with patch("shop.models.process_image_task.delay_on_commit"):

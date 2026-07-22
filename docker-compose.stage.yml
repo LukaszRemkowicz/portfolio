@@ -203,7 +203,6 @@ services:
       - stage_network
       - traefik_proxy
     volumes:
-      - ${NGINX_LOG_DIR:-/var/log/portfolio/nginx/stage}:/var/log/nginx
       - portfolio_staging_media_data:/app/media:ro
       - portfolio_staging_static_data:/app/staticfiles:ro
       - portfolio_staging_nginx_blocklist:/etc/nginx/blocklist:ro

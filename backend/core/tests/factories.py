@@ -33,15 +33,15 @@ class TranslationTaskFactory(DjangoModelFactory):
 class ImageVariantFactory(DjangoModelFactory):
     class Meta:
         model = ImageVariant
-        exclude = ("image",)
+        exclude = ("owner",)
 
     class Params:
-        image = factory.SubFactory("astrophotography.tests.factories.AstroImageFactory")
+        owner = factory.SubFactory("astrophotography.tests.factories.AstroImageFactory")
 
     content_type = factory.LazyAttribute(
-        lambda obj: ContentType.objects.get_for_model(obj.image, for_concrete_model=False)
+        lambda obj: ContentType.objects.get_for_model(obj.owner, for_concrete_model=False)
     )
-    object_id = factory.LazyAttribute(lambda obj: str(obj.image.pk))
+    object_id = factory.LazyAttribute(lambda obj: str(obj.owner.pk))
     file = factory.django.FileField(filename="variant.webp", data=b"variant")
     role = "thumbnail"
     width = 560

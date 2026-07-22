@@ -65,14 +65,24 @@ describe('media normalization', () => {
       normalizeBffPayload(
         {
           url: 'https://api.example.com/image-files/slug/serve/',
-          thumbnail_url: '/media/thumb.webp',
+          fallback_image: {
+            url: '/media/thumb.webp',
+            width: 560,
+            height: 373,
+            mime_type: 'image/webp',
+          },
           title: 'M31',
         },
         'images'
       )
     ).toEqual({
       url: '/app/image-files/slug/serve/',
-      thumbnail_url: '/media/thumb.webp',
+      fallback_image: {
+        url: '/media/thumb.webp',
+        width: 560,
+        height: 373,
+        mime_type: 'image/webp',
+      },
       title: 'M31',
     });
   });

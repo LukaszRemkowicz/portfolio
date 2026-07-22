@@ -10,7 +10,9 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models.fields.files import FieldFile
 
 from astrophotography.models import AstroImage, MainPageBackgroundImage
+from common.ssr_cache import invalidate_frontend_ssr_cache
 from common.utils.image import file_exists_in_storage
+from core.cache_service import CacheService
 from programming.models import ProjectImage
 from shop.models import ShopProduct, ShopSettings
 from users.models import User
@@ -36,6 +38,14 @@ SyncStatus = Literal["needed", "complete", "error"]
 
 class Command(BaseCommand):
     help = "Generate missing responsive image variants for variant-producing models."
+    frontend_cache_tags = [
+        "background",
+        "latest-astro-images",
+        "profile",
+        "settings",
+        "shop",
+        "travel-highlights",
+    ]
 
     targets = (
         VariantBackfillTarget("AstroImage", AstroImage),
@@ -95,6 +105,9 @@ class Command(BaseCommand):
                 dry_run=dry_run,
             )
 
+        if totals.generated and not dry_run:
+            self._invalidate_media_bearing_caches()
+
         self._report_missing_target_ids(target_ids=target_ids, totals=totals)
         self._report_totals(totals)
         if totals.errors and not silent:
@@ -116,6 +129,15 @@ class Command(BaseCommand):
         if force:
             self.stdout.write(self.style.WARNING("FORCE MODE - regenerating variants.\n"))
 
+    def _invalidate_media_bearing_caches(self) -> None:
+        """Clear API and SSR caches that can contain generated media URLs."""
+        CacheService.invalidate_user_cache()
+        CacheService.invalidate_astrophotography_cache()
+        CacheService.invalidate_travel_cache()
+        CacheService.invalidate_landing_page_cache()
+        CacheService.invalidate_shop_cache()
+        invalidate_frontend_ssr_cache(self.frontend_cache_tags)
+
     def _backfill_target(
         self,
         target: VariantBackfillTarget,
@@ -129,7 +151,7 @@ class Command(BaseCommand):
         if target_ids is not None:
             try:
                 queryset = queryset.filter(pk__in=target_ids)
-            except (ValueError, ValidationError):
+            except ValueError, ValidationError:
                 queryset = queryset.none()
 
         count = queryset.count()

@@ -63,7 +63,7 @@ class ContactMessageViewSet(viewsets.ViewSet):
                     safe_ip = client_ip.replace("\n", "").replace("\r", "")
                     logger.warning(f"Request too large: {content_length_int} bytes from {safe_ip}")
                     raise PayloadTooLarge()
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 safe_ip = client_ip.replace("\n", "").replace("\r", "")
                 logger.debug(f"Invalid CONTENT_LENGTH from {safe_ip}")
 

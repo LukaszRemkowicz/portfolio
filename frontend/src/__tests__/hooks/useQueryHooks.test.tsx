@@ -6,18 +6,24 @@ import { useSettings } from '../../hooks/useSettings';
 import { useAstroImages } from '../../hooks/useAstroImages';
 import { useAstroImageDetail } from '../../hooks/useAstroImageDetail';
 import { useLatestAstroImages } from '../../hooks/useLatestAstroImages';
+import { useLatestTags } from '../../hooks/useLatestTags';
 import { useCategories } from '../../hooks/useCategories';
 import { useTags } from '../../hooks/useTags';
 import { useProjects } from '../../hooks/useProjects';
 import { useTravelHighlights } from '../../hooks/useTravelHighlights';
 import { useTravelHighlightDetail } from '../../hooks/useTravelHighlightDetail';
 import { useImageUrls } from '../../hooks/useImageUrls';
+import { useShopProducts } from '../../hooks/useShopProducts';
 
 describe('TanStack Query Hooks', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (globalThis as { __TEST_I18N_LANGUAGE__?: string }).__TEST_I18N_LANGUAGE__ =
       'en';
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 1280,
+    });
   });
 
   afterEach(() => {
@@ -139,6 +145,29 @@ describe('TanStack Query Hooks', () => {
     );
   });
 
+  it('refetches language-bound shell queries when mounted after a language switch', () => {
+    renderHook(() => useProfile());
+    renderHook(() => useBackground());
+    renderHook(() => useLatestAstroImages());
+    renderHook(() => useLatestTags());
+    renderHook(() => useTravelHighlights());
+
+    for (const queryKey of [
+      ['profile', 'en'],
+      ['background', 'en'],
+      ['latest-astro-images', 'en'],
+      ['latest-tags', 'en'],
+      ['travel-highlights', 'en'],
+    ]) {
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey,
+          refetchOnMount: true,
+        })
+      );
+    }
+  });
+
   it('useTravelHighlightDetail calls useQuery with correct options', () => {
     renderHook(() => useTravelHighlightDetail('italy', 'rome', '2023-05'));
     expect(useQuery).toHaveBeenCalledWith(
@@ -149,11 +178,21 @@ describe('TanStack Query Hooks', () => {
     );
   });
 
-  it('useImageUrls calls useQuery with correct options', () => {
-    renderHook(() => useImageUrls(['1', '2']));
+  it('useImageUrls calls useQuery with one selected image id', () => {
+    renderHook(() => useImageUrls('1'));
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['image-urls', 'en', ['1', '2']],
+        queryKey: ['image-urls', 'en', '1'],
+        queryFn: expect.any(Function),
+      })
+    );
+  });
+
+  it('useShopProducts calls useQuery with correct options', () => {
+    renderHook(() => useShopProducts());
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['shop-products'],
         queryFn: expect.any(Function),
       })
     );

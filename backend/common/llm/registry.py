@@ -27,10 +27,10 @@ class LLMProviderRegistry:
         providers = LLMProviderRegistry.list_available()
     """
 
-    _providers: dict[str, type["LLMProvider"]] = {}
+    _providers: dict[str, type[LLMProvider]] = {}
 
     @classmethod
-    def register(cls, name: str, provider_class: type["LLMProvider"]) -> None:
+    def register(cls, name: str, provider_class: type[LLMProvider]) -> None:
         """
         Register a provider class.
 
@@ -54,7 +54,7 @@ class LLMProviderRegistry:
         logger.debug("Registered LLM provider: %s -> %s", name, provider_class.__name__)
 
     @classmethod
-    def get(cls, name: str) -> "LLMProvider":
+    def get(cls, name: str) -> LLMProvider:
         """
         Get an instance of a registered provider.
 

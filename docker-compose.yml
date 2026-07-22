@@ -72,7 +72,7 @@ x-frontend-common: &frontend-common
     TZ: "Europe/Warsaw"
 
 x-local-nginx-common: &local-nginx-common
-  image: nginx:1.29-alpine
+  image: nginx:1.31.3-alpine
   depends_on:
     nginx-blocklist-init:
       condition: service_completed_successfully
@@ -84,7 +84,6 @@ x-local-nginx-common: &local-nginx-common
   volumes:
     - ./infra/nginx/static_server.conf:/etc/nginx/nginx.conf:ro
     - ./infra/nginx/includes:/etc/nginx/includes:ro
-    - ./infra/nginx/logs:/var/log/nginx
     - ./backend/media:/app/media:ro
     - ./frontend/public/error.html:/usr/share/nginx/html/error.html:ro
     - ./frontend/public/404.html:/usr/share/nginx/html/404.html:ro

@@ -6,9 +6,12 @@ from common.serializers import TranslatedSerializerMixin
 from .models import ShopProduct, ShopSettings
 
 
-class ShopProductSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
+class ShopProductSerializer(
+    TranslatedSerializerMixin,
+    TranslatableModelSerializer,
+):
     """
-    Serializer for ShopProduct, exposing translated fields and image URLs.
+    Serializer for ShopProduct, exposing translated fields and generated thumbnail variants.
 
     Serves from the public shop endpoint. Returns translated title and
     description based on the 'lang' query parameter (defaults to English).
@@ -16,7 +19,6 @@ class ShopProductSerializer(TranslatedSerializerMixin, TranslatableModelSerializ
 
     title = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
-    thumbnail_url = serializers.SerializerMethodField()
 
     def get_title(self, instance: ShopProduct) -> str:
         return self.get_translation(instance, "title")
@@ -24,19 +26,10 @@ class ShopProductSerializer(TranslatedSerializerMixin, TranslatableModelSerializ
     def get_description(self, instance: ShopProduct) -> str:
         return self.get_translation(instance, "description")
 
-    def get_thumbnail_url(self, instance: ShopProduct) -> str | None:
-        """
-        Return the absolute thumbnail URL for the product.
-        """
-        url = instance.get_image_url("thumbnail", 560) or instance.thumbnail_url
-        if not url:
-            return None
-
-        request = self.context.get("request")
-        if request and url.startswith("/"):
-            return str(request.build_absolute_uri(url))
-
-        return url
+    def to_representation(self, instance: ShopProduct) -> dict:
+        data = super().to_representation(instance)
+        data.update(instance.get_variant_payload("thumbnail", fallback_width=560))
+        return data
 
     class Meta:
         model = ShopProduct
@@ -44,7 +37,6 @@ class ShopProductSerializer(TranslatedSerializerMixin, TranslatableModelSerializ
             "id",
             "title",
             "description",
-            "thumbnail_url",
             "price",
             "currency",
             "external_url",
@@ -53,12 +45,14 @@ class ShopProductSerializer(TranslatedSerializerMixin, TranslatableModelSerializ
         ]
 
 
-class ShopSettingsSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+class ShopSettingsSerializer(
+    TranslatedSerializerMixin,
+    serializers.ModelSerializer,
+):
     """Serializer for the public textual shop settings shown on the storefront."""
 
     title = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
-    background_url = serializers.SerializerMethodField()
 
     def get_title(self, instance: ShopSettings) -> str:
         return self.get_translation(instance, "title")
@@ -66,20 +60,14 @@ class ShopSettingsSerializer(TranslatedSerializerMixin, serializers.ModelSeriali
     def get_description(self, instance: ShopSettings) -> str:
         return self.get_translation(instance, "description")
 
-    def get_background_url(self, instance: ShopSettings) -> str | None:
-        url = instance.get_background_image_url()
-        request = self.context.get("request")
-        if url and request and url.startswith("/"):
-            absolute_url = str(request.build_absolute_uri(url))
-            separator = "&" if "?" in absolute_url else "?"
-            version = str(int(instance.updated_at.timestamp())) if instance.updated_at else ""
-            return f"{absolute_url}{separator}v={version}" if version else absolute_url
-        return url
+    def to_representation(self, instance: ShopSettings) -> dict:
+        data = super().to_representation(instance)
+        data.update(instance.get_variant_payload("background", fallback_width=2560))
+        return data
 
     class Meta:
         model = ShopSettings
         fields = [
             "title",
             "description",
-            "background_url",
         ]

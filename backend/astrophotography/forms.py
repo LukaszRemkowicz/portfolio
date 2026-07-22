@@ -86,7 +86,7 @@ class BaseImageSourceUploadFormMixin:
                             "Please upload it again."
                         ),
                     )
-            except (OSError, ValueError):
+            except OSError, ValueError:
                 self.add_error(
                     "original_upload",
                     _(

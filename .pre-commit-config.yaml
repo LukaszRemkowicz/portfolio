@@ -1,3 +1,6 @@
+default_language_version:
+  python: python3.14
+
 repos:
   # General hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -37,6 +40,7 @@ repos:
     rev: 7.0.0
     hooks:
       - id: isort
+        language_version: python3.14
         files: ^backend/
         args:
           ["--settings-path", "backend/pyproject.toml", "--profile", "black"]
@@ -45,23 +49,25 @@ repos:
     rev: 26.3.1
     hooks:
       - id: black
+        language_version: python3.14
         files: ^backend/
         args: ["--config", "backend/pyproject.toml"]
-        language_version: python3.13
 
   - repo: https://github.com/pycqa/flake8
     rev: 7.3.0
     hooks:
       - id: flake8
+        language_version: python3.14
         files: ^backend/
         exclude: /migrations/
         args: ["--toml-config", "backend/pyproject.toml"]
         additional_dependencies: [flake8-pyproject]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.8
+    rev: v0.15.9
     hooks:
       - id: ruff-check
+        language_version: python3.14
         files: ^backend/
         args: ["--config", "backend/pyproject.toml"]
 

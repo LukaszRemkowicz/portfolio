@@ -34,7 +34,7 @@ SHOP_SETTINGS_DEFAULTS: dict[str, ShopSettingsSeedContent] = {
 
 
 def seed_shop_settings_defaults(
-    shop_settings: "ShopSettings",
+    shop_settings: ShopSettings,
     *,
     overwrite: bool = False,
 ) -> dict[str, bool]:
@@ -70,8 +70,8 @@ def seed_shop_settings_defaults(
 
 
 def get_or_create_shop_settings(
-    shop_settings: "ShopSettings | None" = None,
-) -> tuple["ShopSettings", bool]:
+    shop_settings: ShopSettings | None = None,
+) -> tuple[ShopSettings, bool]:
     """Return the provided singleton instance or load/create the persisted one."""
     if shop_settings is not None:
         return shop_settings, False

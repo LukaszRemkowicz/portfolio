@@ -5,10 +5,10 @@ export interface UserProfile {
   first_name: string;
   last_name: string;
   short_description: string;
-  avatar?: string | null;
+  avatar?: ProfileImage | null;
   bio?: string;
-  about_me_image?: string | null;
-  about_me_image2?: string | null;
+  about_me_image?: ProfileImage | null;
+  about_me_image2?: ProfileImage | null;
   contact_email?: string;
   prelections?: boolean;
   profiles?: Profile[];
@@ -27,8 +27,23 @@ export interface Profile {
 }
 
 export interface BackgroundImage {
-  url?: string;
+  fallback_image?: ImageVariantCandidate | null;
+  variants?: ImageVariantsByRole;
 }
+
+export interface ProfileImage {
+  fallback_image?: ImageVariantCandidate | null;
+  variants?: ImageVariantsByRole;
+}
+
+export interface ImageVariantCandidate {
+  url: string;
+  width: number;
+  height: number;
+  mime_type?: string;
+}
+
+export type ImageVariantsByRole = Record<string, ImageVariantCandidate[]>;
 
 export interface EquipmentItem {
   id: number;
@@ -48,7 +63,8 @@ export interface AstroImage {
   pk: string;
   slug: string;
   url?: string;
-  thumbnail_url?: string;
+  fallback_image?: ImageVariantCandidate | null;
+  variants?: ImageVariantsByRole;
   tags?: Tag[];
   name: string;
   description: string;
@@ -144,14 +160,16 @@ export interface ShopProduct {
   id: string;
   title: string;
   description: string;
-  thumbnail_url?: string;
+  fallback_image?: ImageVariantCandidate | null;
+  variants?: ImageVariantsByRole;
   external_url: string;
 }
 
 export interface ShopCatalog {
   title: string;
   description: string;
-  background_url: string;
+  fallback_image?: ImageVariantCandidate | null;
+  variants?: ImageVariantsByRole;
   products: ShopProduct[];
 }
 
@@ -160,6 +178,7 @@ export interface HomeProps {
   portraitUrl: string;
   shortDescription: string;
   backgroundUrl?: string | null;
+  backgroundVariants?: ImageVariantsByRole;
 }
 
 export interface AboutProps {

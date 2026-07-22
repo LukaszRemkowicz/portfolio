@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { fetchLatestAstroImages } from '../api/services';
 import { AstroImage } from '../types';
+import { languageBoundShellQueryOptions } from './languageBoundShellQueryOptions';
 
 export const useLatestAstroImages = (enabled: boolean = true) => {
   const { i18n } = useTranslation();
@@ -12,10 +13,6 @@ export const useLatestAstroImages = (enabled: boolean = true) => {
     queryKey: ['latest-astro-images', language],
     queryFn: () => fetchLatestAstroImages(),
     enabled,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-    refetchOnWindowFocus: false,
+    ...languageBoundShellQueryOptions,
   });
 };
