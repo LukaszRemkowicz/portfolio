@@ -95,7 +95,7 @@ def get_available_image_url(image_field: FieldFile | None) -> str:
 
     try:
         return str(image_field.url)
-    except (OSError, ValueError):
+    except OSError, ValueError:
         pass
 
     return ""
@@ -109,7 +109,7 @@ def file_exists_in_storage(file_field: FieldFile | None) -> bool:
     try:
         name = str(file_field.name or "")
         return bool(name and file_field.storage.exists(name))
-    except (OSError, ValueError):
+    except OSError, ValueError:
         return False
 
 
@@ -122,7 +122,7 @@ def delete_file_from_storage(file_field: FieldFile | None, file_name: str) -> bo
         if file_field.storage.exists(file_name):
             file_field.storage.delete(file_name)
             return True
-    except (OSError, ValueError):
+    except OSError, ValueError:
         return False
 
     return False
@@ -201,7 +201,7 @@ def build_image_with_given_width(
             image.seek(0)
         with Image.open(cast(IO[bytes], image)) as opened_image:
             img = opened_image.copy()
-    except (OSError, ValueError, UnidentifiedImageError):
+    except OSError, ValueError, UnidentifiedImageError:
         return None
 
     if img.mode == "RGBA" or (img.mode == "P" and "transparency" in img.info):
@@ -217,7 +217,7 @@ def build_image_with_given_width(
     output = BytesIO()
     try:
         img.save(output, IMAGE_FORMAT.pillow_format, quality=quality)
-    except (OSError, ValueError):
+    except OSError, ValueError:
         return None
 
     source_name = getattr(image, "name", "unknown").split("/")[-1]

@@ -115,7 +115,7 @@ class Command(BaseCommand):
         if target_ids is not None:
             try:
                 queryset = queryset.filter(pk__in=target_ids)
-            except (ValueError, ValidationError):
+            except ValueError, ValidationError:
                 queryset = queryset.none()
 
         count = queryset.count()

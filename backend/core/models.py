@@ -411,7 +411,7 @@ class LandingPageSettings(SingletonModel):
         verbose_name_plural = _("Landing Page Settings")
 
     @classmethod
-    def get_current(cls) -> "LandingPageSettings | None":
+    def get_current(cls) -> LandingPageSettings | None:
         """Return the singleton LandingPageSettings instance, or None if not yet created.
 
         Use this instead of .objects.last() so caching can be added here in future

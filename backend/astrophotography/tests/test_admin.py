@@ -81,6 +81,33 @@ class TestAstroImageAdmin:
         content: str = response.content.decode("utf-8")
         assert image.name in content
 
+    def test_save_model_logs_exception_with_object_context(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        astro_image = AstroImageFactory()
+        admin_instance = AstroImageAdmin(AstroImage, site)
+        request = RequestFactory().post("/admin/astrophotography/astroimage/")
+        form = MagicMock()
+        form.cleaned_data = {}
+        save_model = mocker.patch(
+            "translation.mixins.AutomatedTranslationAdminMixin.save_model",
+            side_effect=RuntimeError("save failed"),
+        )
+        log_exception = mocker.patch("astrophotography.admin.logger.exception")
+
+        with pytest.raises(RuntimeError, match="save failed"):
+            admin_instance.save_model(request, astro_image, form, change=True)
+
+        save_model.assert_called_once()
+        log_exception.assert_called_once_with(
+            "AstroImage admin save failed",
+            extra={
+                "object_id": str(astro_image.pk),
+                "change": True,
+            },
+        )
+
     def test_admin_list_displays_number_column(self, admin_client: Client) -> None:
         response: HttpResponse = admin_client.get(self.CHANGELIST_URL)  # type: ignore[assignment]
 
@@ -659,6 +686,32 @@ class TestPlaceAdmin:
             pytest.fail(f"Form submission failed with errors: {errors}")
         assert response.status_code == 302
         assert Place.objects.filter(translations__name="Test Location").exists()
+
+
+@pytest.mark.django_db
+def test_translatable_admin_bulk_delete_logs_completion(
+    rf: RequestFactory,
+    mocker: MockerFixture,
+) -> None:
+    tags = [TagFactory(), TagFactory()]
+    selected_ids = [tag.pk for tag in tags]
+    admin_instance = site._registry[Tag]
+    log_info = mocker.patch("astrophotography.admin.logger.info")
+
+    admin_instance.delete_queryset(
+        rf.post("/admin/astrophotography/tag/"),
+        Tag.objects.filter(pk__in=selected_ids),
+    )
+
+    assert not Tag.objects.filter(pk__in=selected_ids).exists()
+    log_info.assert_called_once_with(
+        "Admin bulk delete complete",
+        extra={
+            "model_name": "astrophotography.Tag",
+            "object_count": 2,
+            "object_ids": selected_ids,
+        },
+    )
 
 
 class TestMainPageBackgroundImageAdminActions:

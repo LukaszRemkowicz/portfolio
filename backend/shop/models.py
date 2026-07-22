@@ -335,12 +335,12 @@ class ShopSettings(
         verbose_name_plural = _("Shop Settings")
 
     @classmethod
-    def get_current(cls) -> "ShopSettings | None":
+    def get_current(cls) -> ShopSettings | None:
         """Return the singleton shop settings instance, or ``None`` when not created yet."""
         return cls.objects.last()
 
     @classmethod
-    def get_or_create_current(cls, **create_kwargs: Any) -> tuple["ShopSettings", bool]:
+    def get_or_create_current(cls, **create_kwargs: Any) -> tuple[ShopSettings, bool]:
         """Return the singleton shop settings instance or create it with optional defaults."""
         current = cls.get_current()
         if current is not None:

@@ -24,7 +24,7 @@ Run the script from the project root:
 | Variable | Description | Default |
 | :--- | :--- | :--- |
 | `BACKUP_DIR` | Directory to save backups | **REQUIRED** (e.g., `/var/backups/portfolio-db/`) |
-| `RETENTION_DAYS` | Number of days to keep backups | `14` |
+| `RETENTION_DAYS` | Number of days to keep backups | `7` |
 | `DB_USER` | Database user | `postgres` |
 | `DB_NAME` | Database name | `portfolio` |
 

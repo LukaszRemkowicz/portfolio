@@ -1,6 +1,6 @@
 # backend/users/models.py
 import logging
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from django_ckeditor_5.fields import CKEditor5Field
 from model_utils import FieldTracker
@@ -39,7 +39,7 @@ USER_IMAGE_FIELD_MAPPINGS: dict[str, dict[str, str]] = {
 class UserManager(TranslatableManager, BaseUserManager):
     def create_superuser(
         self, email: str, password: str | None = None, **extra_fields: Any
-    ) -> "User":
+    ) -> User:
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         if not email:
@@ -150,7 +150,7 @@ class User(
         return self.email
 
     @classmethod
-    def get_user(cls) -> Optional["User"]:
+    def get_user(cls) -> User | None:
         """Return the main portfolio user"""
         return cls.objects.first()
 

@@ -124,7 +124,7 @@ class ShopAstroImageLookupView(APIView):
             return Response({"error": "Missing 'id' parameter"}, status=400)
         try:
             image = self.queryset.get(pk=id_param)
-        except (AstroImage.DoesNotExist, ValueError):
+        except AstroImage.DoesNotExist, ValueError:
             return Response({"error": "Image not found"}, status=404)
 
         url = self._get_lookup_url(request, image)

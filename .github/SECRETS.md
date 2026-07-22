@@ -7,6 +7,9 @@ This file documents the required GitHub secrets for the CI/CD pipeline.
 ### Container Publish
 - `SENTRY_DSN_FE` - frontend production build argument
 
+### GitHub Project Automation
+- `ADD_TO_PROJECT_PAT` - personal access token used by `actions/add-to-project` to add new repository issues to the GitHub Project. For a classic PAT, include `project` scope; for private repositories also include `repo` scope. For a fine-grained PAT, grant Projects read/write plus Issues read access for this repository.
+
 ### Built-in Token
 - `GITHUB_TOKEN` - automatically provided by GitHub Actions
 
@@ -18,6 +21,9 @@ This file documents the required GitHub secrets for the CI/CD pipeline.
 - `GA_TRACKING_ID` - frontend production build argument
 - `ALLOWED_HOSTS` - frontend production build argument
 - `PROJECT_OWNER` - frontend production build argument
+
+### GitHub Project Automation
+- `ADD_TO_PROJECT_URL` - GitHub Project URL that should receive new issues. This is the Project board URL from the browser address bar, for example `https://github.com/users/LukaszRemkowicz/projects/1`, not the repository URL `https://github.com/LukaszRemkowicz/portfolio`.
 
 ## Optional Secrets
 
@@ -38,6 +44,19 @@ CODECOV_TOKEN=your-codecov-token
 # 3. Select your repository
 # 4. Copy the token from Settings > General
 ```
+
+### 2. GitHub Project Automation
+```bash
+# Go to GitHub repository Settings > Secrets and variables > Actions
+# Add this repository variable. Use the GitHub Project board URL from your browser,
+# not the repository URL.
+ADD_TO_PROJECT_URL=https://github.com/users/LukaszRemkowicz/projects/<project-url-number>
+
+# Add this repository secret:
+ADD_TO_PROJECT_PAT=your-token-with-project-access
+```
+
+The workflow runs for issues that are opened, reopened, or transferred into this repository. Existing issues are not backfilled automatically by this workflow.
 
 ## Current CI/CD Workflow
 

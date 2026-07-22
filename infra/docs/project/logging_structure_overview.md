@@ -18,7 +18,7 @@ Current JSON logging status:
 
 - Backend Django app: yes, JSON to Docker stdout
 - Frontend SSR request logs: yes, JSON to Docker stdout
-- Nginx access logs: yes, JSON to file and Docker stdout
+- Nginx access logs: yes, JSON to Docker stdout
 - Frontend SSR startup/error logs: yes, JSON
 
 Current plain-text / non-JSON areas:
@@ -345,7 +345,6 @@ Relevant config:
 Current access log definition:
 
 - `log_format json_analytics escape=json ...`
-- `access_log /var/log/nginx/access.log json_analytics;`
 - `access_log /dev/stdout json_analytics;`
 
 ### Current structured fields
@@ -369,12 +368,13 @@ The JSON access log contains:
 
 Nginx error logs are still plain text:
 
-- `error_log /var/log/nginx/error.log warn;`
 - `error_log /dev/stderr warn;`
 
 ### Conclusion
 
-Nginx access logs are already JSON and visible through Docker stdout. Nginx error logs are still plain text.
+Nginx access logs are JSON on Docker stdout. Nginx error logs are plain text on
+Docker stderr. Nginx no longer writes duplicate host files; Docker logging and
+MCP stream collection are the runtime sources for both streams.
 
 ## 4. Shell Entrypoints / Startup Scripts
 

@@ -102,7 +102,7 @@ class RegionFilter(admin.SimpleListFilter):
             try:
                 region = Place.objects.get(pk=value, is_region=True)
                 return queryset.filter(parent_regions=region)
-            except (Place.DoesNotExist, ValueError):
+            except Place.DoesNotExist, ValueError:
                 pass
         return queryset
 
@@ -136,6 +136,14 @@ class BaseTranslatableAdmin(
 
         base_queryset = self.model._default_manager.filter(pk__in=selected_pks)
         super().delete_queryset(request, base_queryset)
+        logger.info(
+            "Admin bulk delete complete",
+            extra={
+                "model_name": self.model._meta.label,
+                "object_count": len(selected_pks),
+                "object_ids": selected_pks,
+            },
+        )
 
 
 @admin.register(Place)
@@ -435,7 +443,17 @@ class AstroImageAdmin(
             },
         )
 
-        super().save_model(request, obj, form, change)
+        try:
+            super().save_model(request, obj, form, change)
+        except Exception:
+            logger.exception(
+                "AstroImage admin save failed",
+                extra={
+                    "object_id": str(obj.pk) if obj.pk else None,
+                    "change": change,
+                },
+            )
+            raise
 
         saved_original = astro_obj.original if astro_obj else None
         saved_original_name = saved_original.name if saved_original else ""

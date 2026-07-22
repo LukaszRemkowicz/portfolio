@@ -322,7 +322,7 @@ class AstroImageQuerySet(TranslatableQuerySet):
 
         return queryset.order_by("-created_at", "-pk")
 
-    def for_travel_highlight(self, slider: "MainPageLocation") -> QuerySet:
+    def for_travel_highlight(self, slider: MainPageLocation) -> QuerySet:
         """Return images selected for a given travel highlight slider."""
         queryset: QuerySet = self.select_related("place").prefetch_related(
             "translations",
@@ -1005,7 +1005,7 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
                 next_month_start = dt_date(year, month + 1, 1)
 
             return PG_DateRange(first_day, next_month_start, bounds="[)")
-        except (ValueError, IndexError, KeyError):
+        except ValueError, IndexError, KeyError:
             return None
 
 

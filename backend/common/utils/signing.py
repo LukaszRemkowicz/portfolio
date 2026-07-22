@@ -31,7 +31,7 @@ def validate_signed_url(resource_id: str, signature: str, timestamp_str: str) ->
     """
     try:
         timestamp = int(timestamp_str)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return False
 
     # Check expiration
