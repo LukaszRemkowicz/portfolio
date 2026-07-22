@@ -98,8 +98,13 @@ const Gallery: React.FC = () => {
         ) : error ? (
           <div className={styles.error}>{error}</div>
         ) : filteredImages.length > 0 ? (
-          filteredImages.map(item => (
-            <GalleryCard key={item.pk} item={item} onClick={handleImageClick} />
+          filteredImages.map((item, index) => (
+            <GalleryCard
+              key={item.pk}
+              item={item}
+              onClick={handleImageClick}
+              priority={index < 3}
+            />
           ))
         ) : (
           <div className={styles.noResults}>{t('gallery.empty')}</div>

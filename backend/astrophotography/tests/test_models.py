@@ -33,6 +33,7 @@ from astrophotography.tests.factories import (
 )
 from core.models import LandingPageSettings
 from core.tasks import process_image_task
+from core.tests.factories import ImageVariantFactory
 from translation.services import TranslationService
 
 
@@ -41,6 +42,18 @@ class TestMainPageBackgroundImageVariantContract:
         bg = MainPageBackgroundImage()
 
         assert bg.get_hero_variant() == ("hero", 1920)
+
+    def test_astro_image_thumbnail_variants_are_configured_for_responsive_cards(
+        self,
+    ) -> None:
+        """AstroImage thumbnails should give cards smaller browser candidates."""
+        image = AstroImage()
+        thumbnail_spec = next(
+            spec for spec in image.get_image_variant_specs() if spec.role == "thumbnail"
+        )
+
+        assert thumbnail_spec.viewport_widths.as_tuple() == (320, 560)
+        assert thumbnail_spec.quality == 85
 
 
 @pytest.mark.django_db
@@ -116,15 +129,15 @@ class TestAstroImageModel:
         image: AstroImage = AstroImageFactory(original__width=1200, original__height=800)
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
-        variant = image.variants.get(role="thumbnail")
+        variant = image.variants.get(role="thumbnail", width=560)
 
         missing_name = str(variant.file.name)
         variant.file.storage.delete(missing_name)
 
         assert image.get_image_url("thumbnail", 560) == image.original.url
 
-    def test_original_format_variant_is_configured_like_legacy_original_webp(self):
-        """AstroImage original_format should match the old original_webp target."""
+    def test_original_format_variant_is_configured_as_project_format_display_candidate(self):
+        """AstroImage original_format should use project-format naming."""
         image: AstroImage = AstroImageFactory()
         original_format_spec = next(
             spec for spec in image.get_image_variant_specs() if spec.role == "original_format"
@@ -132,7 +145,7 @@ class TestAstroImageModel:
 
         assert original_format_spec.viewport_widths.as_tuple() == (1920,)
         assert original_format_spec.quality == 90
-        assert not hasattr(image, "webp_quality")
+        assert "webp" not in original_format_spec.label.lower()
         assert not hasattr(image, "max_dimension")
         assert not hasattr(image, "dimension_percentage")
 
@@ -151,9 +164,8 @@ class TestMainPageBackgroundImageModel:
         hero_spec = next(spec for spec in specs if spec.role == "hero")
 
         assert [spec.role for spec in specs] == ["hero"]
-        assert hero_spec.viewport_widths.as_tuple() == (1280, 1920, 2560)
-        assert hero_spec.quality == 95
-        assert not hasattr(bg, "webp_quality")
+        assert hero_spec.viewport_widths.as_tuple() == (960, 1280, 1920, 2560)
+        assert hero_spec.quality == 85
         assert not hasattr(bg, "max_dimension")
         assert not hasattr(bg, "dimension_percentage")
 
@@ -292,6 +304,24 @@ class TestMainPageLocationModel:
         MainPageLocationFactory(place=place, adventure_date=date_range1)
         # Should NOT raise any error
         MainPageLocationFactory(place=place, adventure_date=date_range2)
+
+    def test_ready_for_main_page_prefetches_image_preview_serializer_relations(self) -> None:
+        place: Place = PlaceFactory(country="PL")
+        slider: MainPageLocation = MainPageLocationFactory(place=place)
+        image: AstroImage = AstroImageFactory(place=place)
+        tag: Tag = TagFactory(name="Travel")
+        image.tags.add(tag)
+        ImageVariantFactory(owner=image, role="thumbnail", width=560, height=373)
+        slider.images.add(image)
+
+        hydrated_slider = MainPageLocation.objects.ready_for_main_page().get(pk=slider.pk)
+        hydrated_image = list(hydrated_slider.images.all())[0]
+
+        assert "images" in hydrated_slider._prefetched_objects_cache
+        assert "translations" in hydrated_image._prefetched_objects_cache
+        assert "tags" in hydrated_image._prefetched_objects_cache
+        assert "variants" in hydrated_image._prefetched_objects_cache
+        assert "place" in hydrated_image._state.fields_cache
 
 
 @pytest.mark.django_db

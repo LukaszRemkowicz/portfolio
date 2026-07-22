@@ -31,6 +31,7 @@ import {
 import { getMediaUrl } from '../api/media';
 import { stripHtml, truncateText } from '../utils/html';
 import NotFoundPage from './NotFoundPage';
+import { buildResponsiveImageProps } from '../utils/imageVariants';
 
 interface GalleryReturnLocation {
   pathname: string;
@@ -184,10 +185,22 @@ const AstroGallery: React.FC = () => {
       t('common.gallerySubtitle'),
     160
   );
-  const seoImage = getMediaUrl(modalImage?.thumbnail_url || modalImage?.url);
+  const seoImage = getMediaUrl(
+    modalImage?.fallback_image?.url || modalImage?.url
+  );
   const seoUrl = modalImage?.slug
     ? `${APP_ROUTES.ASTROPHOTOGRAPHY}/${modalImage.slug}`
     : APP_ROUTES.ASTROPHOTOGRAPHY;
+  const responsiveHeroImageProps = useMemo(
+    () =>
+      buildResponsiveImageProps({
+        variants: background?.variants,
+        role: 'hero',
+        fallbackSrc: background?.fallback_image?.url || ASSETS.galleryFallback,
+        sizes: '100vw',
+      }),
+    [background?.fallback_image?.url, background?.variants]
+  );
 
   useEffect(() => {
     lastAutoLoadScrollYRef.current = Number.NEGATIVE_INFINITY;
@@ -411,12 +424,17 @@ const AstroGallery: React.FC = () => {
         ogImage={seoImage}
         url={seoUrl}
       />
-      <div
-        className={styles.hero}
-        style={{
-          backgroundImage: `url(${background || ASSETS.galleryFallback})`,
-        }}
-      >
+      <div className={styles.hero}>
+        <img
+          {...responsiveHeroImageProps}
+          alt=''
+          aria-hidden='true'
+          className={styles.heroImage}
+          loading='eager'
+          decoding='async'
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          {...({ fetchpriority: 'high' } as any)}
+        />
         <h1 className={styles.heroTitle}>{t('common.gallery')}</h1>
       </div>
       <div className={styles.mainContent}>
@@ -492,11 +510,12 @@ const AstroGallery: React.FC = () => {
               <GallerySkeleton count={9} />
             ) : images.length > 0 ? (
               <>
-                {images.map((image: AstroImage) => (
+                {images.map((image: AstroImage, index: number) => (
                   <GalleryCard
                     key={image.pk}
                     item={image}
                     onClick={handleImageClick}
+                    priority={index < 3}
                   />
                 ))}
                 {isFetchingNextPage ? <GallerySkeleton count={3} /> : null}

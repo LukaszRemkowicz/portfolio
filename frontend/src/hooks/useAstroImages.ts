@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchAstroImages } from '../api/services';
 import { AstroImage, FilterParams, PaginatedResponse } from '../types';
 
-export const ASTRO_GALLERY_PAGE_SIZE = 24;
+export const ASTRO_GALLERY_PAGE_SIZE = 15;
 
 const getNextPageNumber = (
   nextUrl: string | null | undefined
@@ -32,13 +32,16 @@ export const useAstroImages = (params: FilterParams = {}) => {
   const pageSize = params.limit ?? ASTRO_GALLERY_PAGE_SIZE;
   const initialPage = params.page ?? 1;
   const isPagedRequest = params.page !== undefined;
+  const imageParams = {
+    ...params,
+  } satisfies FilterParams;
 
   const infiniteQuery = useInfiniteQuery<PaginatedResponse<AstroImage>, Error>({
-    queryKey: ['astro-images', language, params],
+    queryKey: ['astro-images', language, imageParams],
     initialPageParam: initialPage,
     queryFn: ({ pageParam }) =>
       fetchAstroImages({
-        ...params,
+        ...imageParams,
         page: Number(pageParam),
         limit: pageSize,
       }),

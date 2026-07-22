@@ -171,7 +171,12 @@ describe('AstroGallery Component', () => {
       {
         pk: '1',
         slug: 'test-image-1',
-        thumbnail_url: '/test1-thumb.jpg',
+        fallback_image: {
+          url: '/test1-thumb.jpg',
+          width: 560,
+          height: 373,
+          mime_type: 'image/webp',
+        },
         name: 'Test Image 1',
         description: 'Test description 1',
       },
@@ -264,7 +269,12 @@ describe('AstroGallery Component', () => {
       {
         pk: '1',
         slug: 'test-image-1',
-        thumbnail_url: '/test1-thumb.jpg',
+        fallback_image: {
+          url: '/test1-thumb.jpg',
+          width: 560,
+          height: 373,
+          mime_type: 'image/webp',
+        },
         name: 'Test Image 1',
         description: 'Test description 1',
       },
@@ -315,7 +325,12 @@ describe('AstroGallery Component', () => {
       {
         pk: '1',
         slug: 'test-image-1',
-        thumbnail_url: '/test1-thumb.jpg',
+        fallback_image: {
+          url: '/test1-thumb.jpg',
+          width: 560,
+          height: 373,
+          mime_type: 'image/webp',
+        },
         name: 'Test Image 1',
         description: 'Test description 1',
       },
@@ -437,7 +452,12 @@ describe('AstroGallery Component', () => {
       data: Array.from({ length: 24 }, (_, index) => ({
         pk: String(index + 1),
         slug: `page-two-image-${index + 1}`,
-        thumbnail_url: `/thumb-${index + 1}.jpg`,
+        fallback_image: {
+          url: `/thumb-${index + 1}.jpg`,
+          width: 560,
+          height: 373,
+          mime_type: 'image/webp',
+        },
         name: `Page Two Image ${index + 1}`,
         description: `Description ${index + 1}`,
       })),
@@ -471,7 +491,12 @@ describe('AstroGallery Component', () => {
       {
         pk: '1',
         slug: 'test-image-1',
-        thumbnail_url: '/test1-thumb.jpg',
+        fallback_image: {
+          url: '/test1-thumb.jpg',
+          width: 560,
+          height: 373,
+          mime_type: 'image/webp',
+        },
         name: 'Test Image 1',
         description: 'Test description 1',
       },
@@ -533,7 +558,12 @@ describe('AstroGallery Component', () => {
       {
         pk: '1',
         slug: 'test-image-1',
-        thumbnail_url: '/test1-thumb.jpg',
+        fallback_image: {
+          url: '/test1-thumb.jpg',
+          width: 560,
+          height: 373,
+          mime_type: 'image/webp',
+        },
         name: 'Test Image 1',
         description: 'Test description 1',
       },
@@ -663,7 +693,12 @@ describe('AstroGallery Component', () => {
       data: {
         pk: '99',
         slug: 'remote-image',
-        thumbnail_url: '/remote-thumb.jpg',
+        fallback_image: {
+          url: '/remote-thumb.jpg',
+          width: 560,
+          height: 373,
+          mime_type: 'image/webp',
+        },
         name: 'Remote Image',
         description: 'Loaded from detail endpoint',
       },

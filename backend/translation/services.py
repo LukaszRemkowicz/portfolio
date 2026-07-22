@@ -84,7 +84,7 @@ class TranslationService:
         self.agent = agent
 
     @classmethod
-    def create_default(cls) -> "TranslationService":
+    def create_default(cls) -> TranslationService:
         """
         Factory method to create service with default dependencies.
 

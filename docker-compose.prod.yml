@@ -80,6 +80,14 @@ services:
   db-backup:
     image: prodrigestivill/postgres-backup-local:18
     restart: always
+    user: postgres:postgres
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
     networks:
       - portfolio_network
     environment:
@@ -87,9 +95,12 @@ services:
       POSTGRES_DB: portfolio_prod
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      SCHEDULE: "@daily"
+      SCHEDULE: "@weekly"
       BACKUP_KEEP_DAYS: 7
+      BACKUP_KEEP_WEEKS: 4
+      BACKUP_KEEP_MONTHS: 3
       BACKUP_SUFFIX: ".sql.gz"
+      HEALTHCHECK_PORT: 8080
     volumes:
       - ${DB_BACKUP_DIR:-/var/backups/portfolio/prod}:/backups
     depends_on:
@@ -259,7 +270,6 @@ services:
       - be
       - fe
     volumes:
-      - ${NGINX_LOG_DIR:-/var/log/portfolio/nginx/prod}:/var/log/nginx
       - prod_media_data:/app/media:ro
       - prod_static_data:/app/staticfiles:ro
       - nginx_blocklist:/etc/nginx/blocklist:ro

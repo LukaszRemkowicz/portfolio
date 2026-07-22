@@ -6,7 +6,15 @@
  * browser-safe URLs that stay aligned with `SITE_DOMAIN`.
  */
 import { API_BASE_URL } from './routes';
-import type { AstroImage, MainPageLocation, UserProfile } from '../types';
+import type {
+  AstroImage,
+  BackgroundImage,
+  ImageVariantCandidate,
+  ImageVariantsByRole,
+  MainPageLocation,
+  ProfileImage,
+  UserProfile,
+} from '../types';
 
 const toSameOriginPath = (input: URL | string): string => {
   if (typeof input === 'string') {
@@ -85,26 +93,74 @@ export const getMediaUrl = (path: string | null | undefined): string | null => {
   return `${API_BASE_URL}/${cleanPath}`;
 };
 
-/** Normalize thumbnail fields for an astro image payload. */
+export const normalizeImageVariants = (
+  variants: ImageVariantsByRole | undefined
+): ImageVariantsByRole | undefined => {
+  if (!variants) return undefined;
+
+  return Object.fromEntries(
+    Object.entries(variants).map(([role, candidates]) => [
+      role,
+      candidates
+        .map(candidate => {
+          const url = getMediaUrl(candidate.url);
+          return url ? { ...candidate, url } : null;
+        })
+        .filter(candidate => candidate !== null),
+    ])
+  );
+};
+
+export const normalizeImageCandidate = <T extends { url: string }>(
+  candidate: T | null | undefined
+): T | undefined => {
+  if (!candidate) return undefined;
+  const url = getMediaUrl(candidate.url);
+  return url ? { ...candidate, url } : undefined;
+};
+
+export const normalizeImageVariantPayload = <
+  T extends {
+    fallback_image?: ImageVariantCandidate | null;
+    variants?: ImageVariantsByRole;
+  },
+>(
+  image: T | null | undefined
+): T | null => {
+  if (!image?.fallback_image) return null;
+
+  return {
+    ...image,
+    fallback_image: normalizeImageCandidate(image.fallback_image),
+    variants: normalizeImageVariants(image.variants),
+  };
+};
+
+/** Normalize image fallback fields for an astro image payload. */
 export const normalizeAstroImage = <T extends AstroImage>(image: T): T => ({
   ...image,
-  thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
+  fallback_image: normalizeImageCandidate(image.fallback_image),
+  variants: normalizeImageVariants(image.variants),
 });
 
 /** Normalize media fields across a list of astro image payloads. */
 export const normalizeAstroImages = <T extends AstroImage>(images: T[]): T[] =>
   images.map(normalizeAstroImage);
 
+export const normalizeBackgroundImage = (
+  image: BackgroundImage | null | undefined
+): BackgroundImage | null => normalizeImageVariantPayload(image);
+
+const normalizeProfileImage = (
+  image: ProfileImage | null | undefined
+): ProfileImage | null => normalizeImageVariantPayload(image);
+
 /** Normalize profile image fields returned by the backend. */
 export const normalizeProfileMedia = (profile: UserProfile): UserProfile => ({
   ...profile,
-  avatar: profile.avatar ? getMediaUrl(profile.avatar) : null,
-  about_me_image: profile.about_me_image
-    ? getMediaUrl(profile.about_me_image)
-    : null,
-  about_me_image2: profile.about_me_image2
-    ? getMediaUrl(profile.about_me_image2)
-    : null,
+  avatar: normalizeProfileImage(profile.avatar),
+  about_me_image: normalizeProfileImage(profile.about_me_image),
+  about_me_image2: normalizeProfileImage(profile.about_me_image2),
 });
 
 /** Normalize homepage/travel highlight image references. */

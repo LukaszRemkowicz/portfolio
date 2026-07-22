@@ -1,7 +1,7 @@
-# backend/users/serializers.py
 from rest_framework import serializers
 
 from common.serializers import TranslatedSerializerMixin
+from common.types import ImageVariantPayload
 
 from .models import Profile, User
 
@@ -28,7 +28,10 @@ class ProfileSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
         ]
 
 
-class UserSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+class UserSerializer(
+    TranslatedSerializerMixin,
+    serializers.ModelSerializer,
+):
     """Serializer for the User model profile with nested profiles"""
 
     profiles = ProfileSerializer(many=True, read_only=True)
@@ -36,29 +39,23 @@ class UserSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     about_me_image = serializers.SerializerMethodField()
     about_me_image2 = serializers.SerializerMethodField()
 
-    def _build_media_version(self, obj: User) -> str:
-        """Return a stable cache-busting token for user media URLs."""
-        if not obj.updated_at:
-            return ""
-        return str(int(obj.updated_at.timestamp()))
+    def get_image_variants(self, obj: User, source_name: str) -> ImageVariantPayload:
+        role = "original_format"
+        stored_role = obj.build_variant_role(role, source_name)
+        return obj.get_variant_payload(
+            stored_role,
+            fallback_width=2560,
+            response_role=role,
+        )
 
-    def _build_url(self, obj: User, source_field_name: str) -> str:
-        relative_url: str = obj.get_serving_image_url(source_field_name)
-        request = self.context.get("request")
-        if relative_url and request:
-            absolute_url = str(request.build_absolute_uri(relative_url))
-            separator = "&" if "?" in absolute_url else "?"
-            return f"{absolute_url}{separator}v={self._build_media_version(obj)}"
-        return relative_url
+    def get_avatar(self, obj: User) -> ImageVariantPayload:
+        return self.get_image_variants(obj, source_name="avatar")
 
-    def get_avatar(self, obj: User) -> str:
-        return self._build_url(obj, "avatar")
+    def get_about_me_image(self, obj: User) -> ImageVariantPayload:
+        return self.get_image_variants(obj, source_name="about_me_image")
 
-    def get_about_me_image(self, obj: User) -> str:
-        return self._build_url(obj, "about_me_image")
-
-    def get_about_me_image2(self, obj: User) -> str:
-        return self._build_url(obj, "about_me_image2")
+    def get_about_me_image2(self, obj: User) -> ImageVariantPayload:
+        return self.get_image_variants(obj, source_name="about_me_image2")
 
     def to_representation(self, instance: User) -> dict:
         data = super().to_representation(instance)

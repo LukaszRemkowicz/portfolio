@@ -89,8 +89,6 @@
   width: 100%;
   height: 33vh;
   min-height: 250px;
-  background-size: cover;
-  background-position: center;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,6 +96,14 @@
   position: relative;
   padding-top: 80px;
   /* Add space for navbar overlay */
+}
+
+.heroImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .hero::after {

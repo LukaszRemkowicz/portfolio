@@ -107,7 +107,7 @@ def test_image_url_uses_requested_role_and_width(mocker: MockerFixture) -> None:
     )
     product = ShopProductFactory()
     variant = ImageVariantFactory(
-        image=product,
+        owner=product,
         file__filename="product-thumbnail.webp",
         role="thumbnail",
         width=560,
@@ -136,7 +136,7 @@ def test_image_url_falls_back_to_astroimage_thumbnail_when_crop_missing() -> Non
             original=jpeg_field("astro-original.jpg", size=(1600, 1200))
         )
     thumbnail_variant = ImageVariantFactory(
-        image=astro_image,
+        owner=astro_image,
         file__filename="astro-thumbnail.webp",
         role="thumbnail",
         width=560,
@@ -194,18 +194,18 @@ def test_image_variant_sources_fall_back_to_astroimage_original_when_crop_missin
 @pytest.mark.django_db
 def test_shopsettings_background_image_url_returns_background_variant() -> None:
     with patch("shop.models.process_image_task.delay_on_commit"):
-        settings_obj = ShopSettings.objects.create(
+        shop_settings_obj = ShopSettings.objects.create(
             image=png_field("shop-background.png", size=(1920, 1080))
         )
     background = ImageVariantFactory(
-        image=settings_obj,
+        owner=shop_settings_obj,
         file__filename="shop-background-variant.webp",
         role="background",
         width=1920,
         height=1080,
     )
 
-    assert settings_obj.get_background_image_url() == background.file.url
+    assert shop_settings_obj.get_background_image_url() == background.file.url
 
 
 @pytest.mark.django_db
@@ -226,14 +226,14 @@ def test_shopsettings_image_url_uses_requested_role_and_width() -> None:
             image=png_field("shop-background.png", size=(1920, 1080))
         )
     requested = ImageVariantFactory(
-        image=settings_obj,
+        owner=settings_obj,
         file__filename="shop-background-960.webp",
         role="background",
         width=960,
         height=540,
     )
     ImageVariantFactory(
-        image=settings_obj,
+        owner=settings_obj,
         file__filename="shop-background-1920.webp",
         role="background",
         width=1920,

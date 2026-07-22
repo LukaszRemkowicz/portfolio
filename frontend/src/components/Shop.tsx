@@ -1,15 +1,15 @@
-import { type FC } from 'react';
+import { type FC, useMemo } from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { APP_ROUTES } from '../api/constants';
 import { useShopProducts } from '../hooks/useShopProducts';
-import { getMediaUrl } from '../api/media';
 import SEO from './common/SEO';
 import StarBackground from './StarBackground';
 import ShootingStars from './ShootingStars';
 import ClientOnly from './common/ClientOnly';
 import { sanitizeHtml, stripHtml } from '../utils/html';
+import { buildResponsiveImageProps } from '../utils/imageVariants';
 import styles from '../styles/components/Shop.module.css';
 import appStyles from '../styles/components/App.module.css';
 
@@ -19,7 +19,16 @@ const Shop: FC = () => {
   const products = data?.products ?? [];
   const title = data?.title || t('shop.title');
   const description = stripHtml(data?.description || '').trim();
-  const backgroundUrl = data?.background_url || '';
+  const responsiveBackgroundProps = useMemo(
+    () =>
+      buildResponsiveImageProps({
+        variants: data?.variants,
+        role: 'background',
+        fallbackSrc: data?.fallback_image?.url || '',
+        sizes: '100vw',
+      }),
+    [data?.fallback_image?.url, data?.variants]
+  );
   const fallbackDescription = t('shop.subtitle');
 
   return (
@@ -31,13 +40,18 @@ const Shop: FC = () => {
       />
       <StarBackground />
       <div className={styles.shopContainer}>
-        <div
-          className={styles.zodiacalBackground}
-          style={
-            backgroundUrl ? { backgroundImage: `url('${backgroundUrl}')` } : {}
-          }
-          aria-hidden='true'
-        />
+        {responsiveBackgroundProps.src ? (
+          <img
+            {...responsiveBackgroundProps}
+            alt=''
+            aria-hidden='true'
+            className={styles.zodiacalBackground}
+            loading='eager'
+            decoding='async'
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            {...({ fetchpriority: 'high' } as any)}
+          />
+        ) : null}
         <div
           style={{
             position: 'fixed',
@@ -87,15 +101,19 @@ const Shop: FC = () => {
               {products.map(product => (
                 <article key={product.id} className={styles.productCard}>
                   <div className={styles.productImage}>
-                    {product.thumbnail_url ? (
+                    {product.fallback_image?.url ? (
                       <img
-                        src={
-                          getMediaUrl(product.thumbnail_url) ??
-                          product.thumbnail_url
-                        }
+                        {...buildResponsiveImageProps({
+                          variants: product.variants,
+                          role: 'thumbnail',
+                          fallbackSrc: product.fallback_image.url,
+                          sizes:
+                            '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
+                        })}
                         alt=''
                         className={styles.productArtwork}
                         loading='lazy'
+                        decoding='async'
                         aria-hidden='true'
                       />
                     ) : null}

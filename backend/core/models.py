@@ -54,13 +54,13 @@ class ImageVariant(models.Model):
         max_length=64,
         help_text=_("Primary key of the concrete image object that owns this variant."),
     )
-    image = GenericForeignKey("content_type", "object_id")
+    owner = GenericForeignKey("content_type", "object_id")
     file = models.ImageField(
         blank=True,
         editable=False,
         upload_to="",
         verbose_name=_("File"),
-        help_text=_("Generated WebP file stored for this variant."),
+        help_text=_("Generated project-format file stored for this variant."),
     )
     role = models.CharField(
         max_length=32,
@@ -411,7 +411,7 @@ class LandingPageSettings(SingletonModel):
         verbose_name_plural = _("Landing Page Settings")
 
     @classmethod
-    def get_current(cls) -> "LandingPageSettings | None":
+    def get_current(cls) -> LandingPageSettings | None:
         """Return the singleton LandingPageSettings instance, or None if not yet created.
 
         Use this instead of .objects.last() so caching can be added here in future

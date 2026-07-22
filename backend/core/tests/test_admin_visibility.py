@@ -145,7 +145,7 @@ def test_image_variant_admin_can_filter_by_astroimage() -> None:
     request.GET = request.GET.copy()
     request.GET["astroimage"] = str(selected_image.pk)
     selected_variant = ImageVariant.objects.create(
-        image=selected_image,
+        owner=selected_image,
         role="card",
         width=320,
         height=332,
@@ -153,7 +153,7 @@ def test_image_variant_admin_can_filter_by_astroimage() -> None:
         file="images/card/selected.webp",
     )
     ImageVariant.objects.create(
-        image=other_image,
+        owner=other_image,
         role="card",
         width=320,
         height=332,
@@ -171,7 +171,7 @@ def test_image_variant_admin_delete_selected_removes_variant_file(admin_client) 
     with patch("core.models.process_image_task.delay_on_commit"):
         owner = AstroImageFactory()
     variant = ImageVariant.objects.create(
-        image=owner,
+        owner=owner,
         role="admin_delete_probe",
         width=1,
         height=1,
@@ -245,7 +245,7 @@ def test_image_variant_admin_changelist_accepts_astroimage_search_filter(admin_c
     selected_image = AstroImageFactory(name="Selected image")
     other_image = AstroImageFactory(name="Other image")
     ImageVariant.objects.create(
-        image=selected_image,
+        owner=selected_image,
         role="card",
         width=320,
         height=332,
@@ -253,7 +253,7 @@ def test_image_variant_admin_changelist_accepts_astroimage_search_filter(admin_c
         file="images/card/selected.webp",
     )
     ImageVariant.objects.create(
-        image=other_image,
+        owner=other_image,
         role="card",
         width=320,
         height=332,

@@ -36,7 +36,7 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
 - **Docker-Locked Environment**: Verified multi-stage builds and restricted `.dockerignore`.
 
 ### Technical Features
-- **Modern Stack** - Python 3.13, Django 6.0, and `uv` for dependency management.
+- **Modern Stack** - Python 3.14, Django 6.0, and `uv` for dependency management.
 - **Caching** - Redis-backed caching for Django Select2 and internal performance.
 - **Error Tracking** - Sentry integration for production monitoring and telemetry.
 - **Internationalization (i18n)** - Multi-language support (EN/PL) with automatic message compilation.
@@ -44,7 +44,7 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
 
 ### Prerequisites
 - **Docker & Docker Compose**
-- **Python 3.13** *(optional, only if you want to run `uv`/manual host commands)*
+- **Python 3.14** *(optional, only if you want to run `uv`/manual host commands)*
 - **uv** *(optional, only if you want to run `uv`/manual host commands)*
 
 

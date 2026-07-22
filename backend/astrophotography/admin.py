@@ -102,7 +102,7 @@ class RegionFilter(admin.SimpleListFilter):
             try:
                 region = Place.objects.get(pk=value, is_region=True)
                 return queryset.filter(parent_regions=region)
-            except (Place.DoesNotExist, ValueError):
+            except Place.DoesNotExist, ValueError:
                 pass
         return queryset
 
@@ -136,6 +136,14 @@ class BaseTranslatableAdmin(
 
         base_queryset = self.model._default_manager.filter(pk__in=selected_pks)
         super().delete_queryset(request, base_queryset)
+        logger.info(
+            "Admin bulk delete complete",
+            extra={
+                "model_name": self.model._meta.label,
+                "object_count": len(selected_pks),
+                "object_ids": selected_pks,
+            },
+        )
 
 
 @admin.register(Place)
@@ -435,7 +443,17 @@ class AstroImageAdmin(
             },
         )
 
-        super().save_model(request, obj, form, change)
+        try:
+            super().save_model(request, obj, form, change)
+        except Exception:
+            logger.exception(
+                "AstroImage admin save failed",
+                extra={
+                    "object_id": str(obj.pk) if obj.pk else None,
+                    "change": change,
+                },
+            )
+            raise
 
         saved_original = astro_obj.original if astro_obj else None
         saved_original_name = saved_original.name if saved_original else ""
@@ -500,10 +518,11 @@ class AstroImageAdmin(
         if not obj or not obj.pk:
             return str(_("Not generated yet"))
 
-        thumbnail_url = obj.get_available_variant_url("thumbnail", preferred_width=560)
-        if not thumbnail_url:
+        fallback_image = obj.get_variant_candidates("thumbnail", preferred_width=560)
+        if not fallback_image:
             return str(_("Not generated yet"))
 
+        thumbnail_url = str(fallback_image[0]["url"])
         filename = thumbnail_url.rsplit("/", 1)[-1]
         return format_html(
             '<a href="{}" target="_blank" rel="noopener">{}</a>',

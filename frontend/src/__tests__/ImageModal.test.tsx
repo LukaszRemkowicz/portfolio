@@ -13,7 +13,12 @@ const mockImage: AstroImage = {
   pk: '1',
   slug: 'test-image',
   name: 'Test Image',
-  thumbnail_url: 'test.jpg',
+  fallback_image: {
+    url: 'test.jpg',
+    width: 560,
+    height: 373,
+    mime_type: 'image/webp',
+  },
   description: 'A test nebula',
   capture_date: '2023-01-01',
   tags: [
@@ -282,13 +287,18 @@ describe('ImageModal Lightbox', () => {
 
     const directEntryImage = {
       ...mockImage,
-      thumbnail_url: undefined,
+      fallback_image: undefined,
     };
 
     (useAstroImageDetail as jest.Mock).mockReturnValue({
       data: {
         ...directEntryImage,
-        thumbnail_url: '/detail-thumb.webp',
+        fallback_image: {
+          url: '/detail-thumb.webp',
+          width: 560,
+          height: 373,
+          mime_type: 'image/webp',
+        },
       },
       isLoading: false,
       error: null,

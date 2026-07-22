@@ -10,7 +10,24 @@ const mockFetchSettings: jest.Mock = jest.fn(async () => ({
 const mockFetchProfile: jest.Mock = jest.fn(async () => ({
   first_name: 'Lukasz',
 }));
-const mockFetchBackground: jest.Mock = jest.fn(async () => '/background.webp');
+const mockFetchBackgroundImage: jest.Mock = jest.fn(async () => ({
+  fallback_image: {
+    url: '/background.webp',
+    width: 2560,
+    height: 1440,
+    mime_type: 'image/webp',
+  },
+  variants: {
+    hero: [
+      {
+        url: '/background-1920.webp',
+        width: 1920,
+        height: 1080,
+        mime_type: 'image/webp',
+      },
+    ],
+  },
+}));
 const mockFetchTravelHighlights: jest.Mock = jest.fn(async () => []);
 const mockFetchLatestAstroImages: jest.Mock = jest.fn(async () => []);
 const mockFetchCategories: jest.Mock = jest.fn(async () => []);
@@ -18,7 +35,6 @@ const mockFetchTags: jest.Mock = jest.fn(async () => []);
 const mockFetchShopProducts: jest.Mock = jest.fn(async () => ({
   title: '',
   description: '',
-  background_url: '',
   products: [],
 }));
 const mockFetchAstroImages: jest.Mock = jest.fn(async () => ({
@@ -99,16 +115,17 @@ jest.mock('../api/api', () => ({
 
 jest.mock('../api/services', () => ({
   fetchSettings: (client?: unknown) => mockFetchSettings(client),
-  fetchProfile: (client?: unknown) => mockFetchProfile(client),
-  fetchBackground: (client?: unknown) => mockFetchBackground(client),
-  fetchTravelHighlights: (client?: unknown) =>
-    mockFetchTravelHighlights(client),
-  fetchLatestAstroImages: (client?: unknown) =>
-    mockFetchLatestAstroImages(client),
+  fetchProfile: (...args: unknown[]) => mockFetchProfile(...args),
+  fetchBackgroundImage: (...args: unknown[]) =>
+    mockFetchBackgroundImage(...args),
+  fetchTravelHighlights: (...args: unknown[]) =>
+    mockFetchTravelHighlights(...args),
+  fetchLatestAstroImages: (...args: unknown[]) =>
+    mockFetchLatestAstroImages(...args),
   fetchCategories: (client?: unknown) => mockFetchCategories(client),
   fetchTags: (params?: unknown, client?: unknown) =>
     mockFetchTags(params, client),
-  fetchShopProducts: (client?: unknown) => mockFetchShopProducts(client),
+  fetchShopProducts: (...args: unknown[]) => mockFetchShopProducts(...args),
   fetchAstroImages: (params?: unknown, client?: unknown) =>
     mockFetchAstroImages(params, client),
   fetchAstroImageDetail: (slug?: unknown, client?: unknown) =>
@@ -161,6 +178,12 @@ async function consumeStream(stream: PassThrough): Promise<string> {
   return html;
 }
 
+function dehydratedQueryKeys(result: {
+  dehydratedState: { queries: Array<{ queryKey: unknown }> };
+}): unknown[] {
+  return result.dehydratedState.queries.map(query => query.queryKey);
+}
+
 describe('SSR entry server', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -178,7 +201,7 @@ describe('SSR entry server', () => {
     );
     expect(mockFetchSettings).toHaveBeenCalledWith('mock-client');
     expect(mockFetchProfile).toHaveBeenCalledWith('mock-client');
-    expect(mockFetchBackground).toHaveBeenCalledWith('mock-client');
+    expect(mockFetchBackgroundImage).toHaveBeenCalledWith('mock-client');
     expect(mockFetchTravelHighlights).toHaveBeenCalledWith('mock-client');
     expect(mockFetchLatestAstroImages).toHaveBeenCalledWith('mock-client');
     expect(mockFetchTravelHighlightDetail).not.toHaveBeenCalled();
@@ -189,6 +212,26 @@ describe('SSR entry server', () => {
       'pl',
       'https://portfolio.local'
     );
+  });
+
+  it('dehydrates only homepage shell queries', async () => {
+    const result = await render(
+      '/',
+      'en',
+      'https://portfolio.local',
+      'req-home'
+    );
+
+    expect(dehydratedQueryKeys(result)).toEqual(
+      expect.arrayContaining([
+        ['settings', 'en'],
+        ['profile', 'en'],
+        ['background', 'en'],
+        ['travel-highlights', 'en'],
+        ['latest-astro-images', 'en'],
+      ])
+    );
+    expect(result.dehydratedState.queries).toHaveLength(5);
   });
 
   it('prefetches travel detail data for travel routes', async () => {
@@ -225,9 +268,35 @@ describe('SSR entry server', () => {
         filter: 'landscape',
         tag: 'moon',
         page: 1,
-        limit: 24,
+        limit: 15,
       },
       'mock-client'
+    );
+  });
+
+  it('dehydrates gallery route queries without signed image URLs', async () => {
+    const result = await render(
+      '/astrophotography?filter=landscape&tag=moon',
+      'en',
+      'https://portfolio.local',
+      'req-gallery-payload'
+    );
+
+    expect(dehydratedQueryKeys(result)).toEqual(
+      expect.arrayContaining([
+        ['settings', 'en'],
+        ['profile', 'en'],
+        ['background', 'en'],
+        ['travel-highlights', 'en'],
+        ['latest-astro-images', 'en'],
+        ['categories'],
+        ['tags', 'en', 'landscape'],
+        ['astro-images', 'en', { filter: 'landscape', tag: 'moon' }],
+      ])
+    );
+    expect(result.dehydratedState.queries).toHaveLength(8);
+    expect(dehydratedQueryKeys(result)).not.toContainEqual(
+      expect.arrayContaining(['image-urls'])
     );
   });
 
@@ -242,7 +311,7 @@ describe('SSR entry server', () => {
     expect(mockFetchAstroImages).toHaveBeenCalledWith(
       {
         page: 2,
-        limit: 24,
+        limit: 15,
       },
       'mock-client'
     );

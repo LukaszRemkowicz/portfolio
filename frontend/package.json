@@ -51,7 +51,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
-    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-env": "^7.29.7",
     "@babel/preset-react": "^7.0.0",
     "@babel/preset-typescript": "^7.0.0",
     "@eslint/js": "^9.39.4",
@@ -89,7 +89,7 @@
     "qs": "^6.15.0",
     "minimatch": "^10.2.1",
     "serialize-javascript": "^7.0.5",
-    "js-yaml": "4.2.0",
+    "js-yaml": "4.3.0",
     "undici": "7.28.0"
   },
   "browserslist": [

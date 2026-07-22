@@ -22,7 +22,32 @@ jest.mock('../hooks/useAstroImageDetail');
 describe('HomePage Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (useBackground as jest.Mock).mockReturnValue({ data: '/test-bg.jpg' });
+    (useBackground as jest.Mock).mockReturnValue({
+      data: {
+        fallback_image: {
+          url: '/test-bg.jpg',
+          width: 2560,
+          height: 1440,
+          mime_type: 'image/webp',
+        },
+        variants: {
+          hero: [
+            {
+              url: '/test-bg-1280.jpg',
+              width: 1280,
+              height: 720,
+              mime_type: 'image/webp',
+            },
+            {
+              url: '/test-bg-1920.jpg',
+              width: 1920,
+              height: 1080,
+              mime_type: 'image/webp',
+            },
+          ],
+        },
+      },
+    });
     (useProfile as jest.Mock).mockReturnValue({
       data: null,
       isLoading: true,
@@ -95,7 +120,24 @@ describe('HomePage Component', () => {
       first_name: 'John',
       last_name: 'Doe',
       short_description: 'Professional Photographer',
-      avatar: '/test-avatar.jpg',
+      avatar: {
+        fallback_image: {
+          url: '/test-avatar.jpg',
+          width: 800,
+          height: 800,
+          mime_type: 'image/webp',
+        },
+        variants: {
+          original_format: [
+            {
+              url: '/test-avatar.jpg',
+              width: 800,
+              height: 800,
+              mime_type: 'image/webp',
+            },
+          ],
+        },
+      },
       bio: 'This is a test bio',
       about_me_image: null,
       about_me_image2: null,
@@ -143,6 +185,11 @@ describe('HomePage Component', () => {
 
     const backgroundImage = screen.getByTestId('hero-background-image');
     expect(backgroundImage).toHaveAttribute('src', '/test-bg.jpg');
+    expect(backgroundImage).toHaveAttribute(
+      'srcset',
+      '/test-bg-1280.jpg 1280w, /test-bg-1920.jpg 1920w'
+    );
+    expect(backgroundImage).toHaveAttribute('sizes', '100vw');
     expect(backgroundImage).toHaveAttribute('loading', 'eager');
     expect(backgroundImage).toHaveAttribute('fetchpriority', 'high');
   });

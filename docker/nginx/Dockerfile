@@ -1,10 +1,7 @@
-FROM nginx:1.29-alpine
+FROM nginx:1.31.3-alpine
 
 RUN apk add --no-cache tzdata
 ENV TZ=Europe/Warsaw
-
-COPY docker/nginx/docker-entrypoint.d/prepare-log-files.sh /docker-entrypoint.d/prepare-log-files.sh
-RUN chmod +x /docker-entrypoint.d/prepare-log-files.sh
 
 COPY infra/nginx/static_server.conf /etc/nginx/nginx.conf
 COPY infra/nginx/includes /etc/nginx/includes

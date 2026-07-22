@@ -41,7 +41,7 @@ const TravelCard: FC<{
   const [currentIndex, setCurrentIndex] = useState(0);
   const [failedIndices, setFailedIndices] = useState<Set<number>>(new Set());
   const images = location.images
-    .map(img => img.thumbnail_url || '')
+    .map(img => img.fallback_image?.url || '')
     .filter(Boolean);
   const activeIndex =
     images.length > 1 && failedIndices.has(currentIndex)

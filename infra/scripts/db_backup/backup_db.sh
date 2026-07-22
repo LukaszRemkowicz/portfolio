@@ -10,7 +10,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/../../.." && pwd )"
 source "$PROJECT_ROOT/infra/scripts/utils.sh"
 
-RETENTION_DAYS="${RETENTION_DAYS:-14}"
+RETENTION_DAYS="${RETENTION_DAYS:-7}"
 DB_USER="${DB_USER:-postgres}"
 STANDARD_DB_NAME="$(get_db_name)"
 DB_NAME="${DB_NAME:-$STANDARD_DB_NAME}"

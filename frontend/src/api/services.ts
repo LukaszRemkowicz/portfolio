@@ -13,9 +13,10 @@ import type { AxiosInstance } from 'axios';
 import { API_ROUTES, BFF_ROUTES } from './routes';
 import { api } from './api';
 import {
+  normalizeBackgroundImage,
   normalizeAstroImage,
   normalizeAstroImages,
-  getMediaUrl,
+  normalizeImageVariantPayload,
   normalizeProfileMedia,
   normalizeTravelLocation,
 } from './media';
@@ -35,9 +36,11 @@ import {
 import { NotFoundError } from './errors';
 import { DataTransport, QueryParams, resolveDataTransport } from './transport';
 
+type ClientOrTransport = AxiosInstance | DataTransport;
+
 /** Fetch and normalize the public user profile used across the site shell. */
 export const fetchProfile = async (
-  clientOrTransport: AxiosInstance | DataTransport = api
+  clientOrTransport: ClientOrTransport = api
 ): Promise<UserProfile> => {
   const transport = resolveDataTransport(clientOrTransport);
 
@@ -68,10 +71,10 @@ export const fetchProfile = async (
   }
 };
 
-/** Fetch the homepage background image URL, if configured. */
-export const fetchBackground = async (
-  clientOrTransport: AxiosInstance | DataTransport = api
-): Promise<string | null> => {
+/** Fetch the homepage background image payload, if configured. */
+export const fetchBackgroundImage = async (
+  clientOrTransport: ClientOrTransport = api
+): Promise<BackgroundImage | null> => {
   const transport = resolveDataTransport(clientOrTransport);
 
   try {
@@ -79,8 +82,10 @@ export const fetchBackground = async (
       browser: BFF_ROUTES.background,
       server: API_ROUTES.background,
     });
-    if (data && data.url) {
-      return transport.kind === 'browser' ? getMediaUrl(data.url) : data.url;
+    if (data && data.fallback_image) {
+      return transport.kind === 'browser'
+        ? normalizeBackgroundImage(data)
+        : data;
     }
     return null;
   } catch (error) {
@@ -90,6 +95,14 @@ export const fetchBackground = async (
     }
     throw error;
   }
+};
+
+/** Fetch the homepage background image URL, if configured. */
+export const fetchBackground = async (
+  clientOrTransport: ClientOrTransport = api
+): Promise<string | null> => {
+  const background = await fetchBackgroundImage(clientOrTransport);
+  return background?.fallback_image?.url || null;
 };
 
 /** Fetch the astrophotography gallery list with optional filtering parameters. */
@@ -129,7 +142,7 @@ export const fetchAstroImages = async (
 
 /** Fetch the latest homepage astro images used in the shared shell. */
 export const fetchLatestAstroImages = async (
-  clientOrTransport: AxiosInstance | DataTransport = api
+  clientOrTransport: ClientOrTransport = api
 ): Promise<AstroImage[]> => {
   const transport = resolveDataTransport(clientOrTransport);
   const data = await transport.get<AstroImage[] | { results: AstroImage[] }>({
@@ -222,7 +235,6 @@ export const fetchProjects = async (): Promise<Project[]> => {
   //     images: project.images.map(image => ({
   //       ...image,
   //       url: getMediaUrl(image.url) || '',
-  //       thumbnail_url: getMediaUrl(image.thumbnail_url) || undefined,
   //     })),
   //   }));
   // }
@@ -232,7 +244,7 @@ export const fetchProjects = async (): Promise<Project[]> => {
 
 /** Fetch the public shop catalog, including storefront title/description and products. */
 export const fetchShopProducts = async (
-  clientOrTransport: AxiosInstance | DataTransport = api
+  clientOrTransport: ClientOrTransport = api
 ): Promise<ShopCatalog> => {
   const transport = resolveDataTransport(clientOrTransport);
 
@@ -244,14 +256,18 @@ export const fetchShopProducts = async (
   return {
     title: data?.title || '',
     description: data?.description || '',
-    background_url: getMediaUrl(data?.background_url) || '',
-    products: Array.isArray(data?.products) ? data.products : [],
+    ...(normalizeImageVariantPayload(data) ?? {}),
+    products: Array.isArray(data?.products)
+      ? data.products.map(
+          product => normalizeImageVariantPayload(product) ?? product
+        )
+      : [],
   };
 };
 
 /** Fetch and normalize the travel highlights shown on the homepage. */
 export const fetchTravelHighlights = async (
-  clientOrTransport: AxiosInstance | DataTransport = api
+  clientOrTransport: ClientOrTransport = api
 ): Promise<MainPageLocation[]> => {
   const transport = resolveDataTransport(clientOrTransport);
   const data = await transport.get<MainPageLocation[]>({

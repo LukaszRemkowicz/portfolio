@@ -20,7 +20,7 @@ import {
 import {
   fetchAstroImages,
   fetchAstroImageDetail,
-  fetchBackground,
+  fetchBackgroundImage,
   fetchCategories,
   fetchProfile,
   fetchSettings,
@@ -178,7 +178,7 @@ async function prefetchRouteQueries(
       queryKey: ['background', language],
       queryFn: () =>
         cachedShellQuery(SHELL_RESOURCES.background, () =>
-          fetchBackground(client)
+          fetchBackgroundImage(client)
         ),
     }),
     prefetchQuerySafely(queryClient, {
@@ -233,7 +233,13 @@ async function prefetchRouteQueries(
     await Promise.all([
       ...commonPrefetches,
       prefetchQuerySafely(queryClient, {
-        queryKey: ['travel-highlight', countrySlug, placeSlug, dateSlug],
+        queryKey: [
+          'travel-highlight',
+          language,
+          countrySlug,
+          placeSlug,
+          dateSlug,
+        ],
         queryFn: () =>
           fetchTravelHighlightDetail({
             countrySlug: countrySlug!,

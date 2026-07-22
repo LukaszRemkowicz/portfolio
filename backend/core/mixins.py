@@ -8,7 +8,12 @@ from django.db.models import QuerySet
 from django.db.models.base import ModelBase
 from django.db.models.fields.files import ImageFieldFile
 
-from common.types import ImageVariantSource, ImageVariantSpec
+from common.types import (
+    ImageVariantCandidate,
+    ImageVariantPayload,
+    ImageVariantSource,
+    ImageVariantSpec,
+)
 from common.utils.image import (
     IMAGE_FORMAT,
     build_image_variant_file_path,
@@ -77,7 +82,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
         for spec in self.get_image_variant_specs():
             if spec.role != "thumbnail":
                 continue
-            stored_role = self._build_variant_role(spec.role, source.role_namespace)
+            stored_role = self.build_variant_role(spec.role, source.role_namespace)
             targets.extend(
                 (stored_role, width, spec.quality) for width in spec.viewport_widths.as_tuple()
             )
@@ -157,7 +162,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
         return deleted_count + generated_count
 
     @staticmethod
-    def _build_variant_role(role: str, source_name: str | None = None) -> str:
+    def build_variant_role(role: str, source_name: str | None = None) -> str:
         """Return the stored role key, optionally namespaced by source family."""
         if source_name:
             return f"{source_name}__{role}"
@@ -226,7 +231,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
 
         expected_targets: list[ImageVariantTarget] = []
         for spec in self.get_image_variant_specs():
-            stored_role = self._build_variant_role(spec.role, source.role_namespace)
+            stored_role = self.build_variant_role(spec.role, source.role_namespace)
             widths = spec.target_widths_for_source(
                 source_width,
                 required=spec.role in self.required_variant_roles,
@@ -272,7 +277,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
                 role_namespace=source.role_namespace,
             )
             variant = ImageVariant(
-                image=self,
+                owner=self,
                 role=role,
                 width=generated_width,
                 height=generated_height,
@@ -320,7 +325,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
         source_name: str | None = None,
     ) -> ImageFieldFile | None:
         """Return one stored variant file by role, width, and optional source family."""
-        stored_role = self._build_variant_role(role, source_name)
+        stored_role = self.build_variant_role(role, source_name)
         variants = self.variants.filter(  # type: ignore[attr-defined]
             role=stored_role,
             width=width,
@@ -351,28 +356,85 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
             return str(image_file.url)
         return None
 
-    def get_available_variant_url(
+    def get_variant_candidates(
+        self,
+        role: str,
+        preferred_width: int | None = None,
+    ) -> list[ImageVariantCandidate]:
+        """
+        Return available variant candidates for one role.
+
+        Without ``preferred_width`` this returns all existing candidates sorted
+        by width. With ``preferred_width`` it returns a one-item list, preferring
+        an exact width and otherwise using the largest available candidate.
+        """
+        prefetched_variants = getattr(self, "_prefetched_objects_cache", {}).get("variants")
+        if prefetched_variants is not None:
+            variants = sorted(
+                (
+                    variant
+                    for variant in prefetched_variants
+                    if variant.role == role and variant.file
+                ),
+                key=lambda variant: variant.width,
+            )
+        else:
+            variants = list(
+                self.variants.filter(role=role)  # type: ignore[attr-defined]
+                .exclude(file="")
+                .order_by("width")
+            )
+
+        candidates: list[ImageVariantCandidate] = [
+            {
+                "url": str(variant.file.url),
+                "width": variant.width,
+                "height": variant.height,
+                "mime_type": variant.mime_type,
+            }
+            for variant in variants
+            if file_exists_in_storage(variant.file)
+        ]
+
+        if preferred_width is None:
+            return candidates
+
+        exact_candidate = next(
+            (candidate for candidate in candidates if candidate["width"] == preferred_width),
+            None,
+        )
+        if exact_candidate:
+            return [exact_candidate]
+
+        if candidates:
+            return [candidates[-1]]
+
+        return []
+
+    def get_variant_payload(
         self,
         role: str,
         *,
-        preferred_width: int | None = None,
-        source_name: str | None = None,
-    ) -> str | None:
-        """Return an existing variant URL for a role, preferring an exact width."""
-        if preferred_width is not None:
-            variant_url = self.get_variant_url(
-                role,
-                preferred_width,
-                source_name=source_name,
-            )
-            if variant_url:
-                return variant_url
+        fallback_width: int,
+        response_role: str | None = None,
+    ) -> ImageVariantPayload:
+        """
+        Return serializer-ready fallback and responsive candidates for one role.
 
-        stored_role = self._build_variant_role(role, source_name)
-        variants = (
-            cast(Any, self).variants.filter(role=stored_role).exclude(file="").order_by("-width")
+        The candidate list is loaded once, then reused to pick the fallback image.
+        Missing generated variants intentionally return ``None`` and an empty
+        list, so public APIs do not hide variant pipeline failures with source
+        image fallbacks.
+        """
+        candidates = self.get_variant_candidates(role)
+        fallback_image = next(
+            (candidate for candidate in candidates if candidate["width"] == fallback_width),
+            None,
         )
-        for variant in variants:
-            if file_exists_in_storage(variant.file):
-                return str(variant.file.url)
-        return None
+        if fallback_image is None and candidates:
+            fallback_image = candidates[-1]
+
+        return {
+            "fallback_image": fallback_image,
+            "variants": {response_role or role: candidates},
+        }

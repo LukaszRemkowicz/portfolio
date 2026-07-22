@@ -59,35 +59,6 @@ export default defineConfig(({ isSsrBuild }: ConfigEnv) => {
 
             html = html.replace('</head>', `${bootstrapScript}\n</head>`);
 
-            if (ctx?.bundle) {
-              let cssContent = '';
-              for (const [fileName, file] of Object.entries(ctx.bundle)) {
-                const asset = file as { type?: string; source?: unknown };
-                if (
-                  fileName.endsWith('.css') &&
-                  asset.type === 'asset' &&
-                  typeof asset.source === 'string'
-                ) {
-                  cssContent += asset.source;
-                  html = html.replace(
-                    new RegExp(
-                      `<link[^>]*href="[^"]*${fileName}"[^>]*>\\s*`,
-                      'g'
-                    ),
-                    ''
-                  );
-                }
-              }
-              if (cssContent) {
-                const headEndIndex = html.indexOf('</head>');
-                if (headEndIndex !== -1) {
-                  html =
-                    html.slice(0, headEndIndex) +
-                    `<style>${cssContent}</style>\n` +
-                    html.slice(headEndIndex);
-                }
-              }
-            }
             return html;
           },
         },

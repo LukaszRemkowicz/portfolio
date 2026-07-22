@@ -56,7 +56,7 @@ class DefaultCacheStrategy(BaseCacheStrategy):
         # For rendered responses (like JsonResponse), extract content safely
         try:
             return json.loads(response.content)
-        except (AttributeError, ValueError):
+        except AttributeError, ValueError:
             logger.debug(f"Response has no parsable content [Key: {cache_key}]")
             return None
 

@@ -27,8 +27,8 @@ from .constants import CELESTIAL_OBJECT_CHOICES
 from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Tag
 from .pagination import AstroImagePagination
 from .serializers import (
+    AstroImageDetailSerializer,
     AstroImageSerializer,
-    AstroImageSerializerList,
     MainPageBackgroundImageSerializer,
     MainPageLocationSerializer,
     TagSerializer,
@@ -55,11 +55,11 @@ class AstroImageViewSet(ReadOnlyModelViewSet):
         """Returns the filtered queryset of images."""
         return cast(QuerySet[AstroImage], AstroImage.objects.for_gallery(self.request.query_params))
 
-    def get_serializer_class(self) -> type[AstroImageSerializerList] | type[AstroImageSerializer]:
+    def get_serializer_class(self) -> type[AstroImageSerializer] | type[AstroImageDetailSerializer]:
         """Determines which serializer to use based on the action."""
         if self.action in ["list", "latest"]:
-            return AstroImageSerializerList
-        return AstroImageSerializer
+            return AstroImageSerializer
+        return AstroImageDetailSerializer
 
     @method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT))
     @action(detail=False, methods=["get"])
@@ -78,17 +78,18 @@ class MainPageBackgroundImageView(ViewSet):
     serializer_class = MainPageBackgroundImageSerializer
 
     def list(self, request: Request) -> Response:
-        """Returns the URL of the most recent background image."""
-        queryset = MainPageBackgroundImage.objects.order_by("-created_at")
+        """Returns the most recent background image payload with a generated hero variant."""
+        queryset = MainPageBackgroundImage.objects.prefetch_related("variants").order_by(
+            "-created_at"
+        )
         for instance in queryset:
-            if MainPageBackgroundImageSerializer(instance, context={"request": request}).data[
-                "url"
-            ]:
-                serializer: MainPageBackgroundImageSerializer = self.serializer_class(
-                    instance, context={"request": request}
-                )
-                return Response(serializer.data)
-        return Response({"url": None})
+            serializer: MainPageBackgroundImageSerializer = self.serializer_class(
+                instance, context={"request": request}
+            )
+            data = serializer.data
+            if data["fallback_image"]:
+                return Response(data)
+        return Response({"fallback_image": None, "variants": {"hero": []}})
 
 
 @method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT), name="dispatch")
@@ -104,7 +105,7 @@ class MainPageLocationViewSet(ReadOnlyModelViewSet):
 
     def get_queryset(self) -> QuerySet[MainPageLocation]:
         """Returns the optimized queryset for active locations."""
-        return cast(QuerySet[MainPageLocation], MainPageLocation.objects.ready_for_main_page())
+        return MainPageLocation.objects.ready_for_main_page()  # type: ignore[no-any-return]
 
 
 class TravelHighlightsBySlugView(APIView):
@@ -252,8 +253,8 @@ class ImageURLViewSet(ViewSet):
 
     def list(self, request: Request) -> Response:
         """
-        Returns {slug: signed_url} mapping for requested images.
-        Requires query param 'ids' (comma-separated list of PKs).
+        Returns a one-item {pk: signed_url} mapping for a selected image.
+        Requires query param 'ids' with exactly one PK.
         """
         ids_param: str | None = request.query_params.get("ids")
         if ids_param is None:
@@ -266,6 +267,11 @@ class ImageURLViewSet(ViewSet):
         if not ids:
             return Response(
                 {"detail": "Query parameter 'ids' must include at least one image id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(ids) != 1:
+            return Response(
+                {"detail": "Query parameter 'ids' may include exactly one image id."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

@@ -34,7 +34,7 @@ class TestStaticViewSitemap:
 @pytest.mark.django_db
 class TestAstroGalleryPaginationSitemap:
     def test_gallery_pagination_sitemap_has_no_items_when_gallery_fits_on_one_page(self) -> None:
-        for _ in range(24):
+        for _ in range(15):
             AstroImageFactory()
 
         sitemap = AstroGalleryPaginationSitemap()
@@ -47,9 +47,10 @@ class TestAstroGalleryPaginationSitemap:
 
         sitemap = AstroGalleryPaginationSitemap()
 
-        assert sitemap.items() == [2, 3]
+        assert sitemap.items() == [2, 3, 4]
         assert sitemap.location(2) == "/astrophotography?page=2"
         assert sitemap.location(3) == "/astrophotography?page=3"
+        assert sitemap.location(4) == "/astrophotography?page=4"
 
 
 @pytest.mark.django_db

@@ -92,6 +92,7 @@ services:
   celery-worker:
     <<: *backend-defaults
     image: ${ENVIRONMENT}-worker:${TAG}
+    profiles: ["manual-worker"]
     restart: always
     command: celery -A settings worker -l info -Q celery --concurrency=${CELERY_WORKERS:-2}
     volumes:
@@ -202,7 +203,6 @@ services:
       - stage_network
       - traefik_proxy
     volumes:
-      - ${NGINX_LOG_DIR:-/var/log/portfolio/nginx/stage}:/var/log/nginx
       - portfolio_staging_media_data:/app/media:ro
       - portfolio_staging_static_data:/app/staticfiles:ro
       - portfolio_staging_nginx_blocklist:/etc/nginx/blocklist:ro

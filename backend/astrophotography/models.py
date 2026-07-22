@@ -289,6 +289,7 @@ class AstroImageQuerySet(TranslatableQuerySet):
                 "telescope",
                 "tracker",
                 "tripod",
+                "variants",
             )
             .all()
             .order_by("-created_at")
@@ -321,7 +322,7 @@ class AstroImageQuerySet(TranslatableQuerySet):
 
         return queryset.order_by("-created_at", "-pk")
 
-    def for_travel_highlight(self, slider: "MainPageLocation") -> QuerySet:
+    def for_travel_highlight(self, slider: MainPageLocation) -> QuerySet:
         """Return images selected for a given travel highlight slider."""
         queryset: QuerySet = self.select_related("place").prefetch_related(
             "translations",
@@ -333,6 +334,7 @@ class AstroImageQuerySet(TranslatableQuerySet):
             "telescope",
             "tracker",
             "tripod",
+            "variants",
         )
 
         explicit_image_ids: list[int] = list(slider.images.values_list("id", flat=True))
@@ -425,24 +427,18 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
             role="original_format",
             viewport_widths=ViewportWidths.fixed(1920),
             quality=90,
-            label="Astrophotography full-image display candidate matching legacy original_webp",
+            label="Astrophotography project-format full-image display candidate",
         ),
         ImageVariantSpec(
             role="thumbnail",
-            viewport_widths=ViewportWidths.fixed(560),
-            quality=100,
-            label="Astrophotography thumbnail candidate",
-        ),
-        ImageVariantSpec(
-            role="card",
             viewport_widths=ViewportWidths(
                 mobile=320,
                 tablet=560,
-                desktop=840,
-                wide=1120,
+                desktop=560,
+                wide=560,
             ),
-            quality=90,
-            label="Astrophotography card/grid candidates",
+            quality=85,
+            label="Astrophotography thumbnail candidate",
         ),
         ImageVariantSpec(
             role="detail",
@@ -644,12 +640,12 @@ class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):
         ImageVariantSpec(
             role="hero",
             viewport_widths=ViewportWidths(
-                mobile=1280,
+                mobile=960,
                 tablet=1280,
                 desktop=1920,
                 wide=2560,
             ),
-            quality=95,
+            quality=85,
             label="Homepage background hero candidates",
         ),
     )
@@ -713,20 +709,19 @@ class MainPageLocationQuerySet(TranslatableQuerySet):
 
     def active(self) -> Self:
         """Return only active locations."""
-        return cast(Self, self.filter(is_active=True))
+        return self.filter(is_active=True)  # type: ignore[no-any-return]
 
     def with_images(self) -> Self:
         """Prefetch related images for efficiency."""
-        return cast(Self, self.prefetch_related("images"))
+        return self.prefetch_related("images")  # type: ignore[no-any-return]
 
     def with_place(self) -> Self:
         """Select related place for efficiency."""
-        return cast(Self, self.select_related("place"))
+        return self.select_related("place")  # type: ignore[no-any-return]
 
     def ready_for_main_page(self) -> Self:
         """Return active locations with the relations needed by public serializers."""
-        return cast(
-            Self,
+        return (  # type: ignore[no-any-return]
             self.active()
             .with_place()
             .with_images()
@@ -736,8 +731,15 @@ class MainPageLocationQuerySet(TranslatableQuerySet):
                 "place__translations",
                 "background_image__translations",
             )
-            .prefetch_related("images__translations")
-            .order_by("-adventure_date"),
+            .prefetch_related(
+                "images__translations",
+                "images__place",
+                "images__place__translations",
+                "images__tags",
+                "images__tags__translations",
+                "images__variants",
+            )
+            .order_by("-adventure_date")
         )
 
     def by_slugs(self, country_slug: str, place_slug: str, date_slug: str) -> QuerySet:
@@ -1003,7 +1005,7 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
                 next_month_start = dt_date(year, month + 1, 1)
 
             return PG_DateRange(first_day, next_month_start, bounds="[)")
-        except (ValueError, IndexError, KeyError):
+        except ValueError, IndexError, KeyError:
             return None
 
 

@@ -43,7 +43,12 @@ describe('Gallery Component', () => {
           slug: 'm31-andromeda',
           name: 'M31 Andromeda',
           url: 'test.jpg',
-          thumbnail_url: 'thumb.jpg',
+          fallback_image: {
+            url: 'thumb.jpg',
+            width: 560,
+            height: 373,
+            mime_type: 'image/webp',
+          },
           tags: [{ name: 'Deep Sky', slug: 'deepsky' }],
           celestial_object: 'Galaxy',
           created_at: '2023-01-01',
