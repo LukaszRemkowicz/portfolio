@@ -113,6 +113,53 @@ class ReadOnlyMessageWidget(forms.Widget):
         return forms.Media(css={"all": ("core/css/select2_admin.css",)})
 
 
+class ThemedAdminDateWidget(forms.DateInput):
+    """Reusable date-only field backed by the shared Air Datepicker assets."""
+
+    template_name = "core/widgets/themed_date.html"
+    input_class = "themed-date-widget__input"
+
+    def __init__(self, attrs=None, format=None):
+        attrs = dict(attrs or {})
+        classes = attrs.get("class", "").split()
+        classes = list(dict.fromkeys([*classes, self.input_class]))
+        attrs["class"] = " ".join(classes)
+        attrs.setdefault("autocomplete", "off")
+        attrs["data-air-datepicker"] = "true"
+        super().__init__(attrs=attrs, format=format or "%Y-%m-%d")
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        widget = context["widget"]
+        input_id = widget["attrs"].get("id") or f"id_{name}"
+        widget.update(
+            {
+                "calendar_id": f"{input_id}_calendar",
+                "open_calendar_label": _("Open calendar"),
+                "yesterday_label": _("Yesterday"),
+                "today_label": _("Today"),
+                "tomorrow_label": _("Tomorrow"),
+                "cancel_label": _("Cancel"),
+            }
+        )
+        return context
+
+    @property
+    def media(self):
+        return forms.Media(
+            css={
+                "all": (
+                    "core/vendor/air-datepicker/3.6.0/air-datepicker.css",
+                    "core/css/themed_date_widget_v3.css",
+                )
+            },
+            js=(
+                "core/vendor/air-datepicker/3.6.0/air-datepicker.js",
+                "core/js/themed_date_widget_v3.js",
+            ),
+        )
+
+
 class AdminLikeNativeDateWidget(forms.DateInput):
     """Native date input rendered with Django admin-style shortcut controls."""
 

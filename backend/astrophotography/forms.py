@@ -6,7 +6,7 @@ from parler.forms import TranslatableModelForm
 
 from django import forms
 from django.conf import settings
-from django.contrib.admin.widgets import AdminDateWidget, FilteredSelectMultiple
+from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -15,6 +15,7 @@ from core.forms import RangeField
 from core.widgets import (
     CountrySelect2Widget,
     SecureAdminFileWidget,
+    ThemedAdminDateWidget,
     ThemedSelect2MultipleWidget,
     ThemedSelect2Widget,
 )
@@ -174,7 +175,7 @@ class AstroImageForm(BaseImageSourceUploadFormMixin, TranslatableModelForm):
         model = AstroImage
         exclude = ("calculated_exposure_hours",)
         widgets = {
-            "capture_date": AdminDateWidget(),
+            "capture_date": ThemedAdminDateWidget(),
             "location": ThemedSelect2Widget(),
             "place": ThemedSelect2Widget(
                 tags=True,
