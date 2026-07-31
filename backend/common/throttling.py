@@ -7,16 +7,25 @@ from rest_framework.throttling import AnonRateThrottle, BaseThrottle
 from django.conf import settings
 from django.core.cache import cache
 
+from common.client_ip import get_client_ip
+
 logger = logging.getLogger(__name__)
 
 
-class APIRateThrottle(AnonRateThrottle):
+class TrustedAnonRateThrottle(AnonRateThrottle):
+    """Identify anonymous callers using the trusted reverse-proxy contract."""
+
+    def get_ident(self, request: Request) -> str:
+        return get_client_ip(request)
+
+
+class APIRateThrottle(TrustedAnonRateThrottle):
     """Custom throttle for general API calls"""
 
     scope = "api"
 
 
-class GalleryRateThrottle(AnonRateThrottle):
+class GalleryRateThrottle(TrustedAnonRateThrottle):
     """
     Relaxed throttle for gallery views (images, background).
     Allows higher volume of requests for browsing.
@@ -45,7 +54,7 @@ class ContactFormThrottle(BaseThrottle):
             return True
 
         try:
-            ip: str = self.get_ident(request)
+            ip: str = get_client_ip(request)
             email: str | None = self.get_email_from_request(request)
 
             limits = {

@@ -149,7 +149,6 @@ Local development is Docker Compose only. This project is not maintained as a st
 
 - Docker with the Compose plugin
 - Doppler CLI with access to the project secrets
-- `openssl` for generating local self-signed certificates
 - `/etc/hosts` access for local domain mapping
 
 ### 1. Clone
@@ -175,12 +174,6 @@ docker network create traefik_proxy || true
 docker volume create portfolio_dev_db_data || true
 docker volume create portfolio_dev_fe_node_modules || true
 docker volume create portfolio_dev_static_data || true
-```
-
-Generate local TLS certificates used by nginx:
-
-```bash
-./infra/scripts/nginx/generate-cert.sh
 ```
 
 ### 4. Configure local hosts

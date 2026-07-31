@@ -31,9 +31,15 @@ function getBackendBaseUrl(requestPublicEnv) {
 /**
  * Build backend request headers that preserve public host, language, and request correlation.
  *
- * @param {string|null} clientForwardedFor — The X-Forwarded-For value from the incoming
- *   nginx request. Forwarded to Django so DRF throttling operates on the real client IP
- *   rather than the frontend container's internal Docker IP.
+ * @param {{ SITE_DOMAIN: string, API_URL: string }} requestPublicEnv - Resolved public URLs.
+ * @param {string|string[]|undefined} acceptLanguage - Incoming language preference.
+ * @param {string|null|undefined} requestOrigin - Public origin for forwarded host headers.
+ * @param {string|null|undefined} requestId - Request correlation identifier.
+ * @param {string|null} [cookieHeader=null] - Incoming cookies used for language selection.
+ * @param {string|null} [resolvedClientIp=null] - The canonical X-Real-IP value set by nginx.
+ *   Forwarded to Django so throttling uses the resolved visitor rather than the
+ *   frontend container's internal Docker IP.
+ * @returns {Record<string, string>} Headers for the internal Django request.
  */
 function getBackendForwardHeaders(
   requestPublicEnv,
@@ -41,7 +47,7 @@ function getBackendForwardHeaders(
   requestOrigin,
   requestId,
   cookieHeader = null,
-  clientForwardedFor = null
+  resolvedClientIp = null
 ) {
   const headers = {
     Accept: 'application/json',
@@ -80,8 +86,9 @@ function getBackendForwardHeaders(
     headers['X-Request-ID'] = requestId;
   }
 
-  if (clientForwardedFor) {
-    headers['X-Forwarded-For'] = clientForwardedFor;
+  if (resolvedClientIp) {
+    headers['X-Real-IP'] = resolvedClientIp;
+    headers['X-Forwarded-For'] = resolvedClientIp;
   }
 
   return headers;
@@ -108,7 +115,7 @@ async function fetchBackendJson(req, backendPath, requestUrl, requestId) {
       requestOrigin,
       requestId,
       req.headers.cookie,
-      req.headers['x-forwarded-for']
+      req.headers['x-real-ip']
     ),
   });
   const durationMs = Date.now() - startedAt;
@@ -149,7 +156,7 @@ async function forwardBackendWrite(req, backendPath, requestId) {
         requestOrigin,
         requestId,
         req.headers.cookie,
-        req.headers['x-forwarded-for']
+        req.headers['x-real-ip']
       ),
       'Content-Type': 'application/json',
     },
@@ -215,7 +222,7 @@ export async function handleBffRequest(req, res, requestUrl, start, requestId) {
         requestOrigin,
         requestId,
         req.headers.cookie,
-        req.headers['x-forwarded-for']
+        req.headers['x-real-ip']
       ),
       redirect: 'manual',
     });

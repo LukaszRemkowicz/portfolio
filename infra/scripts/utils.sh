@@ -4,7 +4,7 @@
 #
 # Purpose:
 #   Shared utility functions for infrastructure scripts.
-#   May be sourced by release, backup, monitoring, and related script groups.
+#   May be sourced by release, backup, and related application script groups.
 ###############################################################################
 
 # ------------------------------------------------------------------

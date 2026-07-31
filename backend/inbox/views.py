@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from common.client_ip import get_client_ip
 from common.throttling import ContactFormThrottle
 
 from .serializers import ContactMessageSerializer
@@ -46,13 +47,6 @@ class ContactMessageViewSet(viewsets.ViewSet):
         exc.wait = wait
         raise exc
 
-    def get_client_ip(self, request: Request) -> str:
-        """Extract client IP address from request"""
-        x_forwarded_for: str | None = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            return x_forwarded_for.split(",")[0].strip()
-        return str(request.META.get("REMOTE_ADDR", "unknown"))
-
     def _check_payload_size(self, request: Request, client_ip: str) -> None:
         """Check if request payload size exceeds limit"""
         content_length: str | None = request.META.get("CONTENT_LENGTH")
@@ -73,7 +67,7 @@ class ContactMessageViewSet(viewsets.ViewSet):
         Note: Kill switch check is handled by ContactFormKillSwitchMiddleware before this view.
         Logic delegated to ContactSubmissionService.
         """
-        client_ip = self.get_client_ip(request)
+        client_ip = get_client_ip(request)
 
         # 1. Check request size limit (first, to reject large requests before processing)
         self._check_payload_size(request, client_ip)
