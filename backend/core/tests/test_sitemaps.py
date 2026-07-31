@@ -72,6 +72,14 @@ class TestShopSitemap:
 
 @pytest.mark.django_db
 class TestRootSitemapView:
+    def test_root_sitemap_allows_crawlers(self, client) -> None:
+        LandingPageSettingsFactory()
+
+        response = client.get(reverse("sitemap"))
+
+        assert response.status_code == 200
+        assert "X-Robots-Tag" not in response
+
     def test_root_sitemap_includes_feature_routes_when_enabled(self, client) -> None:
         LandingPageSettingsFactory(shop_enabled=True, programming_enabled=True)
 

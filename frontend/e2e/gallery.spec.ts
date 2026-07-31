@@ -34,12 +34,18 @@ test.describe('Gallery Page', () => {
       const images = [
         {
           pk: 1,
-          name: 'Milky Way Arch',
+          name: 'The Milky Way and Red Sprites over Geroldsee (Wagenbrüchsee)',
           slug: 'milky-way-arch',
           description: 'Milky Way over mountains',
           tags: [
+            { name: 'Red Sprites', slug: 'red-sprites', count: 1 },
             { name: 'Milky Way', slug: 'milky-way', count: 1 },
-            { name: 'Mountains', slug: 'mountains', count: 1 },
+            {
+              name: 'Astrolandscape',
+              slug: 'astrolandscape',
+              count: 1,
+            },
+            { name: 'Airglow', slug: 'airglow', count: 1 },
           ],
           celestial_object: 'Milky Way',
           created_at: '2023-01-01',
@@ -173,6 +179,26 @@ test.describe('Gallery Page', () => {
     // Check tags exist - they have # prefix in the UI
     const tag = modal.getByRole('button', { name: '#Milky Way' }).first();
     await expect(tag).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should wrap tags below a long modal title', async ({ page }) => {
+    await page.goto('/astrophotography/milky-way-arch');
+
+    const modal = page.getByTestId('image-modal');
+    await expect(modal).toBeVisible({ timeout: 10000 });
+
+    const title = modal.getByRole('heading', {
+      name: 'The Milky Way and Red Sprites over Geroldsee (Wagenbrüchsee)',
+    });
+    const firstTag = modal.getByRole('button', { name: '#Red Sprites' });
+    const titleBox = await title.boundingBox();
+    const firstTagBox = await firstTag.boundingBox();
+
+    expect(titleBox).not.toBeNull();
+    expect(firstTagBox).not.toBeNull();
+    expect(firstTagBox!.y).toBeGreaterThanOrEqual(
+      titleBox!.y + titleBox!.height
+    );
   });
 
   test('should navigate to tag view when clicking a tag in modal', async ({

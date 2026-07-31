@@ -445,7 +445,7 @@ describe('AstroGallery Component', () => {
     expect(screen.queryByText('Gallery')).not.toBeInTheDocument();
   });
 
-  it('uses the requested page without auto-loading additional pages', async () => {
+  it('uses and self-canonicalizes the requested page without auto-loading additional pages', async () => {
     const fetchNextPage = jest.fn();
 
     (useAstroImages as jest.Mock).mockReturnValue({
@@ -484,6 +484,10 @@ describe('AstroGallery Component', () => {
       expect.objectContaining({ page: 2 })
     );
     expect(fetchNextPage).not.toHaveBeenCalled();
+    expect(document.querySelector('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      'http://localhost/astrophotography?page=2'
+    );
   });
 
   it('returns to the homepage when closing a modal opened from the homepage gallery', async () => {

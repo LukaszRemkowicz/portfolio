@@ -64,9 +64,7 @@ async function bootstrapApp() {
       i18nInstance={i18n}
       dehydratedState={dehydratedState}
     >
-      <BrowserRouter
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-      >
+      <BrowserRouter>
         <App />
       </BrowserRouter>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}

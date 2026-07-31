@@ -1,3 +1,5 @@
+import { logWarning } from './logging.js';
+
 export const MAX_JSON_BODY_BYTES = 64 * 1024;
 
 export class RequestValidationError extends Error {
@@ -6,6 +8,71 @@ export class RequestValidationError extends Error {
     this.name = 'RequestValidationError';
     this.statusCode = statusCode;
   }
+}
+
+export class MalformedRequestTargetError extends RequestValidationError {
+  constructor() {
+    super(400, 'Malformed request target.');
+    this.name = 'MalformedRequestTargetError';
+  }
+}
+
+/**
+ * Reject invalid percent encoding before the request reaches URL parsing or
+ * static-path decoding.
+ */
+export function assertValidRequestTarget(requestTarget) {
+  try {
+    decodeURI(requestTarget || '/');
+  } catch {
+    throw new MalformedRequestTargetError();
+  }
+}
+
+/**
+ * Return a compact client error for malformed request targets and record the
+ * rejection without routing probe noise through the generic SSR error path.
+ */
+export function rejectMalformedRequestTarget(
+  req,
+  res,
+  start,
+  requestId,
+  now = Date.now()
+) {
+  const requestTarget = req.url || '/';
+
+  try {
+    assertValidRequestTarget(requestTarget);
+    return false;
+  } catch (error) {
+    if (!(error instanceof MalformedRequestTargetError)) {
+      throw error;
+    }
+  }
+
+  if (!res.headersSent) {
+    res.writeHead(400, {
+      'Content-Type': 'text/plain; charset=utf-8',
+    });
+    res.end('Bad Request');
+  } else {
+    res.destroy();
+  }
+
+  logWarning(
+    {
+      event: 'request_rejected',
+      kind: 'security_probe',
+      method: req.method,
+      path: requestTarget.slice(0, 2048),
+      reason: 'malformed_request_target',
+      status: 400,
+      duration_ms: now - start,
+    },
+    requestId
+  );
+  return true;
 }
 
 /**

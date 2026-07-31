@@ -285,9 +285,6 @@ class AstroImageAdmin(
     list_display_links = ("get_name",)
     list_filter = ("tags",)
 
-    class Media:
-        css = {"all": ("core/css/admin_date_clean.css",)}
-
     def get_changelist(self, request: HttpRequest, **kwargs: Any) -> type[ChangeList]:
         """Force the final admin changelist queryset to keep newest objects first."""
         return AstroImageChangeList

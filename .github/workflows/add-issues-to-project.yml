@@ -12,26 +12,6 @@ permissions:
 
 jobs:
   add-to-project:
-    name: Add issue to GitHub Project
-    runs-on: ubuntu-latest
-    steps:
-      - name: Validate project automation config
-        env:
-          ADD_TO_PROJECT_PAT: ${{ secrets.ADD_TO_PROJECT_PAT }}
-          ADD_TO_PROJECT_URL: ${{ vars.ADD_TO_PROJECT_URL }}
-        run: |
-          if [ -z "$ADD_TO_PROJECT_URL" ]; then
-            echo "::error::Set repository variable ADD_TO_PROJECT_URL to the GitHub Project URL, for example https://github.com/users/LukaszRemkowicz/projects/1"
-            exit 1
-          fi
-
-          if [ -z "$ADD_TO_PROJECT_PAT" ]; then
-            echo "::error::Set repository secret ADD_TO_PROJECT_PAT with GitHub Project write access."
-            exit 1
-          fi
-
-      - name: Add issue to project
-        uses: actions/add-to-project@v2
-        with:
-          project-url: ${{ vars.ADD_TO_PROJECT_URL }}
-          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/add-issues-to-project.yml@main
+    secrets:
+      project_token: ${{ secrets.ADD_TO_PROJECT_PAT }}

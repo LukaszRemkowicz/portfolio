@@ -21,6 +21,7 @@ import { handleBffRequest } from './backendProxy.js';
 import { handleInternalRequest } from './internalCacheRoute.js';
 import { logError, logRequest, toErrorPayload } from './logging.js';
 import { getRequestId } from './requestMeta.js';
+import { rejectMalformedRequestTarget } from './requestValidation.js';
 import { serveStatic } from './staticAssets.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -50,6 +51,10 @@ const server = http.createServer(async (req, res) => {
   const requestId = getRequestId(req);
   res.setHeader('X-Request-ID', requestId);
   try {
+    if (rejectMalformedRequestTarget(req, res, start, requestId)) {
+      return;
+    }
+
     const host = req.headers.host || 'localhost';
     const requestUrl = new URL(req.url || '/', `http://${host}`);
 
