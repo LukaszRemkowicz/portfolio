@@ -47,6 +47,13 @@ _sitemaps = {
     "travel": TravelHighlightsSitemap,
 }
 
+
+def public_sitemap(request, *args, **kwargs):
+    response = sitemap(request, *args, **kwargs)
+    response.headers.pop("X-Robots-Tag", None)
+    return response
+
+
 urlpatterns = [
     path("health", health_check_view, name="health"),
     path(
@@ -79,7 +86,7 @@ urlpatterns = [
     # reasonably often as content changes.
     path(
         "sitemap.xml",
-        cache_page(43200)(sitemap),
+        cache_page(43200)(public_sitemap),
         {"sitemaps": _sitemaps},
         name="sitemap",
     ),

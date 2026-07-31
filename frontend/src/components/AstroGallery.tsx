@@ -188,9 +188,13 @@ const AstroGallery: React.FC = () => {
   const seoImage = getMediaUrl(
     modalImage?.fallback_image?.url || modalImage?.url
   );
+  const gallerySeoUrl =
+    selectedPage && selectedPage > 1
+      ? `${APP_ROUTES.ASTROPHOTOGRAPHY}?page=${selectedPage}`
+      : APP_ROUTES.ASTROPHOTOGRAPHY;
   const seoUrl = modalImage?.slug
     ? `${APP_ROUTES.ASTROPHOTOGRAPHY}/${modalImage.slug}`
-    : APP_ROUTES.ASTROPHOTOGRAPHY;
+    : gallerySeoUrl;
   const responsiveHeroImageProps = useMemo(
     () =>
       buildResponsiveImageProps({

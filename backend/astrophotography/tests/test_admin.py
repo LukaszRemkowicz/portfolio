@@ -264,10 +264,15 @@ class TestAstroImageAdmin:
         assert response.status_code == 200
         content = response.content.decode("utf-8")
         assert 'name="capture_date"' in content
-        assert 'class="vDateField' in content
-        assert "admin/js/admin/DateTimeShortcuts.js" in content
-        assert "admin/js/calendar.js" in content
-        assert "core/css/admin_date_clean.css" in content
+        assert 'class="themed-date-widget__input"' in content
+        assert 'data-themed-date-widget="true"' in content
+        assert "admin/js/admin/DateTimeShortcuts.js" not in content
+        assert "admin/js/calendar.js" not in content
+        assert "core/vendor/air-datepicker/3.6.0/air-datepicker.css" in content
+        assert "core/css/themed_date_widget_v3.css" in content
+        assert "core/vendor/air-datepicker/3.6.0/air-datepicker.js" in content
+        assert "core/js/themed_date_widget_v3.js" in content
+        assert "core/css/admin_date_clean.css" not in content
 
     def test_admin_add_invalid_submission_keeps_admin_date_widget_for_capture_date(
         self, admin_client: Client
@@ -294,10 +299,14 @@ class TestAstroImageAdmin:
         assert response.status_code == 200
         content = response.content.decode("utf-8")
         assert 'name="capture_date"' in content
-        assert 'class="vDateField' in content
-        assert "admin/js/admin/DateTimeShortcuts.js" in content
-        assert "admin/js/calendar.js" in content
-        assert "core/css/admin_date_clean.css" in content
+        assert 'class="themed-date-widget__input"' in content
+        assert 'data-themed-date-widget="true"' in content
+        assert "admin/js/admin/DateTimeShortcuts.js" not in content
+        assert "admin/js/calendar.js" not in content
+        assert "core/vendor/air-datepicker/3.6.0/air-datepicker.css" in content
+        assert "core/css/themed_date_widget_v3.css" in content
+        assert "core/vendor/air-datepicker/3.6.0/air-datepicker.js" in content
+        assert "core/js/themed_date_widget_v3.js" in content
 
     def test_admin_change_page_filtering_pl(self, admin_client: Client) -> None:
         """

@@ -1,0 +1,27 @@
+<div
+  class="themed-date-widget"
+  data-themed-date-widget="true"
+  data-date-calendar-id="{{ widget.calendar_id }}"
+  data-date-yesterday-label="{{ widget.yesterday_label }}"
+  data-date-today-label="{{ widget.today_label }}"
+  data-date-tomorrow-label="{{ widget.tomorrow_label }}"
+  data-date-cancel-label="{{ widget.cancel_label }}"
+>
+  <div class="themed-date-widget__field">
+    {% include "django/forms/widgets/input.html" %}
+    <button
+      type="button"
+      class="themed-date-widget__trigger"
+      data-date-action="toggle"
+      aria-label="{{ widget.open_calendar_label }}"
+      aria-controls="{{ widget.attrs.id }}"
+      aria-expanded="false"
+      aria-haspopup="dialog"
+    >
+      <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20">
+        <path d="M7 2v3M17 2v3M3.5 9h17M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
+        <path d="M7 13h2M11 13h2M15 13h2M7 17h2M11 17h2M15 17h2" />
+      </svg>
+    </button>
+  </div>
+</div>

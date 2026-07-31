@@ -46,9 +46,21 @@ function getStaticHeaders(filePath) {
  * Resolve a requested static path only when it stays inside the built client directory.
  */
 function isSafeStaticPath(pathname, clientDistDir) {
-  const decoded = decodeURIComponent(pathname);
+  let decoded;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return null;
+  }
+
   const resolved = path.resolve(clientDistDir, `.${decoded}`);
-  return resolved.startsWith(clientDistDir) ? resolved : null;
+  const relative = path.relative(clientDistDir, resolved);
+  const escapesClientDist =
+    relative === '..' ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative);
+
+  return escapesClientDist ? null : resolved;
 }
 
 /**
