@@ -2,10 +2,10 @@
 //
 // Server-side render function.
 // Called by the Hono SSR server (Phase 2) for each request.
-// Uses StaticRouter (react-router-dom v6) — no browser globals.
+// Uses StaticRouter — no browser globals.
 
 import { renderToPipeableStream } from 'react-dom/server';
-import { StaticRouter } from 'react-router-dom/server';
+import { StaticRouter } from 'react-router';
 import { DehydratedState, dehydrate, QueryClient } from '@tanstack/react-query';
 import { matchPath } from 'react-router-dom';
 import type { HelmetServerState } from 'react-helmet-async';

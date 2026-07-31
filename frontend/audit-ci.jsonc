@@ -1,0 +1,12 @@
+{
+  "$schema": "https://github.com/IBM/audit-ci/raw/main/docs/schema.json",
+  "moderate": true,
+  "allowlist": [
+    {
+      "GHSA-qwww-vcr4-c8h2": {
+        "active": true,
+        "notes": "Only affects unstable React Server Components APIs; this application uses declarative BrowserRouter and StaticRouter."
+      }
+    }
+  ]
+}

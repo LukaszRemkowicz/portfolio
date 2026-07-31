@@ -92,9 +92,9 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      - name: Run npm audit
+      - name: Run npm dependency audit
         working-directory: ./frontend
-        run: npm audit --audit-level=moderate
+        run: npm run audit:ci
 
       - name: Run Safety CLI to check for vulnerabilities
         uses: pyupio/safety-action@v1
