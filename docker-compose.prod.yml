@@ -132,7 +132,7 @@ services:
       - prod_media_data:/app/media
       - prod_static_data:/app/staticfiles
     healthcheck:
-      test: ["CMD-SHELL", "celery -A settings inspect ping -d celery@$$HOSTNAME"]
+      test: ["CMD-SHELL", "celery -A settings inspect --timeout 5 ping -d celery@$$HOSTNAME"]
       interval: 30s
       timeout: 10s
       retries: 3
