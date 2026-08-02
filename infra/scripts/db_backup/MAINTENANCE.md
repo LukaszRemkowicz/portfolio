@@ -70,48 +70,14 @@ The script performs a **Truly Professional Verification**:
 5. **Extension Assertions**: Hard-verifies that mandatory extensions (e.g., `plpgsql`) are operational.
 6. **Multi-Step Smoke Test**: Validates row counts for `users`, `images`, and `migrations`.
 
----
+## 🔐 Running With Doppler
 
----
+Use `doppler run` when the backup credentials are stored in Doppler:
 
-## 🛡️ Professional Secret Management with Doppler
-
-For production and shared local environments, we use **Doppler** to manage environment variables securely. This eliminates the need for manually managing `.env` files and ensures secrets are never committed to version control.
-
-### 💻 Local Development
-1. **Install Doppler CLI**: Follow the [official instructions](https://docs.doppler.com/docs/install-cli).
-2. **Login & Setup**:
-   ```bash
-   doppler login
-   doppler setup
-   ```
-3. **Run Services**:
-   Instead of `docker compose up`, run:
-   ```bash
-   # Injects secrets as environment variables into the shell context
-   doppler run -- docker compose up
-   ```
-
-### 🚀 Production (DigitalOcean Droplet)
-1. **Service Token**: Create a [Doppler Service Token](https://docs.doppler.com/docs/service-tokens) for your production config.
-2. **Environment Variable**: Set `DOPPLER_TOKEN` on your server's host environment.
-3. **Start Production Services**:
-   ```bash
-   # Injects secrets from Doppler before executing docker compose
-   doppler run -- docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-   ```
-
-> [!NOTE]
-> Since we use shell interpolation in our `docker-compose.yml` (e.g., `${DB_NAME}`), Doppler correctly injects these variables directly into the containers.
-
-### 📦 Integrated Backups & Tests
-Our scripts are designed to work seamlessly with Doppler. Use `doppler run` to provide database credentials without manual `.env` files:
 ```bash
 doppler run -- ./infra/scripts/db_backup/backup_db.sh
 doppler run -- ./infra/scripts/db_backup/test_restore.sh
 ```
-
----
 
 ## 📂 Path Logic
 - **Configuration**: `BACKUP_DIR` must be set in the environment (e.g., Doppler or `.bashrc`).

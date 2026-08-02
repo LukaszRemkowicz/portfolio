@@ -167,6 +167,16 @@ SHELL_PLUS = "ipython"
 
 # Security Settings (for Nginx SSL termination)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+TRUSTED_PROXY_CIDRS = env.list(
+    "TRUSTED_PROXY_CIDRS",
+    default=[
+        "127.0.0.0/8",
+        "::1/128",
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+    ],
+)
 
 MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",  # Must be near the top
@@ -469,7 +479,7 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ],
     "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
+        "common.throttling.TrustedAnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {

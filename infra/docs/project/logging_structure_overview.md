@@ -352,7 +352,10 @@ Current access log definition:
 The JSON access log contains:
 
 - `time_local`
-- `remote_addr`
+- `client_ip`: visitor address resolved by Nginx real-IP handling
+- `peer_ip`: immediate connection address before real-IP replacement
+- `forwarded_for`: forwarding chain received by Nginx
+- `cf_connecting_ip`: Cloudflare connecting-IP header when present
 - `host`
 - `upstream_addr`
 - `request`
@@ -363,6 +366,23 @@ The JSON access log contains:
 - `upstream_status`
 - `http_referrer`
 - `http_user_agent`
+
+### Client-IP contract
+
+Nginx is the application boundary that resolves the visitor address. It trusts
+only the configured private proxy networks and Cloudflare ranges, processes
+`X-Forwarded-For` recursively, and uses the resulting `$remote_addr` for rate
+limits.
+
+For every proxied application request, Nginx overwrites both `X-Real-IP` and
+`X-Forwarded-For` with that single resolved address. The frontend BFF preserves
+the same value when it forwards a request to Django.
+
+Django accepts `X-Real-IP` only when its immediate `REMOTE_ADDR` belongs to
+`TRUSTED_PROXY_CIDRS`. Requests from other peers ignore `X-Real-IP`,
+`X-Forwarded-For`, and `CF-Connecting-IP` and use the peer address instead.
+The same resolver is used by default anonymous DRF throttling, API/gallery
+throttling, contact throttling, and contact security logging.
 
 ### What is not JSON yet
 
