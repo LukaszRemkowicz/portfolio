@@ -343,6 +343,12 @@ Read-time fallback behavior:
 
 This fallback keeps the API populated even when translation is incomplete.
 
+Travel highlights are an exception: `highlight_name`, `highlight_title`, `story`,
+and story previews allow requested-language then default-English fallback only.
+They do not use the final "any available language" step. This prevents an empty
+English title or story from showing Polish on the English page. The frontend uses
+its localized default subtitle when `highlight_title` is empty.
+
 
 ## Operational Notes
 

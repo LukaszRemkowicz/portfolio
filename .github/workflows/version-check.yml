@@ -8,7 +8,8 @@ permissions:
 
 jobs:
   version-check:
-    uses: LukaszRemkowicz/ci-cd/.github/workflows/version-check.yml@main
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/pyproject-version-check.yml@main
     with:
+      pyproject_file: backend/pyproject.toml
       base_branch: main
       head_branch: dev

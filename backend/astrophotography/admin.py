@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.views.main import ChangeList
 from django.db import models
-from django.db.models import Count, F, Subquery, Window
+from django.db.models import Count, F, Q, Subquery, Window
 from django.db.models.functions import RowNumber
 from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
@@ -19,7 +19,6 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
 from core.widgets import (
-    ReadOnlyMessageWidget,
     ThemedRangeWidget,
     ThemedSelect2MultipleWidget,
     ThemedSelect2Widget,
@@ -54,7 +53,6 @@ from .models import (
     Tracker,
     Tripod,
 )
-from .types import CountryMaps
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +148,7 @@ class BaseTranslatableAdmin(
 class PlaceAdmin(BaseTranslatableAdmin):
     """Admin configuration for geographical places."""
 
-    fields = ("is_region", "name", "country", "sub_places")
+    fields = ("location_type", "is_region", "name", "country", "sub_places")
     form = PlaceAdminForm
 
     list_display = ("id", "get_name", "country", "is_region", "get_regions")
@@ -596,85 +594,61 @@ class MainPageLocationForm(TranslatableModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Fix duplicate places in dropdown by clearing ordering
         if "place" in self.fields:
-            self.fields["place"].queryset = Place.objects.order_by("pk").distinct()
-
+            place_field = self.fields["place"]
+            place_field.queryset = Place.objects.order_by("pk").prefetch_related("translations")
+            place_field.label = _("Destination")
+            place_field.help_text = _(
+                "Select a country, place, or region. "
+                "Use + and choose Country to add a country-wide trip."
+            )
+            place_field.label_from_instance = self.destination_label
         self._apply_dynamic_filtering()
 
-    def _apply_dynamic_filtering(self):  # noqa: C901
-        """
-        Dynamically filter the available images based on the selected place.
+    @staticmethod
+    def destination_label(place: Place) -> str:
+        kind = _("Region") if place.is_region else _("Country") if place.is_country else _("Place")
+        name = "" if place.is_country else str(place)
+        location = ", ".join(
+            part for part in (name, place.country.name if place.country else "") if part
+        )
+        return f"{kind} — {location}"
 
-        - No place (explore_tour): all images from that country (via country_slug)
-        - Exact place (not a region): only images from that specific place
-        - Region with sub_places defined: only images from the listed sub-places
-        - Region with no sub_places: fall back to all images in the same country
-        """
-        if self.instance.pk:
-            place = self.instance.place
+    def _apply_dynamic_filtering(self):
+        """Use the submitted destination on POST and preserve existing explicit selections."""
+        place = self.instance.place if self.instance.place_id else None
+        if self.is_bound:
+            raw_place = self.data.get(self.add_prefix("place"))
+            try:
+                place = Place.objects.filter(pk=raw_place).first() if raw_place else None
+            except ValueError, TypeError:
+                place = None  # The choice field reports invalid submitted IDs during validation.
+        elif not self.instance.pk:
+            return
 
-            if place is None:
-                # Fallback for country-wide tours: find the ISO code and show all images
-                # from that country.
-
-                maps: CountryMaps = AstroImage.objects.get_country_maps()
-                iso_code = maps["code_map"].get(self.instance.country_slug) or maps[
-                    "country_map"
-                ].get(self.instance.country_slug)
-                if iso_code:
-                    qs = AstroImage.objects.filter(place__country=iso_code)
-                else:
-                    qs = AstroImage.objects.filter(
-                        place__country__icontains=self.instance.country_slug
-                    )
-            elif place.is_region:
-                sub_places = place.sub_places.all()
-                if sub_places.exists():
-                    countries = {str(sp.country) for sp in sub_places if sp.country}
-                    if len(countries) > 1:
-                        # Multi-country region (e.g. Scandinavia → Norway, Sweden, Finland):
-                        # filter by country so images from any city in those countries appear.
-                        qs = AstroImage.objects.filter(place__country__in=countries)
-                    else:
-                        # Single-country region (e.g. Hawaii → Oahu, Big Island):
-                        # filter by the exact sub-places to avoid including unrelated places
-                        # in the same country (e.g. Arkansas).
-                        qs = AstroImage.objects.filter(place__in=sub_places)
-                else:
-                    # No sub_places configured: fall back to country-wide (backward compat)
-                    qs = AstroImage.objects.filter(place__country=place.country)
-            else:
-                qs = AstroImage.objects.filter(place=place)
-
-            images_field = self.fields.get("images")
-            if isinstance(images_field, forms.ModelChoiceField):
-                images_field.queryset = qs
-
-            bg_image_field = self.fields.get("background_image")
-            if isinstance(bg_image_field, forms.ModelChoiceField):
-                bg_image_field.queryset = qs
-
-            if not qs.exists():
-                self.fields["images"].widget = ReadOnlyMessageWidget(
-                    message=_(
-                        "No matching items found for this place. "
-                        "Check the place assignment on your images."
-                    )
-                )
+        if place:
+            scope = place.image_scope()
         else:
-            # Creation mode — no place selected yet, show all images
-            pass
+            maps = AstroImage.objects.get_country_maps()
+            iso_code = maps["code_map"].get(self.instance.country_slug) or maps["country_map"].get(
+                self.instance.country_slug
+            )
+            scope = Q(place__country=iso_code) if iso_code else Q(pk__in=[])
+        if self.instance.pk:
+            scope |= Q(pk__in=self.instance.images.values_list("pk", flat=True))
+            if self.instance.background_image_id:
+                scope |= Q(pk=self.instance.background_image_id)
+        for field_name in ("images", "background_image"):
+            if field_name in self.fields:
+                self.fields[field_name].queryset = AstroImage.objects.filter(scope)
 
     class Meta:
         model = MainPageLocation
         fields = "__all__"
         widgets = {
-            # country widget removed
             "place": ThemedSelect2Widget(
-                tags=True,
                 attrs={
-                    "data-placeholder": _("Select or type place..."),
+                    "data-placeholder": _("Select country, place, or region..."),
                     "data-allow-clear": "true",
                 },
             ),
@@ -692,22 +666,6 @@ class MainPageLocationForm(TranslatableModelForm):
                 placeholder_max=_("End Date"),
             ),
         }
-
-    def clean_place(self):
-        place = self.cleaned_data.get("place")
-        if not place:
-            place_name = self.data.get("place")
-            if place_name:
-                # Use translated name lookup? Or just simple name for now
-                # Place name is translatable now. get_or_create by name kwarg relies on Parler
-                # helping, or we need to use translations__name.
-                # For simplicity in admin form logic, try direct lookup which Parler might intercept
-                # or use safe lookup
-                # Parler models manager handles .get(name=...) by querying translations.
-                place, _ = Place.objects.get_or_create(name=place_name)
-        elif isinstance(place, str):
-            place, _ = Place.objects.get_or_create(name=place)
-        return place
 
 
 @admin.register(MainPageLocation)

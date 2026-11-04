@@ -321,22 +321,21 @@ class TestTranslationSerializers:
         assert data["description"] == "Translated Text"
         mock_translate.assert_any_call(instance, "description", "pl")
 
-    def test_main_page_location_serializer_calls_translation_service(
-        self, mocker: MockerFixture
-    ) -> None:
+    def test_main_page_location_serializer_returns_stored_polish_title(self) -> None:
+        from rest_framework.request import Request
+        from rest_framework.test import APIRequestFactory
 
-        mock_translate = mocker.patch("translation.services.TranslationService.get_translation")
-        mock_translate.return_value = "Translated Text"
-        request = mocker.MagicMock()
-        request.query_params.get.return_value = "pl"
-
-        place = PlaceFactory()
-        instance = MainPageLocationFactory(place=place, highlight_name="Highlights")
-        serializer = MainPageLocationSerializer(instance, context={"request": request})
-        data = serializer.data
-
-        assert data["highlight_name"] == "Translated Text"
-        mock_translate.assert_any_call(instance, "highlight_name", "pl")
+        instance = MainPageLocationFactory(
+            highlight_name="Highlights", highlight_title="English title"
+        )
+        instance.set_current_language("pl")
+        instance.highlight_name = "Wspomnienia"
+        instance.highlight_title = "Polski tytuł"
+        instance.save()
+        request = Request(APIRequestFactory().get("/", {"lang": "pl"}))
+        data = MainPageLocationSerializer(instance, context={"request": request}).data
+        assert data["highlight_name"] == "Wspomnienia"
+        assert data["highlight_title"] == "Polski tytuł"
 
     def test_serializer_ignores_translation_without_lang(self, mocker: MockerFixture) -> None:
         """Test that serializers return original data when lang is missing or en"""

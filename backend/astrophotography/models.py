@@ -88,6 +88,39 @@ class Place(AutomatedTranslationModelMixin, TranslatableModel):
         verbose_name_plural = _("Places")
         ordering = ["pk"]
 
+    @property
+    def source_name(self) -> str:
+        """Use the source-language name for geographic identity and URL generation."""
+        return (
+            self.safe_translation_getter(
+                "name", language_code=settings.DEFAULT_APP_LANGUAGE, default=""
+            )
+            or ""
+        )
+
+    @property
+    def is_country(self) -> bool:
+        return bool(self.country and not self.is_region and not self.source_name)
+
+    def image_scope(self, visited: set[int] | None = None) -> Q:
+        """Resolve destination membership, including country nodes and nested regions."""
+        visited = set() if visited is None else visited
+        if self.pk in visited:
+            return Q(pk__in=[])
+        visited.add(self.pk)
+        if self.is_country:
+            return Q(place__country=str(self.country))
+        if self.is_region:
+            children = list(self.sub_places.all())
+            if children:
+                scope = Q(place=self)
+                for child in children:
+                    scope |= child.image_scope(visited)
+                return scope
+            if self.country:
+                return Q(place__country=str(self.country))
+        return Q(place=self)
+
     def clean(self):
         """Custom uniqueness validation for Place names."""
         super().clean()
@@ -107,6 +140,10 @@ class Place(AutomatedTranslationModelMixin, TranslatableModel):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         super().save(*args, **kwargs)
+        # Popup edits must update linked trip URLs as well as the destination label.
+        for highlight in MainPageLocation.objects.filter(place=self):
+            highlight.place = self
+            highlight.save(update_fields=["country_slug", "place_slug", "legacy_slugs"])
         self.trigger_translations()
 
     def __str__(self) -> str:
@@ -340,55 +377,25 @@ class AstroImageQuerySet(TranslatableQuerySet):
         explicit_image_ids: list[int] = list(slider.images.values_list("id", flat=True))
 
         if slider.place:
-            if slider.place.is_region:
-                sub_place_ids: list[int] = list(
-                    slider.place.sub_places.values_list("id", flat=True)
-                )
-                if slider.adventure_date:
-                    queryset = queryset.filter(
-                        Q(
-                            place_id__in=sub_place_ids,
-                            capture_date__range=(
-                                slider.adventure_date.lower,
-                                slider.adventure_date.upper,
-                            ),
-                        )
-                        | Q(id__in=explicit_image_ids)
-                    )
-                else:
-                    queryset = queryset.filter(
-                        Q(place_id__in=sub_place_ids) | Q(id__in=explicit_image_ids)
-                    )
-            else:
-                queryset = queryset.filter(Q(place=slider.place) | Q(id__in=explicit_image_ids))
+            scope = slider.place.image_scope()
         else:
+            # Retain legacy country tours without broadening an empty destination.
             maps: CountryMaps = self.get_country_maps()
-            code_map: dict[str, str] = maps["code_map"]
-            country_map: dict[str, str] = maps["country_map"]
-            iso_code: str | None = code_map.get(slider.country_slug) or country_map.get(
+            iso_code = maps["code_map"].get(slider.country_slug) or maps["country_map"].get(
                 slider.country_slug
             )
+            scope = Q(place__country=iso_code) if iso_code else Q(pk__in=[])
 
-            if iso_code:
-                queryset = queryset.filter(
-                    Q(place__country=iso_code) | Q(id__in=explicit_image_ids)
-                )
-            else:
-                queryset = queryset.filter(
-                    Q(place__country__icontains=slider.country_slug) | Q(id__in=explicit_image_ids)
-                )
+        if slider.adventure_date:
+            dates = slider.adventure_date
+            if dates.lower:
+                lower_lookup = "capture_date__gte" if dates.lower_inc else "capture_date__gt"
+                scope &= Q(**{lower_lookup: dates.lower})
+            if dates.upper:
+                upper_lookup = "capture_date__lte" if dates.upper_inc else "capture_date__lt"
+                scope &= Q(**{upper_lookup: dates.upper})
 
-            if slider.adventure_date:
-                queryset = queryset.filter(
-                    Q(
-                        capture_date__range=(
-                            slider.adventure_date.lower,
-                            slider.adventure_date.upper,
-                        )
-                    )
-                    | Q(id__in=explicit_image_ids)
-                )
-
+        queryset = queryset.filter(scope | Q(id__in=explicit_image_ids))
         return queryset.order_by("-created_at")
 
     def _apply_travel_filter(self, queryset: QuerySet, search_term: str) -> QuerySet:
@@ -748,25 +755,22 @@ class MainPageLocationQuerySet(TranslatableQuerySet):
         """
         qs: QuerySet = self.all()
 
-        # 1. Country filter
-        if country_slug != FALLBACK_URL_SLUG:
-            qs = qs.filter(country_slug=country_slug)
-        else:
-            qs = qs.filter(country_slug="")
-
-        # 2. Place filter
-        if place_slug != FALLBACK_URL_SLUG:
-            qs = qs.filter(place_slug=place_slug)
-        else:
-            qs = qs.filter(place__isnull=True)
-
-        # 3. Date filter
         if date_slug != FALLBACK_URL_SLUG:
             date_range = MainPageLocation._parse_date_slug(date_slug)
-            if date_range:
-                qs = qs.filter(adventure_date__overlap=date_range)
-            else:
+            if not date_range:
                 return qs.none()
+            qs = qs.filter(adventure_date__overlap=date_range)
+
+        canonical = qs.filter(
+            country_slug="" if country_slug == FALLBACK_URL_SLUG else country_slug
+        )
+        if place_slug == FALLBACK_URL_SLUG:
+            canonical = canonical.filter(Q(place_slug="") | Q(place_slug__isnull=True))
+        else:
+            canonical = canonical.filter(place_slug=place_slug)
+        if canonical.exists():
+            return canonical
+        qs = qs.filter(legacy_slugs__contains=[{"country": country_slug, "place": place_slug}])
 
         return qs
 
@@ -823,6 +827,8 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
         null=True,
         blank=True,
     )
+
+    legacy_slugs = models.JSONField(default=list, blank=True, editable=False)
 
     background_image = models.ForeignKey(
         AstroImage,
@@ -907,19 +913,37 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
         return f"{name or _('Unnamed Location')} ({status_str})"
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        # Always keep slugs up to date with the assigned Place.
+        previous = None
+        if self.pk:
+            previous = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values("country_slug", "place_slug", "legacy_slugs")
+                .first()
+            )
         if self.place:
-            if self.place.is_region or not self.place.country:
-                self.country_slug = ""
-            else:
-                # Handle django-countries Country object
-                country_name = getattr(self.place.country, "name", str(self.place.country))
-                self.country_slug = slugify(country_name)
-            if self.place.name:
-                self.place_slug = slugify(self.place.name)
+            with translation.override(settings.DEFAULT_APP_LANGUAGE):
+                self.country_slug = slugify(self.place.country.name) if self.place.country else ""
+            self.place_slug = slugify(self.place.source_name)
         else:
             self.country_slug = ""
             self.place_slug = ""
+
+        if previous:
+            self.legacy_slugs = previous["legacy_slugs"]
+            old_pair = {
+                "country": previous["country_slug"] or FALLBACK_URL_SLUG,
+                "place": previous["place_slug"] or FALLBACK_URL_SLUG,
+            }
+            new_pair = {"country": self.safe_country_slug, "place": self.safe_place_slug}
+            if old_pair != new_pair and old_pair not in self.legacy_slugs:
+                self.legacy_slugs = [*self.legacy_slugs, old_pair]
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = set(kwargs["update_fields"]) | {
+                "country_slug",
+                "place_slug",
+                "legacy_slugs",
+            }
 
         super().save(*args, **kwargs)
         self.trigger_translations()
@@ -928,19 +952,24 @@ class MainPageLocation(AutomatedTranslationModelMixin, TranslatableModel):
 
     def get_full_location(self, language_code: str = "en") -> str:
         """Get full location string (place, country)."""
-        place_name = TranslationService.get_translation(self, "highlight_name", language_code)
+        place_name = TranslationService.get_translation(
+            self, "highlight_name", language_code, allow_any_language=False
+        )
         if not place_name:
             if language_code == settings.DEFAULT_APP_LANGUAGE and self.place:
                 place_name = self.place.name
             else:
                 return ""
 
-        country_name = self.place.country.name if self.place else "Unknown"
-        return f"{place_name}, {country_name}"
+        with translation.override(language_code or settings.DEFAULT_APP_LANGUAGE):
+            country_name = self.place.country.name if self.place and self.place.country else ""
+        return ", ".join(dict.fromkeys(part for part in (place_name, country_name) if part))
 
     def get_story_preview(self, language_code: str = "en", max_length: int = 150) -> str:
         """Get truncated story for previews."""
-        story = TranslationService.get_translation(self, "story", language_code)
+        story = TranslationService.get_translation(
+            self, "story", language_code, allow_any_language=False
+        )
         if len(story) > max_length:
             return story[:max_length].rsplit(" ", 1)[0] + "..."
         return story
