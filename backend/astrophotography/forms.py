@@ -110,6 +110,13 @@ class BaseImageSourceUploadFormMixin:
 class PlaceAdminForm(TranslatableModelForm):
     """Custom form for Place admin to use Select2 widget for country field."""
 
+    location_type = forms.ChoiceField(
+        choices=[("country", _("Country")), ("place", _("Place")), ("region", _("Region"))],
+        required=False,
+        label=_("Location type"),
+        help_text=_("Choose Country for a trip covering several places in one country."),
+    )
+
     # Explicitly define country field to override django-countries default widget
     country = forms.ChoiceField(
         choices=[("", "---------")] + list(countries),
@@ -136,9 +143,24 @@ class PlaceAdminForm(TranslatableModelForm):
     class Meta:
         model = Place
         fields = "__all__"
+        widgets = {"is_region": forms.HiddenInput()}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["location_type"].initial = (
+            "region"
+            if self.instance.is_region
+            else "country" if self.instance.is_country else "place"
+        )
+        if (
+            self.instance.pk
+            and self.instance.get_current_language() != settings.DEFAULT_APP_LANGUAGE
+        ):
+            self.fields["location_type"].disabled = True
+        self.fields["country"].help_text = _(
+            "Keep the country for regions within one country. "
+            "Leave blank for multi-country regions."
+        )
         # Exclude this place from its own sub_places to prevent circular references
         if self.instance.pk:
             self.fields["sub_places"].queryset = Place.objects.exclude(pk=self.instance.pk)
@@ -147,10 +169,29 @@ class PlaceAdminForm(TranslatableModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        kind = cleaned_data.get("location_type")
+        if kind:
+            cleaned_data["is_region"] = kind == "region"
+            if kind == "country":
+                cleaned_data["name"] = ""
+            elif not cleaned_data.get("name"):
+                self.add_error("name", _("Name is required for places and regions."))
+            if kind != "region":
+                cleaned_data["sub_places"] = Place.objects.none()
         is_region = cleaned_data.get("is_region", False)
         country = cleaned_data.get("country")
         if not is_region and not country:
             self.add_error("country", _("Country is required for non-region places."))
+        if kind == "country" and country:
+            candidates = (
+                Place.objects.filter(country=country, is_region=False)
+                .exclude(pk=self.instance.pk)
+                .prefetch_related("translations")
+            )
+            if any(place.is_country for place in candidates):
+                self.add_error(
+                    "country", _("This country already exists. Select the existing destination.")
+                )
         return cleaned_data
 
 

@@ -61,14 +61,14 @@ test/staging environment. The legacy VPS-local path remains available through
 
 ## Release Identity
 
-Release identity is derived from `VERSION` and Git tags.
+Release identity is derived from `backend/pyproject.toml` `[project].version` and Git tags.
 
 ### GitHub release tag flow
 
 `.github/workflows/release.yml`:
 
 - runs on push to `main`
-- reads `VERSION`
+- reads `backend/pyproject.toml` `[project].version`
 - compares it to the latest `v*` tag
 - creates a new annotated tag `vX.Y.Z` if needed
 - publishes production images to GHCR when a new release tag is created
@@ -382,7 +382,7 @@ manual_deploy_staging.sh
 
 High-level production flow:
 
-1. update `VERSION`
+1. update `backend/pyproject.toml` `[project].version`
 2. merge to `main`
 3. `release.yml` creates tag `vX.Y.Z`
 4. `release.yml` builds and pushes production images to GHCR

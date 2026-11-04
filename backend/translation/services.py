@@ -196,7 +196,9 @@ class TranslationService:
         return value
 
     @staticmethod
-    def get_translation(instance: Any, field_name: str, language_code: str) -> str:
+    def get_translation(
+        instance: Any, field_name: str, language_code: str, *, allow_any_language: bool = True
+    ) -> str:
         """
         Pure getter that retrieves an existing translation from the database.
 
@@ -218,6 +220,9 @@ class TranslationService:
             fallback = TranslationService._read_translation(instance, field_name, default_language)
             if fallback:
                 return fallback
+
+        if not allow_any_language:
+            return ""
 
         # Fallback to any available language if both requested and default are missing
         for lang in instance.get_available_languages():

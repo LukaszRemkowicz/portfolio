@@ -864,6 +864,43 @@ class TestAdminDebug:
 class TestMainPageLocationAdmin:
     CHANGE_URL_NAME: str = "admin:astrophotography_mainpagelocation_change"
 
+    def test_country_trip_can_select_images_from_multiple_places(self, admin_client):
+        response = admin_client.post(
+            reverse("admin:astrophotography_place_add"),
+            {"country": "ES", "name": "", "_save": "Save"},
+        )
+        assert response.status_code == 302
+        country = Place.objects.get(country="ES")
+        images = [
+            AstroImageFactory(place=PlaceFactory(country="ES", name=name))
+            for name in ("Castillo De Zafra", "Cabo de Gata", "Sierra Nevada")
+        ]
+        AstroImageFactory(place=PlaceFactory(country="PL"))
+        data = {
+            "place": country.pk,
+            "highlight_name": "Spain trip",
+            "adventure_date_0": "2026-06-01",
+            "adventure_date_1": "2026-06-15",
+            "images": [image.pk for image in images],
+            "background_image": images[0].pk,
+            "is_active": "on",
+            "_save": "Save",
+        }
+        response = admin_client.post(reverse("admin:astrophotography_mainpagelocation_add"), data)
+        assert response.status_code == 302
+        trip = MainPageLocation.objects.get(place=country)
+        change_url = reverse(self.CHANGE_URL_NAME, args=[trip.pk])
+        response = admin_client.get(change_url)
+        form = response.context["adminform"].form
+        expected_ids = {image.pk for image in images}
+        for field in ("images", "background_image"):
+            assert set(form.fields[field].queryset.values_list("pk", flat=True)) == expected_ids
+        response = admin_client.post(change_url, data)
+        assert response.status_code == 302
+        trip.refresh_from_db()
+        assert set(trip.images.values_list("pk", flat=True)) == expected_ids
+        assert trip.background_image_id == images[0].pk
+
     def test_admin_change_page_has_ui_enhancements(self, admin_client: Client) -> None:
         """
         Verify that the MainPageLocation change page includes the expandable CSS/JS

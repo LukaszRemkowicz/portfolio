@@ -47,6 +47,9 @@ class PlaceSerializer(TranslatedSerializerMixin, TranslatableModelSerializer):
         # Helper from mixin
         data = self.translate_fields(data=data, instance=instance, fields=["name"])
 
+        if instance.is_country:
+            data["name"] = ""
+
         request = self.context.get("request")
         lang = request.query_params.get("lang") if request else None
 
@@ -205,7 +208,9 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
 
     def get_full_location(self, obj: MainPageLocation) -> str:
         request = self.context.get("request")
-        lang = request.query_params.get("lang") if request else "en"
+        lang = (
+            request.query_params.get("lang") if request else None
+        ) or settings.DEFAULT_APP_LANGUAGE
         val = obj.get_full_location(language_code=str(lang))
         # SerializerMethodFields bypass translate_fields(), so strip explicitly
         if val.startswith(TranslationService.TRANSLATION_FAILED_PREFIX):
@@ -214,7 +219,9 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
 
     def get_story_preview(self, obj: MainPageLocation) -> str:
         request = self.context.get("request")
-        lang = request.query_params.get("lang") if request else "en"
+        lang = (
+            request.query_params.get("lang") if request else None
+        ) or settings.DEFAULT_APP_LANGUAGE
         val = obj.get_story_preview(language_code=str(lang))
         if val.startswith(TranslationService.TRANSLATION_FAILED_PREFIX):
             return ""
@@ -251,13 +258,13 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
         return f"{self.format_date(lower)} - {self.format_date(display_upper)}"
 
     def to_representation(self, instance: MainPageLocation) -> dict[str, Any]:
-
         data = super().to_representation(instance)
-        data = self.translate_fields(
-            data=data,
-            instance=instance,
-            fields=["highlight_name", "highlight_title", "story"],
-        )
+        request = self.context.get("request")
+        language = request.query_params.get("lang") if request else None
+        for field in ("highlight_name", "highlight_title", "story"):
+            data[field] = TranslationService.get_translation(
+                instance, field, language or settings.DEFAULT_APP_LANGUAGE, allow_any_language=False
+            )
         return data
 
     class Meta:

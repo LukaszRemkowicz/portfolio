@@ -260,6 +260,36 @@ class TestLensModel:
 
 @pytest.mark.django_db
 class TestMainPageLocationModel:
+    def test_country_trip_includes_stops_within_dates_and_explicit_images(self):
+        country = PlaceFactory(name="", country="ES")
+        trip = MainPageLocationFactory(
+            place=country,
+            adventure_date=DateRange(date(2026, 6, 1), date(2026, 6, 15)),
+        )
+        images = [
+            AstroImageFactory(
+                place=PlaceFactory(country="ES", name=name),
+                capture_date=date(2026, 6, 5),
+            )
+            for name in ("Castillo De Zafra", "Cabo de Gata", "Sierra Nevada")
+        ]
+        AstroImageFactory(place=images[0].place, capture_date=date(2025, 6, 5))
+        AstroImageFactory(place=PlaceFactory(country="PL"), capture_date=date(2026, 6, 5))
+        explicit = AstroImageFactory(capture_date=date(2025, 6, 5))
+        trip.images.add(explicit)
+        assert set(AstroImage.objects.for_travel_highlight(trip).values_list("pk", flat=True)) == {
+            *(image.pk for image in images),
+            explicit.pk,
+        }
+
+    def test_country_trip_clears_previous_place_slug(self):
+        trip = MainPageLocationFactory(place=PlaceFactory(name="Cabo de Gata", country="ES"))
+        trip.place = PlaceFactory(name="", country="ES")
+        trip.save()
+        trip.refresh_from_db()
+        assert trip.country_slug == "spain"
+        assert trip.place_slug == ""
+
     def test_string_representation(self) -> None:
         place: Place = PlaceFactory(name="Bieszczady", country="PL")
         slider: MainPageLocation = MainPageLocationFactory(place=place, highlight_name=None)
