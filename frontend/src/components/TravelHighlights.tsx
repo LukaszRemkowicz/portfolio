@@ -70,9 +70,9 @@ const TravelCard: FC<{
     !hasNoImages && failedIndices.size >= displayImages.length;
 
   // Construct display location: "Place, Country" or just "Country"
-  const displayLocation = location.place?.name
-    ? `${location.place.name}, ${location.place.country}`
-    : location.place?.country;
+  const displayLocation = [location.place?.name, location.place?.country]
+    .filter(Boolean)
+    .join(', ');
 
   // Prioritize story from location model, fall back to first image description
   const description = useMemo(() => {
@@ -81,8 +81,8 @@ const TravelCard: FC<{
     }
     return location.images.length > 0
       ? stripHtml(location.images[0].description)
-      : `Explore the cosmic wonders of ${location.place?.country}.`;
-  }, [location.story, location.images, location.place?.country]);
+      : `Explore the cosmic wonders of ${displayLocation}.`;
+  }, [location.story, location.images, displayLocation]);
 
   // Check if the location is "new" (created within last 14 days)
   const isNew = useMemo(() => {
@@ -121,7 +121,7 @@ const TravelCard: FC<{
           <div key={index} className={styles.carouselSlide}>
             <ImageWithFallback
               src={img}
-              alt={`Travel highlight from ${location.place?.country}`}
+              alt={`Travel highlight from ${displayLocation}`}
               className={`${styles.cardImage} ${
                 index === activeIndex && !failedIndices.has(index)
                   ? styles.active

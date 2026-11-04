@@ -74,6 +74,36 @@ describe('TravelHighlights Component', () => {
     expect(screen.queryByText('travel.title')).not.toBeInTheDocument();
   });
 
+  it('renders a region without a trailing comma when country is absent', async () => {
+    (useTravelHighlights as jest.Mock).mockReturnValue({
+      data: [
+        {
+          pk: 1,
+          place: { name: 'Scandinavia', country: '' },
+          highlight_name: 'Northern nights',
+          country_slug: 'explore',
+          place_slug: 'scandinavia',
+          date_slug: '2026-06-01_2026-06-15',
+          images: [],
+        },
+      ],
+      isLoading: false,
+    });
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <TravelHighlights />
+        </MemoryRouter>
+      );
+    });
+    expect(
+      screen.getByText('Scandinavia', { exact: true })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Scandinavia,', { exact: true })
+    ).not.toBeInTheDocument();
+  });
+
   it('cycles images automatically', async () => {
     const mockLocations = [
       {

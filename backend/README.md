@@ -11,6 +11,57 @@ Django + DRF backend for portfolio content, admin, secure media, and translation
 - **Contact System** - Contact form processing with anti-spam protection and email notifications.
 - **Translations** - Multi-language content support for public portfolio data.
 
+### Travel destinations
+
+In Places, choose **Country**, **Place**, or **Region**. A country destination is
+stored as a non-region Place with a country code and an empty source-language name.
+Use the **+** beside a travel highlight's Destination selector to add one (for
+example Spain). The admin prevents duplicate country destinations in this workflow.
+
+Regions retain an editable, optional country: Bieszczady can have Poland and
+sub-places such as Lutowiska and Wetlina. A region spanning several countries can
+leave its own country blank. Sub-places may be specific places, countries, or
+nested regions. Country nodes include every image location in that country;
+named places include their own images. A region includes its own images and its
+children, or falls back to its country when no children are configured. A region
+without a country or children includes only images directly assigned to it.
+
+The admin and travel detail page share geographic filtering. The admin offers
+all matching dates and retains previously selected images/backgrounds. The detail
+page automatically includes matching images within the trip's stored date range
+(respecting its exclusive upper bound), plus explicitly selected images regardless
+of date or destination. If only certain stops should be included, use a region
+with those sub-places rather than a country destination.
+
+Saving a Place also refreshes linked travel slugs in the source language. Previous
+country/place slug pairs are stored as aliases, so existing links continue to work.
+Canonical matches take precedence; an ambiguous alias returns 404. Date changes
+are not versioned by these aliases. Migration `0022_mainpagelocation_legacy_slugs`
+must run before deploying code that uses these aliases.
+
+Production releases automatically repair the known record, Place 53, to Poland
+only while its country is empty. Staging skips this repair. The release uses
+`--if-country-empty`, so a later intentional country edit is preserved.
+
+For a manual repair, preview the exact change first (run inside the deployed
+backend environment):
+
+```bash
+python manage.py repair_travel_place --place-id 53 --country PL
+python manage.py repair_travel_place --place-id 53 --country PL --apply
+```
+
+The first command writes nothing; `--apply` repairs that Place, refreshes its
+linked highlights, and retains previous URL aliases. Verify the place ID before
+applying. Saving linked highlights triggers the normal API/SSR cache invalidation.
+The command does not infer countries for other regions or change translated text.
+
+Travel highlight text uses the requested language, then English, and never an
+arbitrary third language. An empty English Highlight Title stays empty in the API,
+allowing the frontend's localized default subtitle. Other models retain their
+existing translation fallback policy. A previously lost English title must be
+restored from its source; clearing caches does not reconstruct it.
+
 ## 🛡️ Security Architecture
 
 We use a defense-in-depth model across the backend, API, and admin surfaces.

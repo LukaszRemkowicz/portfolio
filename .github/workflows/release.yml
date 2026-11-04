@@ -16,7 +16,9 @@ env:
 
 jobs:
   tag-main:
-    uses: LukaszRemkowicz/ci-cd/.github/workflows/release-tag.yml@main
+    uses: LukaszRemkowicz/ci-cd/.github/workflows/pyproject-release-tag.yml@main
+    with:
+      pyproject_file: backend/pyproject.toml
 
   publish-production:
     name: Publish Production Images

@@ -139,7 +139,7 @@ class TravelHighlightsBySlugView(APIView):
                 .prefetch_related("translations")
                 .get()
             )
-        except MainPageLocation.DoesNotExist:
+        except MainPageLocation.DoesNotExist, MainPageLocation.MultipleObjectsReturned:
             return Response(
                 {"detail": _("No highlight found for these parameters.")},
                 status=status.HTTP_404_NOT_FOUND,
