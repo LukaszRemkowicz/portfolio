@@ -281,7 +281,7 @@ services:
   # only: no ports are opened. The public hostname is protected by Cloudflare
   # Access (service token). Not part of deploy.sh; start once after
   # CLOUDFLARE_TUNNEL_TOKEN is in Doppler:
-  #   doppler run -- docker compose -f docker-compose.common.yml -f docker-compose.prod.yml up -d cloudflared
+  #   doppler run -- docker compose -f docker-compose.prod.yml up -d cloudflared
   cloudflared:
     image: cloudflare/cloudflared:2026.10.7
     profiles: ["tunnel"]
