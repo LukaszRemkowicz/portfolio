@@ -64,8 +64,9 @@ jobs:
         PROJECT_OWNER=test
         SESSION_COOKIE_DOMAIN=.example.com
 
+  # Scans and image builds start together with tests instead of waiting for
+  # them (they do not depend on test results); pr-status still waits for all.
   trivy-scan:
-    needs: [frontend-quality, frontend-tests, backend-quality, backend-tests]
     permissions:
       actions: read
       contents: read
@@ -76,7 +77,6 @@ jobs:
     name: Dependency Security Checks
     runs-on: ubuntu-latest
     environment: portfolio_tests
-    needs: [frontend-quality, frontend-tests, backend-tests]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -107,7 +107,6 @@ jobs:
     # builds stop overwriting each other's cache.
     name: Production Image Build Check (${{ matrix.image }})
     runs-on: ubuntu-latest
-    needs: [frontend-quality, frontend-tests, backend-quality, backend-tests, trivy-scan, dependency-security]
     strategy:
       fail-fast: false
       matrix:
