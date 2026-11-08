@@ -175,6 +175,33 @@ For test-only GHCR tags that are not SemVer-like:
 TEST=true TAG=test-feat-add-image-registry-2f0b23d doppler -c dev run -- ./infra/scripts/release/prepare_images.sh
 ```
 
+## 🔌 Cloudflare Tunnel (frontend on Workers)
+
+The Workers frontend (`portfolio-fe`) reaches the backend through the
+`cloudflared` service (profile `tunnel`), which forwards the tunnel hostname to
+`http://be:8000` inside the compose network, as the in-network `fe` does. It
+opens no ports, and `deploy.sh` does not touch it (pinned public image, not
+`${TAG}`).
+
+One-time setup:
+
+1. Cloudflare Zero Trust -> Networks -> Tunnels: create a tunnel and put its
+   token in Doppler as `CLOUDFLARE_TUNNEL_TOKEN`.
+2. Add a public hostname (e.g. `internal-api.<domain>`) -> service
+   `http://be:8000`, with HTTP Host header set to the site domain.
+3. Zero Trust -> Access: application for that hostname with a Service Auth
+   policy and a service token. The token goes to the Worker secrets
+   `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET`.
+4. Start the connector (once; it restarts by itself afterwards):
+
+```bash
+doppler run -- docker compose -f docker-compose.common.yml -f docker-compose.prod.yml up -d cloudflared
+```
+
+Staging: same with `docker-compose.stage.yml` and the staging tunnel token.
+Stop with `docker compose ... stop cloudflared`; the current frontend keeps
+working without it.
+
 ## ↩️ Rollback
 
 1. Check current and previous tags in `/var/lib/portfolio/<environment>/` or your fallback state directory.
