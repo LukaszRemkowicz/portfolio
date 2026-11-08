@@ -275,6 +275,23 @@ services:
       - prod_static_data:/app/staticfiles:ro
       - nginx_blocklist:/etc/nginx/blocklist:ro
 
+  # ---------- Cloudflare Tunnel ----------
+  # Private link for the Cloudflare Workers frontend (portfolio-fe) to reach
+  # the backend like the in-network `fe` does today (http://be:8000). Outbound
+  # only: no ports are opened. The public hostname is protected by Cloudflare
+  # Access (service token). Not part of deploy.sh; start once after
+  # CLOUDFLARE_TUNNEL_TOKEN is in Doppler:
+  #   doppler run -- docker compose -f docker-compose.common.yml -f docker-compose.prod.yml up -d cloudflared
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.7
+    profiles: ["tunnel"]
+    restart: always
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - portfolio_network
+
 volumes:
   postgres18_data:
     name: portfolio_prod_db_data
