@@ -19,6 +19,7 @@ from django.views.decorators.cache import cache_page
 from django.views.static import serve
 
 from astrophotography.views import AstroImageSecureView, ImageURLViewSet
+from common.csp_reports import CspReportView
 from core.sitemaps import (
     AstroGalleryPaginationSitemap,
     AstroImageSitemap,
@@ -55,6 +56,7 @@ def public_sitemap(request, *args, **kwargs):
 
 
 urlpatterns = [
+    path("csp-report/", CspReportView.as_view(), name="csp-report"),
     path("health", health_check_view, name="health"),
     path(
         "image-files/<slug:slug>/serve/",

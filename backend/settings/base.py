@@ -8,6 +8,7 @@ import sentry_sdk
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 
+from django.utils.csp import CSP  # type: ignore[import-untyped]
 from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -182,6 +183,7 @@ MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",  # Must be near the top
     "corsheaders.middleware.CorsMiddleware",  # Must be before CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.csp.ContentSecurityPolicyMiddleware",
     "common.middleware.RequestCorrelationMiddleware",
     "inbox.middleware.ContactFormKillSwitchMiddleware",
     # Check kill switch early (after security, before sessions)
@@ -196,6 +198,21 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+SECURE_CSP_REPORT_ONLY = {
+    "default-src": [CSP.SELF],
+    "script-src": [CSP.SELF],
+    "style-src": [CSP.SELF],
+    "img-src": [CSP.SELF, "data:", "blob:"],
+    "font-src": [CSP.SELF, "data:"],
+    "connect-src": [CSP.SELF],
+    "worker-src": [CSP.SELF, "blob:"],
+    "base-uri": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "object-src": [CSP.NONE],
+    "frame-src": [CSP.NONE],
+    "report-uri": "/csp-report/",
+}
 
 ROOT_URLCONF = "settings.urls"
 
@@ -486,6 +503,7 @@ REST_FRAMEWORK = {
         "contact": "5/hour",  # Contact form - more restrictive
         "api": "200/hour",  # General API calls
         "gallery": "2000/hour",  # Gallery views - relaxed for browsing
+        "csp_report": "30/min",
     },
 }
 
@@ -498,6 +516,7 @@ if DEBUG:
         "contact": "1000/hour",
         "api": "10000/hour",
         "gallery": "100000/hour",
+        "csp_report": "30/min",
     }
 
 # Django Axes Configuration (Admin Login Protection)

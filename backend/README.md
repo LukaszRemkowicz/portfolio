@@ -86,6 +86,13 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
 - **Environment Isolation**: Secure configuration via `django-environ`.
 - **Docker-Locked Environment**: Verified multi-stage builds and restricted `.dockerignore`.
 
+### 5. Django CSP report-only rollout
+Django sends a report-only Content Security Policy on its responses, including the admin. It does not block resources. The policy allows same-origin scripts, styles, connections, fonts, and forms; images may also use `data:` and `blob:`, fonts may use `data:`, and workers may use `blob:`. Objects and frames are denied. The public Worker frontend is a separate rollout and is not covered by this Django policy.
+
+Reports POST anonymously to `/csp-report/`, are limited to 16 KiB and 30 requests per minute per client IP, and are not stored in the database. The backend JSON log event is `csp_violation`; it contains a bounded directive, the blocked origin (or a CSP keyword), and the document URL without credentials, query, or fragment. It omits source file and script sample fields.
+
+Expected report sources include locally served Django/Jazzmin and vendored admin assets, custom app assets under `backend/*/static/`, and inline styles in custom admin templates. Examples include the style blocks in `backend/core/templates/admin/change_list.html`, `backend/shop/templates/admin/shop/shopsettings/robust_change_form.html`, and `backend/translation/templates/admin/parler_dynamic.html`, plus inline style attributes in admin media and widget templates. Treat these as rollout evidence: collect and inspect production `csp_violation` events during normal admin use before proposing exceptions or enabling enforcement. For local Docker logs, use `docker compose logs --follow be | grep '"event": "csp_violation"'`.
+
 ### Technical Features
 - **Modern Stack** - Python 3.14, Django 6.0, and `uv` for dependency management.
 - **Caching** - Redis-backed caching for Django Select2 and internal performance.
