@@ -14,8 +14,8 @@ The frontend lives in [`LukaszRemkowicz/portfolio-fe`](https://github.com/Lukasz
 
 ## 🗂️ Repository Layout
 
-- `backend/` - Django + DRF application, admin, Celery jobs, and media logic
-- `docker/` - Dockerfiles and entrypoints for backend, redis, and nginx
+- `backend/` - Django + DRF application, admin, background threads (`common/background.py`), and media logic
+- `docker/` - Dockerfiles and entrypoints for backend and nginx
 - `infra/` - nginx templates, release scripts, and project docs
 - `screenshots/` - README screenshots
 
@@ -164,7 +164,6 @@ Local hosts:
 - Admin: `https://admin.portfolio.local/`
 - API: `https://api.portfolio.local/` (still available as a backend host, but no longer the normal browser-facing application entrypoint)
 - Django health endpoint: `http://127.0.0.1:8000/health`
-- Flower: `http://127.0.0.1:5555/`
 
 ### 6. Verify local services
 

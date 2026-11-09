@@ -25,6 +25,7 @@ from django.utils import translation
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
+from common.background import submit
 from common.constants import FALLBACK_URL_SLUG
 from common.types import ImageVariantSpec, ViewportWidths
 from core.models import BaseImage, LandingPageSettings, SingletonModel
@@ -641,7 +642,9 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
             and current_default_exposure_details != previous_default_exposure_details
             and self.pk
         ):
-            calculate_astroimage_exposure_hours_task.delay_on_commit(str(self.pk))
+            submit(
+                calculate_astroimage_exposure_hours_task, str(self.pk), retries=2, retry_delay=300
+            )
 
 
 class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):

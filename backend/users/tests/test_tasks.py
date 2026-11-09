@@ -3,6 +3,7 @@ from unittest.mock import patch
 import pytest
 from PIL import Image
 
+from common.tasks import invalidate_frontend_ssr_cache_task
 from common.tests.image_helpers import jpeg_field, png_field
 from core.tasks import process_image_task
 from users.models import User
@@ -17,7 +18,7 @@ def _variant_name(superuser, source_name: str) -> str:
 class TestProcessUserImagesTask:
     def test_process_user_images_task_generates_avatar_variant(self, superuser: User):
         superuser.avatar = jpeg_field("test_avatar.jpg", size=(800, 800))
-        with patch("users.models.process_image_task.delay_on_commit"):
+        with patch("users.models.submit"):
             superuser.save()
 
         process_image_task("users", "User", superuser.pk, ["avatar"])
@@ -33,24 +34,24 @@ class TestProcessUserImagesTask:
         self, mocker, superuser: User
     ):
         superuser.avatar = jpeg_field("test_avatar.jpg", size=(800, 800))
-        with patch("users.models.process_image_task.delay_on_commit"):
+        with patch("users.models.submit"):
             superuser.save()
 
         mock_invalidate_user_cache = mocker.patch(
             "users.signals.CacheService.invalidate_user_cache"
         )
-        mock_invalidate_frontend = mocker.patch(
-            "users.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
-        )
+        mock_invalidate_frontend = mocker.patch("users.signals.submit")
 
         process_image_task("users", "User", superuser.pk, ["avatar"])
 
         mock_invalidate_user_cache.assert_called_once()
-        mock_invalidate_frontend.assert_called_once_with(["profile"])
+        mock_invalidate_frontend.assert_called_once_with(
+            invalidate_frontend_ssr_cache_task, ["profile"]
+        )
 
     def test_process_user_images_task_uses_new_upload_not_stale_original(self, superuser: User):
         superuser.avatar = jpeg_field("old_avatar.jpg", size=(800, 800))
-        with patch("users.models.process_image_task.delay_on_commit"):
+        with patch("users.models.submit"):
             superuser.save()
         process_image_task("users", "User", superuser.pk, ["avatar"])
 
@@ -59,7 +60,7 @@ class TestProcessUserImagesTask:
         assert "old_avatar" in first_variant_name
 
         superuser.avatar = jpeg_field("new_avatar.jpg", size=(800, 800))
-        with patch("users.models.process_image_task.delay_on_commit"):
+        with patch("users.models.submit"):
             superuser.save()
         process_image_task("users", "User", superuser.pk, ["avatar"])
 
@@ -71,7 +72,7 @@ class TestProcessUserImagesTask:
 
     def test_process_user_images_task_handles_cropped_png_avatar_upload(self, superuser: User):
         superuser.avatar = png_field("cropped_avatar.png", size=(280, 280))
-        with patch("users.models.process_image_task.delay_on_commit"):
+        with patch("users.models.submit"):
             superuser.save()
 
         process_image_task("users", "User", superuser.pk, ["avatar"])
@@ -86,7 +87,7 @@ class TestProcessUserImagesTask:
     def test_process_user_images_task_prefers_cropped_image_when_present(self, superuser: User):
         superuser.avatar = jpeg_field("original_avatar.jpg")
         superuser.avatar_cropped = png_field("cropped_avatar.png", size=(280, 280))
-        with patch("users.models.process_image_task.delay_on_commit"):
+        with patch("users.models.submit"):
             superuser.save()
 
         process_image_task("users", "User", superuser.pk, ["avatar"])
@@ -101,7 +102,7 @@ class TestProcessUserImagesTask:
     def test_process_user_images_task_preserves_transparent_avatar_crop(self, superuser: User):
         superuser.avatar = jpeg_field("original_avatar.jpg")
         superuser.avatar_cropped = png_field("transparent_avatar.png", mode="RGBA", size=(280, 280))
-        with patch("users.models.process_image_task.delay_on_commit"):
+        with patch("users.models.submit"):
             superuser.save()
 
         process_image_task("users", "User", superuser.pk, ["avatar"])

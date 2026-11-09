@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 from django.template.loader import render_to_string
 
+from common.background import submit
 from common.tasks import send_email_task
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ class EmailService:
     @staticmethod
     def send_async(subject: str, html_content: str) -> None:
         """
-        Dispatch email to async Celery task.
+        Dispatch email to a background thread.
 
         This is the common interface for all email sending across the application.
 
@@ -28,7 +29,7 @@ class EmailService:
             html_content: Rendered HTML email body
         """
         logger.debug("Dispatching email to async task: %s", subject)
-        send_email_task.delay(html_content=html_content, subject=subject)
+        submit(send_email_task, html_content=html_content, subject=subject, retries=3)
 
 
 class BaseEmailService(ABC):

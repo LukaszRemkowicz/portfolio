@@ -5,7 +5,6 @@ from typing import Any, cast
 
 import environ
 import sentry_sdk
-from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 
 from django.core.exceptions import ImproperlyConfigured
@@ -39,7 +38,6 @@ if SENTRY_DSN and ENABLE_SENTRY:
         dsn=SENTRY_DSN,
         integrations=[
             DjangoIntegration(),
-            CeleryIntegration(),
         ],
         # Set traces_sample_rate to 1.0 to capture 100%
         # of transactions for performance monitoring.
@@ -353,28 +351,19 @@ if MEDIA_STORAGE == "r2":
     }
     CKEDITOR_5_FILE_STORAGE = "common.storage.CKEditorR2Storage"
 
-# Cache Configuration (Redist for production-grade caching)
-_redis_pwd = env.str("REDIS_PASSWORD", default="")
-_redis_auth = f":{_redis_pwd}@" if _redis_pwd else ""
-
+# Cache Configuration (database-backed; create tables with `manage.py createcachetable`)
+# MAX_ENTRIES is high because API responses are cached for 30 days (default 300 would cull them).
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": env.str("REDIS_URL", default=f"redis://{_redis_auth}redis:6379/1"),
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache",
         "TIMEOUT": 3600,
-        "OPTIONS": {
-            "socket_connect_timeout": 0.2,
-            "socket_timeout": 0.2,
-        },
+        "OPTIONS": {"MAX_ENTRIES": 10000},
     },
     "select2": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": env.str("REDIS_URL", default=f"redis://{_redis_auth}redis:6379/2"),
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_select2_cache",
         "TIMEOUT": 3600,
-        "OPTIONS": {
-            "socket_connect_timeout": 0.2,
-            "socket_timeout": 0.2,
-        },
     },
 }
 
@@ -444,11 +433,6 @@ LOGGING = {
         "django.db.backends": {
             "handlers": ["console"],
             "level": env.str("DB_LOG_LEVEL", default="WARNING"),
-            "propagate": False,
-        },
-        "celery": {
-            "handlers": ["console"],
-            "level": env.str("CELERY_LOG_LEVEL", default="INFO"),
             "propagate": False,
         },
         "axes": {
@@ -699,55 +683,12 @@ ADMIN_SITE_ORDERING = (
 )
 
 # ===========================
-# Celery Beat (Periodic Tasks)
+# Background tasks (in-process thread pool, see common/background.py)
 # ===========================
 
-
-CELERY_BEAT_SCHEDULE: dict[str, Any] = {}
-
-# ===========================
-# Celery Configuration
-# ===========================
-
-# Redis connection for Celery broker and result backend
-_celery_redis_auth = f":{_redis_pwd}@" if _redis_pwd else ""
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=f"redis://{_celery_redis_auth}redis:6379/0")
-CELERY_RESULT_BACKEND = env(
-    "CELERY_RESULT_BACKEND", default=f"redis://{_celery_redis_auth}redis:6379/0"
-)
-
-# Celery task settings
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = TIME_ZONE
-CELERY_TASK_PUBLISH_RETRY = True
-CELERY_TASK_PUBLISH_RETRY_POLICY = {
-    "max_retries": 1,
-    "interval_start": 0,
-    "interval_step": 0.2,
-    "interval_max": 0.2,
-}
-CELERY_BROKER_TRANSPORT_OPTIONS = {
-    "socket_connect_timeout": 0.2,
-    "socket_timeout": 0.2,
-    "max_retries": 1,
-}
-
-# Task Routing
-CELERY_TASK_ROUTES: dict[str, Any] = {}
-
-# Task execution settings
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
-CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes
-
-# Result backend settings
-CELERY_RESULT_EXPIRES = 3600  # 1 hour
-
-# Worker settings
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
+BACKGROUND_TASK_WORKERS = env.int("BACKGROUND_TASK_WORKERS", default=4)
+# Run tasks inline instead of in a thread (used by tests)
+BACKGROUND_TASKS_SYNC = False
 
 
 # ===========================

@@ -69,11 +69,8 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
-# Celery test settings
-CELERY_TASK_ALWAYS_EAGER = True
-CELERY_TASK_EAGER_PROPAGATES = True
-CELERY_BROKER_URL = "memory://"
-CELERY_RESULT_BACKEND = "cache+memory://"
+# Run background tasks inline so exceptions propagate
+BACKGROUND_TASKS_SYNC = True
 
 # Disable logging during tests
 LOGGING_CONFIG = None

@@ -140,21 +140,21 @@ class TestContactSubmissionService:
     def test_finalize_submission(
         self, mocker: MockerFixture, contact_message: ContactMessage
     ) -> None:
-        """Test that finalize_submission triggers Celery task and logs success"""
+        """Test that finalize_submission triggers background task and logs success"""
         mock_enqueue = mocker.patch("inbox.services.ContactSubmissionService._enqueue_email_task")
 
         ContactSubmissionService.finalize_submission(contact_message, "127.0.0.1")
         mock_enqueue.assert_called_once_with(contact_message.id)
 
-    def test_enqueue_email_task_broker_failure_does_not_raise(
+    def test_enqueue_email_task_submit_failure_does_not_raise(
         self,
         mocker: MockerFixture,
         mock_inbox_service_logger: MagicMock,
         contact_message: ContactMessage,
     ) -> None:
-        """Broker failures should be logged without raising."""
-        mock_apply_async = mocker.patch("inbox.services.send_notification_email_task.apply_async")
-        mock_apply_async.side_effect = Exception("Broker unavailable")
+        """Submit failures should be logged without raising."""
+        mock_apply_async = mocker.patch("inbox.services.submit")
+        mock_apply_async.side_effect = Exception("Executor unavailable")
 
         ContactSubmissionService._enqueue_email_task(contact_message.id)
 
@@ -162,7 +162,7 @@ class TestContactSubmissionService:
         args, _ = mock_inbox_service_logger.warning.call_args
         assert args[0] == "Failed to enqueue contact email task for message ID=%s: %s"
         assert args[1] == contact_message.id
-        assert str(args[2]) == "Broker unavailable"
+        assert str(args[2]) == "Executor unavailable"
 
     def test_log_incoming_data_masking(self, mock_inbox_service_logger: MagicMock) -> None:
         """Test log masking for emails and long messages"""

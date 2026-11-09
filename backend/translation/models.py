@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 
 class TranslationTask(models.Model):
-    """Tracks status of Celery translation tasks."""
+    """Tracks status of background translation tasks."""
 
     class Status(models.TextChoices):
         PENDING = "PENDING", _("Pending")

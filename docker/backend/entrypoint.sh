@@ -14,12 +14,6 @@ if [ "$(id -u)" = "0" ]; then
             find /app/media -user appuser -exec chmod u+rwX {} + 2>/dev/null || true
         fi
 
-        # Fix celerybeat schedule file permissions
-        if [ -d /app/celerybeat ]; then
-            echo "[entrypoint] fixing celerybeat permissions..."
-            chown -R appuser:appuser /app/celerybeat 2>/dev/null || true
-        fi
-
         # Fix staticfiles permissions
         if [ -d /app/staticfiles ]; then
             echo "[entrypoint] fixing staticfiles permissions..."

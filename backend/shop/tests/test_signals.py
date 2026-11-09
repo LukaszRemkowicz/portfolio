@@ -9,6 +9,7 @@ when ShopProduct instances and their translations change.
 import pytest
 from pytest_mock import MockerFixture
 
+from common.tasks import invalidate_frontend_ssr_cache_task
 from common.tests.image_helpers import png_field
 from shop.models import ShopSettings
 from shop.tests.factories import ShopProductFactory
@@ -26,9 +27,9 @@ class TestShopProductSignals:
 
     def test_post_save_triggers_ssr_cache_invalidation(self, mocker: MockerFixture):
         """SSR cache tag 'shop' is dispatched on every save."""
-        mock_ssr = mocker.patch("shop.signals.invalidate_frontend_ssr_cache_task.delay_on_commit")
+        mock_ssr = mocker.patch("shop.signals.submit")
         ShopProductFactory()
-        mock_ssr.assert_called_with(["shop"])
+        mock_ssr.assert_called_with(invalidate_frontend_ssr_cache_task, ["shop"])
 
     def test_post_delete_invalidates_shop_cache(self, mocker: MockerFixture):
         """Deleting a product clears the backend shop cache."""
@@ -43,10 +44,10 @@ class TestShopProductSignals:
         """Deleting a product triggers SSR cache invalidation with 'shop' tag."""
         product = ShopProductFactory()
 
-        mock_ssr = mocker.patch("shop.signals.invalidate_frontend_ssr_cache_task.delay_on_commit")
+        mock_ssr = mocker.patch("shop.signals.submit")
         product.delete()
 
-        mock_ssr.assert_called_with(["shop"])
+        mock_ssr.assert_called_with(invalidate_frontend_ssr_cache_task, ["shop"])
 
     def test_update_also_invalidates_cache(self, mocker: MockerFixture):
         """Updating an existing product (not just creation) clears the cache."""
@@ -71,11 +72,11 @@ class TestShopSettingsSignals:
         assert mock_cache.called
 
     def test_post_save_triggers_ssr_cache_invalidation(self, mocker: MockerFixture):
-        mock_ssr = mocker.patch("shop.signals.invalidate_frontend_ssr_cache_task.delay_on_commit")
+        mock_ssr = mocker.patch("shop.signals.submit")
 
         ShopSettings.objects.create(image=png_field("shop-background.png"))
 
-        mock_ssr.assert_called_with(["shop"])
+        mock_ssr.assert_called_with(invalidate_frontend_ssr_cache_task, ["shop"])
 
     def test_update_also_invalidates_cache(self, mocker: MockerFixture):
         settings_obj = ShopSettings.objects.create(image=png_field("shop-background.png"))

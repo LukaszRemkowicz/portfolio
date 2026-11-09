@@ -171,9 +171,8 @@ docker build \
   -f docker/backend/Dockerfile \
   --target production \
   -t "${ENVIRONMENT}-be:${TAG}" \
-  -t "${ENVIRONMENT}-worker:${TAG}" \
   .
-echo "✅ Backend & Worker images built"
+echo "✅ Backend image built"
 
 # ---------------- Nginx ----------------
 echo "🌍 Building nginx release image..."
@@ -189,7 +188,7 @@ echo "✅ Nginx image built"
 # Verify Built Images
 # ------------------------------------------------------------------
 echo "📦 Built images:"
-if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${ENVIRONMENT}-(be|worker|nginx):${TAG}"; then
+if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${ENVIRONMENT}-(be|nginx):${TAG}"; then
   echo "❌ ERROR: Expected built images were not found after build."
   echo "👉 Check image naming in infra/scripts/README.md"
   exit 1
@@ -223,7 +222,7 @@ echo "📌 Keeping tags: build=$TAG current=${CURRENT_TAG:-none} prev=${PREV_TAG
 # Retention Policy - Keep last 5 versions for each service image.
 # ------------------------------------------------------------------
 KEEP_IMAGES=5
-REPOS=("${ENVIRONMENT}-be" "${ENVIRONMENT}-worker" "${ENVIRONMENT}-nginx")
+REPOS=("${ENVIRONMENT}-be" "${ENVIRONMENT}-nginx")
 
 prune_local_images "${ENVIRONMENT}" "${KEEP_IMAGES}" "${TAG}" "${CURRENT_TAG}" "${PREV_TAG}" "${REPOS[@]}"
 

@@ -7,8 +7,6 @@
 #   the names expected by compose, release.sh, and deploy.sh. This mirrors the
 #   production prepare_images.sh flow while using the staging image namespace and
 #   the constant staging tag produced by the Publish Staging Images workflow.
-#   The celery worker uses the same backend artifact, so this script creates the
-#   local stage-worker tag from the pulled stage-be image.
 #
 # Usage:
 #   doppler run -- ./prepare_staging_images.sh
@@ -41,8 +39,8 @@ GHCR_REGISTRY="${GHCR_REGISTRY:-ghcr.io}"
 REMOTE_PREFIX="stage"
 LOCAL_PREFIX="${ENVIRONMENT}"
 REMOTE_SERVICES=("be" "nginx")
-LOCAL_SERVICES=("be" "worker" "nginx")
-REGISTRY_ALIAS_SERVICES=("be" "worker" "nginx")
+LOCAL_SERVICES=("be" "nginx")
+REGISTRY_ALIAS_SERVICES=("be" "nginx")
 STATE_DIR="$(get_state_dir "${ENVIRONMENT}")"
 DIGEST_FILE="${STATE_DIR}/prepared_image_digests.env"
 CURRENT_FILE="${STATE_DIR}/current_tag"
@@ -137,13 +135,6 @@ prepare_registry_images() {
     docker tag "${remote_image}" "${local_image}"
     record_digest "${remote_image}" "${local_image}" "${digest_key}"
 
-    if [[ "${svc}" == "be" ]]; then
-      local worker_image="${LOCAL_PREFIX}-worker:${TAG}"
-      echo "🏷️ Tagging ${local_image} -> ${worker_image}"
-      docker tag "${local_image}" "${worker_image}"
-      record_digest "${remote_image}" "${worker_image}" "WORKER"
-    fi
-
     remove_remote_tag "${remote_image}"
   done
 }
@@ -163,7 +154,7 @@ prepare_registry_images
 verify_local_images
 cleanup_registry_aliases
 prune_local_images "${ENVIRONMENT}" "${KEEP_IMAGES}" "${TAG}" "$(cat "${CURRENT_FILE}" 2>/dev/null || true)" "$(cat "${PREV_FILE}" 2>/dev/null || true)" \
-  "${LOCAL_PREFIX}-be" "${LOCAL_PREFIX}-worker" "${LOCAL_PREFIX}-nginx"
+  "${LOCAL_PREFIX}-be" "${LOCAL_PREFIX}-nginx"
 
 echo "🎉 Staging image preparation completed for TAG=${TAG}"
 if [[ -f "${DIGEST_FILE}" ]]; then

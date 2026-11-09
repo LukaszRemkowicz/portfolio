@@ -40,7 +40,6 @@ x-backend-defaults: &backend-defaults
     SENTRY_DSN: ${SENTRY_DSN}
     ENVIRONMENT: prod
     PROJECT_OWNER: ${PROJECT_OWNER}
-    REDIS_PASSWORD: ${REDIS_PASSWORD}
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
     SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
@@ -49,8 +48,6 @@ x-backend-defaults: &backend-defaults
   depends_on:
     db:
       condition: service_healthy
-    redis:
-      condition: service_started
 
 networks:
   portfolio_network:
@@ -107,53 +104,6 @@ services:
       db:
         condition: service_healthy
 
-  # ---------- Redis ----------
-  redis:
-    build:
-      context: ./docker/redis
-    restart: always
-    networks:
-      - portfolio_network
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping || redis-cli ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  # ---------- Celery Worker ----------
-  celery-worker:
-    init: true
-    <<: *backend-defaults
-    image: ${ENVIRONMENT}-be:${TAG}
-    restart: always
-    command: celery -A settings worker -l info -Q celery --concurrency=${CELERY_WORKERS:-4}
-    volumes:
-      - prod_media_data:/app/media
-      - prod_static_data:/app/staticfiles
-    healthcheck:
-      # The ping boots Celery + Django (~13s at full CPU on the VPS), so run it rarely.
-      test: ["CMD-SHELL", "exec celery -A settings inspect --timeout 5 ping -d celery@$$HOSTNAME"]
-      interval: 5m
-      timeout: 30s
-      retries: 3
-      start_period: 30s
-
-  # ---------- Celery Beat ----------
-  celery-beat:
-    <<: *backend-defaults
-    image: ${ENVIRONMENT}-be:${TAG}
-    profiles: ["manual-beat"]
-    restart: always
-    command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
-    environment:
-      <<: *backend-defaults-env
-    volumes:
-      - prod_media_data:/app/media
-      - prod_static_data:/app/staticfiles
-      - celerybeat_data:/app/celerybeat
-
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
@@ -180,6 +130,7 @@ services:
     command: >
       sh -c "
         python manage.py migrate --noinput &&
+        python manage.py createcachetable &&
         python scripts/release_entrypoint.py &&
         python manage.py collectstatic --noinput
       "
@@ -272,9 +223,6 @@ volumes:
     external: true
   prod_static_data:
     name: portfolio_prod_static_data
-    external: true
-  celerybeat_data:
-    name: portfolio_prod_celerybeat_data
     external: true
   nginx_blocklist:
     name: portfolio_prod_nginx_blocklist

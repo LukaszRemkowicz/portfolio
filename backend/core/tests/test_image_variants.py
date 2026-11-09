@@ -6,6 +6,7 @@ from PIL import Image
 
 from astrophotography.serializers import AstroImageSerializer
 from astrophotography.tests.factories import AstroImageFactory, MainPageBackgroundImageFactory
+from common.tasks import invalidate_frontend_ssr_cache_task
 from common.tests.image_helpers import jpeg_field
 from common.types import ImageVariantSource, ImageVariantSpec, ViewportWidths
 from core.mixins import ImageVariantModelMixin
@@ -93,7 +94,7 @@ class TestImageVariantFileDeletion:
 @pytest.mark.django_db
 class TestImageVariantCacheInvalidation:
     def test_astroimage_variant_save_invalidates_gallery_travel_and_ssr_cache(self, mocker) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(original=jpeg_field("variant-cache.jpg", size=(1200, 800)))
         mock_invalidate_astro = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
@@ -101,9 +102,7 @@ class TestImageVariantCacheInvalidation:
         mock_invalidate_travel = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_travel_cache"
         )
-        mock_invalidate_ssr = mocker.patch(
-            "astrophotography.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
-        )
+        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
 
         ImageVariant.objects.create(
             owner=image,
@@ -115,12 +114,14 @@ class TestImageVariantCacheInvalidation:
 
         mock_invalidate_astro.assert_called_once_with()
         mock_invalidate_travel.assert_called_once_with()
-        mock_invalidate_ssr.assert_called_once_with(["latest-astro-images", "travel-highlights"])
+        mock_invalidate_ssr.assert_called_once_with(
+            invalidate_frontend_ssr_cache_task, ["latest-astro-images", "travel-highlights"]
+        )
 
     def test_astroimage_variant_delete_invalidates_gallery_travel_and_ssr_cache(
         self, mocker
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(original=jpeg_field("variant-cache-delete.jpg"))
         variant = ImageVariant.objects.create(
             owner=image,
@@ -135,27 +136,25 @@ class TestImageVariantCacheInvalidation:
         mock_invalidate_travel = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_travel_cache"
         )
-        mock_invalidate_ssr = mocker.patch(
-            "astrophotography.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
-        )
+        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
 
         variant.delete()
 
         mock_invalidate_astro.assert_called_once_with()
         mock_invalidate_travel.assert_called_once_with()
-        mock_invalidate_ssr.assert_called_once_with(["latest-astro-images", "travel-highlights"])
+        mock_invalidate_ssr.assert_called_once_with(
+            invalidate_frontend_ssr_cache_task, ["latest-astro-images", "travel-highlights"]
+        )
 
     def test_background_variant_save_invalidates_background_ssr_cache(self, mocker) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = MainPageBackgroundImageFactory(
                 original=jpeg_field("background-cache.jpg", size=(1200, 800))
             )
         mock_invalidate_astro = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
         )
-        mock_invalidate_ssr = mocker.patch(
-            "astrophotography.signals.invalidate_frontend_ssr_cache_task.delay_on_commit"
-        )
+        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
 
         ImageVariant.objects.create(
             owner=image,
@@ -166,7 +165,9 @@ class TestImageVariantCacheInvalidation:
         )
 
         mock_invalidate_astro.assert_called_once_with()
-        mock_invalidate_ssr.assert_called_once_with(["background"])
+        mock_invalidate_ssr.assert_called_once_with(
+            invalidate_frontend_ssr_cache_task, ["background"]
+        )
 
 
 class TestImageVariantSpec:
@@ -355,7 +356,7 @@ class TestBaseImageVariants:
     def test_process_image_task_generates_astroimage_high_resolution_variant(
         self,
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("legacy-original.jpg", size=(3000, 2000)),
             )
@@ -371,7 +372,7 @@ class TestBaseImageVariants:
         assert _stored_output_image_size(image, high_resolution.file.name) == (1920, 1280)
 
     def test_process_image_task_generates_responsive_variants_preserving_aspect_ratio(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("nebula.jpg", size=(3000, 2000)),
             )
@@ -397,7 +398,7 @@ class TestBaseImageVariants:
             )
 
     def test_process_image_task_generates_required_variants_for_small_sources(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("tiny.jpg", size=(100, 100)),
             )
@@ -415,7 +416,7 @@ class TestBaseImageVariants:
         assert image.get_image_url("thumbnail", 100) == thumbnail_variant.file.url
 
     def test_incremental_sync_preserves_migrated_high_resolution_file_path(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("migrated-high-resolution.jpg", size=(1200, 800)),
             )
@@ -441,7 +442,7 @@ class TestBaseImageVariants:
         assert variant.file.storage.exists(legacy_path)
 
     def test_main_page_background_generates_hero_variants(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = MainPageBackgroundImageFactory(
                 original=jpeg_field("milky-way.jpg", size=(2600, 1734)),
             )
@@ -462,7 +463,7 @@ class TestBaseImageVariants:
         assert original_format_count == 0
 
     def test_variant_filenames_change_when_source_file_changes(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("first.jpg", size=(1200, 800)),
             )
@@ -471,7 +472,7 @@ class TestBaseImageVariants:
         image.refresh_from_db()
         first_names = {variant.file.name for variant in image.variants.filter(role="thumbnail")}
 
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image.original = jpeg_field("second.jpg", size=(1200, 800))
             image.save()
 
@@ -483,7 +484,7 @@ class TestBaseImageVariants:
         assert first_names.isdisjoint(second_names)
 
     def test_generates_only_missing_variants_without_force(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("missing-only.jpg", size=(3000, 2000)),
             )
@@ -509,7 +510,7 @@ class TestBaseImageVariants:
         assert updated_by_width[1280] != existing_by_width[1280]
 
     def test_has_pending_image_variant_sync_tracks_missing_and_stale_variants(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("pending-sync.jpg", size=(1200, 800)),
             )
@@ -527,7 +528,7 @@ class TestBaseImageVariants:
         assert image.has_pending_image_variant_sync() is True
 
     def test_sync_image_variants_clears_stale_variants_when_source_is_missing(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("missing-source-clear.jpg", size=(1200, 800)),
             )
@@ -545,7 +546,7 @@ class TestBaseImageVariants:
         assert all(not image.original.storage.exists(name) for name in variant_names)
 
     def test_rebuilds_stale_variant_files_without_force(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("stale-source-file.jpg", size=(1200, 800)),
             )
@@ -567,7 +568,7 @@ class TestBaseImageVariants:
         assert image.original.storage.exists(new_thumbnail.file.name)
 
     def test_deletes_stale_variants_without_recreating_valid_variants(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("stale-only.jpg", size=(1200, 800)),
             )
@@ -598,7 +599,7 @@ class TestBaseImageVariants:
         } == existing_names
 
     def test_force_rebuilds_all_variants(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("force.jpg", size=(3000, 2000)),
             )
@@ -624,7 +625,7 @@ class TestBaseImageVariants:
         assert all(not image.original.storage.exists(name) for name in first_names)
 
     def test_force_clears_existing_variants_before_rebuild_failure(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("force-failure.jpg", size=(1200, 800)),
             )
@@ -644,7 +645,7 @@ class TestBaseImageVariants:
         assert all(not image.original.storage.exists(name) for name in existing_names)
 
     def test_variant_instance_delete_removes_stored_file(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("delete-instance.jpg", size=(3000, 2000)),
             )
@@ -662,7 +663,7 @@ class TestBaseImageVariants:
         assert not image.original.storage.exists(variant_name)
 
     def test_variant_queryset_delete_removes_stored_files(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("delete-files.jpg", size=(3000, 2000)),
             )
@@ -679,7 +680,7 @@ class TestBaseImageVariants:
         assert all(not image.original.storage.exists(name) for name in variant_names)
 
     def test_project_image_specs_create_original_format_variant(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = ProjectImageFactory(
                 original=jpeg_field("project.jpg", size=(1200, 800)),
             )
@@ -693,7 +694,7 @@ class TestBaseImageVariants:
         assert original_format.height == 800
 
     def test_list_serializer_exposes_fallback_image(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("thumbnail.jpg", size=(1200, 800)),
             )
@@ -711,7 +712,7 @@ class TestBaseImageVariants:
         assert image.original.url not in str(data)
 
     def test_get_image_url_returns_generated_thumbnail_variant(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("thumbnail-url.jpg", size=(1200, 800)),
             )
@@ -725,7 +726,7 @@ class TestBaseImageVariants:
     def test_get_variant_candidates_prefers_exact_width_then_largest_existing_width(
         self,
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("available-detail.jpg", size=(3000, 2000)),
             )
@@ -753,7 +754,7 @@ class TestBaseImageVariants:
         ]
 
     def test_get_variant_payload_reuses_candidates_for_fallback_and_variants(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("variant-payload.jpg", size=(3000, 2000)),
             )
@@ -783,7 +784,7 @@ class TestBaseImageVariants:
     def test_get_variant_payload_returns_empty_public_shape_when_variants_missing(
         self,
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("missing-payload.jpg", size=(1200, 800)),
             )
@@ -794,7 +795,7 @@ class TestBaseImageVariants:
         }
 
     def test_get_image_url_does_not_fall_back_to_astroimage_source(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("thumbnail-missing.jpg", size=(1200, 800)),
             )
@@ -806,7 +807,7 @@ class TestBaseImageVariants:
         assert image.get_image_url("thumbnail", 560) is None
 
     def test_namespaced_variant_sources_sync_only_requested_changed_fields(self) -> None:
-        with patch("users.models.process_image_task.delay_on_commit"):
+        with patch("users.models.submit"):
             user = UserFactory.create_superuser()
             user.avatar = jpeg_field("avatar.jpg", size=(800, 800))
             user.about_me_image = jpeg_field("portrait.jpg", size=(900, 900))
@@ -865,7 +866,7 @@ class TestBaseImageVariants:
         )
 
     def test_source_width_raises_when_existing_file_dimensions_cannot_be_read(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("bad-dimensions.jpg", size=(1200, 800)),
             )

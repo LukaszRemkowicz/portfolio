@@ -4,10 +4,12 @@ import uuid
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.db import models, transaction
+from django.db import models
 from django.forms import BaseModelForm, Media
 from django.http import HttpRequest
 from django.utils.safestring import mark_safe
+
+from common.background import submit
 
 from .models import TranslationTask
 from .services import TranslationService
@@ -178,11 +180,12 @@ class AutomatedTranslationModelMixin:
             },
         )
 
-        transaction.on_commit(
-            lambda: translate_instance_task.apply_async(
-                kwargs=task_kwargs,
-                task_id=task_id,
-            )
+        submit(
+            translate_instance_task,
+            retries=3,
+            retry_delay=60,
+            task_id=task_id,
+            **task_kwargs,
         )
         return task_id
 

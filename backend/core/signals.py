@@ -1,6 +1,7 @@
 from django.db.models.signals import m2m_changed, post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
+from common.background import submit
 from common.tasks import invalidate_frontend_ssr_cache_task
 from core.cache_service import CacheService
 
@@ -30,7 +31,7 @@ def invalidate_settings_cache(sender, instance, **kwargs):
     CacheService.invalidate_shop_cache()
 
     # 2. Clear Frontend SSR Cache (Async)
-    invalidate_frontend_ssr_cache_task.delay_on_commit(["settings", "latest-astro-images", "shop"])
+    submit(invalidate_frontend_ssr_cache_task, ["settings", "latest-astro-images", "shop"])
 
 
 @receiver(m2m_changed, sender=LandingPageSettings.latest_filters.through)
