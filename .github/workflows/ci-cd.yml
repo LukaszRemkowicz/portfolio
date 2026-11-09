@@ -92,11 +92,11 @@ jobs:
           cache-from: type=gha,scope=image-${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=image-${{ matrix.image }}
 
-      - name: Test Nginx text resources
+      - name: Nginx integration tests
         if: matrix.image == 'nginx'
         env:
           NGINX_TEST_IMAGE: landingpage-nginx-text-resources:ci
-        run: python3 -m unittest infra.nginx.tests.test_text_resources -v
+        run: python3 -m unittest discover -s infra/nginx/tests -p 'test_*.py' -v
 
   pr-status:
     needs: [backend-quality, backend-tests, trivy-scan, dependency-security, image-build-check]
