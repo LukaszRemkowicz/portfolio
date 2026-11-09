@@ -431,10 +431,10 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
     source_tracker = FieldTracker(fields=["original"])
     image_variant_specs = (
         ImageVariantSpec(
-            role="original_format",
+            role="high_resolution",
             viewport_widths=ViewportWidths.fixed(1920),
             quality=90,
-            label="Astrophotography project-format full-image display candidate",
+            label="Astrophotography private high-resolution display candidate",
         ),
         ImageVariantSpec(
             role="thumbnail",
@@ -575,6 +575,10 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
     def base_upload_dir(self) -> str:
         """Store all astro image variants under the images directory."""
         return "images"
+
+    def get_image_url(self, role: str, width: int) -> str | None:
+        """Return a generated variant URL without falling back to the private source."""
+        return self.get_variant_url(role, width)
 
     def __str__(self) -> str:
         name = self.safe_translation_getter("name", any_language=True)

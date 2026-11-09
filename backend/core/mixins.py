@@ -19,6 +19,7 @@ from common.utils.image import (
     build_image_variant_file_path,
     build_image_with_given_width,
     file_exists_in_storage,
+    file_is_available,
 )
 
 type ImageVariantTarget = tuple[str, int, int]
@@ -107,7 +108,9 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
             changed_variant_count += self._sync_variants_for_source(source, force=effective_force)
         return changed_variant_count
 
-    required_variant_roles = frozenset({"background", "original_format", "thumbnail"})
+    required_variant_roles = frozenset(
+        {"background", "high_resolution", "original_format", "thumbnail"}
+    )
 
     def has_pending_image_variant_sync(self, changed_field_names: list[str] | None = None) -> bool:
         """Return whether any selected source family is out of sync with storage.
@@ -331,7 +334,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
             width=width,
         ).exclude(file="")
         for variant in variants:
-            if file_exists_in_storage(variant.file):
+            if file_is_available(variant.file):
                 return cast(ImageFieldFile, variant.file)
         return None
 
@@ -393,7 +396,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
                 "mime_type": variant.mime_type,
             }
             for variant in variants
-            if file_exists_in_storage(variant.file)
+            if file_is_available(variant.file)
         ]
 
         if preferred_width is None:

@@ -19,7 +19,7 @@ from django.utils.translation import gettext_lazy as _
 
 from common.decorators.cache import cache_response
 from common.throttling import GalleryRateThrottle
-from common.utils.image import file_exists_in_storage
+from common.utils.image import file_is_available
 from common.utils.signing import generate_signed_url_params
 from core.views import GenericAdminSecureMediaView, SecureMediaView
 
@@ -192,7 +192,7 @@ class CelestialObjectCategoriesView(APIView):
 
 
 class AstroImageSecureView(SecureMediaView):
-    secure_variant_roles = ("original_format", "detail")
+    secure_variant_roles = ("high_resolution",)
 
     def get_object(self) -> AstroImage:
         slug: str = str(self.kwargs.get("slug"))
@@ -207,21 +207,13 @@ class AstroImageSecureView(SecureMediaView):
         )
         for role in self.secure_variant_roles:
             for variant in variants:
-                if variant.role == role and file_exists_in_storage(variant.file):
+                if variant.role == role and file_is_available(variant.file):
                     return str(variant.file.name)
         return ""
 
     def get_file_path(self, obj: Model) -> str:
         assert isinstance(obj, AstroImage)
-        serving_field = obj.get_original_image()
-        if not serving_field:
-            return ""
-
-        variant_file_path = self.get_variant_file_path(obj)
-        if variant_file_path:
-            return variant_file_path
-
-        return str(serving_field.name)
+        return self.get_variant_file_path(obj)
 
     def get_signature_id(self) -> str:
         return str(self.kwargs.get("slug", ""))

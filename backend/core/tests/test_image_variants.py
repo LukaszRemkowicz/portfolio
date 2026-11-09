@@ -352,7 +352,7 @@ class TestImageVariantMixinCompatibility:
 
 @pytest.mark.django_db
 class TestBaseImageVariants:
-    def test_process_image_task_generates_astroimage_original_format_variant(
+    def test_process_image_task_generates_astroimage_high_resolution_variant(
         self,
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -363,12 +363,12 @@ class TestBaseImageVariants:
         process_image_task("astrophotography", "AstroImage", image.pk)
 
         image.refresh_from_db()
-        original_format = image.variants.get(role="original_format")
-        assert original_format.width == 1920
-        assert original_format.height == 1280
-        assert original_format.mime_type == "image/webp"
-        assert original_format.file.name.startswith("images/original_format/")
-        assert _stored_output_image_size(image, original_format.file.name) == (1920, 1280)
+        high_resolution = image.variants.get(role="high_resolution")
+        assert high_resolution.width == 1920
+        assert high_resolution.height == 1280
+        assert high_resolution.mime_type == "image/webp"
+        assert high_resolution.file.name.startswith("images/high_resolution/")
+        assert _stored_output_image_size(image, high_resolution.file.name) == (1920, 1280)
 
     def test_process_image_task_generates_responsive_variants_preserving_aspect_ratio(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -405,14 +405,40 @@ class TestBaseImageVariants:
         process_image_task("astrophotography", "AstroImage", image.pk)
 
         image.refresh_from_db()
-        original_format = image.variants.get(role="original_format")
+        high_resolution = image.variants.get(role="high_resolution")
         thumbnail_variant = image.variants.get(role="thumbnail")
 
-        assert original_format.width == 100
-        assert original_format.height == 100
+        assert high_resolution.width == 100
+        assert high_resolution.height == 100
         assert thumbnail_variant.width == 100
         assert thumbnail_variant.height == 100
         assert image.get_image_url("thumbnail", 100) == thumbnail_variant.file.url
+
+    def test_incremental_sync_preserves_migrated_high_resolution_file_path(self) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            image = AstroImageFactory(
+                original=jpeg_field("migrated-high-resolution.jpg", size=(1200, 800)),
+            )
+
+        process_image_task("astrophotography", "AstroImage", image.pk)
+        image.refresh_from_db()
+        variant = image.variants.get(role__in=["original_format", "high_resolution"])
+        legacy_path = variant.file.name.replace("/high_resolution/", "/original_format/")
+        if variant.file.name != legacy_path:
+            storage = variant.file.storage
+            with storage.open(variant.file.name, "rb") as generated_file:
+                storage.save(legacy_path, generated_file)
+            storage.delete(variant.file.name)
+            ImageVariant.objects.filter(pk=variant.pk).update(file=legacy_path)
+        ImageVariant.objects.filter(pk=variant.pk).update(role="high_resolution")
+
+        changed_count = image.sync_image_variants()
+
+        variant.refresh_from_db()
+        assert changed_count == 0
+        assert variant.role == "high_resolution"
+        assert variant.file.name == legacy_path
+        assert variant.file.storage.exists(legacy_path)
 
     def test_main_page_background_generates_hero_variants(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -681,6 +707,8 @@ class TestBaseImageVariants:
         assert data["fallback_image"]["url"]
         assert "thumbnail_url" not in data
         assert "image_variants" not in data
+        assert image.original.name not in str(data)
+        assert image.original.url not in str(data)
 
     def test_get_image_url_returns_generated_thumbnail_variant(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
@@ -765,7 +793,7 @@ class TestBaseImageVariants:
             "variants": {"thumbnail": []},
         }
 
-    def test_get_image_url_falls_back_when_thumbnail_variant_is_missing(self) -> None:
+    def test_get_image_url_does_not_fall_back_to_astroimage_source(self) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
             image = AstroImageFactory(
                 original=jpeg_field("thumbnail-missing.jpg", size=(1200, 800)),
@@ -775,7 +803,7 @@ class TestBaseImageVariants:
         image.refresh_from_db()
         image.variants.filter(role="thumbnail").delete()
 
-        assert image.get_image_url("thumbnail", 560) == image.original.url
+        assert image.get_image_url("thumbnail", 560) is None
 
     def test_namespaced_variant_sources_sync_only_requested_changed_fields(self) -> None:
         with patch("users.models.process_image_task.delay_on_commit"):
