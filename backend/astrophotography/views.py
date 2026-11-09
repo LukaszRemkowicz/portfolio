@@ -192,7 +192,7 @@ class CelestialObjectCategoriesView(APIView):
 
 
 class AstroImageSecureView(SecureMediaView):
-    secure_variant_roles = ("original_format", "detail")
+    secure_variant_roles = ("high_resolution",)
 
     def get_object(self) -> AstroImage:
         slug: str = str(self.kwargs.get("slug"))
@@ -213,15 +213,7 @@ class AstroImageSecureView(SecureMediaView):
 
     def get_file_path(self, obj: Model) -> str:
         assert isinstance(obj, AstroImage)
-        serving_field = obj.get_original_image()
-        if not serving_field:
-            return ""
-
-        variant_file_path = self.get_variant_file_path(obj)
-        if variant_file_path:
-            return variant_file_path
-
-        return str(serving_field.name)
+        return self.get_variant_file_path(obj)
 
     def get_signature_id(self) -> str:
         return str(self.kwargs.get("slug", ""))

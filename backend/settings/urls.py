@@ -15,6 +15,7 @@ from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.http import Http404
 from django.urls import include, path
+from django.utils.cache import patch_cache_control, patch_vary_headers
 from django.views.decorators.cache import cache_page
 from django.views.static import serve
 
@@ -109,14 +110,30 @@ def safe_serve(request, path, document_root=None, show_indexes=False):
     if host != settings.ADMIN_DOMAIN:
         raise Http404()
 
+    if any(segment in {".", ".."} for segment in path.split("/")):
+        raise Http404()
+
     if path.startswith(blocked_prefixes) or not path.startswith(allowed_prefixes):
         raise Http404()
-    return serve(
+
+    private_image_path = path.startswith("images/") and not path.startswith(
+        ("images/thumbnail/", "images/detail/")
+    )
+    if private_image_path:
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_authenticated", False) or not getattr(user, "is_staff", False):
+            raise Http404()
+
+    response = serve(
         request,
         path,
         document_root=document_root,
         show_indexes=show_indexes,
     )
+    if private_image_path:
+        patch_cache_control(response, private=True, no_store=True, max_age=0)
+        patch_vary_headers(response, ("Cookie",))
+    return response
 
 
 if settings.ADMIN_DOMAIN in settings.ALLOWED_HOSTS:

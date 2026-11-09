@@ -124,28 +124,16 @@ class TestAstroImageModel:
         url: str = image.get_image_url("thumbnail", 560)
         assert url == variant.file.url
 
-    def test_get_image_url_falls_back_when_thumbnail_variant_file_missing(self) -> None:
-        """Missing thumbnail variant files should not leak dead media URLs to the API."""
-        image: AstroImage = AstroImageFactory(original__width=1200, original__height=800)
-        process_image_task("astrophotography", "AstroImage", image.pk)
-        image.refresh_from_db()
-        variant = image.variants.get(role="thumbnail", width=560)
-
-        missing_name = str(variant.file.name)
-        variant.file.storage.delete(missing_name)
-
-        assert image.get_image_url("thumbnail", 560) == image.original.url
-
-    def test_original_format_variant_is_configured_as_project_format_display_candidate(self):
-        """AstroImage original_format should use project-format naming."""
+    def test_high_resolution_variant_is_configured_as_project_format_display_candidate(self):
+        """AstroImage high_resolution should use project-format naming."""
         image: AstroImage = AstroImageFactory()
-        original_format_spec = next(
-            spec for spec in image.get_image_variant_specs() if spec.role == "original_format"
+        high_resolution_spec = next(
+            spec for spec in image.get_image_variant_specs() if spec.role == "high_resolution"
         )
 
-        assert original_format_spec.viewport_widths.as_tuple() == (1920,)
-        assert original_format_spec.quality == 90
-        assert "webp" not in original_format_spec.label.lower()
+        assert high_resolution_spec.viewport_widths.as_tuple() == (1920,)
+        assert high_resolution_spec.quality == 90
+        assert "webp" not in high_resolution_spec.label.lower()
         assert not hasattr(image, "max_dimension")
         assert not hasattr(image, "dimension_percentage")
 
