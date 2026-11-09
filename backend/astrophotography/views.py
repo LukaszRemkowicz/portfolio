@@ -121,6 +121,7 @@ class TravelHighlightsBySlugView(APIView):
     permission_classes = [AllowAny]
     serializer_class = TravelHighlightDetailSerializer
 
+    @method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT))
     def get(
         self,
         request: Request,

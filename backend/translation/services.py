@@ -179,7 +179,7 @@ class TranslationService:
         if not getattr(instance, "translations", None):
             return ""
 
-        if not instance.translations.filter(language_code=lang).exists():
+        if not instance.has_translation(lang):
             return ""
 
         value = str(
