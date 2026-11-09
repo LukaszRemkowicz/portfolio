@@ -1,5 +1,6 @@
 import http.client
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -36,23 +37,26 @@ class NginxTextResourcesTests(unittest.TestCase):
             raise unittest.SkipTest("Docker is required for Nginx integration tests")
 
         cls.suffix = uuid.uuid4().hex[:10]
-        cls.image = f"landingpage-nginx-text-resources-test:{cls.suffix}"
-        result = docker(
-            "build",
-            "--file",
-            "docker/nginx/Dockerfile",
-            "--tag",
-            cls.image,
-            ".",
-        )
-        if result.returncode:
-            raise RuntimeError(f"Nginx image build failed:\n{result.stderr}")
+        cls.image = os.environ.get("NGINX_TEST_IMAGE")
+        cls.owns_image = cls.image is None
+        if cls.owns_image:
+            cls.image = f"landingpage-nginx-text-resources-test:{cls.suffix}"
+            result = docker(
+                "build",
+                "--file",
+                "docker/nginx/Dockerfile",
+                "--tag",
+                cls.image,
+                ".",
+            )
+            if result.returncode:
+                raise RuntimeError(f"Nginx image build failed:\n{result.stderr}")
 
     @classmethod
     def tearDownClass(cls) -> None:
         if hasattr(cls, "container"):
             docker("rm", "--force", cls.container)
-        if hasattr(cls, "image"):
+        if getattr(cls, "owns_image", False):
             docker("image", "rm", cls.image)
 
     def test_required_and_unsafe_renderer_values_fail_closed(self) -> None:

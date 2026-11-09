@@ -87,8 +87,16 @@ jobs:
           target: ${{ matrix.target }}
           platforms: linux/amd64
           push: false
+          tags: landingpage-nginx-text-resources:ci
+          load: ${{ matrix.image == 'nginx' }}
           cache-from: type=gha,scope=image-${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=image-${{ matrix.image }}
+
+      - name: Test Nginx text resources
+        if: matrix.image == 'nginx'
+        env:
+          NGINX_TEST_IMAGE: landingpage-nginx-text-resources:ci
+        run: python3 -m unittest infra.nginx.tests.test_text_resources -v
 
   pr-status:
     needs: [backend-quality, backend-tests, trivy-scan, dependency-security, image-build-check]
