@@ -22,7 +22,7 @@ from common.tasks import invalidate_frontend_ssr_cache_task
 from core.cache_service import CacheService
 from core.models import ImageVariant
 
-from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Tag
+from .models import AstroImage, MainPageBackgroundImage, MainPageLocation, Place, Tag
 
 
 @receiver([post_save, post_delete], sender=AstroImage)
@@ -38,6 +38,7 @@ def invalidate_astroimage_cache(sender, instance, **kwargs):
     highlight shells embed astrophotography data.
     """
     CacheService.invalidate_astrophotography_cache()
+    CacheService.invalidate_travel_cache()
     invalidate_frontend_ssr_cache_task.delay_on_commit(["latest-astro-images", "travel-highlights"])
 
 
@@ -128,8 +129,18 @@ def invalidate_tag_cache(sender, instance, **kwargs):
 
     No frontend tag is cleared here because tag changes do not map directly to a
     dedicated SSR shell resource in the same way as latest images or settings.
+    Travel API responses embed tags, so the travel cache is cleared too.
     """
     CacheService.invalidate_astrophotography_cache()
+    CacheService.invalidate_travel_cache()
+
+
+@receiver([post_save, post_delete], sender=Place)
+@receiver([post_save, post_delete], sender="astrophotography.PlaceTranslation")
+def invalidate_place_cache(sender, instance, **kwargs):
+    """Clear backend astrophotography and travel caches when places change."""
+    CacheService.invalidate_astrophotography_cache()
+    CacheService.invalidate_travel_cache()
 
 
 @receiver([post_save, post_delete], sender=MainPageLocation)
