@@ -74,38 +74,6 @@ jobs:
           tags: ${{ steps.meta_backend.outputs.tags }}
           labels: ${{ steps.meta_backend.outputs.labels }}
 
-      - name: Docker metadata for staging frontend
-        id: meta_frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-fe
-          tags: |
-            type=raw,value=${{ env.STAGING_IMAGE_TAG }}
-
-      - name: Build and push staging frontend
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: docker/frontend/Dockerfile
-          target: prod
-          platforms: linux/amd64,linux/arm64
-          push: true
-          provenance: true
-          sbom: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            SITE_DOMAIN=${{ vars.STAGING_SITE_DOMAIN || vars.SITE_DOMAIN }}
-            API_URL=https://${{ vars.STAGING_API_DOMAIN || vars.API_DOMAIN }}
-            GA_TRACKING_ID=${{ vars.GA_TRACKING_ID }}
-            ENABLE_GA=${{ vars.STAGING_ENABLE_GA || 'false' }}
-            SENTRY_DSN_FE=${{ secrets.SENTRY_DSN_FE }}
-            ENVIRONMENT=stage
-            ALLOWED_HOSTS=${{ vars.STAGING_ALLOWED_HOSTS || vars.ALLOWED_HOSTS }}
-            PROJECT_OWNER=${{ vars.PROJECT_OWNER }}
-          tags: ${{ steps.meta_frontend.outputs.tags }}
-          labels: ${{ steps.meta_frontend.outputs.labels }}
-
       - name: Docker metadata for staging nginx
         id: meta_nginx
         uses: docker/metadata-action@v5
@@ -141,7 +109,6 @@ jobs:
 
           Images:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-be:${{ env.STAGING_IMAGE_TAG }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-fe:${{ env.STAGING_IMAGE_TAG }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/stage-nginx:${{ env.STAGING_IMAGE_TAG }}
 
           Next VPS step:

@@ -49,7 +49,6 @@ doppler -c dev run -- sh -c 'printenv GHCR_TOKEN | docker login ghcr.io -u "$GHC
 ```
 
 ### ➕ Optional
-- `FRONTEND_PORT`: Defaults to `8080`
 
 ### 🚨 Emergency bypass
 If you must build from an uncommitted state, pass `--emergency` or set `EMERGENCY=1`:
@@ -111,7 +110,6 @@ constant staging tags to GHCR:
 
 ```text
 stage-be:v0.0.0-STG
-stage-fe:v0.0.0-STG
 stage-nginx:v0.0.0-STG
 ```
 

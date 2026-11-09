@@ -1,5 +1,7 @@
 # Frontend and Backend Cache Invalidation
 
+> **Note:** Frontend SSR cache invalidation is disabled (`SSR_CACHE_INVALIDATION_URL` is set to an empty string) since the frontend moved to Cloudflare Workers (`portfolio-fe`). The Node.js SSR server described below no longer exists in this repo; the Django-side hook returns early on an empty URL.
+
 This document explains how cache invalidation works between the Django backend and the Node.js frontend (SSR server).
 
 ## Overview

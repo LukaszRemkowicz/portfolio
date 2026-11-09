@@ -11,9 +11,10 @@ is missing.
 For general project context, architecture, and repository structure, read:
 
 - `README.md`
-- `frontend/README.md`
 - `backend/README.md`
 - `infra/scripts/README.md`
+
+The frontend lives in the separate `LukaszRemkowicz/portfolio-fe` repo (Cloudflare Workers); it is not in this repository.
 
 Use `infra/docs/project/` for system behavior, architecture, runbooks, and
 feature-specific technical context.

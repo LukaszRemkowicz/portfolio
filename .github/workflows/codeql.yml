@@ -13,5 +13,5 @@ jobs:
       security-events: write
     uses: LukaszRemkowicz/ci-cd/.github/workflows/codeql.yml@main
     with:
-      languages_json: '["javascript","python"]'
+      languages_json: '["python"]'
       config_file: .github/codeql-config.yml
