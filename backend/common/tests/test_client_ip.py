@@ -61,3 +61,38 @@ def test_anonymous_throttle_uses_resolved_client_ip() -> None:
 
     assert throttle.get_ident(first_request) == "203.0.113.25"
     assert throttle.get_ident(second_request) == "203.0.113.26"
+
+
+@override_settings(TRUSTED_PROXY_CIDRS=["172.16.0.0/12"])
+def test_tunnel_request_uses_first_forwarded_for_hop() -> None:
+    # Workers frontend via Cloudflare Tunnel: no X-Real-IP, the Worker sets
+    # X-Forwarded-For to the visitor and Cloudflare appends its own hop.
+    request = request_factory.get(
+        "/",
+        REMOTE_ADDR="172.23.0.8",
+        HTTP_X_FORWARDED_FOR="2001:db8::1234, 2a06:98c0:3600::103",
+    )
+
+    assert get_client_ip(request) == "2001:db8::1234"
+
+
+@override_settings(TRUSTED_PROXY_CIDRS=["172.16.0.0/12"])
+def test_untrusted_peer_cannot_spoof_forwarded_for() -> None:
+    request = request_factory.get(
+        "/",
+        REMOTE_ADDR="198.51.100.10",
+        HTTP_X_FORWARDED_FOR="203.0.113.26",
+    )
+
+    assert get_client_ip(request) == "198.51.100.10"
+
+
+@override_settings(TRUSTED_PROXY_CIDRS=["172.16.0.0/12"])
+def test_malformed_forwarded_for_falls_back_to_peer() -> None:
+    request = request_factory.get(
+        "/",
+        REMOTE_ADDR="172.23.0.8",
+        HTTP_X_FORWARDED_FOR="not-an-ip, 203.0.113.26",
+    )
+
+    assert get_client_ip(request) == "172.23.0.8"
