@@ -228,9 +228,7 @@ TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
 LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER = env.str(
     "LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER", default="gpt"
 )
-SSR_CACHE_INVALIDATION_URL = env.str(
-    "SSR_CACHE_INVALIDATION_URL", default="http://fe:8080/internal/cache/invalidate"
-)
+SSR_CACHE_INVALIDATION_URL = env.str("SSR_CACHE_INVALIDATION_URL", default="")
 SSR_CACHE_INVALIDATION_TOKEN = env.str(
     "SSR_CACHE_INVALIDATION_TOKEN", default="dev-ssr-cache-token"
 )

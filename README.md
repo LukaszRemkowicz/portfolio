@@ -2,10 +2,13 @@
 
 Personal portfolio web app for astrophotography, travel stories, and programming work. The stack is:
 
-- frontend SSR server: React + TypeScript
 - backend: Django + DRF
 - edge/static layer: nginx
 - secrets: Doppler
+
+The frontend lives in [`LukaszRemkowicz/portfolio-fe`](https://github.com/LukaszRemkowicz/portfolio-fe) and runs on Cloudflare Workers. Workers routes send `/media/*`, `/static/*`, `/app/image-files/*`, `/v1/*` and `/sitemap.xml` to this stack (Traefik, nginx); every other path on the main domain is served by the Worker.
+
+Fallback: nginx still proxies the main domain to the last frontend container (`fe`, image `production-fe`), which keeps running on the VPS although it is no longer in compose or deploys. Removing the Workers route `lukaszremkowicz.com/*` in Cloudflare instantly serves the old frontend again. Do not remove that container while nginx references `frontend_upstream`; nginx would fail to start.
 
 ## 🌍 Live
 
@@ -13,15 +16,13 @@ Personal portfolio web app for astrophotography, travel stories, and programming
 
 ## 🗂️ Repository Layout
 
-- `frontend/` - React + TypeScript app, SSR runtime, browser app, tests, and public assets
 - `backend/` - Django + DRF application, admin, Celery jobs, and media logic
-- `docker/` - Dockerfiles and entrypoints for frontend, backend, redis, and nginx
+- `docker/` - Dockerfiles and entrypoints for backend, redis, and nginx
 - `infra/` - nginx templates, release scripts, and project docs
 - `screenshots/` - README screenshots
 
 Component docs:
 
-- Frontend: [frontend/README.md](frontend/README.md)
 - Backend: [backend/README.md](backend/README.md)
 - Infra scripts: [infra/scripts/README.md](infra/scripts/README.md)
 
@@ -50,17 +51,15 @@ The project follows a modern, highly decoupled architecture for performance and 
 
 ### Key Components:
 - **Environment Isolation**: Parallel stacks (`PROD` and `STAGE`) ensure zero-collision deployments.
-- **Development Stack**: Local development uses the same core `Nginx + Frontend SSR + Django + PostgreSQL` architecture via `portfolio-dev`.
+- **Development Stack**: Local development uses the same core `Nginx + Django + PostgreSQL` architecture via `portfolio-dev`.
 - **Doppler**: Secret management for project runtime configuration.
 
 
 Current request flow:
 
-1. browser requests `SITE_DOMAIN`
-2. nginx receives the public request
-3. nginx either serves public static/media directly or proxies the request to the frontend SSR server
-4. frontend SSR renders the page and fetches backend data internally when needed
-5. browser hydrates with server-provided React Query state
+1. browser requests `SITE_DOMAIN`; Cloudflare Workers serves pages and forwards `/media/*`, `/static/*`, `/app/image-files/*`, `/v1/*` and `/sitemap.xml` to the VPS
+2. Traefik routes those requests to nginx
+3. nginx serves public static/media directly or proxies the request to Django; any other path returns 404
 
 Application structure:
 
@@ -70,11 +69,9 @@ Application structure:
 
 ## 📖 Glossary
 
-- `SSR`: Server-Side Rendering. The frontend server renders HTML before it reaches the browser.
-- `BFF`: Backend For Frontend. A frontend-owned server layer that the browser talks to instead of calling backend APIs directly.
 - `SITE_DOMAIN`: Public website host, for example `portfolio.local`.
 - `ADMIN_DOMAIN`: Public Django admin host, for example `admin.portfolio.local`.
-- `API`: Internal backend API contract used by the frontend server and Django admin integrations.
+- `API`: Internal backend API contract used by the Workers frontend and Django admin integrations.
 
 ## 🧭 Architecture Overview
 
@@ -82,29 +79,18 @@ Application structure:
 
 - `SITE_DOMAIN`
   - public website
-  - SSR HTML
-  - FE-owned transport endpoints for the remaining interactive browser flows
+  - public website (frontend on Cloudflare Workers; only API, media, static and sitemap paths reach this stack)
   - public media served by nginx
 - `ADMIN_DOMAIN`
   - Django admin
-
-### Frontend server responsibilities
-
-- SSR page rendering
-- request/data composition for page-shell content
-- BFF transport for the remaining browser JSON flows
-- public environment injection into HTML
-- structured logging and request correlation
-- in-memory SSR shell cache
 
 ### Backend responsibilities
 
 - content ownership and business logic
 - admin application
-- internal API used by FE
+- API used by the Workers frontend
 - sitemap generation
 - secure media authorization/signing
-- cache invalidation webhooks to FE
 
 ### Media Delivery
 
@@ -115,26 +101,9 @@ Protected media uses a split flow:
 - Django signs or authorizes access
 - nginx serves file bytes through `X-Accel-Redirect`
 
-### Caching
-
-The frontend SSR server keeps a `24h` in-memory cache for shared shell data:
-
-- `settings`
-- `profile`
-- `background`
-- `travel-highlights`
-- `latest-astro-images`
-
-The backend invalidates those FE cache tags through an internal webhook after content changes.
-
 ### Observability
 
-The stack uses request correlation across FE and BE:
-
-- FE generates or forwards `X-Request-ID`
-- FE logs include `request_id`
-- FE forwards `X-Request-ID` to BE
-- BE echoes and logs the same request ID
+The backend echoes and logs `X-Request-ID` when the frontend forwards it.
 
 Operational log and sitemap monitoring is handled outside this repository by
 the standalone `agent-monitoring` project. Landingpage emits structured logs
@@ -143,7 +112,7 @@ reports or exposes Django admin monitoring actions.
 
 ## ⚡ Quick Start
 
-Local development is Docker Compose only. This project is not maintained as a standalone `manage.py runserver` / `npm start` workflow.
+Local development is Docker Compose only. This project is not maintained as a standalone `manage.py runserver` workflow.
 
 ### ✅ Prerequisites
 
@@ -172,7 +141,6 @@ The local Compose stack expects these external Docker resources to already exist
 ```bash
 docker network create traefik_proxy || true
 docker volume create portfolio_dev_db_data || true
-docker volume create portfolio_dev_fe_node_modules || true
 docker volume create portfolio_dev_static_data || true
 ```
 
@@ -223,41 +191,18 @@ Common commands:
 doppler --config dev run -- docker compose down
 
 # restart one service
-doppler --config dev run -- docker compose restart fe
+doppler --config dev run -- docker compose restart be
 
 # show logs
-doppler --config dev run -- docker compose logs -f fe be nginx
+doppler --config dev run -- docker compose logs -f be nginx
 
 # run backend management commands
 doppler --config dev run -- docker compose exec -T be python manage.py migrate
-
-# run frontend checks
-doppler --config dev run -- docker compose exec -T fe npm run type-check
 ```
 
 ## 🧰 Useful Commands
 
 Run everything from the repository root unless noted otherwise.
-
-### Frontend
-
-Clear the FE SSR cache without restarting the service:
-
-```bash
-doppler --config dev run -- docker compose exec -T fe sh -lc 'cd /app && npm run cache:clear:ssr'
-```
-
-Clear only selected SSR cache tags:
-
-```bash
-doppler --config dev run -- docker compose exec -T fe sh -lc 'cd /app && npm run cache:clear:ssr -- profile travel-highlights'
-```
-
-Clear all known SSR cache tags:
-
-```bash
-doppler --config dev run -- docker compose exec -T fe sh -lc 'cd /app && npm run cache:clear:ssr -- --all-tags'
-```
 
 ### Backend
 
@@ -351,23 +296,13 @@ doppler --config dev run -- docker compose exec -T be python manage.py collectst
 doppler --config dev run -- docker compose exec -T be python manage.py compilemessages
 ```
 
-Standalone local development commands such as `python manage.py runserver` or `npm run dev` are not the supported workflow described by this repository.
+Standalone local development commands such as `python manage.py runserver` are not the supported workflow described by this repository.
 
 ## 🧪 Testing And Checks
 
 Typical project checks:
 
 ```bash
-# frontend type checks and linting
-doppler --config dev run -- docker compose exec -T fe npm run type-check
-doppler --config dev run -- docker compose exec -T fe npm run lint
-
-# frontend unit tests
-doppler --config dev run -- docker compose exec -T fe npm test -- --runInBand
-
-# frontend e2e tests
-doppler --config dev run -- docker compose exec -T fe npm run test:e2e
-
 # backend test suite
 doppler --config dev run -- docker compose exec -T be uv run pytest
 
@@ -378,7 +313,6 @@ doppler --config dev run -- docker compose exec -T be uv run mypy .
 Compose also exposes dedicated test services:
 
 ```bash
-doppler --config dev run -- docker compose --profile test run --rm fe-test
 doppler --config dev run -- docker compose --profile test run --rm test
 ```
 
@@ -396,7 +330,6 @@ doppler run -p portfolio -c portfolio-prod -- ./infra/scripts/release/deploy.sh
 
 Production/stage deploys rebuild:
 
-- `fe` when SSR/public env changes
 - `nginx` when routing or public media rules change
 - `be` when invalidation, serializers, or backend routes change
 
@@ -404,29 +337,12 @@ Production/stage deploys rebuild:
 
 ## 📝 Notes
 
-- Active Node scripts live in [frontend/package.json](frontend/package.json).
 - Python dependency and tool configuration live in [backend/pyproject.toml](backend/pyproject.toml).
 - Local startup runs Django migrations, `seed_settings`, message compilation, and `collectstatic` automatically as part of the `be` service command.
 
 ### Cache Invalidation
 
-Frontend SSR cache covers shared shell data:
-
-- `settings`
-- `profile`
-- `background`
-- `travel-highlights`
-- `latest-astro-images`
-
-Backend invalidates this cache through an internal FE webhook after content changes.
-
-### Frontend Views
-
-The frontend server mirrors Django's `views` concept in its server-side ownership model:
-
-- server-side FE request/data ownership lives in `frontend/server/views/*`
-- SSR and BFF routes should reuse those views instead of duplicating transport logic
-- low-level HTTP clients stay separate from request/data contract ownership
+Frontend SSR cache invalidation is disabled (`SSR_CACHE_INVALIDATION_URL` is empty) since the frontend moved to Cloudflare Workers. See `infra/docs/project/cache_invalidation.md`.
 
 
 ## 💾 Database Backup & Maintenance
@@ -456,12 +372,6 @@ The backend tests now run in a dedicated, isolated environment using Docker Comp
 
 ```bash
 doppler --config dev run -- docker compose run --rm test
-```
-
-### Frontend
-```bash
-doppler --config dev run -- docker compose exec -T fe npm test -- --watchAll=false
-doppler --config dev run -- docker compose run --rm fe-test
 ```
 
 ## 🔄 Release Lifecycle
@@ -496,10 +406,8 @@ On your production server, simply run:
 
 ## Component Docs
 
-- Frontend: [frontend/README.md](frontend/README.md)
 - Backend: [backend/README.md](backend/README.md)
 
 
 ### TODO:
-- Fix issues with "go back" on the website (Fe)
 - fix small visual issues in django admin

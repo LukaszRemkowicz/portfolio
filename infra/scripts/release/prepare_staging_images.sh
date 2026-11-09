@@ -40,9 +40,9 @@ GHCR_REGISTRY="${GHCR_REGISTRY:-ghcr.io}"
 : "${GHCR_NAMESPACE:?GHCR_NAMESPACE is required for prepare_staging_images.sh}"
 REMOTE_PREFIX="stage"
 LOCAL_PREFIX="${ENVIRONMENT}"
-REMOTE_SERVICES=("be" "fe" "nginx")
-LOCAL_SERVICES=("be" "worker" "fe" "nginx")
-REGISTRY_ALIAS_SERVICES=("be" "worker" "fe" "nginx")
+REMOTE_SERVICES=("be" "nginx")
+LOCAL_SERVICES=("be" "worker" "nginx")
+REGISTRY_ALIAS_SERVICES=("be" "worker" "nginx")
 STATE_DIR="$(get_state_dir "${ENVIRONMENT}")"
 DIGEST_FILE="${STATE_DIR}/prepared_image_digests.env"
 CURRENT_FILE="${STATE_DIR}/current_tag"
@@ -163,7 +163,7 @@ prepare_registry_images
 verify_local_images
 cleanup_registry_aliases
 prune_local_images "${ENVIRONMENT}" "${KEEP_IMAGES}" "${TAG}" "$(cat "${CURRENT_FILE}" 2>/dev/null || true)" "$(cat "${PREV_FILE}" 2>/dev/null || true)" \
-  "${LOCAL_PREFIX}-be" "${LOCAL_PREFIX}-worker" "${LOCAL_PREFIX}-fe" "${LOCAL_PREFIX}-nginx"
+  "${LOCAL_PREFIX}-be" "${LOCAL_PREFIX}-worker" "${LOCAL_PREFIX}-nginx"
 
 echo "🎉 Staging image preparation completed for TAG=${TAG}"
 if [[ -f "${DIGEST_FILE}" ]]; then

@@ -15,26 +15,6 @@ repos:
       - id: debug-statements
       - id: check-docstring-first
 
-  # Frontend hooks
-  - repo: local
-    hooks:
-      - id: prettier
-        name: prettier
-        entry: npx --prefix frontend prettier --write
-        language: system
-        files: ^frontend/
-        types_or: [javascript, jsx, ts, tsx, css, json, yaml, markdown]
-
-  - repo: local
-    hooks:
-      - id: eslint
-        name: eslint
-        entry: npm run lint --prefix frontend
-        language: system
-        pass_filenames: false
-        files: ^frontend/
-        types_or: [javascript, jsx, ts, tsx]
-
   # Backend hooks
   - repo: https://github.com/pycqa/isort
     rev: 7.0.0
@@ -132,12 +112,4 @@ repos:
         pass_filenames: false
         files: ^backend/
         always_run: false
-        stages: [pre-commit]
-
-      - id: frontend-tests
-        name: frontend-tests
-        entry: bash -c "cd frontend && npm test -- --watchAll=false"
-        language: system
-        pass_filenames: false
-        always_run: true
         stages: [pre-commit]
