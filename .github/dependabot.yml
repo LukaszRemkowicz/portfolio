@@ -11,24 +11,6 @@ multi-ecosystem-groups:
       prefix: "chore"
       include: "scope"
 updates:
-  # Frontend dependencies
-  - package-ecosystem: "npm"
-    directory: "/frontend"
-    patterns:
-      - "*"
-    multi-ecosystem-group: "all-dependencies"
-    reviewers:
-      - "LukaszRemkowicz"
-    assignees:
-      - "LukaszRemkowicz"
-    labels:
-      - "dependencies"
-      - "frontend"
-      - "javascript"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-
   # Backend dependencies (uv-managed project)
   - package-ecosystem: "pip"
     directory: "/backend"

@@ -89,37 +89,6 @@ jobs:
           tags: ${{ steps.meta_backend.outputs.tags }}
           labels: ${{ steps.meta_backend.outputs.labels }}
 
-      - name: Docker metadata for production frontend
-        id: meta_frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/production-fe
-          tags: |
-            type=raw,value=${{ steps.image_tag.outputs.value }}
-
-      - name: Build and push production frontend
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: docker/frontend/Dockerfile
-          target: prod
-          platforms: linux/amd64,linux/arm64
-          push: true
-          provenance: true
-          sbom: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            SITE_DOMAIN=${{ vars.SITE_DOMAIN }}
-            API_URL=https://${{ vars.API_DOMAIN }}
-            GA_TRACKING_ID=${{ vars.GA_TRACKING_ID }}
-            SENTRY_DSN_FE=${{ secrets.SENTRY_DSN_FE }}
-            ENVIRONMENT=production
-            ALLOWED_HOSTS=${{ vars.ALLOWED_HOSTS }}
-            PROJECT_OWNER=${{ vars.PROJECT_OWNER }}
-          tags: ${{ steps.meta_frontend.outputs.tags }}
-          labels: ${{ steps.meta_frontend.outputs.labels }}
-
       - name: Docker metadata for production nginx
         id: meta_nginx
         uses: docker/metadata-action@v5

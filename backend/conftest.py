@@ -25,6 +25,15 @@ __all__ = [
 ]
 
 
+@pytest.fixture(autouse=True, scope="session")
+def isolated_media_root(tmp_path_factory: pytest.TempPathFactory) -> Generator[None]:
+    """Keep test uploads out of the real MEDIA_ROOT (it may be a mounted media volume)."""
+    from django.test import override_settings
+
+    with override_settings(MEDIA_ROOT=str(tmp_path_factory.mktemp("media"))):
+        yield
+
+
 @pytest.fixture(autouse=True)
 def execute_on_commit() -> Generator[None]:
     """

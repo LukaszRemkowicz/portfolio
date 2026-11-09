@@ -8,6 +8,7 @@ import sentry_sdk
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 
+from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -228,9 +229,7 @@ TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
 LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER = env.str(
     "LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER", default="gpt"
 )
-SSR_CACHE_INVALIDATION_URL = env.str(
-    "SSR_CACHE_INVALIDATION_URL", default="http://fe:8080/internal/cache/invalidate"
-)
+SSR_CACHE_INVALIDATION_URL = env.str("SSR_CACHE_INVALIDATION_URL", default="")
 SSR_CACHE_INVALIDATION_TOKEN = env.str(
     "SSR_CACHE_INVALIDATION_TOKEN", default="dev-ssr-cache-token"
 )
@@ -328,6 +327,31 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 # Media files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+# MEDIA_STORAGE=local keeps Django's default FileSystemStorage; "r2" uses Cloudflare R2.
+MEDIA_STORAGE = env.str("MEDIA_STORAGE", default="local")
+if MEDIA_STORAGE not in ("local", "r2"):
+    raise ImproperlyConfigured(f"MEDIA_STORAGE must be 'local' or 'r2', got {MEDIA_STORAGE!r}")
+if MEDIA_STORAGE == "r2":
+    R2_ENDPOINT_URL = env.str(
+        "R2_ENDPOINT_URL",
+        default="https://8e28090942604cdb0c3620bd22f54145.r2.cloudflarestorage.com",
+    )
+    R2_ACCESS_KEY_ID = env.str("R2_ACCESS_KEY_ID", default="")
+    R2_SECRET_ACCESS_KEY = env.str("R2_SECRET_ACCESS_KEY", default="")
+    if not (R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY):
+        raise ImproperlyConfigured(
+            "MEDIA_STORAGE=r2 requires R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY"
+        )
+    R2_PUBLIC_BUCKET = env.str("R2_PUBLIC_BUCKET", default="portfolio-media")
+    R2_PRIVATE_BUCKET = env.str("R2_PRIVATE_BUCKET", default="portfolio-originals")
+    R2_PUBLIC_DOMAIN = env.str("R2_PUBLIC_DOMAIN", default="media.lukaszremkowicz.com")
+    R2_SIGNED_URL_EXPIRE = env.int("R2_SIGNED_URL_EXPIRE", default=300)
+    STORAGES = {
+        "default": {"BACKEND": "common.storage.R2RoutingStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+    CKEDITOR_5_FILE_STORAGE = "common.storage.CKEditorR2Storage"
 
 # Cache Configuration (Redist for production-grade caching)
 _redis_pwd = env.str("REDIS_PASSWORD", default="")

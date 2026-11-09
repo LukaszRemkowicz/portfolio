@@ -39,11 +39,6 @@ screenshots/
 *.dump
 *.sql
 
-# Frontend artifacts
-node_modules/
-frontend/node_modules/
-dist/
-frontend/dist/
 
 # CI/CD & IDE
 .github/

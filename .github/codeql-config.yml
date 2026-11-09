@@ -2,14 +2,10 @@ name: "CodeQL Configuration"
 
 # Languages to analyze
 languages:
-  - javascript
   - python
 
 # Paths to exclude from analysis
 paths-ignore:
-  - '**/node_modules/**'
-  - '**/dist/**'
-  - '**/build/**'
   - '**/coverage/**'
   - '**/__pycache__/**'
   - '**/.venv/**'

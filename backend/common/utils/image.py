@@ -10,6 +10,7 @@ from django.core.files.base import ContentFile
 from django.db.models.fields.files import FieldFile
 from django.utils.deconstruct import deconstructible
 
+from common.storage import is_remote_storage
 from common.types import ProcessableImageFile
 
 
@@ -87,7 +88,7 @@ def get_available_image_url(image_field: FieldFile | None) -> str:
     partial failures. This helper centralizes the safe read path used by callers that
     want to present an image URL only when storage still confirms the file exists.
     """
-    if not file_exists_in_storage(image_field):
+    if not file_is_available(image_field):
         return ""
 
     if image_field is None:
@@ -111,6 +112,13 @@ def file_exists_in_storage(file_field: FieldFile | None) -> bool:
         return bool(name and file_field.storage.exists(name))
     except OSError, ValueError:
         return False
+
+
+def file_is_available(file_field: FieldFile | None) -> bool:
+    """Read-path existence check: remote storage trusts the DB name (no HEAD request)."""
+    if file_field and is_remote_storage(file_field.storage):
+        return bool(file_field.name)
+    return file_exists_in_storage(file_field)
 
 
 def delete_file_from_storage(file_field: FieldFile | None, file_name: str) -> bool:

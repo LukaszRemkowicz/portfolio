@@ -222,6 +222,8 @@ class TestTranslationFallbacks:
         img.set_current_language("pl")
         img.name = "Polish Name"
         img.save()
+        # Queryset delete bypasses parler's per-instance cache; reload to drop stale 'en'.
+        img = type(img).objects.get(pk=img.pk)
 
         # Request translation in 'en'. The 'en' version is missing,
         # and the default 'en' is also missing.
@@ -241,3 +243,20 @@ class TestTranslationFallbacks:
 
         pl_result = loc.get_full_location("pl")
         assert pl_result == ""
+
+
+@pytest.mark.django_db
+class TestReadTranslationUsesPrefetch:
+    def test_prefetched_translations_need_no_queries(self, django_assert_num_queries):
+        from astrophotography.models import Tag
+
+        tag = Tag.objects.create(name="Nebula")
+        tag.set_current_language("pl")
+        tag.name = "Mgławica"
+        tag.save()
+        tag = Tag.objects.prefetch_related("translations").get(pk=tag.pk)
+
+        with django_assert_num_queries(0):
+            assert TranslationService._read_translation(tag, "name", "pl") == "Mgławica"
+            assert TranslationService._read_translation(tag, "name", "de") == ""
+            assert TranslationService.get_translation(tag, "name", "de", allow_any_language=False)

@@ -15,12 +15,10 @@
 #   COMPOSE_FILE  - Path to the docker-compose file. Defaults to docker-compose.${ENVIRONMENT}.yml.
 #   EMERGENCY     - Set to '1' to bypass dirty git status check.
 #
-#   Domain & Analytics (Required via Doppler):
-#     API_DOMAIN, SITE_DOMAIN, GA_TRACKING_ID, SENTRY_DSN_FE,
-#     ALLOWED_HOSTS, PROJECT_OWNER
+#   Domain (Required via Doppler):
+#     API_DOMAIN, SITE_DOMAIN
 #
 #   Optional:
-#     FRONTEND_PORT - Port for frontend service (default: 8080)
 #
 # Arguments (CLI):
 #   --emergency   - Bypass dirty git status check (same as EMERGENCY=1).
@@ -30,14 +28,13 @@
 #   - Refuses to run outside a git repository
 #   - Refuses to run if the working tree is dirty (unless --emergency is used)
 #   - Requires an exact git tag on HEAD (tag == release)
-#   - Builds backend and frontend Docker images for that tag
+#   - Builds backend and nginx Docker images for that tag
 #   - Does NOT deploy anything
 #   - Does NOT run migrations or collect static files
 #
 # What this script DOES:
 #   - Builds:
 #       portfolio-backend:<TAG>
-#       portfolio-frontend:<TAG>
 #   - Uses Docker BuildKit for consistent builds
 #   - Injects runtime configuration via environment variables
 #   - Cleans up old images while keeping:
@@ -95,14 +92,8 @@ done
 #   doppler run -- ./build.sh
 # ------------------------------------------------------------------
 : "${API_DOMAIN:?API_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
-: "${GA_TRACKING_ID:?GA_TRACKING_ID is required (inject via: doppler run -- ./build.sh)}"
-: "${ENABLE_GA:=true}"
 : "${SITE_DOMAIN:?SITE_DOMAIN is required (inject via: doppler run -- ./build.sh)}"
-: "${SENTRY_DSN_FE:?SENTRY_DSN_FE is required (inject via: doppler run -- ./build.sh)}"
-: "${ALLOWED_HOSTS:?ALLOWED_HOSTS is required (inject via: doppler run -- ./build.sh)}"
 : "${ENVIRONMENT:?ENVIRONMENT is required (inject via: doppler run -- ./build.sh)}"
-: "${PROJECT_OWNER:?PROJECT_OWNER is required (inject via: doppler run -- ./build.sh)}"
-: "${FRONTEND_PORT:=8080}"
 
 # Resolve Compose File
 ENV_SUFFIX=$(get_env_suffix "${ENVIRONMENT}")
@@ -184,26 +175,6 @@ docker build \
   .
 echo "✅ Backend & Worker images built"
 
-# ---------------- Frontend ----------------
-echo "🌐 Building frontend image..."
-docker build \
-  ${CACHE_FLAG} \
-  --pull \
-  -f docker/frontend/Dockerfile \
-  --target prod \
-  --build-arg "ENVIRONMENT=${ENVIRONMENT}" \
-  --build-arg "SITE_DOMAIN=${SITE_DOMAIN}" \
-  --build-arg "API_URL=https://${API_DOMAIN}" \
-  --build-arg "GA_TRACKING_ID=${GA_TRACKING_ID}" \
-  --build-arg "ENABLE_GA=${ENABLE_GA}" \
-  --build-arg "SENTRY_DSN_FE=${SENTRY_DSN_FE}" \
-  --build-arg "ALLOWED_HOSTS=${ALLOWED_HOSTS}" \
-  --build-arg "FRONTEND_PORT=${FRONTEND_PORT}" \
-  --build-arg "PROJECT_OWNER=${PROJECT_OWNER}" \
-  -t "${ENVIRONMENT}-fe:${TAG}" \
-  .
-echo "✅ Frontend image built"
-
 # ---------------- Nginx ----------------
 echo "🌍 Building nginx release image..."
 docker build \
@@ -218,7 +189,7 @@ echo "✅ Nginx image built"
 # Verify Built Images
 # ------------------------------------------------------------------
 echo "📦 Built images:"
-if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${ENVIRONMENT}-(be|fe|worker|nginx):${TAG}"; then
+if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${ENVIRONMENT}-(be|worker|nginx):${TAG}"; then
   echo "❌ ERROR: Expected built images were not found after build."
   echo "👉 Check image naming in infra/scripts/README.md"
   exit 1
@@ -252,7 +223,7 @@ echo "📌 Keeping tags: build=$TAG current=${CURRENT_TAG:-none} prev=${PREV_TAG
 # Retention Policy - Keep last 5 versions for each service image.
 # ------------------------------------------------------------------
 KEEP_IMAGES=5
-REPOS=("${ENVIRONMENT}-be" "${ENVIRONMENT}-fe" "${ENVIRONMENT}-worker" "${ENVIRONMENT}-nginx")
+REPOS=("${ENVIRONMENT}-be" "${ENVIRONMENT}-worker" "${ENVIRONMENT}-nginx")
 
 prune_local_images "${ENVIRONMENT}" "${KEEP_IMAGES}" "${TAG}" "${CURRENT_TAG}" "${PREV_TAG}" "${REPOS[@]}"
 

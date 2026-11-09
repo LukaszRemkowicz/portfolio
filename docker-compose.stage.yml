@@ -43,7 +43,7 @@ x-backend-defaults: &backend-defaults
     CELERY_BROKER_URL: redis://redis:6379/0
     CELERY_RESULT_BACKEND: redis://redis:6379/0
     SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
-    SSR_CACHE_INVALIDATION_URL: ${SSR_CACHE_INVALIDATION_URL:-http://fe:8080/internal/cache/invalidate}
+    SSR_CACHE_INVALIDATION_URL: ""
     SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
   depends_on:
     db:
@@ -119,35 +119,6 @@ services:
       - portfolio_staging_media_data:/app/media
       - portfolio_staging_static_data:/app/staticfiles
       - portfolio_staging_celerybeat_data:/app/celerybeat
-
-  # ---------- Frontend ----------
-  fe:
-    image: ${ENVIRONMENT}-fe:${TAG}
-    restart: always
-    networks:
-      - stage_network
-    volumes:
-      - portfolio_staging_frontend_asset_cache:/app/runtime-assets
-    expose:
-      - "8080"
-    environment:
-      TZ: "Europe/Warsaw"
-      ENVIRONMENT: stage
-      SITE_DOMAIN: ${SITE_DOMAIN}
-      SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
-      PORT: 8080
-      FRONTEND_PORT: 8080
-      NODE_ENV: production
-      API_URL: https://${API_DOMAIN}
-      SSR_API_URL: http://be:8000
-      GA_TRACKING_ID: ${GA_TRACKING_ID}
-      ENABLE_GA: ${ENABLE_GA:-false}
-      PROJECT_OWNER: ${PROJECT_OWNER:-Lukasz}
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
 
   # ---------- Backend ----------
   be:
@@ -234,7 +205,7 @@ services:
   # only: no ports are opened. The public hostname is protected by Cloudflare
   # Access (service token). Not part of deploy.sh; start once after
   # CLOUDFLARE_TUNNEL_TOKEN is in Doppler:
-  #   doppler run -- docker compose -f docker-compose.common.yml -f docker-compose.stage.yml up -d cloudflared
+  #   doppler run -- docker compose -f docker-compose.stage.yml up -d cloudflared
   cloudflared:
     image: cloudflare/cloudflared:2026.10.7
     profiles: ["tunnel"]
@@ -256,4 +227,3 @@ volumes:
     external: true
   portfolio_staging_nginx_blocklist:
     external: true
-  portfolio_staging_frontend_asset_cache:

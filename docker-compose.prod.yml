@@ -44,7 +44,7 @@ x-backend-defaults: &backend-defaults
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
     SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
-    SSR_CACHE_INVALIDATION_URL: ${SSR_CACHE_INVALIDATION_URL:-http://fe:8080/internal/cache/invalidate}
+    SSR_CACHE_INVALIDATION_URL: ""
     SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
   depends_on:
     db:
@@ -133,9 +133,10 @@ services:
       - prod_media_data:/app/media
       - prod_static_data:/app/staticfiles
     healthcheck:
+      # The ping boots Celery + Django (~13s at full CPU on the VPS), so run it rarely.
       test: ["CMD-SHELL", "exec celery -A settings inspect --timeout 5 ping -d celery@$$HOSTNAME"]
-      interval: 30s
-      timeout: 10s
+      interval: 5m
+      timeout: 30s
       retries: 3
       start_period: 30s
 
@@ -152,35 +153,6 @@ services:
       - prod_media_data:/app/media
       - prod_static_data:/app/staticfiles
       - celerybeat_data:/app/celerybeat
-
-  # ---------- Frontend ----------
-  fe:
-    image: ${ENVIRONMENT}-fe:${TAG}
-    restart: "always"
-    networks:
-      - portfolio_network
-    volumes:
-      - prod_frontend_asset_cache:/app/runtime-assets
-    expose:
-      - "8080"
-    environment:
-      TZ: "Europe/Warsaw"
-      ENVIRONMENT: production
-      SITE_DOMAIN: ${SITE_DOMAIN}
-      SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
-      PORT: 8080
-      FRONTEND_PORT: 8080
-      NODE_ENV: production
-      API_URL: https://${API_DOMAIN}
-      SSR_API_URL: http://be:8000
-      GA_TRACKING_ID: ${GA_TRACKING_ID}
-      ENABLE_GA: ${ENABLE_GA:-true}
-      PROJECT_OWNER: ${PROJECT_OWNER:-Lukasz}
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
 
   # ---------- Backend ----------
   be:
@@ -269,7 +241,6 @@ services:
       - "traefik.http.services.portfolio-prod.loadbalancer.server.port=80"
     depends_on:
       - be
-      - fe
     volumes:
       - prod_media_data:/app/media:ro
       - prod_static_data:/app/staticfiles:ro
@@ -281,7 +252,7 @@ services:
   # only: no ports are opened. The public hostname is protected by Cloudflare
   # Access (service token). Not part of deploy.sh; start once after
   # CLOUDFLARE_TUNNEL_TOKEN is in Doppler:
-  #   doppler run -- docker compose -f docker-compose.common.yml -f docker-compose.prod.yml up -d cloudflared
+  #   doppler run -- docker compose -f docker-compose.prod.yml up -d cloudflared
   cloudflared:
     image: cloudflare/cloudflared:2026.10.7
     profiles: ["tunnel"]
@@ -305,8 +276,6 @@ volumes:
   celerybeat_data:
     name: portfolio_prod_celerybeat_data
     external: true
-  prod_frontend_asset_cache:
-    name: portfolio_prod_frontend_asset_cache
   nginx_blocklist:
     name: portfolio_prod_nginx_blocklist
     external: true

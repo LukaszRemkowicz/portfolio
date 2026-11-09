@@ -3,16 +3,6 @@ name: CI/CD
 on:
   pull_request:
 
-env:
-  PROJECT_OWNER: "GitHub Actions"
-  SITE_DOMAIN: test.local
-  API_URL: https://api.test.local
-  GA_TRACKING_ID: test
-  SENTRY_DSN_FE: test
-  ENVIRONMENT: production
-  ALLOWED_HOSTS: test.local,localhost,127.0.0.1
-  IMAGE_PROJECT_OWNER: test
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -23,26 +13,6 @@ permissions:
   pull-requests: write
 
 jobs:
-  frontend-quality:
-    uses: LukaszRemkowicz/ci-cd/.github/workflows/node-quality.yml@main
-    with:
-      working_directory: frontend
-      cache_dependency_path: frontend/package-lock.json
-      install_command: npm ci
-      lint_command: npm run lint
-      format_check_command: npm run format:check || (npx prettier --list-different 'src/**/*.{ts,tsx,css}' && exit 1)
-      type_check_command: npx tsc --noEmit
-
-  frontend-tests:
-    uses: LukaszRemkowicz/ci-cd/.github/workflows/node-tests.yml@main
-    with:
-      working_directory: frontend
-      cache_dependency_path: frontend/package-lock.json
-      install_command: npm ci
-      test_command: npm test -- --coverage --watchAll=false
-      test_environment: |
-        API_URL=http://localhost:8000
-
   backend-quality:
     uses: LukaszRemkowicz/ci-cd/.github/workflows/python-quality-uv.yml@main
     with:
@@ -81,21 +51,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Run npm dependency audit
-        working-directory: ./frontend
-        run: npm run audit:ci
-
       - name: Run Safety CLI to check for vulnerabilities
         uses: pyupio/safety-action@v1
         with:
@@ -114,9 +69,6 @@ jobs:
           - image: backend
             file: docker/backend/Dockerfile
             target: production
-          - image: frontend
-            file: docker/frontend/Dockerfile
-            target: prod
           - image: nginx
             file: docker/nginx/Dockerfile
             target: ""
@@ -135,59 +87,15 @@ jobs:
           target: ${{ matrix.target }}
           platforms: linux/amd64
           push: false
-          # The frontend is loaded for the runtime smoke test below.
-          load: ${{ matrix.image == 'frontend' }}
-          tags: ${{ matrix.image == 'frontend' && 'frontend-smoke:ci' || '' }}
-          build-args: |
-            SITE_DOMAIN=${{ env.SITE_DOMAIN }}
-            API_URL=${{ env.API_URL }}
-            GA_TRACKING_ID=${{ env.GA_TRACKING_ID }}
-            SENTRY_DSN_FE=${{ env.SENTRY_DSN_FE }}
-            ENVIRONMENT=${{ env.ENVIRONMENT }}
-            ALLOWED_HOSTS=${{ env.ALLOWED_HOSTS }}
-            PROJECT_OWNER=${{ env.IMAGE_PROJECT_OWNER }}
           cache-from: type=gha,scope=image-${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=image-${{ matrix.image }}
 
-      - name: Smoke test frontend runtime
-        if: matrix.image == 'frontend'
-        run: |
-          set -euo pipefail
-
-          docker rm -f frontend-smoke-test >/dev/null 2>&1 || true
-
-          docker run -d \
-            --name frontend-smoke-test \
-            -p 18080:8080 \
-            frontend-smoke:ci
-
-          cleanup() {
-            status=$?
-            if [[ $status -ne 0 ]]; then
-              docker logs frontend-smoke-test || true
-            fi
-            docker rm -f frontend-smoke-test >/dev/null 2>&1 || true
-            exit $status
-          }
-          trap cleanup EXIT
-
-          for _ in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:18080/health >/dev/null; then
-              echo "Frontend runtime smoke test passed"
-              exit 0
-            fi
-            sleep 1
-          done
-
-          echo "Frontend runtime smoke test failed"
-          exit 1
-
   pr-status:
-    needs: [frontend-quality, frontend-tests, backend-quality, backend-tests, trivy-scan, dependency-security, image-build-check]
+    needs: [backend-quality, backend-tests, trivy-scan, dependency-security, image-build-check]
     if: always()
     uses: LukaszRemkowicz/ci-cd/.github/workflows/pr-status.yml@main
     with:
       status_items_json: >-
-        {"Frontend Quality":"${{ needs.frontend-quality.result }}","Frontend Tests":"${{ needs.frontend-tests.result }}","Backend Quality":"${{ needs.backend-quality.result }}","Backend Tests":"${{ needs.backend-tests.result }}","Trivy Security Analysis":"${{ needs.trivy-scan.result }}","Dependency Security Checks":"${{ needs.dependency-security.result }}","Production Image Build Check":"${{ needs.image-build-check.result }}"}
+        {"Backend Quality":"${{ needs.backend-quality.result }}","Backend Tests":"${{ needs.backend-tests.result }}","Trivy Security Analysis":"${{ needs.trivy-scan.result }}","Dependency Security Checks":"${{ needs.dependency-security.result }}","Production Image Build Check":"${{ needs.image-build-check.result }}"}
       success_message: 🎉 **All checks passed!**
       failure_message: ⚠️ **Some checks failed. Please review the logs.**
