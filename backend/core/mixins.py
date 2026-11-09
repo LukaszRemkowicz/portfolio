@@ -19,6 +19,7 @@ from common.utils.image import (
     build_image_variant_file_path,
     build_image_with_given_width,
     file_exists_in_storage,
+    file_is_available,
 )
 
 type ImageVariantTarget = tuple[str, int, int]
@@ -331,7 +332,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
             width=width,
         ).exclude(file="")
         for variant in variants:
-            if file_exists_in_storage(variant.file):
+            if file_is_available(variant.file):
                 return cast(ImageFieldFile, variant.file)
         return None
 
@@ -393,7 +394,7 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
                 "mime_type": variant.mime_type,
             }
             for variant in variants
-            if file_exists_in_storage(variant.file)
+            if file_is_available(variant.file)
         ]
 
         if preferred_width is None:

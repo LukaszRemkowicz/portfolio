@@ -19,7 +19,7 @@ from django.utils.translation import gettext_lazy as _
 
 from common.decorators.cache import cache_response
 from common.throttling import GalleryRateThrottle
-from common.utils.image import file_exists_in_storage
+from common.utils.image import file_is_available
 from common.utils.signing import generate_signed_url_params
 from core.views import GenericAdminSecureMediaView, SecureMediaView
 
@@ -207,7 +207,7 @@ class AstroImageSecureView(SecureMediaView):
         )
         for role in self.secure_variant_roles:
             for variant in variants:
-                if variant.role == role and file_exists_in_storage(variant.file):
+                if variant.role == role and file_is_available(variant.file):
                     return str(variant.file.name)
         return ""
 

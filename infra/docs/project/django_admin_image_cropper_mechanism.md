@@ -278,6 +278,15 @@ Current fix:
 Regression test:
 - [backend/core/tests/test_admin_media_urls.py](../../../backend/core/tests/test_admin_media_urls.py)
 
+### Cloudflare R2 media storage (opt-in)
+`MEDIA_STORAGE=local` (default) keeps the local `FileSystemStorage` and nginx `X-Accel-Redirect` serving. `MEDIA_STORAGE=r2` switches the default storage to `common.storage.R2RoutingStorage`.
+
+Env vars (r2 only): `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (required, startup fails without them), `R2_ENDPOINT_URL`, `R2_PUBLIC_BUCKET` (`portfolio-media`), `R2_PRIVATE_BUCKET` (`portfolio-originals`), `R2_PUBLIC_DOMAIN` (`media.lukaszremkowicz.com`, host only), `R2_SIGNED_URL_EXPIRE` (`300` seconds).
+
+Bucket split: a name is private only when its first segment is `images` and any segment is `original`, `original_format` or `detail`. Everything else is public. DB names are unchanged. Public URLs use the custom domain; private URLs are presigned.
+
+Secure views (`SecureMediaView` and subclasses) validate the signature as before, then return a `302` to a presigned URL (`Cache-Control: private, no-store, max-age=0`) instead of `X-Accel-Redirect`. Read paths trust the DB file name in r2 mode (no existence check per URL). CKEditor 5 uploads go to `ckeditor/` in the public bucket. `media_inventory` is filesystem only.
+
 ## Image Spec Interaction
 
 The cropper config stores an `ImageSpec` directly in each admin `CropperFieldConfig`.

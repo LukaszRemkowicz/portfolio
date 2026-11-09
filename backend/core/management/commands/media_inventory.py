@@ -5,7 +5,8 @@ from pathlib import Path
 
 from django.apps import apps
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.files.storage import default_storage
+from django.core.management.base import BaseCommand, CommandError
 from django.db import models
 from django.utils import timezone
 
@@ -21,6 +22,8 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        if getattr(default_storage, "remote", False):
+            raise CommandError("media_inventory is filesystem only; run with MEDIA_STORAGE=local")
         report = self._build_report()
         if options["json"]:
             self.stdout.write(json.dumps(report, separators=(",", ":")))

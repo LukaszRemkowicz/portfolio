@@ -14,12 +14,14 @@ from rest_framework.views import APIView
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.files.storage import default_storage
 from django.db.models import Model
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
 
 from common.decorators.cache import cache_response
+from common.storage import is_remote_storage
 from common.utils.logging import sanitize_for_logging
 from common.utils.signing import validate_signed_url
 from core.errors import render_403_error, render_404_error
@@ -180,6 +182,11 @@ class SecureMediaView(APIView):
             return render_404_error(request)
 
         filename = file_path.split("/")[-1]
+        if is_remote_storage(default_storage):
+            # Signature already validated above; hand off to a short-lived presigned URL.
+            redirect = HttpResponseRedirect(default_storage.url(file_path))
+            redirect["Cache-Control"] = "private, no-store, max-age=0"
+            return redirect
         response = HttpResponse()
         # This path must match the 'location /protected_media/' block in nginx.conf
         redirect_uri: str = f"/protected_media/{file_path}"

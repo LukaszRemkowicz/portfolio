@@ -11,11 +11,13 @@ from django.db import models
 from django.db.models.fields.files import ImageFieldFile
 from django.utils.translation import gettext_lazy as _
 
+from common.storage import is_private_name, is_remote_storage
 from common.types import ImageVariantSource, ImageVariantSpec
 from common.utils.image import (
     IMAGE_FORMAT,
     delete_file_from_storage,
     file_exists_in_storage,
+    file_is_available,
     seeded_image_upload_to,
 )
 from core.mixins import ImageVariantModelMixin
@@ -288,9 +290,13 @@ class BaseImage(ImageVariantModelMixin, TranslatableModel):
 
     def get_original_image_url(self) -> str | None:
         """Return the original source URL when it exists in storage."""
-        if self.original and file_exists_in_storage(self.original):
-            return str(self.original.url)
-        return None
+        if not (self.original and file_is_available(self.original)):
+            return None
+        if is_remote_storage(self.original.storage) and is_private_name(self.original.name):
+            # A presigned URL would expire inside the 30-day API cache; private files
+            # are served only through the signed secure views.
+            return None
+        return str(self.original.url)
 
     def get_image_url(self, role: str, width: int) -> str | None:
         """Return the generated variant URL or fall back to the original source URL."""
