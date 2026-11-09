@@ -7,6 +7,7 @@ import os
 
 # base.py initialises Sentry on import, so it must be disabled before the import.
 os.environ["ENABLE_SENTRY"] = "false"
+os.environ["MEDIA_STORAGE"] = "local"
 
 from .base import *  # noqa: F401,F403,E402
 

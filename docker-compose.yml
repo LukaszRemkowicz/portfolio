@@ -25,6 +25,7 @@ x-backend-common: &backend-common
     TZ: "Europe/Warsaw"
     SECRET_KEY: ${SECRET_KEY}
     DB_NAME: portfolio_dev
+    MEDIA_STORAGE: ${MEDIA_STORAGE:-local}
     DB_USER: ${DB_USER}
     DB_PASSWORD: ${DB_PASSWORD}
     DB_HOST: ${DB_HOST:-db}

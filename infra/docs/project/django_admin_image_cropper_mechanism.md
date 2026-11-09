@@ -279,7 +279,7 @@ Regression test:
 - [backend/core/tests/test_admin_media_urls.py](../../../backend/core/tests/test_admin_media_urls.py)
 
 ### Cloudflare R2 media storage (opt-in)
-`MEDIA_STORAGE=local` (default) keeps the local `FileSystemStorage` and nginx `X-Accel-Redirect` serving. `MEDIA_STORAGE=r2` switches the default storage to `common.storage.R2RoutingStorage`.
+`MEDIA_STORAGE=r2` is the default (production); `MEDIA_STORAGE=local` (dev compose, staging, tests) keeps the local `FileSystemStorage` and nginx `X-Accel-Redirect` serving. `MEDIA_STORAGE=r2` switches the default storage to `common.storage.R2RoutingStorage`.
 
 Env vars (r2 only): `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (required, startup fails without them), `R2_ENDPOINT_URL`, `R2_PUBLIC_BUCKET` (`portfolio-media`), `R2_PRIVATE_BUCKET` (`portfolio-originals`), `R2_PUBLIC_DOMAIN` (`media.lukaszremkowicz.com`, host only), `R2_SIGNED_URL_EXPIRE` (`300` seconds).
 
