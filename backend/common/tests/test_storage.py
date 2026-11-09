@@ -29,8 +29,10 @@ R2 = {
     [
         ("images/original/x.png", True),
         ("images/original_format/x.webp", True),
-        ("images/detail/x.webp", True),
-        ("images/ns/detail/x.webp", True),
+        ("images/high_resolution/x.webp", True),
+        ("images/legacy_source.jpeg", True),
+        ("images/detail", True),
+        ("images/detail/x.webp", False),
         ("images/thumbnail/x.webp", False),
         ("backgrounds/original/x.png", False),
         ("avatars/original_format/x.webp", False),
@@ -59,7 +61,7 @@ class TestRouting:
     def test_ops_hit_right_backend(self) -> None:
         storage = R2RoutingStorage()
         storage._public, storage._private = MagicMock(), MagicMock()
-        storage._save("images/detail/x.webp", b"")
+        storage._save("images/high_resolution/x.webp", b"")
         storage._private._save.assert_called_once()
         storage.exists("images/thumbnail/x.webp")
         storage._public.exists.assert_called_once_with("images/thumbnail/x.webp")

@@ -11,13 +11,17 @@ from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
 
 PRIVATE_ROOT = "images"
-PRIVATE_SEGMENTS = frozenset({"original", "original_format", "detail"})
+# Same contract as nginx: only generated thumbnail/detail variants are public. Sources
+# (images/original/, legacy images/<file>) and high-resolution variants stay private.
+PUBLIC_IMAGE_DIRS = frozenset({"thumbnail", "detail"})
 
 
 def is_private_name(name: str) -> bool:
-    """Private iff under ``images/`` and any directory segment is a source/secure-view role."""
+    """Private iff under ``images/`` and not inside a public variant directory."""
     parts = [p for p in str(name).replace("\\", "/").split("/") if p]
-    return bool(parts) and parts[0] == PRIVATE_ROOT and any(p in PRIVATE_SEGMENTS for p in parts)
+    if not parts or parts[0] != PRIVATE_ROOT:
+        return False
+    return not (len(parts) > 2 and parts[1] in PUBLIC_IMAGE_DIRS)
 
 
 def is_remote_storage(storage: Any) -> bool:
