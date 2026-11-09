@@ -159,6 +159,10 @@ services:
   nginx:
     image: ${ENVIRONMENT}-nginx:${TAG}
     restart: always
+    environment:
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      SECURITY_CONTACT_EMAIL: ${SECURITY_CONTACT_EMAIL:?SECURITY_CONTACT_EMAIL is required for stage}
     read_only: true
     security_opt:
       - no-new-privileges:true

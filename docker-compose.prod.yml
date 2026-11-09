@@ -191,6 +191,9 @@ services:
     restart: always
     environment:
       TZ: "Europe/Warsaw"
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      SECURITY_CONTACT_EMAIL: ${SECURITY_CONTACT_EMAIL:?SECURITY_CONTACT_EMAIL is required for production}
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -216,7 +219,7 @@ services:
       - "traefik.http.routers.portfolio-prod.service=portfolio-prod"
 
       # Admin Router
-      - "traefik.http.routers.portfolio-prod-admin.rule=Host(`admin.${SITE_DOMAIN}`)"
+      - "traefik.http.routers.portfolio-prod-admin.rule=Host(`${ADMIN_DOMAIN}`)"
       - "traefik.http.routers.portfolio-prod-admin.entrypoints=websecure"
       - "traefik.http.routers.portfolio-prod-admin.tls=true"
       - "traefik.http.routers.portfolio-prod-admin.tls.certresolver=letsencrypt"

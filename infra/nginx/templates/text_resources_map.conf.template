@@ -1,0 +1,5 @@
+map $host $text_resources_directory {
+    default "";
+    ${ADMIN_DOMAIN} /var/cache/nginx/text-resources/${ADMIN_DOMAIN};
+    ${API_DOMAIN} /var/cache/nginx/text-resources/${API_DOMAIN};
+}

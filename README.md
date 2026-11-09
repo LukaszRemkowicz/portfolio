@@ -57,7 +57,9 @@ Current request flow:
 
 1. browser requests `SITE_DOMAIN`; Cloudflare Workers serves pages and forwards `/media/*`, `/static/*`, `/app/image-files/*`, `/v1/*` and `/sitemap.xml` to the VPS
 2. Traefik routes those requests to nginx
-3. nginx serves public static/media directly or proxies the request to Django; any other path returns 404
+3. nginx serves explicit static/media paths and proxies explicit Django routes; unowned paths return 404 instead of being sent to the frontend
+
+Nginx generates `robots.txt` and `/.well-known/security.txt` at startup for `ADMIN_DOMAIN` and `API_DOMAIN`. Both hosts disallow crawling; each security file has its own canonical URL and expires after 180 days. Production and staging require `SECURITY_CONTACT_EMAIL` in the runtime environment. Local Compose uses the reserved `security@example.invalid` placeholder when it is not set. This Nginx setting applies only to admin/API hosts; the public Worker uses its own runtime configuration.
 
 Application structure:
 

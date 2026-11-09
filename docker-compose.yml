@@ -66,9 +66,16 @@ x-local-nginx-common: &local-nginx-common
     be:
       condition: service_healthy
   restart: unless-stopped
+  environment:
+    TZ: "Europe/Warsaw"
+    ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+    API_DOMAIN: ${API_DOMAIN}
+    SECURITY_CONTACT_EMAIL: ${SECURITY_CONTACT_EMAIL:-security@example.invalid}
   volumes:
     - ./infra/nginx/static_server.conf:/etc/nginx/nginx.conf:ro
     - ./infra/nginx/includes:/etc/nginx/includes:ro
+    - ./infra/nginx/templates:/etc/nginx/text-resources/templates:ro
+    - ./docker/nginx/18-render-text-resources.sh:/docker-entrypoint.d/18-render-text-resources.sh:ro
     - ./backend/media:/app/media:ro
     - ./infra/nginx/html/error.html:/usr/share/nginx/html/error.html:ro
     - ./infra/nginx/html/404.html:/usr/share/nginx/html/404.html:ro

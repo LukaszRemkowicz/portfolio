@@ -33,8 +33,11 @@ These scripts **require** several variables to be set, typically via Doppler.
 1. `ENVIRONMENT`: Determines tags and isolated state (e.g. `production`, `stage`)
 2. `TAG`: The git tag or version (e.g. `v1.2.3`)
 3. `PROJECT_OWNER`: Injected into frontend metadata
-4. `SITE_DOMAIN` and `API_DOMAIN`: Used for Nginx templates and frontend builds
-5. `ALLOWED_HOSTS`: Django security setting
+4. `SITE_DOMAIN`, `ADMIN_DOMAIN`, and `API_DOMAIN`: Public, admin, and API hostnames used by routing and Nginx startup templates
+5. `SECURITY_CONTACT_EMAIL`: Public security contact rendered by Nginx for admin/API hosts; required in production and staging
+6. `ALLOWED_HOSTS`: Django security setting
+
+For local Compose, `SECURITY_CONTACT_EMAIL` defaults to the reserved `security@example.invalid` address. Production and staging Compose require the variable and fail configuration when it is missing; provision it as public runtime configuration in the respective Doppler config. This variable configures Nginx only. The public Cloudflare Worker has a separate runtime binding.
 
 ### 🏭 GHCR image preparation
 - `GHCR_USERNAME`: registry username used by `prepare_images.sh` and `prepare_staging_images.sh`
