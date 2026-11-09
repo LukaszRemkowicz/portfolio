@@ -149,7 +149,7 @@ def test_image_url_falls_back_to_astroimage_thumbnail_when_crop_missing() -> Non
 
 
 @pytest.mark.django_db
-def test_image_url_falls_back_to_astroimage_original_when_thumbnail_variant_missing(
+def test_image_url_does_not_fall_back_to_astroimage_private_source(
     caplog,
 ) -> None:
     astro_image = AstroImageFactory(original=jpeg_field("astro-original.jpg", size=(1600, 1200)))
@@ -157,8 +157,8 @@ def test_image_url_falls_back_to_astroimage_original_when_thumbnail_variant_miss
     product.variants.all().delete()
     astro_image.variants.all().delete()
 
-    assert product.get_image_url("thumbnail", 560) == str(astro_image.original.url)
-    assert "Falling back to original source image because variant is missing" in caplog.text
+    assert product.get_image_url("thumbnail", 560) is None
+    assert str(astro_image.original.url) not in caplog.text
 
 
 @pytest.mark.django_db

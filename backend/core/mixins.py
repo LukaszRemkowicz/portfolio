@@ -108,7 +108,9 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
             changed_variant_count += self._sync_variants_for_source(source, force=effective_force)
         return changed_variant_count
 
-    required_variant_roles = frozenset({"background", "original_format", "thumbnail"})
+    required_variant_roles = frozenset(
+        {"background", "high_resolution", "original_format", "thumbnail"}
+    )
 
     def has_pending_image_variant_sync(self, changed_field_names: list[str] | None = None) -> bool:
         """Return whether any selected source family is out of sync with storage.

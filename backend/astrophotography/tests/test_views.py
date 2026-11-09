@@ -978,7 +978,7 @@ class TestAstroImageSecureView:
         astro_image: AstroImage = AstroImageFactory(original__width=3000, original__height=2000)
         process_image_task("astrophotography", "AstroImage", astro_image.pk)
         astro_image.refresh_from_db()
-        original_format: ImageVariant = astro_image.variants.get(role="original_format")
+        high_resolution: ImageVariant = astro_image.variants.get(role="high_resolution")
         url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
         params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
 
@@ -986,17 +986,18 @@ class TestAstroImageSecureView:
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
         assert response["Cache-Control"] == "private, no-store, max-age=0"
-        assert f"/protected_media/{original_format.file.name}" == response["X-Accel-Redirect"]
+        assert f"/protected_media/{high_resolution.file.name}" == response["X-Accel-Redirect"]
 
-    def test_astro_image_secure_view_always_serves_full_resolution_path(
+    def test_astro_image_secure_view_serves_generated_variant_without_source_file(
         self, api_client: APIClient
     ) -> None:
-        """The modal/lightbox endpoint must serve the canonical public asset."""
+        """The signed endpoint serves its generated variant independently of the source."""
         astro_image: AstroImage = AstroImageFactory(original__width=3000, original__height=2000)
         process_image_task("astrophotography", "AstroImage", astro_image.pk)
         astro_image.refresh_from_db()
 
-        original_format: ImageVariant = astro_image.variants.get(role="original_format")
+        high_resolution: ImageVariant = astro_image.variants.get(role="high_resolution")
+        astro_image.original.storage.delete(str(astro_image.original.name))
 
         url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
         params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
@@ -1006,22 +1007,53 @@ class TestAstroImageSecureView:
         assert response.status_code == status.HTTP_200_OK
         assert response.has_header("X-Accel-Redirect")
         assert response["Cache-Control"] == "private, no-store, max-age=0"
-        assert response["X-Accel-Redirect"] == f"/protected_media/{original_format.file.name}"
+        assert response["X-Accel-Redirect"] == f"/protected_media/{high_resolution.file.name}"
 
-    def test_astro_image_secure_view_requires_original_source_even_when_variant_exists(
+    def test_astro_image_secure_view_missing_generated_file_returns_not_found(
+        self, api_client: APIClient
+    ) -> None:
+        """A missing generated file must not make the private source a fallback."""
+        astro_image: AstroImage = AstroImageFactory(original__width=3000, original__height=2000)
+        process_image_task("astrophotography", "AstroImage", astro_image.pk)
+        astro_image.refresh_from_db()
+
+        high_resolution: ImageVariant = astro_image.variants.get(role="high_resolution")
+        high_resolution.file.storage.delete(str(high_resolution.file.name))
+
+        url: str = reverse("astroimages:secure-image-serve", args=[astro_image.slug])
+        params: dict[str, Any] = generate_signed_url_params(astro_image.slug)
+
+        response: Response = api_client.get(url, params)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert not response.has_header("X-Accel-Redirect")
+
+    def test_astro_image_secure_view_does_not_fall_back_to_detail_variant(
         self, api_client: APIClient
     ) -> None:
         with patch("core.models.process_image_task.delay_on_commit"):
-            astroimage: AstroImage = AstroImageFactory(original=jpeg_field("missing-source.jpg"))
-        original_name: str = astroimage.original.name
-        astroimage.original.storage.delete(original_name)
+            astroimage: AstroImage = AstroImageFactory(original=jpeg_field("detail-only.jpg"))
         ImageVariantFactory(
             owner=astroimage,
-            file__filename="restored-original-format.webp",
-            role="original_format",
-            width=1920,
+            file__filename="detail-only.webp",
+            role="detail",
+            width=1280,
             height=1280,
         )
+
+        url: str = reverse("astroimages:secure-image-serve", args=[astroimage.slug])
+        params: dict[str, Any] = generate_signed_url_params(astroimage.slug)
+
+        response: Response = api_client.get(url, params)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert not response.has_header("X-Accel-Redirect")
+
+    def test_astro_image_secure_view_does_not_fall_back_to_original_source(
+        self, api_client: APIClient
+    ) -> None:
+        with patch("core.models.process_image_task.delay_on_commit"):
+            astroimage: AstroImage = AstroImageFactory(original=jpeg_field("source-only.jpg"))
 
         url: str = reverse("astroimages:secure-image-serve", args=[astroimage.slug])
         params: dict[str, Any] = generate_signed_url_params(astroimage.slug)

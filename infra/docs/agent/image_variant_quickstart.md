@@ -62,6 +62,20 @@ quickstart and targeted code inspection are insufficient.
 - Compatibility paths may exist during rollout, but new serving behavior should
   prefer `ImageVariant` rows over legacy image fields.
 
+## AstroImage Access
+
+- Source uploads under `images/original/` and legacy files directly under
+  `images/` are private. Public `/media/images/` paths are limited to generated
+  `thumbnail/` and `detail/` variants; other direct image paths require staff
+  access on the admin media route.
+- AstroImage's signed viewer serves only the `high_resolution` variant. It does
+  not fall back to `detail` or the source upload. Legacy AstroImage
+  `original_format` rows are renamed in place, so their existing file paths stay
+  valid.
+- The public API payload does not expose the `high_resolution` role. The
+  signed image URL contract stays unchanged, so the external frontend keeps
+  using the existing signed URL flow.
+
 ## Verification
 
 Run backend commands from `backend/`.

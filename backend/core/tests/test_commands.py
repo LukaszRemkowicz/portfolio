@@ -177,7 +177,7 @@ class TestBackfillImageVariantsCommand:
         call_command("backfill_image_variants", object_id=str(image.pk))
 
         image.refresh_from_db()
-        original_format = image.variants.get(role="original_format")
+        high_resolution = image.variants.get(role="high_resolution")
         detail_widths = [
             variant.width for variant in image.variants.filter(role="detail").order_by("width")
         ]
@@ -189,7 +189,7 @@ class TestBackfillImageVariantsCommand:
             1920,
             2560,
         ]
-        assert original_format.width == 1920
+        assert high_resolution.width == 1920
         assert thumbnail_widths == [320, 560]
 
     def test_generated_variants_invalidate_media_bearing_caches(
@@ -292,9 +292,9 @@ class TestBackfillImageVariantsCommand:
         call_command("backfill_image_variants", object_id=str(image.pk))
 
         image.refresh_from_db()
-        original_format = image.variants.get(role="original_format")
+        high_resolution = image.variants.get(role="high_resolution")
         thumbnail_variant = image.variants.get(role="thumbnail", width=560)
-        assert original_format.width == 1200
+        assert high_resolution.width == 1200
         assert thumbnail_variant.height == 373
         assert thumbnail_variant.file.name.startswith("images/thumbnail/")
         assert not image.variants.filter(role="card").exists()
