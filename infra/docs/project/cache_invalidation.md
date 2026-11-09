@@ -19,7 +19,7 @@ For example, in `backend/core/signals.py` and `backend/astrophotography/signals.
 @receiver([post_save, post_delete], sender=AstroImage)
 def invalidate_astroimage_cache(sender, instance, **kwargs):
     CacheService.invalidate_astrophotography_cache()
-    invalidate_frontend_ssr_cache_task.delay_on_commit(["latest-astro-images", "travel-highlights"])
+    submit(invalidate_frontend_ssr_cache_task, ["latest-astro-images", "travel-highlights"])
 ```
 
 ### 1. Backend API Cache Invalidation

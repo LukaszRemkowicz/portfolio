@@ -15,23 +15,48 @@ def test_sync_mode_runs_inline_and_propagates(settings):
         background.submit(MagicMock(side_effect=ValueError("boom")))
 
 
-def test_async_mode_retries_then_logs_and_closes_connection(settings, mocker):
+def test_async_mode_retries_via_timer_then_logs(settings, mocker):
     settings.BACKGROUND_TASKS_SYNC = False
-    mocker.patch("common.background.time.sleep")
     close = mocker.patch("common.background.connection.close")
-    mocker.patch("common.background.close_old_connections")
+    reopen = mocker.patch("common.background.close_old_connections")
     log = mocker.patch("common.background.logger.exception")
-    func = MagicMock(side_effect=ValueError("boom"))
+    timers: list[float] = []
+
+    class ImmediateTimer:
+        def __init__(self, delay, fn, args):
+            timers.append(delay)
+            self.fn, self.args, self.daemon = fn, args, False
+
+        def start(self):
+            self.fn(*self.args)
+
+    mocker.patch("common.background.Timer", ImmediateTimer)
     mocker.patch(
         "common.background._get_executor",
         return_value=MagicMock(submit=lambda fn, *a: fn(*a)),
     )
+    func = MagicMock(side_effect=ValueError("boom"))
 
-    background.submit(func, retries=2, retry_delay=1)
+    background.submit(func, retries=2, retry_delay=7)
 
     assert func.call_count == 3
+    assert timers == [7, 7]
     log.assert_called_once()
-    close.assert_called_once()
+    # Every attempt gets a fresh DB connection and closes it.
+    assert reopen.call_count == close.call_count == 3
+
+
+def test_submit_waits_for_commit(settings, mocker):
+    settings.BACKGROUND_TASKS_SYNC = True
+    callbacks: list = []
+    mocker.patch("common.background.transaction.on_commit", side_effect=callbacks.append)
+    func = MagicMock()
+
+    background.submit(func, "x")
+
+    func.assert_not_called()
+    callbacks[0]()
+    func.assert_called_once_with("x")
 
 
 def test_async_mode_runs_in_thread(settings):

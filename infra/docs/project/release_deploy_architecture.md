@@ -421,6 +421,24 @@ Important state:
 
 Rollback uses a previous version tag, not a mutable tag.
 
+### Celery and Redis removal (first deploy after it)
+
+`deploy.sh` does not pass `--remove-orphans`, so the old `redis`, `celery-worker`
+and `celery-beat` containers keep running after the first deploy without them.
+Remove them once the new release is healthy:
+
+```bash
+docker rm -f portfolio-prod-redis-1 portfolio-prod-celery-worker-1 portfolio-prod-celery-beat-1
+```
+
+Do not remove the `fe` container: nginx still proxies to `fe:8080`.
+
+Rolling back to a release from before the removal needs Redis again (its
+settings use `RedisCache` and Celery): start it from that release's checkout with
+`docker compose -f docker-compose.common.yml -f docker-compose.prod.yml up -d redis celery-worker`.
+After the removal, the `portfolio_prod_celerybeat_data` volume and the
+`REDIS_PASSWORD` secret in Doppler are unused.
+
 ## Registry And Local Retention
 
 Recommended retention split:

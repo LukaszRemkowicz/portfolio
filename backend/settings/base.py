@@ -686,7 +686,7 @@ ADMIN_SITE_ORDERING = (
 # Background tasks (in-process thread pool, see common/background.py)
 # ===========================
 
-BACKGROUND_TASK_WORKERS = env.int("BACKGROUND_TASK_WORKERS", default=4)
+BACKGROUND_TASK_WORKERS = env.int("BACKGROUND_TASK_WORKERS", default=2)
 # Run tasks inline instead of in a thread (used by tests)
 BACKGROUND_TASKS_SYNC = False
 

@@ -127,7 +127,7 @@ Helper functions:
 Important behavior:
 
 - task state is anchored to the dispatcher-provided `task_id` when available
-- transient HTTP/network failures are re-raised so `submit(..., retries=3, retry_delay=60)` retries them with exponential backoff instead of an immediate hard failure
+- transient HTTP/network failures are re-raised so `submit(..., retries=3, retry_delay=60)` retries them after a fixed delay instead of an immediate hard failure
 - partial field-level failures are treated as task failure and saved to `error_message`
 
 
