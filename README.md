@@ -8,8 +8,6 @@ Personal portfolio web app for astrophotography, travel stories, and programming
 
 The frontend lives in [`LukaszRemkowicz/portfolio-fe`](https://github.com/LukaszRemkowicz/portfolio-fe) and runs on Cloudflare Workers. Workers routes send `/media/*`, `/static/*`, `/app/image-files/*`, `/v1/*` and `/sitemap.xml` to this stack (Traefik, nginx); every other path on the main domain is served by the Worker.
 
-Fallback: nginx still proxies the main domain to the last frontend container (`fe`, image `production-fe`), which keeps running on the VPS although it is no longer in compose or deploys. Removing the Workers route `lukaszremkowicz.com/*` in Cloudflare instantly serves the old frontend again. Do not remove that container while nginx references `frontend_upstream`; nginx would fail to start.
-
 ## 🌍 Live
 
 - Site: [lukaszremkowicz.com](https://lukaszremkowicz.com)
