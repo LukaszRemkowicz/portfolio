@@ -23,6 +23,6 @@ Repo-level first-stop guide for Codex and future engineering sessions.
 
 - Cache, SSR/BFF, deployment/release, monitoring, admin media/image behavior, translations, feature flags, latest images, or total-time stats -> read the matching document listed in `infra/docs/agent/repository_routing.md` before inferring from code.
 - Backend validation -> run backend `uv` commands from `backend/`; canonical validation is `cd backend && uv run test`.
-- Frontend validation -> use the frontend Docker container rather than assuming the host runtime.
+- Frontend -> lives in the separate `LukaszRemkowicz/portfolio-fe` repo (Cloudflare Workers); validate it there.
 
 Keep this file tiny. Put stable details in `infra/docs/agent/` and link them here.

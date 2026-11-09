@@ -51,33 +51,18 @@ x-backend-common: &backend-common
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
     SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-true}
-    SSR_CACHE_INVALIDATION_URL: ${SSR_CACHE_INVALIDATION_URL:-http://fe:8080/internal/cache/invalidate}
+    SSR_CACHE_INVALIDATION_URL: ""
     SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN:-dev-ssr-cache-token}
   depends_on:
     - db
     - redis
 
 
-x-frontend-common: &frontend-common
-  build:
-    context: .
-    dockerfile: docker/frontend/Dockerfile
-    target: dev
-  networks:
-    - portfolio_network
-  volumes:
-    - ./frontend:/app
-    - portfolio_dev_fe_node_modules:/app/node_modules
-  environment:
-    TZ: "Europe/Warsaw"
-
 x-local-nginx-common: &local-nginx-common
   image: nginx:1.31.3-alpine
   depends_on:
     nginx-blocklist-init:
       condition: service_completed_successfully
-    fe:
-      condition: service_healthy
     be:
       condition: service_healthy
   restart: unless-stopped
@@ -85,42 +70,12 @@ x-local-nginx-common: &local-nginx-common
     - ./infra/nginx/static_server.conf:/etc/nginx/nginx.conf:ro
     - ./infra/nginx/includes:/etc/nginx/includes:ro
     - ./backend/media:/app/media:ro
-    - ./frontend/public/error.html:/usr/share/nginx/html/error.html:ro
-    - ./frontend/public/404.html:/usr/share/nginx/html/404.html:ro
+    - ./infra/nginx/html/error.html:/usr/share/nginx/html/error.html:ro
+    - ./infra/nginx/html/404.html:/usr/share/nginx/html/404.html:ro
     - portfolio_dev_static_data:/app/staticfiles:ro
     - nginx_blocklist:/etc/nginx/blocklist:ro
 
 services:
-  fe:
-    <<: *frontend-common
-    environment:
-      SITE_DOMAIN: ${SITE_DOMAIN:-portfolio.local}
-      SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN:-dev-ssr-cache-token}
-      API_URL: https://${API_DOMAIN:-api.portfolio.local}
-      SSR_API_URL: http://be:8000
-      VITE_API_URL: https://${API_DOMAIN:-api.portfolio.local}
-      GA_TRACKING_ID: ${GA_TRACKING_ID:-G-2WGK87YBL6}
-      VITE_GA_TRACKING_ID: ${GA_TRACKING_ID:-G-2WGK87YBL6}
-      ENABLE_GA: ${ENABLE_GA:-false}
-      VITE_ENABLE_GA: ${ENABLE_GA:-false}
-      SENTRY_DSN_FE: ${SENTRY_DSN_FE:-}
-      VITE_SENTRY_DSN_FE: ${SENTRY_DSN_FE:-}
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      VITE_ENVIRONMENT: ${ENVIRONMENT:-development}
-      PROJECT_OWNER: ${PROJECT_OWNER:-Lukasz Remkowicz}
-      FRONTEND_PORT: ${FRONTEND_PORT:-8080}
-      PORT: ${FRONTEND_PORT:-8080}
-      NODE_ENV: production
-    command: npm run dev:ssr
-    expose:
-      - "8080"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
   be:
     <<: *backend-common
     ports:
@@ -137,16 +92,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-
-  fe-test:
-    build:
-      context: .
-      dockerfile: docker/frontend/Dockerfile
-      target: e2e
-    networks:
-      - portfolio_network
-    profiles: [ "test" ]
-    command: sh -lc "npm test -- --watchAll=false && npm run test:e2e"
 
   test:
     <<: *backend-common
@@ -254,8 +199,6 @@ services:
 
 volumes:
   portfolio_dev_db_data:
-    external: true
-  portfolio_dev_fe_node_modules:
     external: true
   portfolio_dev_static_data:
     external: true
