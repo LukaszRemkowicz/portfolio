@@ -11,7 +11,7 @@ from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
 
 PRIVATE_ROOT = "images"
-# Same contract as nginx: only generated thumbnail/detail variants are public. Sources
+# Only generated thumbnail/detail variants are public (issue #198). Sources
 # (images/original/, legacy images/<file>) and high-resolution variants stay private.
 PUBLIC_IMAGE_DIRS = frozenset({"thumbnail", "detail"})
 

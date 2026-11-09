@@ -283,7 +283,7 @@ Regression test:
 
 Env vars (r2 only): `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (required, startup fails without them), `R2_ENDPOINT_URL`, `R2_PUBLIC_BUCKET` (`portfolio-media`), `R2_PRIVATE_BUCKET` (`portfolio-originals`), `R2_PUBLIC_DOMAIN` (`media.lukaszremkowicz.com`, host only), `R2_SIGNED_URL_EXPIRE` (`300` seconds).
 
-Bucket split: a name is private when its first segment is `images` and it is not inside `images/thumbnail/` or `images/detail/` (the same rule as nginx). This covers `images/original/`, legacy sources stored directly in `images/`, and `images/original_format/` (the high-resolution variant). Everything outside `images/` is public. DB names are unchanged. Public URLs use the custom domain; private URLs are presigned.
+Bucket split: a name is private when its first segment is `images` and it is not inside `images/thumbnail/` or `images/detail/` (issue #198). This covers `images/original/`, legacy sources stored directly in `images/`, and `images/original_format/` (the high-resolution variant). Everything outside `images/` is public. DB names are unchanged. Public URLs use the custom domain; private URLs are presigned.
 
 Secure views (`SecureMediaView` and subclasses) validate the signature as before, then return a `302` to a presigned URL (`Cache-Control: private, no-store, max-age=0`) instead of `X-Accel-Redirect`. Read paths trust the DB file name in r2 mode (no existence check per URL). CKEditor 5 uploads go to `ckeditor/` in the public bucket. `media_inventory` is filesystem only.
 
