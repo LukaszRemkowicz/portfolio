@@ -14,6 +14,7 @@ x-backend-defaults: &backend-defaults
     TZ: "Europe/Warsaw"
     SECRET_KEY: ${SECRET_KEY}
     DB_NAME: portfolio_stage
+    MEDIA_STORAGE: ${MEDIA_STORAGE:-local}
     DB_USER: ${DB_USER:-portfolio}
     DB_PASSWORD: ${DB_PASSWORD}
     DB_HOST: db

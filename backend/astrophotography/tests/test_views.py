@@ -636,6 +636,40 @@ class TestTravelHighlightsBySlugView:
         assert "thumbnail_url" not in data["images"][0]
         assert data["images"][0]["fallback_image"]["url"] == fallback.file.url
 
+    def test_background_image_is_public_detail_variant(self, api_client: APIClient) -> None:
+        """The cached payload must not embed a signed link that expires."""
+        place: Place = PlaceFactory(name="Bieszczady", country="PL")
+        with patch("core.models.process_image_task.delay_on_commit"):
+            astroimage: AstroImage = AstroImageFactory(place=place)
+        detail: ImageVariant = ImageVariantFactory(
+            owner=astroimage,
+            file__filename="travel-detail.webp",
+            role="detail",
+            width=1920,
+            height=1280,
+        )
+        slider: MainPageLocation = MainPageLocationFactory(
+            place=place,
+            is_active=True,
+            background_image=astroimage,
+            adventure_date=DateRange(date(2024, 1, 1), date(2024, 1, 31)),
+        )
+
+        detail_url: str = reverse(
+            TRAVEL_BY_COUNTRY_PLACE_DATE_URL_NAME,
+            kwargs={
+                "country_slug": slider.country_slug,
+                "place_slug": slider.place_slug,
+                "date_slug": slider.date_slug,
+            },
+        )
+        detail_response: Response = api_client.get(detail_url)
+        list_response: Response = api_client.get(reverse(TRAVEL_HIGHLIGHTS_LIST_URL_NAME))
+
+        assert detail_response.json()["background_image"] == detail.file.url
+        assert list_response.json()[0]["background_image"] == detail.file.url
+        assert "?s=" not in detail.file.url
+
     def test_get_highlights_with_story(self, api_client: APIClient) -> None:
         """Test retrieving highlights with a story"""
 
