@@ -1,9 +1,8 @@
-"""In-process background task runner (replaces Celery).
+"""In-process background task runner.
 
 Tasks are plain functions submitted to a small thread pool after the current
-transaction commits. A failed task is retried after a fixed delay (the Celery
-tasks used a fixed countdown too). Tasks are lost if the process dies before
-they run.
+transaction commits. A failed task is retried after a fixed delay. Tasks are
+lost if the process dies before they run.
 """
 
 import logging

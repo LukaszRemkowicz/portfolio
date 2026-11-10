@@ -14,7 +14,7 @@ class TranslationTask(models.Model):
         COMPLETED = "COMPLETED", _("Completed")
         FAILED = "FAILED", _("Failed")
 
-    task_id = models.CharField(max_length=255, unique=True, help_text=_("Celery Task ID"))
+    task_id = models.CharField(max_length=255, unique=True, help_text=_("Background task ID"))
 
     # Generic Foreign Key to support both AstroImage (UUID) and Place/Tag (Int)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)

@@ -309,8 +309,8 @@ msgid "Failed"
 msgstr "Niepowodzenie"
 
 #: translation/models.py:17
-msgid "Celery Task ID"
-msgstr "ID taska Celery"
+msgid "Background task ID"
+msgstr "ID zadania w tle"
 
 #: translation/models.py:22
 msgid "Primary Key of the object (Int or UUID)"
