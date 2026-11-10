@@ -173,7 +173,7 @@ plugins = [
 ]
 
 [tool.django-stubs]
-django_settings_module = "settings.base"
+django_settings_module = "settings.tests"
 
 [[tool.mypy.overrides]]
 module = [

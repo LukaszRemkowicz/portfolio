@@ -5,70 +5,38 @@ import pytest
 from scripts import release_entrypoint
 
 
-@pytest.mark.parametrize("environment", ["prod", "production"])
-def test_production_release_repairs_empty_travel_country_after_backfill(monkeypatch, environment):
+def test_release_runs_no_commands_by_default(monkeypatch):
     run = Mock()
     monkeypatch.setattr(release_entrypoint.subprocess, "run", run)
-    monkeypatch.setenv("ENVIRONMENT", environment)
+
+    assert release_entrypoint.main() == 0
+
+    run.assert_not_called()
+
+
+def test_release_runs_configured_commands_in_order(monkeypatch):
+    run = Mock()
+    monkeypatch.setattr(release_entrypoint.subprocess, "run", run)
+    monkeypatch.setattr(
+        release_entrypoint,
+        "RELEASE_CONFIGURATION_COMMANDS",
+        (("first", "--flag"), ("second",)),
+    )
 
     assert release_entrypoint.main() == 0
 
     assert run.call_args_list == [
-        call(
-            (
-                release_entrypoint.sys.executable,
-                "manage.py",
-                "backfill_image_variants",
-                "--verbosity",
-                "0",
-                "--silent",
-            ),
-            check=True,
-        ),
-        call(
-            (
-                release_entrypoint.sys.executable,
-                "manage.py",
-                "repair_travel_place",
-                "--place-id",
-                "53",
-                "--country",
-                "PL",
-                "--apply",
-                "--if-country-empty",
-            ),
-            check=True,
-        ),
-    ]
-
-
-@pytest.mark.parametrize("environment", ["stage", "dev"])
-def test_nonproduction_release_only_runs_existing_backfill(monkeypatch, environment):
-    run = Mock()
-    monkeypatch.setattr(release_entrypoint.subprocess, "run", run)
-    monkeypatch.setenv("ENVIRONMENT", environment)
-
-    assert release_entrypoint.main() == 0
-
-    assert run.call_args_list == [
-        call(
-            (
-                release_entrypoint.sys.executable,
-                "manage.py",
-                "backfill_image_variants",
-                "--verbosity",
-                "0",
-                "--silent",
-            ),
-            check=True,
-        )
+        call((release_entrypoint.sys.executable, "manage.py", "first", "--flag"), check=True),
+        call((release_entrypoint.sys.executable, "manage.py", "second"), check=True),
     ]
 
 
 def test_release_stops_when_a_configuration_command_fails(monkeypatch):
     run = Mock(side_effect=release_entrypoint.subprocess.CalledProcessError(1, "manage.py"))
     monkeypatch.setattr(release_entrypoint.subprocess, "run", run)
-    monkeypatch.setenv("ENVIRONMENT", "prod")
+    monkeypatch.setattr(
+        release_entrypoint, "RELEASE_CONFIGURATION_COMMANDS", (("first",), ("second",))
+    )
 
     with pytest.raises(release_entrypoint.subprocess.CalledProcessError):
         release_entrypoint.main()

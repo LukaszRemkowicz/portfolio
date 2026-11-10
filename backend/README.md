@@ -39,11 +39,8 @@ Canonical matches take precedence; an ambiguous alias returns 404. Date changes
 are not versioned by these aliases. Migration `0022_mainpagelocation_legacy_slugs`
 must run before deploying code that uses these aliases.
 
-Production releases automatically repair the known record, Place 53, to Poland
-only while its country is empty. Staging skips this repair. The release uses
-`--if-country-empty`, so a later intentional country edit is preserved.
-
-For a manual repair, preview the exact change first (run inside the deployed
+The known record, Place 53, was repaired to Poland by an earlier release;
+releases no longer run this step. For a manual repair, preview the exact change first (run inside the deployed
 backend environment):
 
 ```bash

@@ -326,8 +326,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# MEDIA_STORAGE=local keeps Django's default FileSystemStorage; "r2" uses Cloudflare R2.
-MEDIA_STORAGE = env.str("MEDIA_STORAGE", default="local")
+# "r2" (default, production) uses Cloudflare R2; "local" (dev, staging, tests) keeps files on disk.
+MEDIA_STORAGE = env.str("MEDIA_STORAGE", default="r2")
 if MEDIA_STORAGE not in ("local", "r2"):
     raise ImproperlyConfigured(f"MEDIA_STORAGE must be 'local' or 'r2', got {MEDIA_STORAGE!r}")
 if MEDIA_STORAGE == "r2":
