@@ -22,7 +22,7 @@ fi
 expected=(
   "ps"
   "--filter"
-  "label=com.docker.compose.project=portfolio-stage"
+  "label=com.docker.compose.project=portfolio-prod"
   "--filter"
   "label=com.docker.compose.service=be"
   "--filter"
@@ -36,15 +36,15 @@ if [[ "$*" != "${expected[*]}" ]]; then
   exit 2
 fi
 
-printf '%s\n' "portfolio-stage-be-1"
+printf '%s\n' "portfolio-prod-be-1"
 STUB
 chmod +x "${tmp_dir}/docker"
 
 PATH="${tmp_dir}:${PATH}"
 source "${REPO_ROOT}/infra/scripts/utils.sh"
 
-actual="$(get_compose_service_containers "portfolio-stage" "be")"
-expected="portfolio-stage-be-1"
+actual="$(get_compose_service_containers "portfolio-prod" "be")"
+expected="portfolio-prod-be-1"
 
 if [[ "${actual}" != "${expected}" ]]; then
   echo "expected only the long-running backend container"

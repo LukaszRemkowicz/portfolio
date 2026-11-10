@@ -12,7 +12,7 @@
 #   - Captures release logs for long-term auditing
 #
 # Typical usage:
-#   TAG=v1.2.3 ENVIRONMENT=stage doppler run -- ./release.sh
+#   TAG=v1.2.3 ENVIRONMENT=production doppler run -- ./release.sh
 #
 # Parameters (Environment Variables):
 #   ENVIRONMENT   - Target environment (required: 'production', 'dev', etc.)

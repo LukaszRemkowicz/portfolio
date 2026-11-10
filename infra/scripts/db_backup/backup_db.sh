@@ -17,10 +17,10 @@ DB_NAME="${DB_NAME:-$STANDARD_DB_NAME}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PASSWORD="${DB_PASSWORD:-postgres}"
 
-# For managed prod/stage environments, prefer the standardized DB name derived
+# For managed prod environments, prefer the standardized DB name derived
 # from ENVIRONMENT over any stale injected DB_NAME value.
 case "${ENVIRONMENT:-}" in
-    production|prod|staging|stage|stg)
+    production|prod)
         if [ "${DB_NAME}" != "${STANDARD_DB_NAME}" ]; then
             echo "⚠️  Overriding DB_NAME=${DB_NAME} with standardized ${STANDARD_DB_NAME} for ENVIRONMENT=${ENVIRONMENT}"
             DB_NAME="${STANDARD_DB_NAME}"
