@@ -121,7 +121,6 @@ Current behavior:
   `exposure_details` changed and is non-empty
 - deleting an `AstroImage` invalidates settings/landing-page cache
 - changing `calculated_exposure_hours` invalidates landing-page/settings cache
-  and frontend SSR `settings`
 - translation-model signals still invalidate astrophotography/latest/travel cache,
   but they do not queue exposure-hour recalculation anymore
 
@@ -160,11 +159,10 @@ If higher confidence is required:
 
 ## Cache Invalidation
 
-This feature touches both backend and frontend cache behavior.
+This feature relies on the backend API cache (Django `DatabaseCache`).
 
 Current invalidation points:
 - per-image exposure-hour recalculation invalidates landing-page backend cache
-- per-image exposure-hour recalculation invalidates frontend SSR `settings`
 - `AstroImage.calculated_exposure_hours` changes invalidate the same settings
   cache path
 
@@ -175,19 +173,13 @@ Why this matters:
 
 ## Frontend Rendering
 
-Relevant files:
-- `frontend/src/components/About.tsx`
-- `frontend/src/types/index.ts`
-
-Current behavior:
-- frontend reads `settings.total_time_spent`
-- value is shown in the About stat section as `xh +`
-- stat includes a reusable tooltip explaining the metric
+The frontend (`portfolio-fe`) reads `settings.total_time_spent` from `/v1/settings/`
+and shows it in the About stat section.
 
 
 ## Testing Expectations
 
-When changing this feature, cover both backend behavior and frontend rendering.
+When changing this feature, cover backend behavior (frontend rendering is tested in `portfolio-fe`).
 
 Minimum backend coverage:
 - service parsing and prompt loading
@@ -197,11 +189,6 @@ Minimum backend coverage:
 - signal behavior for `calculated_exposure_hours`
 - command behavior
 - settings serializer output
-
-Minimum frontend coverage:
-- About stat rendering when value exists
-- About stat hiding when value is missing
-- tooltip rendering behavior
 
 
 ## Current State Summary

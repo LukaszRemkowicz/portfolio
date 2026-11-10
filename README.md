@@ -1,28 +1,10 @@
 # 🌌 Portfolio Landing Page
 
-Personal portfolio web app for astrophotography, travel stories, and programming work. The stack is:
-
-- backend: Django + DRF
-- edge/static layer: nginx
-- secrets: Doppler
-
-The frontend lives in [`LukaszRemkowicz/portfolio-fe`](https://github.com/LukaszRemkowicz/portfolio-fe) and runs on Cloudflare Workers. Workers routes send `/media/*`, `/static/*`, `/app/image-files/*`, `/v1/*` and `/sitemap.xml` to this stack (Traefik, nginx); every other path on the main domain is served by the Worker.
+Backend, nginx and infrastructure for a personal portfolio (astrophotography, travel stories, programming work). This repository holds the Django 6 + DRF backend (Python 3.14, `uv`), the nginx layer, Docker/compose files and the release scripts. The frontend lives in [`LukaszRemkowicz/portfolio-fe`](https://github.com/LukaszRemkowicz/portfolio-fe) (React Router 7 on Cloudflare Workers).
 
 ## 🌍 Live
 
 - Site: [lukaszremkowicz.com](https://lukaszremkowicz.com)
-
-## 🗂️ Repository Layout
-
-- `backend/` - Django + DRF application, admin, background threads (`common/background.py`), and media logic
-- `docker/` - Dockerfiles and entrypoints for backend and nginx
-- `infra/` - nginx templates, release scripts, and project docs
-- `screenshots/` - README screenshots
-
-Component docs:
-
-- Backend: [backend/README.md](backend/README.md)
-- Infra scripts: [infra/scripts/README.md](infra/scripts/README.md)
 
 ## 📸 Screenshots
 
@@ -40,101 +22,84 @@ Component docs:
 
 </details>
 
-
 ## 🏗️ Architecture
 
-The project follows a modern, highly decoupled architecture for performance and security. It supports **Environment Isolation** (Production & Staging) on the server, with an identical stack for **Development** (Local):
+Production request path: the browser talks to the Cloudflare Workers frontend (`portfolio-fe`), which reaches this stack through a Cloudflare Tunnel. Django serves the API, the sitemap and the admin; media is stored in Cloudflare R2.
 
-![Architecture Illustration](infra/docs/project/architecture.png)
+```mermaid
+flowchart LR
+    Browser["Browser"] --> Workers["Cloudflare Workers<br/>(portfolio-fe)"]
+    Workers -->|"API, sitemap"| Tunnel["Cloudflare Tunnel<br/>(cloudflared)"]
+    Tunnel --> Django["Django (gunicorn)"]
+    Admin["Browser (ADMIN_DOMAIN)"] -->|"admin"| Edge["Traefik (VPS edge)"]
+    Edge --> Nginx["nginx"]
+    Nginx --> Django
+    Django --> DB[("PostgreSQL")]
+    Django -->|"uploads, presigned URLs"| R2[("Cloudflare R2<br/>portfolio-media / portfolio-originals")]
+    Browser -->|"public images"| MediaHost["media.lukaszremkowicz.com"]
+    MediaHost --> R2
+```
 
-### Key Components:
-- **Environment Isolation**: Parallel stacks (`PROD` and `STAGE`) ensure zero-collision deployments.
-- **Development Stack**: Local development uses the same core `Nginx + Django + PostgreSQL` architecture via `portfolio-dev`.
-- **Doppler**: Secret management for project runtime configuration.
+- `cloudflared` is a compose service (profile `tunnel` in `docker-compose.prod.yml`). It is started separately and is not touched by the deploy. See [infra/scripts/README.md](infra/scripts/README.md).
+- Traefik runs on the VPS edge (and in the local dev compose labels). `deploy.sh` also uses it for its health check (HTTPS to `SITE_DOMAIN` via `127.0.0.1:443`).
+- nginx config: [infra/nginx/](infra/nginx/). It still has an `fe:8080` upstream (`infra/nginx/static_server.conf`). On the VPS an old orphan `fe` container (no longer defined in this repo's compose) keeps running so nginx can resolve it. Do not remove it until that upstream is removed.
+- Local development uses the same `nginx + Django + PostgreSQL` stack through `docker-compose.yml` with Traefik labels.
+- Secrets come from Doppler.
 
+## 🗂️ Repository Layout
 
-Current request flow:
+- `backend/` - Django + DRF application: API, admin, translations, media logic, background tasks (`common/background.py`)
+- `docker/` - Dockerfiles and entrypoint for the backend (`docker/backend/`) and nginx (`docker/nginx/`)
+- `infra/nginx/` - nginx config and includes
+- `infra/scripts/` - release scripts (`release/`), DB backup scripts (`db_backup/`), shared helpers
+- `infra/docs/` - agent docs (`agent/`) and project docs (`project/`)
+- `docker-compose.yml`, `docker-compose.common.yml`, `docker-compose.prod.yml` - dev, shared and production stacks
+- `.github/` - CI/CD workflows, secrets doc, PR templates
+- `screenshots/` - README screenshots
 
-1. browser requests `SITE_DOMAIN`; Cloudflare Workers serves pages and forwards `/media/*`, `/static/*`, `/app/image-files/*`, `/v1/*` and `/sitemap.xml` to the VPS
-2. Traefik routes those requests to nginx
-3. nginx serves public static/media directly or proxies the request to Django; any other path returns 404
+Component docs:
 
-Application structure:
-
-- public page URLs are the normal website addresses used by users, search engines, and the sitemap
-- the browser uses `SITE_DOMAIN` as its public application host
-- Django remains the content owner and still handles sitemap generation
+- Backend: [backend/README.md](backend/README.md)
+- Infra scripts: [infra/scripts/README.md](infra/scripts/README.md)
 
 ## 📖 Glossary
 
-- `SITE_DOMAIN`: Public website host, for example `portfolio.local`.
-- `ADMIN_DOMAIN`: Public Django admin host, for example `admin.portfolio.local`.
-- `API`: Internal backend API contract used by the Workers frontend and Django admin integrations.
+- `SITE_DOMAIN`: public website host, for example `portfolio.local`.
+- `ADMIN_DOMAIN`: public Django admin host, for example `admin.portfolio.local`.
+- `X-Request-ID`: request correlation header. The backend reuses or creates it, echoes it in responses and logs it.
 
-## 🧭 Architecture Overview
+## 🖼️ Media
 
-### Public entrypoints
+`MEDIA_STORAGE` selects the storage backend: `r2` (default) or `local`. Dev compose and tests use `local` (files on disk, served by nginx).
 
-- `SITE_DOMAIN`
-  - public website
-  - public website (frontend on Cloudflare Workers; only API, media, static and sitemap paths reach this stack)
-  - public media served by nginx
-- `ADMIN_DOMAIN`
-  - Django admin
+In `r2` mode (code: [backend/common/storage.py](backend/common/storage.py)):
 
-### Backend responsibilities
+- public bucket `portfolio-media`, served at `media.lukaszremkowicz.com`: generated thumbnail and detail variants
+- private bucket `portfolio-originals`: source uploads and high-resolution variants, served through short-lived presigned URLs
+- secrets `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` come from Doppler (startup fails without them)
 
-- content ownership and business logic
-- admin application
-- API used by the Workers frontend
-- sitemap generation
-- secure media authorization/signing
+More detail: [cropper and media doc](infra/docs/project/django_admin_image_cropper_mechanism.md).
 
-### Media Delivery
+## ⚙️ Background Tasks & Caching
 
-Public-safe media is served directly by nginx on `SITE_DOMAIN`.
-
-Protected media uses a split flow:
-
-- Django signs or authorizes access
-- nginx serves file bytes through `X-Accel-Redirect`
-
-### Observability
-
-The backend echoes and logs `X-Request-ID` when the frontend forwards it.
-
-Operational log and sitemap monitoring is handled outside this repository by
-the standalone `agent-monitoring` project. Landingpage emits structured logs
-and still owns public sitemap generation, but it no longer stores monitoring
-reports or exposes Django admin monitoring actions.
+- Background work (emails, translations, image processing) runs through `submit()` in [backend/common/background.py](backend/common/background.py): an in-process thread pool started after the transaction commits, with timer-based retries. There is no broker, so tasks are lost if the process stops. `BACKGROUND_TASK_WORKERS` sets the pool size (default 2). Tests run tasks inline (`BACKGROUND_TASKS_SYNC`).
+- Caching uses Django `DatabaseCache` (`django_cache`, `django_select2_cache`). `createcachetable` runs after `migrate` (dev `be` command and the production `release` job).
+- Content changes clear the whole API cache through `core/cache_service.py`. The old SSR cache webhook (`backend/common/ssr_cache.py`) is a disabled leftover. See [cache_invalidation.md](infra/docs/project/cache_invalidation.md).
 
 ## ⚡ Quick Start
 
-Local development is Docker Compose only. This project is not maintained as a standalone `manage.py runserver` workflow.
+Local development is Docker Compose only; `python manage.py runserver` on the host is not a supported workflow.
 
-### ✅ Prerequisites
-
-- Docker with the Compose plugin
-- Doppler CLI with access to the project secrets
-- `/etc/hosts` access for local domain mapping
-
-### 1. Clone
+Prerequisites: Docker with the Compose plugin, Doppler CLI with access to the project secrets, `/etc/hosts` access.
 
 ```bash
-git clone <your-repo-url>
-cd landingpage
-```
-
-### 2. Configure secrets with Doppler
-
-```bash
+git clone https://github.com/LukaszRemkowicz/portfolio.git
+cd portfolio
 doppler login
 doppler setup
 ```
 
-### 3. Bootstrap local Docker resources
-
-The local Compose stack expects these external Docker resources to already exist:
+Create the external Docker resources the local stack expects:
 
 ```bash
 docker network create traefik_proxy || true
@@ -142,9 +107,7 @@ docker volume create portfolio_dev_db_data || true
 docker volume create portfolio_dev_static_data || true
 ```
 
-### 4. Configure local hosts
-
-Add these entries to `/etc/hosts`:
+Add to `/etc/hosts`:
 
 ```text
 127.0.0.1 portfolio.local
@@ -152,67 +115,41 @@ Add these entries to `/etc/hosts`:
 127.0.0.1 api.portfolio.local
 ```
 
-### 5. Start local stack
+Start the stack (the `be` service runs migrations, `createcachetable`, message compilation and `collectstatic` on start):
 
 ```bash
 doppler --config dev run -- docker compose up --build
 ```
 
-Local hosts:
+Local hosts (served through Traefik, which must be running on the `traefik_proxy` network):
 
 - Site: `https://portfolio.local/`
 - Admin: `https://admin.portfolio.local/`
-- API: `https://api.portfolio.local/` (still available as a backend host, but no longer the normal browser-facing application entrypoint)
 - Django health endpoint: `http://127.0.0.1:8000/health`
 
-### 6. Verify local services
+Media defaults to `MEDIA_STORAGE=local` in dev compose, so no R2 credentials are needed.
 
 ```bash
-curl -k https://portfolio.local/
 curl -k https://admin.portfolio.local/
 curl -fsS http://127.0.0.1:8000/health
 ```
 
-## 🛠️ Local Development
-
-Use Docker Compose for all normal local work:
+Common compose commands:
 
 ```bash
-doppler --config dev run -- docker compose up --build
-```
-
-Common commands:
-
-```bash
-# stop the stack
 doppler --config dev run -- docker compose down
-
-# restart one service
 doppler --config dev run -- docker compose restart be
-
-# show logs
 doppler --config dev run -- docker compose logs -f be nginx
-
-# run backend management commands
-doppler --config dev run -- docker compose exec -T be python manage.py migrate
 ```
 
 ## 🧰 Useful Commands
 
-Run everything from the repository root unless noted otherwise.
-
-### Backend
+Run from the repository root.
 
 General pattern for Django management commands:
 
 ```bash
 doppler --config dev run -- docker compose exec -T be python manage.py <command> [args]
-```
-
-Clear the full Django cache:
-
-```bash
-doppler --config dev run -- docker compose exec -T be python manage.py clear_cache
 ```
 
 Backfill responsive image variants:
@@ -241,10 +178,10 @@ doppler --config dev run -- docker compose exec -T be python manage.py regenerat
 doppler --config dev run -- docker compose exec -T be python manage.py regenerate_thumbnails --force
 ```
 
-### Custom management commands in this repository
+### Custom management commands
 
 - `clear_cache`
-  - clears the active Django cache backend
+  - clears the Django cache (database cache)
   - run:
     ```bash
     doppler --config dev run -- docker compose exec -T be python manage.py clear_cache
@@ -275,6 +212,8 @@ doppler --config dev run -- docker compose exec -T be python manage.py regenerat
     doppler --config dev run -- docker compose exec -T be python manage.py seed_regions --dry-run
     doppler --config dev run -- docker compose exec -T be python manage.py seed_regions --retranslate
     ```
+- `recalculate_landing_page_total_time_spent`
+  - rebuilds per-image exposure hours (see [total time doc](infra/docs/project/landing_page_total_time_spent_system.md))
 - `fix_parler_language_codes`
   - rewrites legacy `en-us` Parler translations to `en`
   - run:
@@ -293,54 +232,44 @@ doppler --config dev run -- docker compose exec -T be python manage.py collectst
 doppler --config dev run -- docker compose exec -T be python manage.py compilemessages
 ```
 
-Standalone local development commands such as `python manage.py runserver` are not the supported workflow described by this repository.
-
 ## 🧪 Testing And Checks
 
-Typical project checks:
+Canonical test run (pytest in the Docker `test` service):
 
 ```bash
-# backend test suite
-doppler --config dev run -- docker compose exec -T be uv run pytest
+cd backend && uv run test
+```
 
-# backend static analysis
+Other checks:
+
+```bash
+# type checking
 doppler --config dev run -- docker compose exec -T be uv run mypy .
+
+# lint, format and tests via pre-commit
+cd backend && uv run pre-commit run --all-files
 ```
 
-Compose also exposes dedicated test services:
+Pre-commit runs lint, mypy and tests (see [.pre-commit-config.yaml](.pre-commit-config.yaml)). Python tool configuration lives in [backend/pyproject.toml](backend/pyproject.toml).
+
+## 🚀 Release & Deployment
+
+The version lives only in `backend/pyproject.toml`.
+
+1. Merge feature PRs into `dev`.
+2. Bump the version once per release (version-only commit with `[skip ci]`).
+3. Open a PR `dev` -> `main` titled `Release vX.Y.Z 🚀`.
+4. On merge, `.github/workflows/release.yml` creates tag `vX.Y.Z` and publishes `production-be` and `production-nginx` images to GHCR.
+5. On the VPS, in `~/portfolio`:
 
 ```bash
-doppler --config dev run -- docker compose --profile test run --rm test
+git pull
+TAG=vX.Y.Z doppler run --project portfolio --config prd -- ./infra/scripts/release/deploy_production.sh
 ```
 
-## 🚀 Deployment
+`deploy_production.sh` runs `prepare_images.sh` -> `release.sh` -> `deploy.sh`. `deploy.sh` switches only `be` and `nginx`, accepts only `ENVIRONMENT=production`, and records `current_tag` / `prev_tag` for tag-based rollback. `build.sh` remains a manual fallback to build images locally. There is no staging environment.
 
-Typical release flow:
-
-```bash
-# Build images
-doppler run -p portfolio -c portfolio-prod -- ./infra/scripts/release/build.sh
-
-# Deploy on server
-doppler run -p portfolio -c portfolio-prod -- ./infra/scripts/release/deploy.sh
-```
-
-Production/stage deploys rebuild:
-
-- `nginx` when routing or public media rules change
-- `be` when invalidation, serializers, or backend routes change
-
-## 🔧 Operations
-
-## 📝 Notes
-
-- Python dependency and tool configuration live in [backend/pyproject.toml](backend/pyproject.toml).
-- Local startup runs Django migrations, `seed_settings`, message compilation, and `collectstatic` automatically as part of the `be` service command.
-
-### Cache Invalidation
-
-Frontend SSR cache invalidation is disabled (`SSR_CACHE_INVALIDATION_URL` is empty) since the frontend moved to Cloudflare Workers. See `infra/docs/project/cache_invalidation.md`.
-
+Details and rollback: [release_deploy_architecture.md](infra/docs/project/release_deploy_architecture.md), [infra/scripts/README.md](infra/scripts/README.md), [.github/SECRETS.md](.github/SECRETS.md).
 
 ## 💾 Database Backup & Maintenance
 
@@ -362,49 +291,17 @@ This script creates a temporary container and verifies that the SQL dump is vali
 
 See [Backup Maintenance Guide](infra/scripts/db_backup/MAINTENANCE.md) for more details.
 
-## Testing
+## 🔭 Observability
 
-### Backend (Dedicated Service)
-The backend tests now run in a dedicated, isolated environment using Docker Compose Profiles. This inherits your development configuration but remains isolated.
+The backend echoes and logs `X-Request-ID` (forwarded by the frontend when present). Logs are JSON on Docker stdout; see [logging_structure_overview.md](infra/docs/project/logging_structure_overview.md).
 
-```bash
-doppler --config dev run -- docker compose run --rm test
-```
+Log and sitemap monitoring is handled outside this repository by the separate `agent-monitoring` project. This repository only emits structured logs and generates the public sitemap.
 
-## 🔄 Release Lifecycle
+## 📚 Docs Index
 
-To ensure version traceability and zero-downtime, follow this mandatory flow for all new features and fixes:
-
-### 1. Development to Dev
-- **Merge Request**: Create an MR from your feature branch to `dev`.
-- **Squash & Delete**: Perform a **Squash and Merge** and delete the feature branch to keep history clean.
-
-### 2. Versioning (Tags)
-- **Tag the Commit**: Once code is on `dev`, tag it with a version (e.g., `v1.2.0`).
-- **Push Tag**: `git push origin v1.2.0`
-- **Automatic Detection**: The `build.sh` and `deploy.sh` scripts automatically detect this tag and use it as the Docker image reference.
-
-### 3. Promotion to Main
-- **Merge Request**: Merge `dev` into `main`.
-- **Production Anchor**: This ensures `main` always stable and aligned with a specific Git tag.
-
-### 4. Direct Deployment
-On your production server, simply run:
-```bash
-# TAG is auto-detected from the Git tag on main
-./infra/scripts/release/deploy.sh
-```
-
-> [!IMPORTANT]
-> **Production Requirement**: Deployments **must** use a Git tag as the reference. This allows for instant rollbacks by just changing the `TAG` variable.
-
----
-
-
-## Component Docs
-
-- Backend: [backend/README.md](backend/README.md)
-
-
-### TODO:
-- fix small visual issues in django admin
+- [backend/README.md](backend/README.md) - backend overview, security, development
+- [infra/scripts/README.md](infra/scripts/README.md) - release, backup and Cloudflare Tunnel runbook
+- [infra/scripts/db_backup/MAINTENANCE.md](infra/scripts/db_backup/MAINTENANCE.md) - database backup and restore
+- [.github/SECRETS.md](.github/SECRETS.md) - GitHub secrets, variables and CI/CD
+- [infra/docs/project/](infra/docs/project/) - system docs: [cache invalidation](infra/docs/project/cache_invalidation.md), [release and deploy](infra/docs/project/release_deploy_architecture.md), [logging](infra/docs/project/logging_structure_overview.md), [feature flags](infra/docs/project/feature_flag_mechanism.md), [latest image tags](infra/docs/project/latest_images_tags.md), [total time spent](infra/docs/project/landing_page_total_time_spent_system.md), [admin image cropper](infra/docs/project/django_admin_image_cropper_mechanism.md), [translations](infra/docs/project/translation_system_overview.md)
+- [infra/docs/agent/](infra/docs/agent/) - agent routing and engineering conventions ([AGENTS.md](AGENTS.md))

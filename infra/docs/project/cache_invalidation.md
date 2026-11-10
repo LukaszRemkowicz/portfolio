@@ -1,51 +1,49 @@
-# Frontend and Backend Cache Invalidation
+# Cache Invalidation
 
-> **Note:** Frontend SSR cache invalidation is disabled (`SSR_CACHE_INVALIDATION_URL` is set to an empty string) since the frontend moved to Cloudflare Workers (`portfolio-fe`). The Node.js SSR server described below no longer exists in this repo; the Django-side hook returns early on an empty URL.
+How the Django backend caches API responses and invalidates them when content
+changes.
 
-This document explains how cache invalidation works between the Django backend and the Node.js frontend (SSR server).
+> The frontend (`portfolio-fe`) runs on Cloudflare Workers. The old Node SSR
+> cache webhook (`backend/common/ssr_cache.py`, `SSR_CACHE_INVALIDATION_URL`) is
+> a disabled leftover: the URL defaults to an empty string, and the task returns
+> early without sending anything. Signals still `submit()` it, which is a no-op.
 
-## Overview
-The architecture relies on two layers of caching to ensure high performance and low latency:
-1. **Backend API Cache (Django DatabaseCache)**: Caches the JSON responses for API endpoints.
-2. **Frontend SSR Shell Cache (Node.js)**: Caches the shared HTML shell parts (e.g. Navigation, Footer, Background, Latest Images) injected during Server-Side Rendering (SSR).
+## Cache backend
 
-When content changes in the Django admin, the backend must clear both its own API cache and proactively notify the frontend to flush its SSR cache.
+The API cache is Django's `DatabaseCache`:
 
-## Django Signals
-We use Django signals (`post_save`, `post_delete`, `m2m_changed`) to detect when models are modified.
-For example, in `backend/core/signals.py` and `backend/astrophotography/signals.py`:
+- caches: `default` (table `django_cache`) and Select2 (table `django_select2_cache`)
+- tables are created by `python manage.py createcachetable`, which runs after
+  `migrate` (dev `be` command and the production `release` job)
+- API responses are stored under keys such as `api_cache:/v1/astroimages`
+
+## Invalidation flow
+
+1. Django signals (`post_save`, `post_delete`, `m2m_changed`) fire on content
+   models. See `backend/core/signals.py`, `backend/astrophotography/signals.py`,
+   `backend/users/signals.py`, `backend/shop/signals.py`.
+2. The handler calls a `CacheService.invalidate_*` method
+   (`backend/core/cache_service.py`).
+3. `DatabaseCache` cannot delete by prefix, so each call clears the whole cache
+   (`cache.clear()`). The prefix argument only documents what changed.
+4. The next API request repopulates the cache from the database.
+
+Example:
 
 ```python
 @receiver([post_save, post_delete], sender=AstroImage)
 def invalidate_astroimage_cache(sender, instance, **kwargs):
     CacheService.invalidate_astrophotography_cache()
-    submit(invalidate_frontend_ssr_cache_task, ["latest-astro-images", "travel-highlights"])
 ```
 
-### 1. Backend API Cache Invalidation
-The `CacheService` handles removing the cached JSON payloads from the database cache. DatabaseCache cannot delete by prefix, so each `invalidate_*` call clears the whole default cache once (keys look like `api_cache:/v1/astroimages`).
-This ensures that the next API call (either from a browser fetch or from the SSR Node server) returns fresh data.
+## LandingPageSettings edge case
 
-### 2. Frontend SSR Cache Invalidation Hook
-For the SSR shell, we rely on background tasks (`common.background.submit`, run after commit) to send an HTTP POST webhook to the frontend Node server.
-The webhook URL is configured via the `SSR_CACHE_INVALIDATION_URL` environment variable. The backend uses the shared task `invalidate_frontend_ssr_cache_task`, which sends a payload containing the cache tags to invalidate.
+`LandingPageSettings` controls `latest_filters` and image-format toggles, so
+saving it also invalidates the astrophotography cache. Changes show up on the
+homepage gallery on the next API request.
 
-Example payload sent to Node:
-```json
-{
-  "tags": ["latest-astro-images", "settings"]
-}
+## Manual clear
+
+```bash
+doppler --config dev run -- docker compose exec -T be python manage.py clear_cache
 ```
-
-## Frontend SSR Server
-The frontend runs a Node.js server (`server/index.mjs`) which exposes an internal endpoint: `/internal/cache/invalidate`.
-This endpoint expects a POST request with the `tags` array and a matching Authorization Bearer token (`SSR_CACHE_INVALIDATION_TOKEN`).
-
-When the backend hits this endpoint, the Node server executes `invalidateCacheTags(tags)` in `server/ssrCache.js`.
-
-### What gets cleared?
-The Node server groups its SSR cache by "tags" defined in `SHELL_RESOURCES` (e.g., `background`, `latestAstroImages`, `profile`, `settings`, `travelHighlights`).
-When a tag like `"latest-astro-images"` is invalidated, the Node SSR server dumps its in-memory cache for that specific resource. The very next time a user visits a page, the SSR process will execute a fresh fetch against the clear Backend API. Since the backend just flushed its cache too, the Node server retrieves the latest database data, caches it again, and serves the updated HTML.
-
-## LandingPageSettings Edge Case
-Because `LandingPageSettings` dictates which images are tagged as the "latest_filters" and whether "serve_webp_images" is toggled, saving `LandingPageSettings` also invalidates the astrophotography backend cache and the `"latest-astro-images"` frontend SSR cache. This ensures that changes to the settings immediately bubble up to the homepage gallery.

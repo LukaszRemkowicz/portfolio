@@ -7,7 +7,7 @@ This document describes the current logging structure inside the landingpage app
 It is intended as:
 
 - a current-state reference for future logging work,
-- an operational guide for reading logs across backend, frontend, and nginx,
+- an operational guide for reading logs across backend and nginx,
 - a baseline for future log normalization and ingestion work.
 
 Current state verified on 2026-04-17.
@@ -17,9 +17,7 @@ Current state verified on 2026-04-17.
 Current JSON logging status:
 
 - Backend Django app: yes, JSON to Docker stdout
-- Frontend SSR request logs: yes, JSON to Docker stdout
 - Nginx access logs: yes, JSON to Docker stdout
-- Frontend SSR startup/error logs: yes, JSON
 
 Current plain-text / non-JSON areas:
 
@@ -37,8 +35,8 @@ So the stack is partially normalized, but not fully JSON everywhere yet.
 
 Backend application logs now use JSON through Django logging configuration in:
 
-- [backend/settings/base.py](/Users/lukaszremkowicz/Projects/landingpage/backend/settings/base.py:421)
-- [backend/common/utils/logging.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/utils/logging.py:1)
+- [backend/settings/base.py](../../../backend/settings/base.py)
+- [backend/common/utils/logging.py](../../../backend/common/utils/logging.py)
 
 The backend writes logs to standard output through the console handler, which means Docker captures them directly.
 
@@ -109,7 +107,7 @@ Typical purpose:
 
 - shared services
 - email task dispatch
-- SSR cache invalidation
+- SSR cache invalidation webhook (disabled leftover)
 - shared image-processing workflow
 
 Common log shape:
@@ -123,9 +121,9 @@ Common log shape:
 
 Examples live in:
 
-- [backend/common/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/tasks.py:1)
-- [backend/common/ssr_cache.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/ssr_cache.py:1)
-- [backend/common/image_processing.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/image_processing.py:1)
+- [backend/common/tasks.py](../../../backend/common/tasks.py)
+- [backend/common/ssr_cache.py](../../../backend/common/ssr_cache.py)
+- [backend/common/utils/image.py](../../../backend/common/utils/image.py)
 
 #### `core`
 
@@ -144,10 +142,10 @@ Typical purpose:
 
 These modules emit structured logs through the normal app-level namespace configuration, for example:
 
-- [backend/common/image_processing.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/image_processing.py:1)
-- [backend/core/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/models.py:1)
-- [backend/core/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/tasks.py:1)
-- [backend/core/management/commands/backfill_image_variants.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/management/commands/backfill_image_variants.py:1)
+- [backend/common/utils/image.py](../../../backend/common/utils/image.py)
+- [backend/core/models.py](../../../backend/core/models.py)
+- [backend/core/tasks.py](../../../backend/core/tasks.py)
+- [backend/core/management/commands/backfill_image_variants.py](../../../backend/core/management/commands/backfill_image_variants.py)
 - shared image task compatibility wrapper
 
 Common log shape:
@@ -158,9 +156,9 @@ Common log shape:
 
 Examples live in:
 
-- [backend/core/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/models.py:1)
-- [backend/core/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/tasks.py:1)
-- [backend/core/cache_service.py](/Users/lukaszremkowicz/Projects/landingpage/backend/core/cache_service.py:1)
+- [backend/core/models.py](../../../backend/core/models.py)
+- [backend/core/tasks.py](../../../backend/core/tasks.py)
+- [backend/core/cache_service.py](../../../backend/core/cache_service.py)
 
 #### `users`
 
@@ -177,8 +175,7 @@ Common log shape:
 
 Examples live in:
 
-- [backend/users/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/users/models.py:1)
-- [backend/users/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/users/tasks.py:1)
+- [backend/users/models.py](../../../backend/users/models.py)
 
 #### `shop`
 
@@ -195,8 +192,7 @@ Common log shape:
 
 Examples live in:
 
-- [backend/shop/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/shop/models.py:1)
-- [backend/shop/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/shop/tasks.py:1)
+- [backend/shop/models.py](../../../backend/shop/models.py)
 
 #### `translation`
 
@@ -225,8 +221,8 @@ Current structure:
 
 Examples live in:
 
-- [backend/astrophotography/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/astrophotography/models.py:1)
-- [backend/astrophotography/admin.py](/Users/lukaszremkowicz/Projects/landingpage/backend/astrophotography/admin.py:1)
+- [backend/astrophotography/models.py](../../../backend/astrophotography/models.py)
+- [backend/astrophotography/admin.py](../../../backend/astrophotography/admin.py)
 
 #### `programming`
 
@@ -241,7 +237,7 @@ Current structure:
 
 Examples live in:
 
-- [backend/programming/admin.py](/Users/lukaszremkowicz/Projects/landingpage/backend/programming/admin.py:1)
+- [backend/programming/admin.py](../../../backend/programming/admin.py)
 
 #### `django.request`
 
@@ -277,7 +273,7 @@ The main differences between apps are not formatter differences but:
 
 Request correlation comes from:
 
-- [backend/common/middleware.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/middleware.py:20)
+- [backend/common/middleware.py](../../../backend/common/middleware.py)
 
 The middleware:
 
@@ -289,49 +285,7 @@ The middleware:
 
 Backend runtime logging is already JSON and suitable for Docker log parsing.
 
-## 2. Frontend SSR Server
-
-### Current format
-
-Frontend SSR logging is now structured for request, startup, warning, and error paths used by the SSR runtime.
-
-Relevant files:
-
-- [frontend/server/logging.js](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/logging.js:1)
-- [frontend/server/index.mjs](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/index.mjs:1)
-
-The SSR server uses:
-
-- `logRequest(...)` to emit JSON request logs
-- `logEvent(...)` for structured runtime/startup logs
-- `logWarning(...)` for structured warning logs
-- `logError(...)` for structured error logs
-
-### Current structured fields
-
-Frontend SSR logs currently include:
-
-- `timestamp`
-- `service`
-- `level`
-- `request_id`
-- request-specific payload fields such as:
-  - `event`
-  - `kind`
-  - `method`
-  - `path`
-  - `status`
-  - `duration_ms`
-  - optional `error`
-  - optional `error_name`
-  - optional `error_message`
-  - optional `error_stack`
-
-### Conclusion
-
-Frontend SSR server/runtime logging is now JSON in the main request/startup/error paths. Browser-side client `console.*` calls still exist in frontend code, but they are not the same as server runtime logs.
-
-## 3. Nginx
+## 2. Nginx
 
 ### Current format
 
@@ -339,7 +293,7 @@ Nginx access logging is JSON.
 
 Relevant config:
 
-- [infra/nginx/static_server.conf](/Users/lukaszremkowicz/Projects/landingpage/infra/nginx/static_server.conf:43)
+- [infra/nginx/static_server.conf](../../../infra/nginx/static_server.conf)
 
 Current access log definition:
 
@@ -374,8 +328,7 @@ only the configured private proxy networks and Cloudflare ranges, processes
 limits.
 
 For every proxied application request, Nginx overwrites both `X-Real-IP` and
-`X-Forwarded-For` with that single resolved address. The frontend BFF preserves
-the same value when it forwards a request to Django.
+`X-Forwarded-For` with that single resolved address.
 
 Django accepts `X-Real-IP` only when its immediate `REMOTE_ADDR` belongs to
 `TRUSTED_PROXY_CIDRS`. Requests from other peers ignore `X-Real-IP`,
@@ -395,14 +348,13 @@ Nginx access logs are JSON on Docker stdout. Nginx error logs are plain text on
 Docker stderr. Nginx no longer writes duplicate host files; Docker logging and
 MCP stream collection are the runtime sources for both streams.
 
-## 4. Shell Entrypoints / Startup Scripts
+## 3. Shell Entrypoints / Startup Scripts
 
 Current startup scripts still emit plain text via shell `echo`.
 
 Examples:
 
-- [docker/backend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/backend/entrypoint.sh:1)
-- [docker/frontend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/frontend/entrypoint.sh:1)
+- [docker/backend/entrypoint.sh](../../../docker/backend/entrypoint.sh)
 
 These are operational bootstrap logs, not application logs, and they are currently plain text.
 
@@ -411,7 +363,6 @@ These are operational bootstrap logs, not application logs, and they are current
 ### Fully or mostly JSON today
 
 - Backend Django runtime logs
-- Frontend SSR request logs
 - Nginx access logs
 
 ### Still plain text today
@@ -429,11 +380,6 @@ Current examples:
   - `timestamp`
   - `level`
   - `logger`
-  - `request_id`
-- Frontend:
-  - `timestamp`
-  - `service`
-  - `level`
   - `request_id`
 - Nginx:
   - `time_local`
@@ -464,18 +410,14 @@ If you are looking at live Docker logs:
 
 - backend logs are JSON
 - nginx access logs are JSON
-- frontend SSR runtime logs are JSON
 - nginx error lines remain plain text
 
 Landingpage owns application log emission only.
 
 ## Verified Sources
 
-- [backend/settings/base.py](/Users/lukaszremkowicz/Projects/landingpage/backend/settings/base.py:421)
-- [backend/common/utils/logging.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/utils/logging.py:1)
-- [backend/common/middleware.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/middleware.py:20)
-- [frontend/server/logging.js](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/logging.js:1)
-- [frontend/server/index.mjs](/Users/lukaszremkowicz/Projects/landingpage/frontend/server/index.mjs:1)
-- [infra/nginx/static_server.conf](/Users/lukaszremkowicz/Projects/landingpage/infra/nginx/static_server.conf:43)
-- [docker/backend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/backend/entrypoint.sh:1)
-- [docker/frontend/entrypoint.sh](/Users/lukaszremkowicz/Projects/landingpage/docker/frontend/entrypoint.sh:1)
+- [backend/settings/base.py](../../../backend/settings/base.py)
+- [backend/common/utils/logging.py](../../../backend/common/utils/logging.py)
+- [backend/common/middleware.py](../../../backend/common/middleware.py)
+- [infra/nginx/static_server.conf](../../../infra/nginx/static_server.conf)
+- [docker/backend/entrypoint.sh](../../../docker/backend/entrypoint.sh)

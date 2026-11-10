@@ -2,424 +2,162 @@
 
 ## Purpose
 
-This document describes the current release and deployment model of the application.
+Compact description of the current release and deployment model (production
+only; staging was removed).
 
-It is intended as compact context for future engineering or LLM-assisted work.
-
-For operator-facing commands and day-to-day usage, see:
+For operator-facing commands see:
 
 - [infra/scripts/README.md](../../scripts/README.md)
 - [infra/scripts/release/README.md](../../scripts/release/README.md)
 
-It focuses on:
-
-- release identity
-- artifact sources
-- staging vs production behavior
-- script responsibilities
-- runtime image naming
-- operational flow and rollback
-
 ## Core Model
 
-The application uses a tag-based release model.
-
-Source of truth for a release:
-
-```text
-vX.Y.Z
-```
-
-Key rule:
+The application uses a tag-based release model. The source of truth for a
+release is the Git tag `vX.Y.Z`.
 
 - release and deploy logic are tag-based
 - mutable tags such as `latest` are not part of the deployment contract
 
-## Environments
-
-There are two distinct artifact flows:
-
-### Staging
-
-Staging supports two artifact paths:
-
-- legacy path: built locally on the VPS with `infra/scripts/release/build.sh`;
-- registry path: built in GitHub Actions by the `Publish Staging Images`
-  workflow, pushed to GHCR under the constant staging tag `v0.0.0-STG`, and
-  prepared on the VPS with `infra/scripts/release/prepare_staging_images.sh`.
-
-The registry path exists to avoid stressing the VPS while building the
-test/staging environment. The legacy VPS-local path remains available through
-`infra/scripts/release/manual_deploy_staging.sh`.
-
-### Production
-
-- images are built in GitHub Actions
-- images are published to GitHub Container Registry
-- VPS pulls the published production images with `infra/scripts/release/prepare_images.sh`
-- `release.sh` and `deploy.sh` then use the locally tagged images
-
 ## Release Identity
 
-Release identity is derived from `backend/pyproject.toml` `[project].version` and Git tags.
-
-### GitHub release tag flow
+The version lives only in `backend/pyproject.toml` `[project].version` (there is
+no `VERSION` file).
 
 `.github/workflows/release.yml`:
 
 - runs on push to `main`
-- reads `backend/pyproject.toml` `[project].version`
-- compares it to the latest `v*` tag
-- creates a new annotated tag `vX.Y.Z` if needed
-- publishes production images to GHCR when a new release tag is created
+- calls the shared `pyproject-release-tag` workflow, which reads the version and
+  creates tag `vX.Y.Z` if it is new
+- when a new tag is created, builds and pushes the production images to GHCR
 
 ## Artifact Sources
-
-### Staging artifact sources
-
-#### Legacy VPS-local source
-
-Staging artifacts can still be created locally by:
-
-```text
-infra/scripts/release/build.sh
-```
-
-This script:
-
-- resolves `TAG` from git if omitted
-- requires `ENVIRONMENT`
-- builds:
-  - `${ENVIRONMENT}-be:${TAG}`
-  - `${ENVIRONMENT}-fe:${TAG}`
-  - `${ENVIRONMENT}-nginx:${TAG}`
-- prunes older local images while protecting:
-  - current tag
-  - previous tag
-  - newly built tag
-
-#### CI registry publish source
-
-Staging artifacts can also be built outside the VPS by adding the
-`publish-staging` label to the pull request for the branch being tested.
-
-`.github/workflows/staging-image-publish.yml`:
-
-- runs on `pull_request` `labeled` and `synchronize` events;
-- only performs work when the PR has the `publish-staging` label;
-- checks out the PR head SHA, not the base branch;
-- publishes staging images to GHCR with the constant tag `v0.0.0-STG`;
-- republishes automatically on later branch updates while the label remains
-  present.
-
-Published staging artifacts:
-
-```text
-<registry>/<namespace>/stage-be:v0.0.0-STG
-<registry>/<namespace>/stage-fe:v0.0.0-STG
-<registry>/<namespace>/stage-nginx:v0.0.0-STG
-```
-
-On the VPS, `infra/scripts/release/prepare_staging_images.sh`:
-
-- owns the fixed `TAG=v0.0.0-STG` staging tag;
-- logs in to GHCR;
-- pulls staging images from GHCR;
-- tags them locally as:
-  - `stage-be:${TAG}`
-  - `stage-fe:${TAG}`
-  - `stage-nginx:${TAG}`
-- removes the GHCR tag locally after retagging so the VPS keeps only the
-  runtime-local names;
-- records pulled image digests under the staging state directory.
-
-### Production artifact source
 
 Production artifacts are published to GHCR as:
 
 ```text
 <registry>/<namespace>/production-be:vX.Y.Z
-<registry>/<namespace>/production-fe:vX.Y.Z
 <registry>/<namespace>/production-nginx:vX.Y.Z
 ```
 
-On the production VPS, `infra/scripts/release/prepare_images.sh`:
+On the VPS, `infra/scripts/release/prepare_images.sh`:
 
-- resolves `TAG` from git if omitted
-- assumes production
-- logs in to GHCR
-- pulls production images from GHCR
-- tags them locally as:
-  - `production-be:${TAG}`
-  - `production-fe:${TAG}`
-  - `production-nginx:${TAG}`
-- removes the GHCR tag locally after retagging so the VPS keeps only the runtime-local names
+- resolves `TAG` from git if omitted and validates it as SemVer-like
+- logs in to GHCR and pulls the production images
+- tags them locally as `production-be:${TAG}` and `production-nginx:${TAG}`
+- removes the GHCR tag locally so the VPS keeps only the runtime-local names
 - records pulled image digests under the production state directory
 
-So production runtime still uses local Docker image names.
 GHCR is the artifact source, not the runtime image naming contract.
+
+Fallback: `infra/scripts/release/build.sh` builds the same two images locally
+from an exact git tag (`production-be:${TAG}`, `production-nginx:${TAG}`). Use it
+only when the GHCR flow is unavailable.
 
 ## Runtime Image Naming
 
-The naming contract used by compose and runtime scripts is environment-prefixed:
+Compose and runtime scripts use environment-prefixed local names:
 
 ```text
 production-be:${TAG}
-production-fe:${TAG}
 production-nginx:${TAG}
-stage-be:${TAG}
-stage-fe:${TAG}
-stage-nginx:${TAG}
 ```
 
-This naming is preserved intentionally because it matches current VPS operations and existing scripts.
+There is no frontend image: the frontend is deployed from `portfolio-fe` to
+Cloudflare Workers.
 
 ## Service-To-Image Mapping
 
-The important runtime simplification is:
+`be` and `release` both use `${ENVIRONMENT}-be:${TAG}`. They are separate
+containers with separate commands that share one backend image. `nginx` uses
+`${ENVIRONMENT}-nginx:${TAG}`.
 
-- `be`
-- `release`
-
-both use the same backend artifact:
-
-```text
-${ENVIRONMENT}-be:${TAG}
-```
-
-This does not mean they are the same container.
-
-It means:
-
-- separate containers
-- separate processes
-- separate commands
-- shared backend image artifact
-
-Frontend and nginx remain separate artifacts:
-
-- `${ENVIRONMENT}-fe:${TAG}`
-- `${ENVIRONMENT}-nginx:${TAG}`
+The `release` job runs: `migrate`, `createcachetable`, `scripts/release_entrypoint.py`,
+`collectstatic` (see `docker-compose.prod.yml`).
 
 ## Compose Behavior
 
-Compose remains runtime-focused.
+Compose stays runtime-focused. It references local image names, never GHCR URLs;
+artifact preparation stays outside compose.
 
-It still references local image names rather than GHCR URLs.
-
-This is intentional because:
-
-- it keeps compose concerned with runtime topology
-- it avoids mixing artifact-source logic into compose
-- artifact preparation stays outside compose
-
-Production compose change already made:
-
-`be` and `release` were already using `${ENVIRONMENT}-be:${TAG}`.
+The `cloudflared` service (profile `tunnel`) is not part of the deploy; it is
+started separately (see [infra/scripts/README.md](../../scripts/README.md)).
 
 ## Script Responsibilities
 
-### `infra/scripts/release/build.sh`
-
-Primary role:
-
-- build local environment-prefixed images
-
-Current intended usage:
-
-- standard path for staging
-- fallback path for production if GHCR flow is unavailable
-
-Runbook:
-
-- [infra/scripts/README.md](../../scripts/README.md)
-- [infra/scripts/release/README.md](../../scripts/release/README.md)
-
-It does not:
-
-- run migrations
-- deploy containers
-- update rollback state
-
 ### `infra/scripts/release/prepare_images.sh`
 
-Primary role:
+Production-only artifact preparation from GHCR (see above). It does not run
+migrations or switch services.
 
-- production-only artifact preparation from GHCR
+### `infra/scripts/release/build.sh`
 
-It does:
-
-- pull production images from GHCR
-- tag them locally to the names already expected by compose
-- remove the GHCR tag locally after retagging
-- record digests for verification/audit
-
-It does not:
-
-- run migrations
-- switch running services
-
-Runbook:
-
-- [infra/scripts/README.md](../../scripts/README.md)
+Manual fallback: builds the local images. It does not run migrations, deploy
+containers, or update rollback state.
 
 ### `infra/scripts/release/release.sh`
 
-Primary role:
+One-shot release tasks. It:
 
-- execute one-shot release tasks
+- enforces a release lock
+- resolves the release image from compose
+- ensures dependencies such as db are healthy
+- refreshes the nginx bot blocklist
+- creates a pre-release database backup
+- runs the `release` job and captures its logs
 
-It does:
-
-- enforce release lock
-- resolve the release image from compose
-- ensure dependencies such as db are healthy
-- run the release container/job
-- capture release logs
-- create pre-release backup in production
-
-It expects:
-
-- the correct local image for `TAG` already exists
-
-It does not:
-
-- build images
-- pull from GHCR
-- switch long-running containers
-
-Runbook:
-
-- [infra/scripts/README.md](../../scripts/README.md)
-- [infra/scripts/release/README.md](../../scripts/release/README.md)
+It does not build images, pull from GHCR, or switch long-running containers.
 
 ### `infra/scripts/release/deploy.sh`
 
-Primary role:
+Switches running services to a specified tag. It:
 
-- switch running services to a specified tag
+- verifies the requested images already exist locally
+- switches `be` and `nginx` (the only deploy-managed services)
+- runs post-switch health checks (container health plus an HTTPS check of
+  `SITE_DOMAIN` through the local edge proxy on `127.0.0.1:443`)
+- updates rollback state
 
-It does:
+It accepts only `ENVIRONMENT=production`. It does not build images, pull from
+GHCR, or run release tasks.
 
-- verify the requested images already exist locally
-- switch long-running services to the specified tag
-- run post-switch health checks
-- update rollback state
+### `infra/scripts/release/deploy_production.sh`
 
-The normal deploy-managed services are:
-
-- `be`
-- `fe`
-- `nginx`
-
-It does not:
-
-- build images
-- pull production images from GHCR
-- run one-shot release tasks
-
-### Guided wrappers
-
-Operator-facing wrappers coordinate the full flow with approval prompts between phases:
-
-- `infra/scripts/release/deploy_staging.sh`
-  - owns the fixed `TAG=v0.0.0-STG` staging tag
-  - runs `prepare_staging_images.sh` -> `release.sh` -> `deploy.sh`
-- `infra/scripts/release/manual_deploy_staging.sh`
-  - default `TAG=v0.0.0-STG`
-  - legacy VPS-local build path
-  - runs `build.sh` -> `release.sh` -> `deploy.sh`
-- `infra/scripts/release/deploy_production.sh`
-  - requires `TAG`
-  - runs `prepare_images.sh` -> `release.sh` -> `deploy.sh`
-
-Runbook:
-
-- [infra/scripts/README.md](../../scripts/README.md)
-- [infra/scripts/release/README.md](../../scripts/release/README.md)
-
-### Shared Design Principle
-
-`release.sh` and `deploy.sh` remain shared between staging and production.
-
-Artifact-source logic stays outside them.
-
-That is why production uses:
-
-```text
-prepare_images.sh -> release.sh -> deploy.sh
-```
-
-while staging uses:
-
-```text
-prepare_staging_images.sh -> release.sh -> deploy.sh
-```
-
-or, for the legacy VPS-local build path:
-
-```text
-manual_deploy_staging.sh
-```
+Guided wrapper. Requires `TAG`, asks for approval between phases and runs
+`prepare_images.sh` -> `release.sh` -> `deploy.sh`.
 
 ## Production Flow
 
-High-level production flow:
+1. feature PR into `dev`
+2. bump `backend/pyproject.toml` version once per release (version-only commit
+   with `[skip ci]`)
+3. PR `dev` -> `main` titled `Release vX.Y.Z`
+4. on merge, `release.yml` creates tag `vX.Y.Z` and pushes the images to GHCR
+5. on the VPS, in `~/portfolio`:
 
-1. update `backend/pyproject.toml` `[project].version`
-2. merge to `main`
-3. `release.yml` creates tag `vX.Y.Z`
-4. `release.yml` builds and pushes production images to GHCR
-5. on VPS, run `prepare_images.sh`
-6. run `release.sh`
-7. run `deploy.sh`
+```bash
+git pull
+TAG=vX.Y.Z doppler run --project portfolio --config prd -- ./infra/scripts/release/deploy_production.sh
+```
 
-This means production deploy is still explicit and operator-driven.
-
-There is no listener service or auto-deploy agent on the VPS.
-
-## Staging Flow
-
-High-level staging registry deploy flow:
-
-1. open or update the pull request for the branch being tested
-2. add the `publish-staging` label
-3. GitHub Actions builds the PR head SHA
-4. GitHub Actions pushes the `v0.0.0-STG` staging images to GHCR
-5. on the VPS, run `deploy_staging.sh`
-
-`deploy_staging.sh` owns the fixed staging tag, prepares the registry images,
-runs `release.sh`, and then runs `deploy.sh`. Staging deploy switches only
-`be`, `fe`, and `nginx`.
-
-High-level legacy staging flow:
-
-1. choose branch/tag/build target
-2. run `manual_deploy_staging.sh`, or manually run:
-   - `build.sh`
-   - `release.sh`
-   - `deploy.sh`
-
-Staging remains intentionally separate from the production release-tag flow.
+Production deploy is explicit and operator-driven. There is no listener or
+auto-deploy agent on the VPS.
 
 ## Rollback Model
 
-Rollback is tag-based.
-
-State files are stored under the environment state directory, typically:
+Rollback is tag-based. State files live under the environment state directory,
+typically:
 
 ```text
 /var/lib/portfolio/<environment>/
 ```
 
-Important state:
+Important state: `current_tag` and `prev_tag`. `deploy.sh` updates them after a
+successful deployment. Rollback re-deploys a previous version tag (never a
+mutable tag):
 
-- `current_tag`
-- `prev_tag`
-
-`deploy.sh` updates these after successful deployment.
-
-Rollback uses a previous version tag, not a mutable tag.
+```bash
+TAG=v1.1.0 ENVIRONMENT=production doppler run --project portfolio --config prd -- ./infra/scripts/release/deploy.sh
+```
 
 ### Celery and Redis removal (first deploy after it)
 
@@ -431,7 +169,9 @@ Remove them once the new release is healthy:
 docker rm -f portfolio-prod-redis-1 portfolio-prod-celery-worker-1 portfolio-prod-celery-beat-1
 ```
 
-Do not remove the `fe` container: nginx still proxies to `fe:8080`.
+Do not remove the orphan `fe` container (no longer defined in this repo's
+compose): nginx still has an `fe:8080` upstream in `infra/nginx/static_server.conf`
+and needs it to resolve. Remove it only after that upstream is removed.
 
 Rolling back to a release from before the removal needs Redis again (its
 settings use `RedisCache` and Celery): start it from that release's checkout with
@@ -441,66 +181,21 @@ After the removal, the `portfolio_prod_celerybeat_data` volume and the
 
 ## Registry And Local Retention
 
-Recommended retention split:
-
-### GHCR
-
-- long-term artifact store
-- keep production release tags conservatively
-
-### VPS local Docker images
-
-- short-term runtime cache
-- keep a small recent set locally
-- rely on GHCR as the durable artifact source
-
-This keeps migration/recovery possible even if the VPS is replaced.
+- GHCR: long-term artifact store; keep production release tags conservatively
+- VPS local Docker images: short-term runtime cache; a small recent set is kept
+  (`prepare_images.sh` and `build.sh` prune older images, protecting the current
+  and previous tags)
 
 ## Security Model
 
-### GitHub side
+- publishing uses the built-in `GITHUB_TOKEN`; package visibility should stay private
+- `prepare_images.sh` on the VPS requires `GHCR_USERNAME`, `GHCR_TOKEN`,
+  `GHCR_NAMESPACE` (`GHCR_REGISTRY` defaults to `ghcr.io`); use a dedicated
+  read-only package credential stored in Doppler, not in the repository
 
-- publishing uses built-in `GITHUB_TOKEN`
-- package visibility should remain private
-
-### Production VPS side
-
-`prepare_images.sh` requires:
-
-- `GHCR_USERNAME`
-- `GHCR_TOKEN`
-- `GHCR_NAMESPACE`
-
-`GHCR_REGISTRY` defaults to `ghcr.io`
-
-Best practice:
-
-- use a dedicated read-only package credential
-- store it in Doppler, not in the repository
-
-## Current Status
-
-Implemented:
-
-- production image publish workflow
-- production image preparation script
-- shared backend artifact usage in production compose
-- digest capture for prepared production images
-- production/staging documentation updates
-
-Not built into the scripts:
-
-- automatic invocation of `prepare_images.sh` from `release.sh` or `deploy.sh`
-
-This is intentional because staging and production use different artifact sources.
-
-## Practical Summary
-
-If future work touches release/deploy behavior, the main invariant to preserve is:
+## Invariants To Preserve
 
 - `release.sh` and `deploy.sh` consume local image names and explicit tags
-- staging gets those local images from `prepare_staging_images.sh`, or from
-  `build.sh` through the legacy `manual_deploy_staging.sh` wrapper
-- production gets those local images from `prepare_images.sh`
+- production gets those local images from `prepare_images.sh` (or `build.sh` as fallback)
 - compose remains runtime-focused
 - rollback remains explicit and tag-based

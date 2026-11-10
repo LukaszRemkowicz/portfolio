@@ -1,28 +1,30 @@
 # Tags in Latest Images
 
-This document explains how the "Tags" (filters) work within the "Latest Images" section on the homepage, and how they are configured and cached between the Django Backend and Node.js Frontend.
+This document explains how the "Tags" (filters) in the "Latest Images" section of
+the homepage are configured and cached in the Django backend. Rendering happens
+in the separate `portfolio-fe` repository.
 
 ## 1. Controlling the Tags (Django Admin)
-The specific tags that appear above the "Latest Images" gallery are not automatically generated from the most recent uploads. Instead, they are explicitly curated via the Django Admin to allow complete control over the visitor experience.
+The tags shown above the "Latest Images" gallery are not generated from the most
+recent uploads. They are curated in the Django Admin.
 
 - **Model:** `LandingPageSettings`
 - **Field:** `latest_filters` (Many-to-Many relationship to `astrophotography.Tag`)
 
-When an admin selects tags in the `latest_filters` field on the `LandingPageSettings`, those exact tags are passed to the frontend to be rendered as clickable category filters above the latest images section.
+The selected tags are returned by the latest-images API (`/v1/astroimages/latest/`)
+and rendered by the frontend as clickable category filters.
 
-## 2. Frontend Rendering & SSR Caching
-The Node.js Server-Side Rendering (SSR) process fetches the latest images payload (which includes the configured tags) from the backend API: `/v1/astroimages/latest/`.
-
-To ensure the homepage loads quickly for all visitors, the Node.js frontend caches this specific section under a dedicated SSR cache key:
-- **SSR Cache Tag:** `"latest-astro-images"`
-
-Similarly, the React client expects the tags to be provided in the initial HTML payload (dehydrated state) to prevent content flashes when the user loads the page.
+## 2. Caching
+The latest-images payload (including the configured tags) is cached in the Django
+`DatabaseCache` like other API responses.
 
 ## 3. Cache Invalidation Flow
-Because the available Tags are tied to `LandingPageSettings`, updating these tags requires flushing both the backend and frontend caches to prevent visitors from seeing stale filters.
+Because the available tags are tied to `LandingPageSettings`, changing them must
+flush the cached astrophotography responses.
 
-When you modify the tags on the `LandingPageSettings` model in the Django admin:
-1. **Backend Cache Flush:** `CacheService.invalidate_astrophotography_cache()` is called. This clears the database cache for all astrophotography responses, including the tags and the latest images payload.
-2. **Frontend SSR Flush:** A background task (`invalidate_frontend_ssr_cache_task`) sends a webhook to the Node.js SSR server containing the `["latest-astro-images"]` key. This forces the Node server to drop its cached HTML shell piece for the latest images gallery.
+When you modify the tags on `LandingPageSettings` in the Django admin,
+`CacheService.invalidate_astrophotography_cache()` is called from the signal
+handler. It clears the database cache, including the tags and the latest images
+payload. The next request returns the updated tags and images.
 
-On the very next page visit, the frontend fetches the freshly updated tags and images direct from the backend, caches them, and correctly renders the new filters.
+See `infra/docs/project/cache_invalidation.md` for the general mechanism.

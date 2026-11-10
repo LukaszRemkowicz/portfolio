@@ -1,28 +1,22 @@
 # 🚀 Release Scripts
 
-The canonical operational documentation for infrastructure scripts now lives in:
+The canonical operational documentation for infrastructure scripts lives in:
 
 - [infra/scripts/README.md](../README.md)
 
 ## 🗂️ This Folder Contains
 
-This folder contains:
-
-- [build.sh](./build.sh)
-- [prepare_images.sh](./prepare_images.sh)
-- [prepare_staging_images.sh](./prepare_staging_images.sh)
-- [release.sh](./release.sh)
-- [deploy.sh](./deploy.sh)
-- [deploy_staging.sh](./deploy_staging.sh)
-- [manual_deploy_staging.sh](./manual_deploy_staging.sh)
-- [deploy_production.sh](./deploy_production.sh)
+- [build.sh](./build.sh) - manual fallback: build production images locally
+- [prepare_images.sh](./prepare_images.sh) - pull production images from GHCR and tag them locally
+- [release.sh](./release.sh) - one-shot release job (migrations, collectstatic)
+- [deploy.sh](./deploy.sh) - switch `be` and `nginx` to a tag, update rollback state
+- [deploy_production.sh](./deploy_production.sh) - guided wrapper: `prepare_images.sh` -> `release.sh` -> `deploy.sh`
+- [test_deploy_container_selection.sh](./test_deploy_container_selection.sh) - shell test for deploy container selection
 
 ## 📖 Use The Shared Runbook For
 
-Use the shared scripts README for:
-
 - build and deploy workflow
-- guided staging and production deploy wrappers
+- guided production deploy wrapper
 - backup and restore workflow
 - troubleshooting
 - operational prerequisites
