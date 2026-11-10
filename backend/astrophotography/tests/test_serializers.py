@@ -153,7 +153,7 @@ class TestAstroImageSerializers:
 
     def test_image_serializers_omit_dead_fallback_images(self) -> None:
         """Image serializers should omit dead fallback image paths instead of exposing them."""
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(place=PlaceFactory())
         variant = ImageVariantFactory(
             owner=image,
@@ -174,7 +174,7 @@ class TestAstroImageSerializers:
 
     def test_image_serializers_return_default_thumbnail_fallback_variant(self) -> None:
         """Fallback image should keep the old default thumbnail width behavior."""
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(original=jpeg_field("card-fallback.jpg", size=(1200, 800)))
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
@@ -204,7 +204,7 @@ class TestAstroImageSerializers:
 
     def test_astro_image_serializer_exposes_thumbnail_variant_candidates(self) -> None:
         """Gallery card payloads should include thumbnail preview candidates."""
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory()
         thumbnail = ImageVariantFactory(
             owner=image,

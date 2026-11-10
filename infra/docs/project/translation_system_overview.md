@@ -15,7 +15,7 @@ Use this document for:
 - translation bugs
 - stale or missing translated content
 - `TranslationTask` admin issues
-- Celery translation queue debugging
+- background translation task debugging
 - adding translation support to new models
 
 
@@ -26,7 +26,7 @@ The translation system is asynchronous and model-driven.
 1. A translatable model is saved in the default language.
 2. The model triggers translation tasks for non-default languages that are missing content.
 3. A `TranslationTask` row is created with `PENDING`.
-4. Celery runs `translation.tasks.translate_instance_task`.
+4. A background thread (`common.background.submit`, after commit) runs `translation.tasks.translate_instance_task`.
 5. `TranslationService` chooses the correct translation method for the model.
 6. `TranslationAgent` calls the configured LLM provider and returns translated text.
 7. The translated Parler fields are saved.
@@ -44,7 +44,7 @@ This model tracks async translation execution state.
 
 Important fields:
 
-- `task_id`: Celery task id
+- `task_id`: UUID generated at dispatch and passed to the task
 - `content_type` + `object_id`: generic relation to the translated object
 - `language`: target language
 - `method`: service method used, for example `translate_astro_image`
@@ -53,8 +53,8 @@ Important fields:
 
 Important limitation:
 
-- a row can remain stuck in `PENDING` if the task record is created but Celery never reaches task execution
-- in that case Celery failure hooks do not help, because the task body never starts
+- a row can remain stuck in `PENDING` if the task record is created but the task never runs (for example the process stops before the background thread starts; tasks are in-process and not persisted)
+- in that case no failure handling runs, because the task body never starts
 
 
 ### 2. Translation-triggering model mixin
@@ -69,7 +69,7 @@ Responsibilities:
 - skip the default language
 - detect whether a translation is already active (`PENDING` / `RUNNING`)
 - detect whether target fields are empty and source fields have content
-- queue a new Celery translation task when needed
+- queue a new background translation task when needed
 
 Important methods:
 
@@ -102,7 +102,7 @@ Admin-specific helpers:
   - hides non-translatable fields when editing non-default language entries in admin
 
 
-### 4. Celery task wrapper
+### 4. Background task wrapper
 
 Path: [backend/translation/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/tasks.py)
 
@@ -126,8 +126,8 @@ Helper functions:
 
 Important behavior:
 
-- task state is anchored to the Celery `task_id` when available
-- transient HTTP/network failures raise Celery retry instead of immediate hard failure
+- task state is anchored to the dispatcher-provided `task_id` when available
+- transient HTTP/network failures are re-raised so `submit(..., retries=3, retry_delay=60)` retries them after a fixed delay instead of an immediate hard failure
 - partial field-level failures are treated as task failure and saved to `error_message`
 
 
@@ -295,12 +295,12 @@ When a model using `AutomatedTranslationModelMixin` is saved:
 
 - it checks each supported non-default language
 - it checks whether relevant target fields are empty
-- if needed, it dispatches `translate_instance_task.delay(...)`
+- if needed, it dispatches `submit(translate_instance_task, ...)`
 - it stores/updates a `TranslationTask` row with `PENDING`
 
 ### Execution
 
-When Celery receives the task:
+When the background thread runs the task:
 
 - it marks the task row `RUNNING`
 - it loads the service method dynamically
@@ -319,7 +319,7 @@ A task becomes `FAILED` when:
 But a task may remain `PENDING` forever when:
 
 - the row is created
-- the Celery task never actually starts
+- the background task never actually starts
 - or execution history is lost before task bookkeeping advances
 
 

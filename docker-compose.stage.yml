@@ -14,6 +14,7 @@ x-backend-defaults: &backend-defaults
     TZ: "Europe/Warsaw"
     SECRET_KEY: ${SECRET_KEY}
     DB_NAME: portfolio_stage
+    MEDIA_STORAGE: ${MEDIA_STORAGE:-local}
     DB_USER: ${DB_USER:-portfolio}
     DB_PASSWORD: ${DB_PASSWORD}
     DB_HOST: db
@@ -39,17 +40,12 @@ x-backend-defaults: &backend-defaults
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.0}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
     PROJECT_OWNER: ${PROJECT_OWNER:-Lukasz}
-    REDIS_URL: redis://redis:6379/1
-    CELERY_BROKER_URL: redis://redis:6379/0
-    CELERY_RESULT_BACKEND: redis://redis:6379/0
     SKIP_PERMISSION_FIX: ${SKIP_PERMISSION_FIX:-false}
     SSR_CACHE_INVALIDATION_URL: ""
     SSR_CACHE_INVALIDATION_TOKEN: ${SSR_CACHE_INVALIDATION_TOKEN}
   depends_on:
     db:
       condition: service_healthy
-    redis:
-      condition: service_started
 
 networks:
   stage_network:
@@ -75,51 +71,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ---------- Redis ----------
-  redis:
-    build:
-      context: ./docker/redis
-    restart: always
-    networks:
-      - stage_network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  # ---------- Celery Worker ----------
-  celery-worker:
-    init: true
-    <<: *backend-defaults
-    image: ${ENVIRONMENT}-worker:${TAG}
-    profiles: ["manual-worker"]
-    restart: always
-    command: celery -A settings worker -l info -Q celery --concurrency=${CELERY_WORKERS:-2}
-    volumes:
-      - portfolio_staging_media_data:/app/media
-      - portfolio_staging_static_data:/app/staticfiles
-    healthcheck:
-      test: ["CMD-SHELL", "exec celery -A settings inspect --timeout 5 ping -d celery@$$HOSTNAME"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  # ---------- Celery Beat ----------
-  celery-beat:
-    <<: *backend-defaults
-    image: ${ENVIRONMENT}-be:${TAG}
-    profiles: ["manual-beat"]
-    restart: always
-    command: celery -A settings beat -l info -s /app/celerybeat/celerybeat-schedule
-    environment:
-      <<: *backend-defaults-env
-    volumes:
-      - portfolio_staging_media_data:/app/media
-      - portfolio_staging_static_data:/app/staticfiles
-      - portfolio_staging_celerybeat_data:/app/celerybeat
-
   # ---------- Backend ----------
   be:
     <<: *backend-defaults
@@ -138,8 +89,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_started
 
   # ---------- Release Job ----------
   release:
@@ -151,6 +100,7 @@ services:
     command: >
       sh -c "
         python manage.py migrate --noinput &&
+        python manage.py createcachetable &&
         python scripts/release_entrypoint.py &&
         python manage.py collectstatic --noinput
       "
@@ -222,8 +172,6 @@ volumes:
   portfolio_staging_media_data:
     external: true
   portfolio_staging_static_data:
-    external: true
-  portfolio_staging_celerybeat_data:
     external: true
   portfolio_staging_nginx_blocklist:
     external: true

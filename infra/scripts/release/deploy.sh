@@ -150,9 +150,9 @@ echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
 # like `release` are handled explicitly by release.sh earlier in the flow.
 if [[ "${ENV_SUFFIX}" == "stage" ]]; then
   DEPLOY_SERVICES=("be" "nginx")
-  ON_DEMAND_SERVICES=("celery-worker")
+  ON_DEMAND_SERVICES=()
 else
-  DEPLOY_SERVICES=("be" "celery-worker" "nginx")
+  DEPLOY_SERVICES=("be" "nginx")
   ON_DEMAND_SERVICES=()
 fi
 
@@ -221,10 +221,9 @@ for svc in "${DEPLOY_SERVICES[@]}"; do
   if [[ "${image_to_check}" =~ ^[[:space:]]*$ ]]; then
     echo "ℹ️  NOTE: Using naming fallback for '${svc}' (config resolution skipped)."
     image_to_check="${ENVIRONMENT}-${svc}"
-    if [[ "$svc" == "release" || "$svc" == "celery-beat" ]]; then
+    if [[ "$svc" == "release" ]]; then
       image_to_check="${ENVIRONMENT}-be"
     fi
-    if [[ "$svc" == "celery-worker" ]]; then image_to_check="${ENVIRONMENT}-worker"; fi
     image_to_check="${image_to_check}:$TAG"
   fi
 

@@ -5,6 +5,10 @@ Test settings for pytest
 
 import os
 
+# base.py initialises Sentry on import, so it must be disabled before the import.
+os.environ["ENABLE_SENTRY"] = "false"
+os.environ["MEDIA_STORAGE"] = "local"
+
 from .base import *  # noqa: F401,F403,E402
 
 SECRET_KEY = "test-secret-key-for-pytest"
@@ -69,15 +73,11 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
-# Celery test settings
-CELERY_TASK_ALWAYS_EAGER = True
-CELERY_TASK_EAGER_PROPAGATES = True
-CELERY_BROKER_URL = "memory://"
-CELERY_RESULT_BACKEND = "cache+memory://"
+# Run background tasks inline so exceptions propagate
+BACKGROUND_TASKS_SYNC = True
 
 # Disable logging during tests
 LOGGING_CONFIG = None
-ENABLE_SENTRY = False
 
 # Tests run in HTTP mode by default, do not force SSL redirects
 SECURE_SSL_REDIRECT = False

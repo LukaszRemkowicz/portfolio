@@ -5,8 +5,10 @@ import pytest
 from pytest_mock import MockerFixture
 
 from astrophotography.tests.factories import AstroImageFactory
+from common.tasks import invalidate_frontend_ssr_cache_task
 from common.tests.image_helpers import jpeg_field, png_field
 from common.types import ImageVariantSpec, ViewportWidths
+from core.tasks import process_image_task
 from core.tests.factories import ImageVariantFactory
 from shop.models import ShopProduct, ShopSettings
 from shop.tests.factories import ShopProductFactory
@@ -49,7 +51,7 @@ def test_partial_save_clears_product_crop_and_processes_variants(mocker: MockerF
     product.image_cropped = png_field("first-crop.png", size=(560, 560))
     product.save()
     replacement = ShopProductFactory().image
-    mock_delay = mocker.patch("shop.models.process_image_task.delay_on_commit")
+    mock_delay = mocker.patch("shop.models.submit")
 
     product.image = replacement
     product.save(update_fields=["image"])
@@ -58,6 +60,7 @@ def test_partial_save_clears_product_crop_and_processes_variants(mocker: MockerF
     assert product.image == replacement
     assert not product.image_cropped
     mock_delay.assert_called_once_with(
+        process_image_task,
         "shop",
         "shopproduct",
         product.pk,
@@ -131,7 +134,7 @@ def test_image_url_falls_back_to_cropped_source_when_variant_missing(caplog) -> 
 
 @pytest.mark.django_db
 def test_image_url_falls_back_to_astroimage_thumbnail_when_crop_missing() -> None:
-    with patch("core.models.process_image_task.delay_on_commit"):
+    with patch("core.models.submit"):
         astro_image = AstroImageFactory(
             original=jpeg_field("astro-original.jpg", size=(1600, 1200))
         )
@@ -193,7 +196,7 @@ def test_image_variant_sources_fall_back_to_astroimage_original_when_crop_missin
 
 @pytest.mark.django_db
 def test_shopsettings_background_image_url_returns_background_variant() -> None:
-    with patch("shop.models.process_image_task.delay_on_commit"):
+    with patch("shop.models.submit"):
         shop_settings_obj = ShopSettings.objects.create(
             image=png_field("shop-background.png", size=(1920, 1080))
         )
@@ -210,7 +213,7 @@ def test_shopsettings_background_image_url_returns_background_variant() -> None:
 
 @pytest.mark.django_db
 def test_shopsettings_background_image_url_falls_back_when_variant_missing(caplog) -> None:
-    with patch("shop.models.process_image_task.delay_on_commit"):
+    with patch("shop.models.submit"):
         settings_obj = ShopSettings.objects.create(
             image=png_field("shop-background.png", size=(1920, 1080))
         )
@@ -221,7 +224,7 @@ def test_shopsettings_background_image_url_falls_back_when_variant_missing(caplo
 
 @pytest.mark.django_db
 def test_shopsettings_image_url_uses_requested_role_and_width() -> None:
-    with patch("shop.models.process_image_task.delay_on_commit"):
+    with patch("shop.models.submit"):
         settings_obj = ShopSettings.objects.create(
             image=png_field("shop-background.png", size=(1920, 1080))
         )
@@ -247,7 +250,7 @@ def test_shopsettings_image_url_uses_requested_role_and_width() -> None:
 def test_shopsettings_image_url_falls_back_to_background_source_when_variant_missing(
     caplog,
 ) -> None:
-    with patch("shop.models.process_image_task.delay_on_commit"):
+    with patch("shop.models.submit"):
         settings_obj = ShopSettings.objects.create(
             image=png_field("shop-background.png", size=(1920, 1080))
         )
@@ -269,13 +272,13 @@ def test_shopsettings_image_url_logs_error_when_variant_and_source_are_missing(c
 def test_partial_save_clears_shopsettings_crop_and_processes_variants(
     mocker: MockerFixture,
 ) -> None:
-    with patch("shop.models.process_image_task.delay_on_commit"):
+    with patch("shop.models.submit"):
         settings_obj = ShopSettings.objects.create(
             image=jpeg_field("shop-background.jpg", size=(1920, 1080)),
             image_cropped=png_field("shop-background-crop.png", size=(1920, 1080)),
             title="Prints",
         )
-    mock_delay = mocker.patch("shop.models.process_image_task.delay_on_commit")
+    mock_delay = mocker.patch("shop.models.submit")
 
     settings_obj.image = jpeg_field("shop-background-replacement.jpg", size=(1920, 1080))
     settings_obj.save(update_fields=["image"])
@@ -283,6 +286,7 @@ def test_partial_save_clears_shopsettings_crop_and_processes_variants(
 
     assert not settings_obj.image_cropped
     mock_delay.assert_called_once_with(
+        process_image_task,
         "shop",
         "shopsettings",
         settings_obj.pk,
@@ -302,9 +306,9 @@ def test_save_triggers_translations(mocker: MockerFixture) -> None:
 @pytest.mark.django_db
 def test_save_triggers_cache_invalidation(mocker: MockerFixture) -> None:
     mock_cache = mocker.patch("shop.signals.CacheService.invalidate_shop_cache")
-    mock_ssr = mocker.patch("shop.signals.invalidate_frontend_ssr_cache_task.delay_on_commit")
+    mock_ssr = mocker.patch("shop.signals.submit")
 
     ShopProductFactory()
 
     assert mock_cache.called
-    mock_ssr.assert_called_with(["shop"])
+    mock_ssr.assert_called_with(invalidate_frontend_ssr_cache_task, ["shop"])

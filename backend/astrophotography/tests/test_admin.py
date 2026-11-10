@@ -49,13 +49,17 @@ from users.models import User
 
 
 def translation_apply_async_kwargs(call) -> dict:
-    """Return task kwargs passed through Celery apply_async."""
-    return call.kwargs["kwargs"]
+    """Return translation task kwargs passed through submit()."""
+    return {
+        key: value
+        for key, value in call.kwargs.items()
+        if key not in {"retries", "retry_delay", "task_id"}
+    }
 
 
 def only_translation_apply_async_kwargs(mock_translate_task: MagicMock) -> dict:
-    mock_translate_task.apply_async.assert_called_once()
-    return translation_apply_async_kwargs(mock_translate_task.apply_async.call_args)
+    mock_translate_task.assert_called_once()
+    return translation_apply_async_kwargs(mock_translate_task.call_args)
 
 
 @pytest.mark.django_db
@@ -659,7 +663,7 @@ class TestPlaceAdmin:
         assert response.status_code == 302
 
         # Verify task WAS NOT called because name did not change
-        mock_translate_task.apply_async.assert_not_called()
+        mock_translate_task.assert_not_called()
 
     def test_country_field_is_translated(self, admin_client: Client) -> None:
         """
@@ -818,7 +822,7 @@ class TestMainPageBackgroundImageAdminActions:
             errors = form.form.errors if form else "No form errors found"
             pytest.fail(f"Form submission failed with errors: {errors}")
         assert response.status_code == 302
-        assert mock_translate_task.apply_async.call_count == 0
+        assert mock_translate_task.call_count == 0
 
 
 @pytest.mark.django_db
@@ -968,7 +972,7 @@ class TestMainPageLocationAdmin:
         """
         place = PlaceFactory()
         # Reset mock after Place creation to ignore translate_place calls
-        mock_translate_task.apply_async.reset_mock()
+        mock_translate_task.reset_mock()
 
         url = reverse("admin:astrophotography_mainpagelocation_add")
         data = {
@@ -986,11 +990,11 @@ class TestMainPageLocationAdmin:
         assert response.status_code == 302
 
         # Check if task was called with correct parameters
-        assert mock_translate_task.apply_async.called
+        assert mock_translate_task.called
         # Find the call for 'pl'
         pl_call = next(
             c
-            for c in mock_translate_task.apply_async.call_args_list
+            for c in mock_translate_task.call_args_list
             if translation_apply_async_kwargs(c)["language_code"] == "pl"
         )
         pl_kwargs = translation_apply_async_kwargs(pl_call)
@@ -1020,7 +1024,7 @@ class TestMainPageLocationAdmin:
         explicit id that the sequence hasn't advanced past yet.
         """
         place: Place = PlaceFactory()
-        mock_translate_task.apply_async.reset_mock()
+        mock_translate_task.reset_mock()
 
         url: str = reverse("admin:astrophotography_mainpagelocation_add")
         data: dict = {
@@ -1060,7 +1064,7 @@ class TestMainPageLocationAdmin:
 
         # First object — inserted via factory so it has a concrete id in the DB.
         existing: MainPageLocation = MainPageLocationFactory(place=place)
-        mock_translate_task.apply_async.reset_mock()
+        mock_translate_task.reset_mock()
 
         url: str = reverse("admin:astrophotography_mainpagelocation_add")
         data: dict = {

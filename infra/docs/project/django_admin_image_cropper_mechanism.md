@@ -48,7 +48,7 @@ After save, the existing async image pipeline still runs:
 1. Django admin saves the selected source field.
 2. model save logic detects changed image fields.
 3. the matching async image task is scheduled.
-4. Celery regenerates the derived file for the changed source field.
+4. A background thread regenerates the derived file for the changed source field.
 5. cache invalidation runs after image processing.
 
 This means the cropper does not replace the existing backend image-processing architecture. It only changes what source file is submitted.
@@ -279,7 +279,7 @@ Regression test:
 - [backend/core/tests/test_admin_media_urls.py](../../../backend/core/tests/test_admin_media_urls.py)
 
 ### Cloudflare R2 media storage (opt-in)
-`MEDIA_STORAGE=local` (default) keeps the local `FileSystemStorage` and nginx `X-Accel-Redirect` serving. `MEDIA_STORAGE=r2` switches the default storage to `common.storage.R2RoutingStorage`.
+`MEDIA_STORAGE=r2` is the default (production); `MEDIA_STORAGE=local` (dev compose, staging, tests) keeps the local `FileSystemStorage` and nginx `X-Accel-Redirect` serving. `MEDIA_STORAGE=r2` switches the default storage to `common.storage.R2RoutingStorage`.
 
 Env vars (r2 only): `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (required, startup fails without them), `R2_ENDPOINT_URL`, `R2_PUBLIC_BUCKET` (`portfolio-media`), `R2_PRIVATE_BUCKET` (`portfolio-originals`), `R2_PUBLIC_DOMAIN` (`media.lukaszremkowicz.com`, host only), `R2_SIGNED_URL_EXPIRE` (`300` seconds).
 

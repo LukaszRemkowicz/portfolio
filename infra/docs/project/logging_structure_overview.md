@@ -85,7 +85,6 @@ The current Django logging config explicitly configures these backend app namesp
 - `django.request`
 - `django.server`
 - `django.db.backends`
-- `celery`
 
 Each of the app namespaces above currently uses the same JSON formatter and the same stdout handler.
 

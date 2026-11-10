@@ -6,6 +6,7 @@ from rest_framework.exceptions import APIException
 
 from django.utils import timezone
 
+from common.background import submit
 from common.utils.logging import sanitize_for_logging
 
 from .models import ContactMessage
@@ -89,7 +90,7 @@ class ContactSubmissionService:
     @staticmethod
     def _enqueue_email_task(contact_message_id: int) -> None:
         try:
-            send_notification_email_task.apply_async(args=[contact_message_id])
+            submit(send_notification_email_task, contact_message_id, retries=3)
         except Exception as exc:
             logger.warning(
                 "Failed to enqueue contact email task for message ID=%s: %s",

@@ -9,6 +9,7 @@ Keeps two cache layers in sync after shop product changes:
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from common.background import submit
 from common.tasks import invalidate_frontend_ssr_cache_task
 from core.cache_service import CacheService
 
@@ -27,4 +28,4 @@ def invalidate_shop_cache(sender, instance, **kwargs):
     - frontend SSR tag: ``shop``
     """
     CacheService.invalidate_shop_cache()
-    invalidate_frontend_ssr_cache_task.delay_on_commit(["shop"])
+    submit(invalidate_frontend_ssr_cache_task, ["shop"])

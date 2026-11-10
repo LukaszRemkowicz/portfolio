@@ -26,9 +26,7 @@ class TestTranslationLogic:
         self.mixin = MockModelMixin()
         self.default_lang = settings.DEFAULT_APP_LANGUAGE
 
-        self.mock_apply_async = unittest.mock.patch(
-            "translation.mixins.translate_instance_task.apply_async"
-        ).start()
+        self.mock_apply_async = unittest.mock.patch("translation.mixins.submit").start()
         self.mock_apply_async.side_effect = lambda *args, **kwargs: unittest.mock.Mock(
             id=str(uuid.uuid4())
         )

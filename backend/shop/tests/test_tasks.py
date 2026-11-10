@@ -12,7 +12,7 @@ from shop.tests.factories import ShopProductFactory
 @pytest.mark.django_db
 class TestShopProductImageProcessing:
     def test_process_task_uses_cropped_image_for_product_variants(self) -> None:
-        with patch("shop.models.process_image_task.delay_on_commit"):
+        with patch("shop.models.submit"):
             linked_image = AstroImageFactory(
                 original__width=1200,
                 original__height=800,
@@ -34,7 +34,7 @@ class TestShopProductImageProcessing:
     def test_process_task_rebuilds_product_variants_from_linked_image_when_crop_is_removed(
         self,
     ) -> None:
-        with patch("shop.models.process_image_task.delay_on_commit"):
+        with patch("shop.models.submit"):
             product = ShopProductFactory(
                 image_cropped=jpeg_field("product-crop.jpg", size=(560, 420))
             )
@@ -42,7 +42,7 @@ class TestShopProductImageProcessing:
         assert product.variants.count() == 2
 
         product.image_cropped = None
-        with patch("shop.models.process_image_task.delay_on_commit"):
+        with patch("shop.models.submit"):
             product.save(update_fields=["image_cropped"])
 
         process_image_task("shop", "ShopProduct", product.pk, ["image_cropped"])
@@ -58,7 +58,7 @@ class TestShopProductImageProcessing:
 @pytest.mark.django_db
 class TestShopSettingsImageProcessing:
     def test_process_task_uses_cropped_image_when_present(self) -> None:
-        with patch("shop.models.process_image_task.delay_on_commit"):
+        with patch("shop.models.submit"):
             settings_obj = ShopSettings.objects.create(
                 image=jpeg_field("background-source.jpg"),
                 image_cropped=png_field("background-crop.png", size=(1920, 1080)),
@@ -78,7 +78,7 @@ class TestShopSettingsImageProcessing:
         assert all("background-crop" in variant.file.name for variant in background_variants)
 
     def test_process_task_clears_variants_when_no_source_image(self) -> None:
-        with patch("shop.models.process_image_task.delay_on_commit"):
+        with patch("shop.models.submit"):
             settings_obj = ShopSettings.objects.create(
                 image=jpeg_field("background-source.jpg"),
                 title="Shop",
@@ -88,7 +88,7 @@ class TestShopSettingsImageProcessing:
 
         settings_obj.image = None
         settings_obj.image_cropped = None
-        with patch("shop.models.process_image_task.delay_on_commit"):
+        with patch("shop.models.submit"):
             settings_obj.save(update_fields=["image", "image_cropped"])
 
         process_image_task("shop", "ShopSettings", settings_obj.pk, ["image"])

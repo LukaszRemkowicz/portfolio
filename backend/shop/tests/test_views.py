@@ -112,7 +112,7 @@ class TestShopProductListView:
     def test_list_product_does_not_use_linked_astroimage_thumbnail_as_public_fallback(
         self, api_client: APIClient
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             astro_image = AstroImageFactory(
                 original=jpeg_field("astro-original.jpg", size=(1200, 800))
             )
@@ -140,7 +140,7 @@ class TestShopProductListView:
     def test_list_product_does_not_use_astroimage_original_as_public_fallback(
         self, api_client: APIClient
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             astro_image = AstroImageFactory(
                 original=jpeg_field("astro-original.jpg", size=(1200, 800))
             )
@@ -203,7 +203,7 @@ class TestShopProductListView:
 
     def test_list_includes_shop_settings_copy(self, api_client: APIClient) -> None:
         ShopProductFactory()
-        with patch("shop.models.process_image_task.delay_on_commit"):
+        with patch("shop.models.submit"):
             shop_settings = ShopSettings.objects.create(
                 image=png_field("shop-background.png", size=(1920, 1080))
             )
@@ -220,7 +220,7 @@ class TestShopProductListView:
 
     def test_list_serves_generated_shop_background_variant(self, api_client: APIClient) -> None:
         ShopProductFactory()
-        with patch("shop.models.process_image_task.delay_on_commit"):
+        with patch("shop.models.submit"):
             shop_settings = ShopSettings.objects.create(
                 image=png_field("shop-background.png", size=(1920, 1080))
             )
@@ -250,7 +250,7 @@ class TestShopProductListView:
         self, api_client: APIClient
     ) -> None:
         ShopProductFactory()
-        with patch("shop.models.process_image_task.delay_on_commit"):
+        with patch("shop.models.submit"):
             ShopSettings.objects.create(image=png_field("shop-background.png", size=(1920, 1080)))
 
         response = api_client.get(reverse(SHOP_PRODUCT_LIST_URL), {"lang": "en"})
@@ -447,7 +447,7 @@ class TestShopProductDetailView:
     def test_detail_does_not_use_linked_astroimage_thumbnail_as_public_fallback(
         self, api_client: APIClient
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             astro_image = AstroImageFactory(
                 original=jpeg_field("astro-original.jpg", size=(1200, 800))
             )
@@ -475,7 +475,7 @@ class TestShopProductDetailView:
     def test_detail_does_not_use_astroimage_original_as_public_fallback(
         self, api_client: APIClient
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             astro_image = AstroImageFactory(
                 original=jpeg_field("astro-original.jpg", size=(1200, 800))
             )
@@ -563,7 +563,7 @@ class TestShopAstroImageLookupView:
     def test_lookup_returns_signed_original_url_for_admin_cropper(
         self, api_client: APIClient
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(original=jpeg_field("lookup-thumb.jpg", size=(1200, 800)))
         ImageVariantFactory(
             owner=image,
@@ -587,7 +587,7 @@ class TestShopAstroImageLookupView:
         assert "e=" in parsed_url.query
 
     def test_lookup_returns_404_when_original_field_is_empty(self, api_client: APIClient) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(original=None)
 
         response = api_client.get(

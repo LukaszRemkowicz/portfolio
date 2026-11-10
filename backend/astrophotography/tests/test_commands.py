@@ -39,7 +39,7 @@ class TestFixParlerLanguageCodesCommand:
         mocker.patch("astrophotography.models.Place.trigger_translations", autospec=True)
         mocker.patch("astrophotography.models.AstroImage.trigger_translations", autospec=True)
         mocker.patch("astrophotography.models.MainPageLocation.trigger_translations", autospec=True)
-        mocker.patch("core.models.process_image_task.delay")
+        mocker.patch("core.models.submit")
 
         place = PlaceFactory()
         translation_model = Place._parler_meta.root_model

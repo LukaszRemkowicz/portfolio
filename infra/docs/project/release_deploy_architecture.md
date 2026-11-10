@@ -91,7 +91,6 @@ This script:
 - requires `ENVIRONMENT`
 - builds:
   - `${ENVIRONMENT}-be:${TAG}`
-  - `${ENVIRONMENT}-worker:${TAG}`
   - `${ENVIRONMENT}-fe:${TAG}`
   - `${ENVIRONMENT}-nginx:${TAG}`
 - prunes older local images while protecting:
@@ -130,8 +129,6 @@ On the VPS, `infra/scripts/release/prepare_staging_images.sh`:
   - `stage-be:${TAG}`
   - `stage-fe:${TAG}`
   - `stage-nginx:${TAG}`
-- tags `stage-be:${TAG}` locally as `stage-worker:${TAG}` because the celery
-  worker runs the same backend artifact;
 - removes the GHCR tag locally after retagging so the VPS keeps only the
   runtime-local names;
 - records pulled image digests under the staging state directory.
@@ -171,7 +168,6 @@ production-be:${TAG}
 production-fe:${TAG}
 production-nginx:${TAG}
 stage-be:${TAG}
-stage-worker:${TAG}
 stage-fe:${TAG}
 stage-nginx:${TAG}
 ```
@@ -183,10 +179,9 @@ This naming is preserved intentionally because it matches current VPS operations
 The important runtime simplification is:
 
 - `be`
-- `celery-worker`
 - `release`
 
-all use the same backend artifact:
+both use the same backend artifact:
 
 ```text
 ${ENVIRONMENT}-be:${TAG}
@@ -200,10 +195,6 @@ It means:
 - separate processes
 - separate commands
 - shared backend image artifact
-
-`celery-beat` also uses the backend artifact, but it is not part of the
-standard deployment switch because no scheduled Beat jobs are active. It is
-kept behind the `manual-beat` compose profile for explicit operator use.
 
 Frontend and nginx remain separate artifacts:
 
@@ -223,9 +214,6 @@ This is intentional because:
 - artifact preparation stays outside compose
 
 Production compose change already made:
-
-- `celery-worker` now uses `${ENVIRONMENT}-be:${TAG}`
-- `celery-beat` is available only through the `manual-beat` profile
 
 `be` and `release` were already using `${ENVIRONMENT}-be:${TAG}`.
 
@@ -285,7 +273,7 @@ It does:
 
 - enforce release lock
 - resolve the release image from compose
-- ensure dependencies such as db and redis are healthy
+- ensure dependencies such as db are healthy
 - run the release container/job
 - capture release logs
 - create pre-release backup in production
@@ -322,11 +310,7 @@ The normal deploy-managed services are:
 
 - `be`
 - `fe`
-- `celery-worker`
 - `nginx`
-
-`celery-beat` is intentionally excluded from the normal service switch while it
-has no active schedule.
 
 It does not:
 
@@ -406,8 +390,7 @@ High-level staging registry deploy flow:
 
 `deploy_staging.sh` owns the fixed staging tag, prepares the registry images,
 runs `release.sh`, and then runs `deploy.sh`. Staging deploy switches only
-`be`, `fe`, and `nginx`; `celery-worker` is intentionally excluded and remains
-an on-demand service.
+`be`, `fe`, and `nginx`.
 
 High-level legacy staging flow:
 
@@ -437,6 +420,24 @@ Important state:
 `deploy.sh` updates these after successful deployment.
 
 Rollback uses a previous version tag, not a mutable tag.
+
+### Celery and Redis removal (first deploy after it)
+
+`deploy.sh` does not pass `--remove-orphans`, so the old `redis`, `celery-worker`
+and `celery-beat` containers keep running after the first deploy without them.
+Remove them once the new release is healthy:
+
+```bash
+docker rm -f portfolio-prod-redis-1 portfolio-prod-celery-worker-1 portfolio-prod-celery-beat-1
+```
+
+Do not remove the `fe` container: nginx still proxies to `fe:8080`.
+
+Rolling back to a release from before the removal needs Redis again (its
+settings use `RedisCache` and Celery): start it from that release's checkout with
+`docker compose -f docker-compose.common.yml -f docker-compose.prod.yml up -d redis celery-worker`.
+After the removal, the `portfolio_prod_celerybeat_data` volume and the
+`REDIS_PASSWORD` secret in Doppler are unused.
 
 ## Registry And Local Retention
 

@@ -39,7 +39,7 @@ class TestLandingPageSettingsGetCurrent:
 class TestBaseImageImageUrls:
     def test_get_variant_url_returns_hero_variant_url(self):
         """Variant helper returns the generated hero URL without fallback."""
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory(
                 original=jpeg_field("background.jpg", size=(2600, 1734))
             )
@@ -52,7 +52,7 @@ class TestBaseImageImageUrls:
 
     def test_get_variant_url_returns_empty_string_when_variant_missing(self):
         """Variant helper stays strict when the requested role is absent."""
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory(
                 original=jpeg_field("background.jpg", size=(2600, 1734))
             )
@@ -61,7 +61,7 @@ class TestBaseImageImageUrls:
         assert img.get_variant_url("hero", width=2600) is None
 
     def test_get_original_image_url_returns_original_source_url(self):
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory(
                 original=jpeg_field("background.jpg", size=(2600, 1734))
             )
@@ -70,7 +70,7 @@ class TestBaseImageImageUrls:
 
     def test_get_image_url_falls_back_to_original_when_variant_missing(self, caplog):
         """Connector falls back to the stored original file and logs a warning."""
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory(
                 original=jpeg_field("background.jpg", size=(2600, 1734))
             )

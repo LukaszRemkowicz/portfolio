@@ -1,4 +1,3 @@
-import uuid
 from unittest.mock import MagicMock
 
 import pytest
@@ -7,18 +6,8 @@ from pytest_mock import MockerFixture
 
 @pytest.fixture
 def mock_translate_task(mocker: MockerFixture) -> MagicMock:
-    """Fixture to mock translate_instance_task reliably across tests."""
-
-    class MockTaskResult:
-        def __init__(self, task_id):
-            self.id = task_id
-
-    def mock_task_result(*args, **kwargs):  # noqa: ARG001
-        return MockTaskResult(str(uuid.uuid4()))
-
-    mock = mocker.patch("translation.mixins.translate_instance_task")
-    mock.apply_async.side_effect = mock_task_result
-    return mock
+    """Fixture to mock the submit() call that dispatches translate_instance_task."""
+    return mocker.patch("translation.mixins.submit")
 
 
 @pytest.fixture

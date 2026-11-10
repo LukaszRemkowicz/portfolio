@@ -153,9 +153,9 @@ def test_contact_throttling_bypassed_in_debug(
 def test_contact_throttling_fails_open_when_cache_unavailable(
     mocker, mock_email_service: MagicMock, api_client: APIClient
 ) -> None:
-    """Redis/cache failures should not block or reject contact submissions."""
+    """Cache failures should not block or reject contact submissions."""
     LandingPageSettingsFactory(contact_form_enabled=True)
-    mocker.patch("common.throttling.cache.get", side_effect=Exception("Redis unavailable"))
+    mocker.patch("common.throttling.cache.get", side_effect=Exception("Cache unavailable"))
 
     url = reverse("inbox:contact-message-list")
     data = {

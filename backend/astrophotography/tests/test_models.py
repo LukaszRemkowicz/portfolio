@@ -415,7 +415,7 @@ class TestImageUpdateLogic:
         Image.new("RGB", (100, 100), color="red").save(img_data1, "JPEG")
         file1 = SimpleUploadedFile("shared.jpg", img_data1.getvalue(), content_type="image/jpeg")
 
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image: AstroImage = AstroImageFactory(original=file1)
         process_image_task("astrophotography", "AstroImage", image.pk)
         image.refresh_from_db()
@@ -429,7 +429,7 @@ class TestImageUpdateLogic:
         file2 = SimpleUploadedFile("shared.jpg", img_data2.getvalue(), content_type="image/jpeg")
 
         image.original = file2
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image.save()
         process_image_task("astrophotography", "AstroImage", image.pk, ["original"])
 
@@ -448,7 +448,7 @@ class TestImageUpdateLogic:
         """
         Verify that the thumbnail is NOT regenerated if we save without changing the image.
         """
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image: AstroImage = AstroImageFactory(
                 name="Stationary Image",
                 original__width=1200,
@@ -471,7 +471,7 @@ class TestImageUpdateLogic:
         Simulate a Django Admin update using the actual model form.
         """
         # 1. Create initial
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image: AstroImage = AstroImageFactory(
                 name="Form Test",
                 original__width=1200,

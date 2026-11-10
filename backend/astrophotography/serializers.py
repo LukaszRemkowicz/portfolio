@@ -5,11 +5,9 @@ from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
 
 from django.conf import settings
-from django.urls import reverse
 from django.utils import translation
 
 from common.serializers import TranslatedSerializerMixin
-from common.utils.signing import generate_signed_url_params
 from translation.services import TranslationService
 
 from .models import (
@@ -192,18 +190,14 @@ class MainPageLocationSerializer(TranslatedSerializerMixin, TranslatableModelSer
         return dt.strftime("%-d %b %Y")
 
     def get_background_image(self, obj: MainPageLocation) -> str:
+        # Public detail variant: a signed link would expire inside the 30-day API cache.
         if obj.background_image:
-            request = self.context.get("request")
-            url_path = reverse(
-                "astroimages:secure-image-serve",
-                kwargs={"slug": obj.background_image.slug},
-            )
-            params = generate_signed_url_params(obj.background_image.slug)
-
-            if request:
-                return f"{request.build_absolute_uri(url_path)}" f"?s={params['s']}&e={params['e']}"
-
-            return f"{url_path}?s={params['s']}&e={params['e']}"
+            fallback = obj.background_image.get_variant_payload("detail", fallback_width=1920)[
+                "fallback_image"
+            ]
+            if fallback:
+                url: str = fallback["url"]
+                return url
         return ""
 
     def get_full_location(self, obj: MainPageLocation) -> str:

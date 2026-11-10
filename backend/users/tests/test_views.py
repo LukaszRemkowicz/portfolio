@@ -165,7 +165,7 @@ def test_profile_endpoint_constructs_image_urls_correctly(api_client: APIClient)
 def test_profile_endpoint_with_avatar(api_client: APIClient) -> None:
     """Test that profile endpoint returns empty candidates before variant sync."""
     avatar_file: SimpleUploadedFile = jpeg_field("avatar.jpg", size=(800, 800))
-    with patch("users.models.process_image_task.delay_on_commit"):
+    with patch("users.models.submit"):
         UserFactory(avatar=avatar_file)
 
     url: str = reverse("users:profile-profile")
@@ -227,7 +227,7 @@ def test_profile_avatar_serves_generated_variant_url(api_client: APIClient) -> N
 
 @pytest.mark.django_db
 def test_profile_image_fields_return_stored_variant_urls(api_client: APIClient) -> None:
-    with patch("users.models.process_image_task.delay_on_commit"):
+    with patch("users.models.submit"):
         user: PortfolioUser = UserFactory(
             avatar=jpeg_field("avatar.jpg", size=(800, 800)),
             about_me_image=jpeg_field("about-me.jpg", size=(1200, 800)),
@@ -265,7 +265,7 @@ def test_profile_image_fields_return_stored_variant_urls(api_client: APIClient) 
 
 @pytest.mark.django_db
 def test_profile_image_fields_ignore_requested_size(api_client: APIClient) -> None:
-    with patch("users.models.process_image_task.delay_on_commit"):
+    with patch("users.models.submit"):
         user: PortfolioUser = UserFactory(avatar=jpeg_field("avatar.jpg", size=(1200, 1200)))
     requested_avatar: ImageVariant = ImageVariantFactory(
         owner=user,

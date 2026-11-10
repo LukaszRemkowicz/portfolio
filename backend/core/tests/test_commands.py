@@ -53,8 +53,8 @@ class TestMediaInventoryCommand:
         media_root = Path(settings.MEDIA_ROOT)
 
         with (
-            patch("core.models.process_image_task.delay_on_commit"),
-            patch("users.models.process_image_task.delay_on_commit"),
+            patch("core.models.submit"),
+            patch("users.models.submit"),
         ):
             astro_image = AstroImageFactory(original=jpeg_field("astro-source.jpg"))
             user = UserFactory()
@@ -132,7 +132,7 @@ class TestRegenerateThumbnailsCommand:
         assert not issubclass(RegenerateThumbnailsCommand, BackfillImageVariantsCommand)
 
     def test_regenerates_thumbnail_variants_only(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("regenerate-thumbnail.jpg", size=(1200, 800)),
             )
@@ -149,7 +149,7 @@ class TestRegenerateThumbnailsCommand:
         assert image.variants.exclude(role="thumbnail").count() == existing_variant_count
 
     def test_force_rebuilds_existing_thumbnail_variant(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("force-thumbnail.jpg", size=(1200, 800)),
             )
@@ -167,7 +167,7 @@ class TestRegenerateThumbnailsCommand:
 @pytest.mark.django_db
 class TestBackfillImageVariantsCommand:
     def test_generates_missing_variants(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("backfill.jpg", size=(3000, 2000)),
             )
@@ -195,7 +195,7 @@ class TestBackfillImageVariantsCommand:
     def test_generated_variants_invalidate_media_bearing_caches(
         self, mocker: MockerFixture
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("cache-invalidation-backfill.jpg", size=(1200, 800)),
             )
@@ -239,7 +239,7 @@ class TestBackfillImageVariantsCommand:
         )
 
     def test_generates_project_image_original_format_from_model_specs(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = ProjectImageFactory(
                 original=jpeg_field("project-backfill.jpg", size=(900, 600)),
             )
@@ -254,7 +254,7 @@ class TestBackfillImageVariantsCommand:
         assert original_format.file.name.startswith("programming/original_format/")
 
     def test_generates_user_profile_variants(self) -> None:
-        with patch("users.models.process_image_task.delay_on_commit"):
+        with patch("users.models.submit"):
             user = UserFactory(
                 avatar=jpeg_field("avatar-backfill.jpg", size=(800, 800)),
                 about_me_image=jpeg_field("about-me-backfill.jpg", size=(1200, 800)),
@@ -276,7 +276,7 @@ class TestBackfillImageVariantsCommand:
         )
 
     def test_generates_new_thumbnail_spec_for_existing_variant_rows(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("thumbnail-backfill.jpg", size=(1200, 800)),
             )
@@ -300,7 +300,7 @@ class TestBackfillImageVariantsCommand:
         assert not image.variants.filter(role="card").exists()
 
     def test_generates_shop_product_thumbnail_from_linked_astroimage_original(self) -> None:
-        with patch("shop.models.process_image_task.delay_on_commit"):
+        with patch("shop.models.submit"):
             astro_image = AstroImageFactory(
                 original=jpeg_field("astro-product-source.jpg", size=(1600, 1200))
             )
@@ -319,7 +319,7 @@ class TestBackfillImageVariantsCommand:
         assert thumbnail_variant.file.name.startswith("shop/products/cropped/")
 
     def test_generates_shop_settings_background_variant(self) -> None:
-        with patch("shop.models.process_image_task.delay_on_commit"):
+        with patch("shop.models.submit"):
             settings = ShopSettings.objects.create(
                 image=jpeg_field("shop-background.jpg", size=(2200, 1467)),
                 title="Prints",
@@ -336,7 +336,7 @@ class TestBackfillImageVariantsCommand:
         assert background_variant.file.name.startswith("shop/backgrounds/background/")
 
     def test_reports_missing_source_file_and_continues(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("missing-source-seed.jpg", size=(1200, 800)),
             )
@@ -350,7 +350,7 @@ class TestBackfillImageVariantsCommand:
         assert "missing source file" in stderr.getvalue()
 
     def test_silent_reports_missing_source_without_raising(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("silent-missing-source-seed.jpg", size=(1200, 800)),
             )
@@ -371,7 +371,7 @@ class TestBackfillImageVariantsCommand:
         assert "Errors: 1" in stdout.getvalue()
 
     def test_reports_missing_source_when_original_file_is_missing(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("legacy-source-seed.jpg", size=(1200, 800)),
             )
@@ -386,7 +386,7 @@ class TestBackfillImageVariantsCommand:
         assert "missing source file" in stderr.getvalue()
 
     def test_reports_error_when_source_file_cannot_generate_variants(self) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             image = AstroImageFactory(
                 original=jpeg_field("bad-source-seed.jpg", size=(1200, 800)),
             )

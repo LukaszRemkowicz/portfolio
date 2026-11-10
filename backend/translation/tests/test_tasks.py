@@ -1,6 +1,6 @@
 # backend/core/tests/test_tasks.py
 """
-Tests for translation-related tasks, including Celery tasks, service logic,
+Tests for translation-related tasks, including background tasks, service logic,
 and GPT agent interactions.
 """
 
@@ -519,7 +519,7 @@ class TestTranslationServiceBusinessLogic:
 
 @pytest.mark.django_db
 class TestTranslateInstanceTask:
-    """Tests for Celery tasks (thin wrappers)."""
+    """Tests for background tasks (thin wrappers)."""
 
     def test_translate_instance_task_calls_service_method(
         self, mock_task_infrastructure, mocker: MockerFixture

@@ -22,7 +22,7 @@ Similarly, the React client expects the tags to be provided in the initial HTML 
 Because the available Tags are tied to `LandingPageSettings`, updating these tags requires flushing both the backend and frontend caches to prevent visitors from seeing stale filters.
 
 When you modify the tags on the `LandingPageSettings` model in the Django admin:
-1. **Backend Cache Flush:** `CacheService.invalidate_astrophotography_cache()` is called. This clears the Redis cache for all astrophotography responses, including the tags and the latest images payload.
-2. **Frontend SSR Flush:** An asynchronous Celery task (`invalidate_frontend_ssr_cache_task`) sends a webhook to the Node.js SSR server containing the `["latest-astro-images"]` key. This forces the Node server to drop its cached HTML shell piece for the latest images gallery.
+1. **Backend Cache Flush:** `CacheService.invalidate_astrophotography_cache()` is called. This clears the database cache for all astrophotography responses, including the tags and the latest images payload.
+2. **Frontend SSR Flush:** A background task (`invalidate_frontend_ssr_cache_task`) sends a webhook to the Node.js SSR server containing the `["latest-astro-images"]` key. This forces the Node server to drop its cached HTML shell piece for the latest images gallery.
 
 On the very next page visit, the frontend fetches the freshly updated tags and images direct from the backend, caches them, and correctly renders the new filters.

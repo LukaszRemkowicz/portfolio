@@ -39,11 +39,8 @@ Canonical matches take precedence; an ambiguous alias returns 404. Date changes
 are not versioned by these aliases. Migration `0022_mainpagelocation_legacy_slugs`
 must run before deploying code that uses these aliases.
 
-Production releases automatically repair the known record, Place 53, to Poland
-only while its country is empty. Staging skips this repair. The release uses
-`--if-country-empty`, so a later intentional country edit is preserved.
-
-For a manual repair, preview the exact change first (run inside the deployed
+The known record, Place 53, was repaired to Poland by an earlier release;
+releases no longer run this step. For a manual repair, preview the exact change first (run inside the deployed
 backend environment):
 
 ```bash
@@ -88,7 +85,7 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
 
 ### Technical Features
 - **Modern Stack** - Python 3.14, Django 6.0, and `uv` for dependency management.
-- **Caching** - Redis-backed caching for Django Select2 and internal performance.
+- **Caching** - Database-backed caching (Django `DatabaseCache`, tables created by `manage.py createcachetable`) for API responses and Django Select2. Background work (emails, translations, image processing) runs in an in-process thread pool (`common/background.py`).
 - **Error Tracking** - Sentry integration for production monitoring and telemetry.
 - **Internationalization (i18n)** - Multi-language support (EN/PL) with automatic message compilation.
 - **Docker Integration** - Multi-stage builds with automated static collection.

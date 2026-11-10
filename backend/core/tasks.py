@@ -1,12 +1,6 @@
 import logging
 
-import sentry_sdk
-from celery import shared_task
-
 from django.apps import apps
-from django.conf import settings
-
-from common.celery import CommitAwareTask
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +35,6 @@ def run_shared_image_processing(
         )
 
 
-@shared_task(  # type: ignore[untyped-decorator]
-    name="core.process_image",
-    base=CommitAwareTask,
-)
 def process_image_task(
     app_label: str,
     model_name: str,
@@ -54,13 +44,11 @@ def process_image_task(
     """Shared image-processing task."""
     try:
         run_shared_image_processing(app_label, model_name, instance_id, changed_field_names)
-    except Exception as exc:
+    except Exception:
         logger.exception(
             "Failed to process image for %s.%s %s",
             app_label,
             model_name,
             instance_id,
         )
-        if settings.ENABLE_SENTRY:
-            sentry_sdk.capture_exception(exc)
         raise
