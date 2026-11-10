@@ -85,7 +85,7 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
 
 ### Technical Features
 - **Modern Stack** - Python 3.14, Django 6.0, and `uv` for dependency management.
-- **Caching** - Redis-backed caching for Django Select2 and internal performance.
+- **Caching** - Database-backed caching (Django `DatabaseCache`, tables created by `manage.py createcachetable`) for API responses and Django Select2. Background work (emails, translations, image processing) runs in an in-process thread pool (`common/background.py`).
 - **Error Tracking** - Sentry integration for production monitoring and telemetry.
 - **Internationalization (i18n)** - Multi-language support (EN/PL) with automatic message compilation.
 - **Docker Integration** - Multi-stage builds with automated static collection.

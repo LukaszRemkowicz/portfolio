@@ -52,7 +52,7 @@ confirming behavior.
 ## Project Document Map
 
 - `infra/docs/project/cache_invalidation.md`
-  Use for stale homepage/shared content, Django signals, Redis invalidation, or
+  Use for stale homepage/shared content, Django signals, cache invalidation, or
   frontend SSR cache invalidation. Describes the two-layer cache model and
   backend-to-frontend invalidation flow.
 - `infra/docs/project/django_admin_image_cropper_mechanism.md`

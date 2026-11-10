@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "backend"
-version = "2.20.0"
+version = "2.21.0"
 description = "Portfolio backend with Django REST Framework"
 readme = "README.md"
 requires-python = ">=3.14,<4.0"
@@ -20,14 +20,11 @@ dependencies = [
     "django-countries==8.2.0",
     "django-select2==8.4.8",
     "django-ckeditor-5==0.2.20",
-    "redis==5.3.1",
     "openai==1.109.1",
     "django-extensions==3.2.3",
     "django-parler==2.3",
     "django-parler-rest==2.2",
     "beautifulsoup4==4.14.3",
-    "celery[redis]==5.6.3",
-    "flower==2.0.1",
     "sentry-sdk==2.57.0",
     "requests==2.33.1",
     "django-model-utils==5.0.0",
@@ -181,7 +178,6 @@ django_settings_module = "settings.tests"
 [[tool.mypy.overrides]]
 module = [
     "PIL.*",
-    "celery.*",
     "taggit.*",
     "parler.*",
     "parler_rest.*",
@@ -259,9 +255,6 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "django_db: marks tests that require database access",
-]
-filterwarnings = [
-    "ignore:Cache backend does not support delete_pattern:UserWarning",
 ]
 
 [tool.coverage.run]

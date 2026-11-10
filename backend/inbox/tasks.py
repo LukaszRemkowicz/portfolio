@@ -1,8 +1,6 @@
 # backend/inbox/tasks.py
 import logging
 
-from celery import shared_task
-
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage
@@ -136,21 +134,15 @@ class EmailHandler:
         logger.info(f"Fake Email notifications sent for message ID={contact_message.id}")
 
 
-@shared_task(
-    bind=True,
-    max_retries=3,
-    default_retry_delay=60,
-    retry_backoff=True,
-)  # type: ignore[untyped-decorator]
-def send_notification_email_task(self, contact_message_id: int) -> None:
+def send_notification_email_task(contact_message_id: int) -> None:
     """
-    Celery task to send email notification for a contact message.
+    Send email notification for a contact message (submit with retries=3).
     """
     try:
         contact_message = ContactMessage.objects.get(pk=contact_message_id)
         EmailHandler.send_email(contact_message)
     except ObjectDoesNotExist:
         logger.error(f"Message {contact_message_id} not found. Skipping email.")
-    except Exception as exc:
+    except Exception:
         logger.exception(f"Error sending email for message {contact_message_id}")
-        raise self.retry(exc=exc) from exc
+        raise

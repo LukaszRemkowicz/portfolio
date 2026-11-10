@@ -11,6 +11,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from common.background import submit
 from common.types import ImageVariantSource, ImageVariantSpec, ViewportWidths
 from common.utils.image import file_exists_in_storage, get_available_image_url
 from core.mixins import ImageVariantModelMixin
@@ -232,7 +233,8 @@ class ShopProduct(ImageVariantModelMixin, AutomatedTranslationModelMixin, Transl
 
         super().save(*args, **kwargs)
         if should_process_images:
-            process_image_task.delay_on_commit(
+            submit(
+                process_image_task,
                 self._meta.app_label,
                 self._meta.model_name,
                 self.pk,
@@ -375,7 +377,8 @@ class ShopSettings(
         super().save(*args, **kwargs)
 
         if should_process_images:
-            process_image_task.delay_on_commit(
+            submit(
+                process_image_task,
                 self._meta.app_label,
                 self._meta.model_name,
                 self.pk,

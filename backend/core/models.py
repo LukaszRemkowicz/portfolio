@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models.fields.files import ImageFieldFile
 from django.utils.translation import gettext_lazy as _
 
+from common.background import submit
 from common.storage import is_private_name, is_remote_storage
 from common.types import ImageVariantSource, ImageVariantSpec
 from common.utils.image import (
@@ -201,7 +202,7 @@ class BaseImage(ImageVariantModelMixin, TranslatableModel):
     def _dispatch_image_processing(
         self, is_new: bool, source_changed: bool, update_fields: Any
     ) -> None:
-        """Trigger the background celery task to process thumbnails and variants."""
+        """Trigger the background task to process thumbnails and variants."""
         source_field = self.original
         if (is_new or source_changed) and source_field and not update_fields:
             logger.info(
@@ -214,7 +215,8 @@ class BaseImage(ImageVariantModelMixin, TranslatableModel):
                     "source_name": str(getattr(source_field, "name", "") or ""),
                 },
             )
-            process_image_task.delay_on_commit(
+            submit(
+                process_image_task,
                 self._meta.app_label,
                 self._meta.model_name,
                 str(self.pk),

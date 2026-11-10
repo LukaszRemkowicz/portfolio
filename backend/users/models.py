@@ -12,6 +12,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.db import IntegrityError, models
 from django.utils.translation import gettext_lazy as _
 
+from common.background import submit
 from common.types import ImageVariantSource, ImageVariantSpec, ViewportWidths
 from common.utils.image import get_available_image_url
 from core.mixins import ImageVariantModelMixin
@@ -176,7 +177,8 @@ class User(
             super().save(*args, **kwargs)
 
             if changed_image_fields and not kwargs.get("update_fields"):
-                process_image_task.delay_on_commit(
+                submit(
+                    process_image_task,
                     self._meta.app_label,
                     self._meta.model_name,
                     self.pk,

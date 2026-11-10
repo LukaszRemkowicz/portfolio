@@ -1,6 +1,4 @@
-import uuid
 from collections.abc import Generator
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -47,16 +45,10 @@ def execute_on_commit() -> Generator[None]:
 @pytest.fixture(autouse=True)
 def global_translation_mock():
     """
-    Globally mock the translation task delay to prevent EAGER execution
+    Globally mock the translation task submission to prevent EAGER execution
     during tests unless explicitly handled by the test.
     This prevents IntegrityErrors and slow tests on the host.
     """
 
-    with patch("translation.mixins.translate_instance_task.apply_async") as mock_apply_async:
-
-        def mock_task_result(*args, **kwargs):  # noqa: ARG001
-            return SimpleNamespace(id=str(uuid.uuid4()))
-
-        # Generate a unique ID for every call if a test reads the async result.
-        mock_apply_async.side_effect = mock_task_result
-        yield mock_apply_async
+    with patch("translation.mixins.submit") as mock_submit:
+        yield mock_submit

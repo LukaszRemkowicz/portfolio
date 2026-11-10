@@ -23,7 +23,7 @@ class TestTranslationLifecycle:
     def test_creation_queues_translation(self, mocker):
         """1) Create AstroImage -> check translations task exists."""
         # Mock apply_async to produce unique IDs
-        mock_apply_async = mocker.patch("translation.mixins.translate_instance_task.apply_async")
+        mock_apply_async = mocker.patch("translation.mixins.submit")
 
         mock_apply_async.side_effect = lambda *args, **kwargs: mocker.Mock(id=str(uuid.uuid4()))
 
@@ -43,7 +43,7 @@ class TestTranslationLifecycle:
     def test_clear_field_re_triggers_translation(self, mocker):
         """3) Clear field in translation, save model -> check if task started."""
         # Mock apply_async with unique IDs
-        mock_apply_async = mocker.patch("translation.mixins.translate_instance_task.apply_async")
+        mock_apply_async = mocker.patch("translation.mixins.submit")
 
         mock_apply_async.side_effect = lambda *args, **kwargs: mocker.Mock(id=str(uuid.uuid4()))
 
@@ -80,7 +80,7 @@ class TestTranslationLifecycle:
     def test_core_field_change_triggers_if_target_empty(self, mocker):
         """5) Core model field value change -> trans is started (if target empty)."""
         # Mock apply_async with unique IDs
-        mock_apply_async = mocker.patch("translation.mixins.translate_instance_task.apply_async")
+        mock_apply_async = mocker.patch("translation.mixins.submit")
 
         mock_apply_async.side_effect = lambda *args, **kwargs: mocker.Mock(id=str(uuid.uuid4()))
 
@@ -103,7 +103,7 @@ class TestTranslationLifecycle:
 
     def test_other_models_lifecycle(self, mocker):
         """Verify Tag and Place also queue translations."""
-        mock_apply_async = mocker.patch("translation.mixins.translate_instance_task.apply_async")
+        mock_apply_async = mocker.patch("translation.mixins.submit")
 
         mock_apply_async.side_effect = lambda *args, **kwargs: mocker.Mock(id=str(uuid.uuid4()))
 
@@ -122,7 +122,7 @@ class TestTranslationLifecycle:
         Verify that changing core field does NOT trigger re-translation
         if target is populated.
         """
-        mock_apply_async = mocker.patch("translation.mixins.translate_instance_task.apply_async")
+        mock_apply_async = mocker.patch("translation.mixins.submit")
 
         mock_apply_async.side_effect = lambda *args, **kwargs: mocker.Mock(id=str(uuid.uuid4()))
 

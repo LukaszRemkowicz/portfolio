@@ -147,8 +147,6 @@ database_data/
 *.dump
 coverage.xml
 
-# Celery
-celerybeat-schedule*
 
 # Security
 *.key

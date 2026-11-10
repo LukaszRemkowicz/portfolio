@@ -8,7 +8,7 @@
 # High-level behavior:
 #   - Prevents concurrent releases via flock
 #   - Dynamically resolves release image from docker-compose config
-#   - Ensures required dependencies (db, redis) are running and healthy
+#   - Ensures required dependencies (db) are running and healthy
 #   - Captures release logs for long-term auditing
 #
 # Typical usage:
@@ -107,7 +107,6 @@ export COMPOSE_FILE
 COMPOSE=(docker compose -f "${COMMON_COMPOSE_FILE}" -f "${COMPOSE_FILE}")
 
 DB_SVC="db"
-REDIS_SVC="redis"
 RELEASE_SVC="release"
 
 # ------------------------------------------------------------------
@@ -125,15 +124,6 @@ check_health() {
     else
        echo "🧩 Starting database..."
        "${COMPOSE[@]}" up -d "${DB_SVC}"
-    fi
-  fi
-
-  if ! "${COMPOSE[@]}" ps --services --status running 2>/dev/null | grep -q "^${REDIS_SVC}$"; then
-    if [[ "${DRY_RUN}" == "true" ]]; then
-       echo "⚠️  DRY RUN: Redis is NOT running (would be started in a real run)."
-    else
-       echo "🧩 Starting redis..."
-       "${COMPOSE[@]}" up -d "${REDIS_SVC}"
     fi
   fi
 
@@ -166,44 +156,6 @@ check_health() {
       sleep "${sleep_time}"
       [[ "$i" -eq "$db_timeout" ]] && { echo "❌ ERROR: Database ${container} timeout"; echo "👉 Check release troubleshooting in infra/scripts/README.md" >&2; exit 1; }
     done
-  done
-
-  # 2. Redis Health (Multi-instance & Retry Loop)
-  local redis_timeout=30
-  local redis_containers
-  redis_containers=$(docker ps --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" --filter "label=com.docker.compose.service=${REDIS_SVC}" --format '{{.Names}}')
-
-  if [[ -z "${redis_containers}" ]]; then
-     echo "⚠️  WARNING: No active Redis containers found via labels; falling back to default naming."
-     redis_containers="${COMPOSE_PROJECT_NAME}-${REDIS_SVC}-1"
-  fi
-
-  for container in ${redis_containers}; do
-    echo "🩺 Checking Redis: ${container}"
-    local redis_ok=false
-    for ((i=1; i<=redis_timeout; i++)); do
-      # Preferred: Live PING
-      if docker exec "${container}" redis-cli PING 2>/dev/null | grep -iq "PONG"; then
-        echo "✅ Redis ${container} is reachable (PONG)"
-        redis_ok=true
-        break
-      fi
-      # Fallback: Docker Health Status
-      if docker inspect --format='{{.State.Health.Status}}' "${container}" 2>/dev/null | grep -q "healthy"; then
-        echo "✅ Redis ${container} is healthy (Docker)"
-        redis_ok=true
-        break
-      fi
-      local sleep_time=$(( i < 10 ? 1 : i / 10 ))
-      echo "⏳ Waiting for ${container}... ($i/$redis_timeout, sleep ${sleep_time}s)"
-      sleep "${sleep_time}"
-    done
-
-    if [[ "${redis_ok}" != "true" ]]; then
-      echo "❌ ERROR: Redis ${container} not ready after ${redis_timeout}s." >&2
-      echo "👉 Check release troubleshooting in infra/scripts/README.md" >&2
-      exit 1
-    fi
   done
 }
 

@@ -80,13 +80,6 @@ Guided flow:
 doppler run -- ./infra/scripts/release/deploy_staging.sh
 ```
 
-Staging deploy does not start `celery-worker`. To run the staging worker on
-demand after images are prepared:
-
-```bash
-TAG=v0.0.0-STG ENVIRONMENT=stage doppler run -- docker compose -f docker-compose.common.yml -f docker-compose.stage.yml --profile manual-worker up -d celery-worker
-```
-
 Image preparation only, for debugging the registry pull step without running
 release/deploy:
 
@@ -112,10 +105,6 @@ constant staging tags to GHCR:
 stage-be:v0.0.0-STG
 stage-nginx:v0.0.0-STG
 ```
-
-`prepare_staging_images.sh` creates the local `stage-worker:v0.0.0-STG` tag
-from `stage-be:v0.0.0-STG`, matching production: worker and backend use the
-same backend artifact.
 
 If the PR branch is updated while the `publish-staging` label is still present,
 the workflow publishes the new PR head commit again. Remove the label to stop

@@ -1,13 +1,12 @@
 # backend/translation/tasks.py
 """
-Celery tasks for asynchronous translation processing.
+Background tasks for asynchronous translation processing.
 """
 
 import logging
 import uuid
 from typing import Any
 
-from celery import shared_task
 from requests.exceptions import RequestException
 
 from django.apps import apps
@@ -20,20 +19,12 @@ from .services import TranslationService
 logger = logging.getLogger(__name__)
 
 
-@shared_task(
-    bind=True,
-    max_retries=3,
-    default_retry_delay=60,
-    retry_backoff=True,
-    retry_backoff_max=600,
-    retry_jitter=True,
-)  # type: ignore[untyped-decorator]
 def translate_instance_task(
-    self,
     model_name: str,
     instance_pk: int,
     language_code: str,
     method_name: str,
+    task_id: str | None = None,
     **kwargs: Any,
 ) -> dict[str, Any]:
     """
@@ -46,8 +37,8 @@ def translate_instance_task(
         instance = Model.objects.get(pk=instance_pk)
         content_type = ContentType.objects.get_for_model(Model)
 
-        # Establish a unique ID for this execution (CELERY task ID or fresh UUID for manual runs)
-        task_id = self.request.id or str(uuid.uuid4())
+        # Unique ID for this execution (from the dispatcher, or a fresh UUID for manual runs)
+        task_id = task_id or str(uuid.uuid4())
 
         # Mark as RUNNING
         _update_task_record(
@@ -96,7 +87,7 @@ def translate_instance_task(
 
     except RequestException as exc:
         logger.warning("Transient error: %s. Retrying...", exc)
-        raise self.retry(exc=exc)  # noqa: B904
+        raise
 
     except Exception as exc:
         logger.exception("Task failed: %s(pk=%s, lang=%s)", method_name, instance_pk, language_code)

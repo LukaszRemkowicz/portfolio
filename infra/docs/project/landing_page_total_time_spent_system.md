@@ -108,7 +108,7 @@ Modes:
 Operational use:
 - use `--recalculate` after prompt changes
 - use the default mode for backfilling newly added images
-- the command recalculates each image directly in a loop; it does not dispatch Celery tasks
+- the command recalculates each image directly in a loop; it does not dispatch background tasks
 
 
 ## Save/Signal Behavior

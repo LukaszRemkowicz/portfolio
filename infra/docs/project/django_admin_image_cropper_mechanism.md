@@ -48,7 +48,7 @@ After save, the existing async image pipeline still runs:
 1. Django admin saves the selected source field.
 2. model save logic detects changed image fields.
 3. the matching async image task is scheduled.
-4. Celery regenerates the derived file for the changed source field.
+4. A background thread regenerates the derived file for the changed source field.
 5. cache invalidation runs after image processing.
 
 This means the cropper does not replace the existing backend image-processing architecture. It only changes what source file is submitted.

@@ -2,11 +2,12 @@ import uuid
 
 from translation.mixins import AutomatedTranslationModelMixin
 from translation.models import TranslationTask
+from translation.tasks import translate_instance_task
 
 
 class TestTranslationDispatch:
-    def test_trigger_translation_defers_celery_dispatch_until_commit(self, mocker):
-        """Translation dispatch should wait for the model transaction to commit."""
+    def test_trigger_translation_submits_background_task(self, mocker):
+        """Translation dispatch goes through common.background.submit (commit-aware)."""
         mixin = AutomatedTranslationModelMixin()
         obj = mocker.Mock()
         obj.pk = "image-1"
@@ -17,8 +18,7 @@ class TestTranslationDispatch:
         task_manager.filter.return_value.delete.return_value = (0, {})
         task_manager.update_or_create.return_value = (mocker.Mock(), True)
         mocker.patch("uuid.uuid4", return_value=uuid.UUID(int=7))
-        on_commit = mocker.patch("django.db.transaction.on_commit")
-        apply_async = mocker.patch("translation.mixins.translate_instance_task.apply_async")
+        submit = mocker.patch("translation.mixins.submit")
 
         task_id = mixin._trigger_translation(
             obj,
@@ -34,17 +34,13 @@ class TestTranslationDispatch:
             "task_id": task_id,
             "status": TranslationTask.Status.PENDING,
         }
-        apply_async.assert_not_called()
-
-        on_commit.assert_called_once()
-        on_commit.call_args.args[0]()
-
-        apply_async.assert_called_once_with(
-            kwargs={
-                "model_name": obj._meta.label,
-                "instance_pk": obj.pk,
-                "language_code": "pl",
-                "method_name": "translate_astro_image",
-            },
+        submit.assert_called_once_with(
+            translate_instance_task,
+            retries=3,
+            retry_delay=60,
             task_id=task_id,
+            model_name=obj._meta.label,
+            instance_pk=obj.pk,
+            language_code="pl",
+            method_name="translate_astro_image",
         )

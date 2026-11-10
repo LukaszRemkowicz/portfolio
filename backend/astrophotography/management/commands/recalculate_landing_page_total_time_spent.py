@@ -5,6 +5,7 @@ from django.db.models import Sum
 
 from astrophotography.models import AstroImage
 from astrophotography.tasks import calculate_astroimage_exposure_hours_task
+from common.background import submit
 from common.tasks import invalidate_frontend_ssr_cache_task
 from core.cache_service import CacheService
 
@@ -38,7 +39,7 @@ class Command(BaseCommand):
             processed_images += 1
 
         CacheService.invalidate_landing_page_cache()
-        invalidate_frontend_ssr_cache_task.delay(["settings"])
+        submit(invalidate_frontend_ssr_cache_task, ["settings"])
         aggregate = AstroImage.objects.aggregate(total=Sum("calculated_exposure_hours"))
         total_hours = float(aggregate["total"] or 0)
         action = "Rebuilt" if recalculate else "Calculated"

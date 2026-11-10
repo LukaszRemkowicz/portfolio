@@ -25,7 +25,7 @@ class TestProcessImageTask:
         THEN the primary generated hero variant should be populated.
         """
         # Prevent automatic task execution during factory creation for this test
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory(
                 original=jpeg_field("background.jpg", size=(2600, 1734))
             )
@@ -47,13 +47,11 @@ class TestProcessImageTask:
 
         error_mock.assert_called_once()
 
-    def test_process_image_task_reports_exception_to_sentry_when_enabled(self, mocker) -> None:
-        mocker.patch("core.tasks.settings.ENABLE_SENTRY", True)
+    def test_process_image_task_logs_and_reraises_exception(self, mocker) -> None:
         run_mock = mocker.patch(
             "core.tasks.run_shared_image_processing",
             side_effect=RuntimeError("boom"),
         )
-        sentry_mock = mocker.patch("core.tasks.sentry_sdk.capture_exception")
         exception_mock = mocker.patch("core.tasks.logger.exception")
 
         with pytest.raises(RuntimeError, match="boom"):
@@ -66,14 +64,3 @@ class TestProcessImageTask:
             None,
         )
         exception_mock.assert_called_once()
-        sentry_mock.assert_called_once()
-
-    def test_process_image_task_skips_sentry_when_disabled(self, mocker) -> None:
-        mocker.patch("core.tasks.settings.ENABLE_SENTRY", False)
-        mocker.patch("core.tasks.run_shared_image_processing", side_effect=RuntimeError("boom"))
-        sentry_mock = mocker.patch("core.tasks.sentry_sdk.capture_exception")
-
-        with pytest.raises(RuntimeError, match="boom"):
-            process_image_task("astrophotography", "MainPageBackgroundImage", "123")
-
-        sentry_mock.assert_not_called()

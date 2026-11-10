@@ -17,9 +17,9 @@ class TestBaseImageAsyncTrigger:
     def test_save_triggers_background_task_and_skips_sync_conversion(self):
         """
         Verify that saving a BaseImage (via MainPageBackgroundImage)
-        triggers the Celery task and does NOT populate variants synchronously.
+        triggers the background task and does NOT populate variants synchronously.
         """
-        with patch("core.models.process_image_task.delay_on_commit") as mock_delay:
+        with patch("core.models.submit") as mock_delay:
             # build() does not call save()
             img = MainPageBackgroundImageFactory.build()
             img.original = jpeg_field("new_upload.jpg")
@@ -29,9 +29,9 @@ class TestBaseImageAsyncTrigger:
             # Using ANY for pk because it's generated on save
             mock_delay.assert_called_once()
             args, _ = mock_delay.call_args
-            assert args[0] == "astrophotography"
-            assert args[1] == "mainpagebackgroundimage"
-            assert args[3] == ["original"]
+            assert args[1] == "astrophotography"
+            assert args[2] == "mainpagebackgroundimage"
+            assert args[4] == ["original"]
 
             # Assert variants are STILL EMPTY (processing hasn't happened yet)
             img.refresh_from_db()
@@ -42,7 +42,7 @@ class TestBaseImageAsyncTrigger:
         """
         Existing broken rows must be rejected by the admin form when the source file is missing.
         """
-        with patch("core.models.process_image_task.delay_on_commit") as mock_delay:
+        with patch("core.models.submit") as mock_delay:
             img = MainPageBackgroundImageFactory()
 
         img.refresh_from_db()
@@ -72,7 +72,7 @@ class TestBaseImageAsyncTrigger:
             "background_replacement.png", image_io.read(), content_type="image/png"
         )
 
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img.original = replacement
             img.save()
         img.refresh_from_db()
@@ -88,7 +88,7 @@ class TestBaseImageAsyncTrigger:
         """
         Metadata-only saves must not clear generated variants when the source is unchanged.
         """
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory()
 
         process_image_task("astrophotography", "MainPageBackgroundImage", img.pk)
@@ -105,7 +105,7 @@ class TestBaseImageAsyncTrigger:
         """
         Replacing the source image must delete previous generated variant files.
         """
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory(
                 original=jpeg_field("background-original.jpg", size=(2600, 1734))
             )
@@ -123,7 +123,7 @@ class TestBaseImageAsyncTrigger:
             "background_refresh.png", image_io.read(), content_type="image/png"
         )
 
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img.original = replacement
             img.save()
         process_image_task("astrophotography", "MainPageBackgroundImage", img.pk, ["original"])

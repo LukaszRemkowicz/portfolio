@@ -13,6 +13,7 @@ from django.test import TestCase
 
 from astrophotography.models import Place
 from astrophotography.tests.factories import MainPageBackgroundImageFactory
+from core.tasks import process_image_task
 from core.tests.factories import TranslationTaskFactory
 from translation.models import TranslationTask
 
@@ -65,10 +66,10 @@ class TestBaseImageModel:
         Dispatch should enqueue the shared processing task when a canonical source
         exists and the save represents a new or changed source image.
         """
-        with patch("core.models.process_image_task.delay_on_commit") as mock_delay:
+        with patch("core.models.submit") as mock_delay:
             img = MainPageBackgroundImageFactory()
 
-        with patch("core.models.process_image_task.delay_on_commit") as mock_delay:
+        with patch("core.models.submit") as mock_delay:
             img._dispatch_image_processing(
                 is_new=False,
                 source_changed=True,
@@ -76,6 +77,7 @@ class TestBaseImageModel:
             )
 
         mock_delay.assert_called_once_with(
+            process_image_task,
             img._meta.app_label,
             img._meta.model_name,
             str(img.pk),
@@ -86,10 +88,10 @@ class TestBaseImageModel:
         """
         Dispatch should skip when save() is running a targeted update_fields write.
         """
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory()
 
-        with patch("core.models.process_image_task.delay_on_commit") as mock_delay:
+        with patch("core.models.submit") as mock_delay:
             img._dispatch_image_processing(
                 is_new=False,
                 source_changed=True,
@@ -103,7 +105,7 @@ class TestBaseImageModel:
         Save-time consistency checks must recover the previous source name when the
         freshly assigned current name is missing but the previous stored file still exists.
         """
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory()
 
         img.refresh_from_db()
@@ -125,7 +127,7 @@ class TestBaseImageModel:
         Save-time consistency checks must fail hard for a newly created row when neither
         the current nor previous source file exists.
         """
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory()
 
         img.refresh_from_db()
@@ -146,7 +148,7 @@ class TestBaseImageModel:
         """
         Cleanup should remove previously tracked managed files by name.
         """
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory()
 
         stale_name = "backgrounds/original/stale-file.jpg"
@@ -161,7 +163,7 @@ class TestBaseImageModel:
         """
         Cleanup should leave current files alone when no deletions were requested.
         """
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img = MainPageBackgroundImageFactory()
 
         current_name = str(img.original.name)

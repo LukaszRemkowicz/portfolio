@@ -139,7 +139,7 @@ def test_image_variant_admin_numbers_oldest_first_while_showing_newest_first() -
 def test_image_variant_admin_can_filter_by_astroimage() -> None:
     admin_instance = ImageVariantAdmin(ImageVariant, AdminSite())
     request = RequestFactory().get("/")
-    with patch("core.models.process_image_task.delay_on_commit"):
+    with patch("core.models.submit"):
         selected_image = AstroImageFactory(name="Selected image")
         other_image = AstroImageFactory(name="Other image")
     request.GET = request.GET.copy()
@@ -168,7 +168,7 @@ def test_image_variant_admin_can_filter_by_astroimage() -> None:
 
 @pytest.mark.django_db
 def test_image_variant_admin_delete_selected_removes_variant_file(admin_client) -> None:
-    with patch("core.models.process_image_task.delay_on_commit"):
+    with patch("core.models.submit"):
         owner = AstroImageFactory()
     variant = ImageVariant.objects.create(
         owner=owner,

@@ -18,6 +18,7 @@ frontend shell depends on the changed data, also clears the matching SSR tag.
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
+from common.background import submit
 from common.tasks import invalidate_frontend_ssr_cache_task
 from core.cache_service import CacheService
 from core.models import ImageVariant
@@ -39,7 +40,7 @@ def invalidate_astroimage_cache(sender, instance, **kwargs):
     """
     CacheService.invalidate_astrophotography_cache()
     CacheService.invalidate_travel_cache()
-    invalidate_frontend_ssr_cache_task.delay_on_commit(["latest-astro-images", "travel-highlights"])
+    submit(invalidate_frontend_ssr_cache_task, ["latest-astro-images", "travel-highlights"])
 
 
 @receiver([post_save, post_delete], sender=ImageVariant)
@@ -54,14 +55,12 @@ def invalidate_cache_for_image_variant_change(sender, instance: ImageVariant, **
     if isinstance(owner, AstroImage):
         CacheService.invalidate_astrophotography_cache()
         CacheService.invalidate_travel_cache()
-        invalidate_frontend_ssr_cache_task.delay_on_commit(
-            ["latest-astro-images", "travel-highlights"]
-        )
+        submit(invalidate_frontend_ssr_cache_task, ["latest-astro-images", "travel-highlights"])
         return
 
     if isinstance(owner, MainPageBackgroundImage):
         CacheService.invalidate_astrophotography_cache()
-        invalidate_frontend_ssr_cache_task.delay_on_commit(["background"])
+        submit(invalidate_frontend_ssr_cache_task, ["background"])
 
 
 @receiver(pre_save, sender=AstroImage)
@@ -101,7 +100,7 @@ def invalidate_settings_cache_when_calculated_exposure_hours_changes(
         return
 
     CacheService.invalidate_landing_page_cache()
-    invalidate_frontend_ssr_cache_task.delay_on_commit(["settings"])
+    submit(invalidate_frontend_ssr_cache_task, ["settings"])
 
 
 @receiver(post_delete, sender=AstroImage)
@@ -116,7 +115,7 @@ def recalculate_total_time_spent_after_astroimage_delete(sender, instance, **kwa
     payload and SSR shell must both be refreshed.
     """
     CacheService.invalidate_landing_page_cache()
-    invalidate_frontend_ssr_cache_task.delay_on_commit(["settings"])
+    submit(invalidate_frontend_ssr_cache_task, ["settings"])
 
 
 @receiver([post_save, post_delete], sender=Tag)
@@ -156,7 +155,7 @@ def invalidate_travel_cache(sender, instance, **kwargs):
     highlights section separately from the backend API response cache.
     """
     CacheService.invalidate_travel_cache()
-    invalidate_frontend_ssr_cache_task.delay_on_commit(["travel-highlights"])
+    submit(invalidate_frontend_ssr_cache_task, ["travel-highlights"])
 
 
 @receiver([post_save, post_delete], sender=MainPageBackgroundImage)
@@ -172,4 +171,4 @@ def invalidate_background_cache(sender, instance, **kwargs):
     alone would not refresh the rendered page background.
     """
     CacheService.invalidate_astrophotography_cache()
-    invalidate_frontend_ssr_cache_task.delay_on_commit(["background"])
+    submit(invalidate_frontend_ssr_cache_task, ["background"])

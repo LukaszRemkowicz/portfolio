@@ -63,7 +63,7 @@ class TestAstroImageViewSet:
         assert results[0]["pk"] == str(astro_image.pk)
 
     def test_list_astro_images_returns_fallback_image(self, api_client: APIClient) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             astroimage: AstroImage = AstroImageFactory(
                 original=jpeg_field("gallery.jpg", size=(1200, 800))
             )
@@ -90,7 +90,7 @@ class TestAstroImageViewSet:
     def test_list_astro_images_ignores_requested_size_for_fallback_image(
         self, api_client: APIClient
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             astroimage: AstroImage = AstroImageFactory(
                 original=jpeg_field("gallery-wide.jpg", size=(1600, 1000))
             )
@@ -121,7 +121,7 @@ class TestAstroImageViewSet:
     def test_list_astro_images_invalid_size_uses_fallback_default(
         self, api_client: APIClient
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             astroimage: AstroImage = AstroImageFactory(
                 original=jpeg_field("gallery-default.jpg", size=(1200, 800))
             )
@@ -350,7 +350,7 @@ class TestAstroImageViewSet:
 class TestBackgroundMainPageView:
     def test_list_background_image_uses_hero_fallback_image(self, api_client: APIClient) -> None:
         """Background endpoint should serve the default generated hero variant candidate."""
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             background: MainPageBackgroundImage = MainPageBackgroundImageFactory(
                 original=jpeg_field("background.jpg", size=(2600, 1734))
             )
@@ -375,7 +375,7 @@ class TestBackgroundMainPageView:
 
     def test_list_background_image_ignores_requested_variant(self, api_client: APIClient) -> None:
         """Background endpoint always serves the default hero variant for now."""
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             background: MainPageBackgroundImage = MainPageBackgroundImageFactory(
                 original=jpeg_field("background.jpg", size=(2600, 1734))
             )
@@ -454,7 +454,7 @@ class TestBackgroundMainPageView:
         self, api_client: APIClient
     ) -> None:
         """Missing background source files should not crash the public endpoint."""
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             background: MainPageBackgroundImage = MainPageBackgroundImageFactory(
                 original=jpeg_field("missing-background.jpg", size=(2600, 1734))
             )
@@ -601,7 +601,7 @@ class TestTravelHighlightsBySlugView:
         """Test retrieving highlights by country, place, and date slug."""
 
         place: Place = PlaceFactory(name="High Tatras", country="PL")
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             astroimage: AstroImage = AstroImageFactory(place=place, name="Tatras 1")
         fallback: ImageVariant = ImageVariantFactory(
             owner=astroimage,
@@ -639,7 +639,7 @@ class TestTravelHighlightsBySlugView:
     def test_background_image_is_public_detail_variant(self, api_client: APIClient) -> None:
         """The cached payload must not embed a signed link that expires."""
         place: Place = PlaceFactory(name="Bieszczady", country="PL")
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             astroimage: AstroImage = AstroImageFactory(place=place)
         detail: ImageVariant = ImageVariantFactory(
             owner=astroimage,
@@ -680,7 +680,7 @@ class TestTravelHighlightsBySlugView:
             adventure_date=DateRange(date(2024, 1, 1), date(2024, 1, 31)),
         )
         # Prevent automatic task execution during factory creation for this test
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             img: AstroImage = AstroImageFactory(place=place)
 
         # Now manually call the task
@@ -1065,7 +1065,7 @@ class TestAstroImageSecureView:
     def test_astro_image_secure_view_does_not_fall_back_to_detail_variant(
         self, api_client: APIClient
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             astroimage: AstroImage = AstroImageFactory(original=jpeg_field("detail-only.jpg"))
         ImageVariantFactory(
             owner=astroimage,
@@ -1086,7 +1086,7 @@ class TestAstroImageSecureView:
     def test_astro_image_secure_view_does_not_fall_back_to_original_source(
         self, api_client: APIClient
     ) -> None:
-        with patch("core.models.process_image_task.delay_on_commit"):
+        with patch("core.models.submit"):
             astroimage: AstroImage = AstroImageFactory(original=jpeg_field("source-only.jpg"))
 
         url: str = reverse("astroimages:secure-image-serve", args=[astroimage.slug])
@@ -1218,7 +1218,7 @@ class TestTranslationQueryCounts:
             return len(ctx)
 
         def add_tagged_image() -> None:
-            with patch("core.models.process_image_task.delay_on_commit"):
+            with patch("core.models.submit"):
                 image = AstroImageFactory()
             image.tags.add(TagFactory())
 
@@ -1259,7 +1259,7 @@ class TestTravelCache:
     @pytest.mark.parametrize("factory", [AstroImageFactory, TagFactory, PlaceFactory])
     def test_saving_content_invalidates_travel_cache(self, factory: Any) -> None:
         with (
-            patch("core.models.process_image_task.delay_on_commit"),
+            patch("core.models.submit"),
             patch("astrophotography.signals.CacheService.invalidate_travel_cache") as inval,
         ):
             factory()
