@@ -340,3 +340,45 @@ Deno.test("shop enabled: settings head merged with products; price stays a strin
   assert(p.fallback_image.url.endsWith("/shop/t.webp"));
   assertEquals(p.variants.thumbnail.length, 1);
 });
+
+Deno.test("sitemap: exact XML, Warsaw lastmod across midnight, headers", async () => {
+  setup();
+  const late = String(Date.parse("2026-03-01T23:30:00Z") / 1000); // Warsaw: 2026-03-02 00:30
+  const early = String(Date.parse("2026-01-10T10:00:00Z") / 1000);
+  rowsFor = (t) =>
+    t.includes("core_landingpagesettings")
+      ? [{ programming_enabled: true, shop_enabled: false }]
+      : t.includes("astrophotography_astroimage")
+      ? Array.from({ length: 31 }, (_, i) => ({ slug: `img-${i}`, updated: i ? early : late }))
+      : t.includes("astrophotography_mainpagelocation")
+      ? [
+        { country_slug: "spain", place_slug: "", lower: "2026-08-03", updated: early },
+        { country_slug: "peru", place_slug: "cusco", lower: null, updated: early },
+      ]
+      : [];
+  const res = await handler(req("http://h/api/sitemap.xml"));
+  assertEquals(res.status, 200);
+  assertEquals(res.headers.get("content-type"), "application/xml");
+  assertEquals(res.headers.get("cache-control"), "max-age=43200");
+  const url = (p: string, last: string | null, f: string, pr: string) =>
+    `<url><loc>https://p.supabase.co${p}</loc>${
+      last ? `<lastmod>${last}</lastmod>` : ""
+    }<changefreq>${f}</changefreq><priority>${pr}</priority></url>`;
+  const urls = [
+    ...["/", "/astrophotography", "/privacy", "/programming"].map((p) =>
+      url(p, null, "daily", "1.0")
+    ),
+    url("/astrophotography?page=2", "2026-03-02", "weekly", "0.6"),
+    url("/astrophotography?page=3", "2026-03-02", "weekly", "0.6"),
+    url("/astrophotography/img-0", "2026-03-02", "weekly", "0.8"),
+    ...Array.from(
+      { length: 30 },
+      (_, i) => url(`/astrophotography/img-${i + 1}`, "2026-01-10", "weekly", "0.8"),
+    ),
+    url("/travel/spain/explore/aug2026", "2026-01-10", "monthly", "0.7"),
+  ].join("");
+  assertEquals(
+    await res.text(),
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls}\n</urlset>\n`,
+  );
+});

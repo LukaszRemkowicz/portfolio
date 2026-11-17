@@ -29,7 +29,7 @@ import { signedParams, validateSigned } from "./signing.ts";
 
 type Json = Record<string, unknown>;
 
-const FALLBACK_URL_SLUG = "explore";
+export const FALLBACK_URL_SLUG = "explore";
 const CATEGORIES = [
   "Landscape",
   "Deep Sky",
