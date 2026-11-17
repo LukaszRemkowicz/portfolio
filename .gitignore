@@ -143,6 +143,8 @@ nginx/logs/
 /backend/core/local.py
 database_data/
 *.sql
+# Supabase migrations are source, not dumps.
+!supabase/migrations/*.sql
 *.sql.gz
 *.dump
 coverage.xml

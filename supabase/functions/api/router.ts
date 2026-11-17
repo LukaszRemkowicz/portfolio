@@ -4,6 +4,7 @@ import * as contact from "./contact.ts";
 import * as core from "./core.ts";
 import { type Ctx, detail, htmlError, json, makeCtx } from "./http.ts";
 import * as shop from "./shop.ts";
+import { sitemap } from "./sitemap.ts";
 import { safeEqual } from "./signing.ts";
 import * as users from "./users.ts";
 
@@ -19,6 +20,7 @@ const LOOKUP = "([^/.]+)"; // DRF default lookup_value_regex
 const ROUTES: [RegExp, Handler][] = [
   [/^\/health$/, core.health],
   [/^\/v1\/health$/, core.health],
+  [/^\/sitemap\.xml$/, sitemap],
   [/^\/v1\/settings\/$/, () => core.settings()],
   [/^\/v1\/profile\/$/, users.profile],
   [/^\/v1\/background\/$/, astro.background],
