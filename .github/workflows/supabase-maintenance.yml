@@ -1,7 +1,7 @@
 name: Supabase Maintenance
 
-# Daily: one request through the site that reaches the database, so the free
-# Supabase project is never paused for inactivity.
+# Every 6 hours: one query against the database (pooler, same secrets as the
+# backup); Supabase pauses free projects with only a few queries a day.
 # Monthly: encrypted pg_dump of the Supabase database to the private R2 bucket;
 # dumps older than 62 days are deleted. Free projects get no automatic backups.
 # This repo is public: nothing secret may reach the logs, and the dump is
@@ -9,7 +9,7 @@ name: Supabase Maintenance
 
 on:
   schedule:
-    - cron: "17 5 * * *" # ping, daily
+    - cron: "17 */6 * * *" # ping, 4 times a day
     - cron: "23 3 1 * *" # backup, 1st of the month
   workflow_dispatch:
     inputs:
@@ -27,15 +27,23 @@ concurrency:
 
 jobs:
   ping:
-    name: Ping the site API
+    name: Ping the database
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      PGHOST: ${{ secrets.SUPABASE_DB_HOST }}
+      PGPORT: ${{ secrets.SUPABASE_DB_PORT }}
+      PGDATABASE: ${{ secrets.SUPABASE_DB_NAME }}
+      PGUSER: ${{ secrets.SUPABASE_DB_USER }}
+      PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PGSSLMODE: require
     steps:
-      - name: Request settings (reaches the database)
-        run: >-
-          curl -fsS --retry 3 --retry-delay 20 -o /dev/null
-          -w "%{http_code} in %{time_total}s\n"
-          https://lukaszremkowicz.com/app/settings/
+      # A direct query: Cloudflare's bot protection answers GitHub runners with 403.
+      - name: Read the site settings
+        run: |
+          docker run --rm -e PGHOST -e PGPORT -e PGDATABASE -e PGUSER -e PGPASSWORD -e PGSSLMODE \
+            postgres:17 psql -X -q -t -A -v ON_ERROR_STOP=1 \
+            -c "select 'settings rows: ' || count(*) from core_landingpagesettings"
 
   backup:
     name: Back up the database to R2
