@@ -106,3 +106,27 @@ Pulls the released `production-be` image from GHCR, runs `migrate` and
 (`docker-compose.supabase.yml`, all config from Doppler). Background work
 (image variants, translations) runs in-process: stop with Ctrl+C only after it
 has finished. Nothing here touches the VPS.
+
+## Keep-alive and Backups
+
+`.github/workflows/supabase-maintenance.yml` (runs from `main`):
+
+- Daily 05:17 UTC: `GET https://lukaszremkowicz.com/app/settings/`, a request that
+  reaches the database, so the free project is not paused for inactivity.
+- 1st of each month 03:23 UTC (or a manual run with "backup" ticked): `pg_dump`
+  (custom format, schemas `public` and `api_private`) encrypted with
+  `BACKUP_PASSPHRASE` and uploaded to the private R2 bucket as
+  `portfolio-originals/backups/supabase/YYYY-MM-DD.dump.gpg`; dumps older than
+  62 days are deleted. Free projects get no automatic Supabase backups.
+- Needs repo secrets `SUPABASE_DB_HOST/PORT/NAME/USER/PASSWORD`,
+  `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `BACKUP_PASSPHRASE` (same values
+  as Doppler `portfolio/prd`). GitHub disables schedules in a public repo after
+  60 days without commits; re-enable it in the Actions tab if that happens.
+- Images are not in the dump: the database stores only R2 object keys.
+
+Restore (Postgres 17 tools; roles from the Supabase migrations must exist):
+
+```bash
+gpg --decrypt 2026-12-01.dump.gpg > db.dump      # asks for BACKUP_PASSPHRASE
+pg_restore --clean --if-exists --no-owner -d "$TARGET_DATABASE_URL" db.dump
+```
