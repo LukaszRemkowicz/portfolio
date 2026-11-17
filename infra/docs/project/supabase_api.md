@@ -111,8 +111,9 @@ has finished. Nothing here touches the VPS.
 
 `.github/workflows/supabase-maintenance.yml` (runs from `main`):
 
-- Daily 05:17 UTC: one `psql` query against the database (session pooler, same
-  secrets as the backup), so the free project is not paused for inactivity. Not
+- Every 6 hours (00:17, 06:17, 12:17, 18:17 UTC): one `psql` query against the
+  database (session pooler, same secrets as the backup). Supabase pauses a free
+  project after a week with too few database queries ("a few a day" is enough). Not
   through the site: Cloudflare's bot protection answers GitHub runners with 403.
 - 1st of each month 03:23 UTC (or a manual run with "backup" ticked): `pg_dump`
   (custom format, schemas `public` and `api_private`) encrypted with

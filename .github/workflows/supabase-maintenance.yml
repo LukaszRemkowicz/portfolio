@@ -1,7 +1,7 @@
 name: Supabase Maintenance
 
-# Daily: one query against the database (pooler, same secrets as the backup), so the free
-# Supabase project is never paused for inactivity.
+# Every 6 hours: one query against the database (pooler, same secrets as the
+# backup); Supabase pauses free projects with only a few queries a day.
 # Monthly: encrypted pg_dump of the Supabase database to the private R2 bucket;
 # dumps older than 62 days are deleted. Free projects get no automatic backups.
 # This repo is public: nothing secret may reach the logs, and the dump is
@@ -9,7 +9,7 @@ name: Supabase Maintenance
 
 on:
   schedule:
-    - cron: "17 5 * * *" # ping, daily
+    - cron: "17 */6 * * *" # ping, 4 times a day
     - cron: "23 3 1 * *" # backup, 1st of the month
   workflow_dispatch:
     inputs:
