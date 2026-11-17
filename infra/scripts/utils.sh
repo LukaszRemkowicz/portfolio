@@ -128,7 +128,6 @@ get_project_name() {
 get_db_name() {
   case "${ENVIRONMENT:-}" in
     production|prod) echo "portfolio_prod" ;;
-    staging|stage|stg) echo "portfolio_stage" ;;
     *) echo "portfolio_dev" ;;
   esac
 }
@@ -142,9 +141,6 @@ get_env_suffix() {
   case "${env}" in
     production) echo "prod" ;;
     prod)       echo "prod" ;;
-    staging)    echo "stage" ;;
-    stage)      echo "stage" ;;
-    stg)        echo "stage" ;;
     *)          echo "${env}" ;;
   esac
 }

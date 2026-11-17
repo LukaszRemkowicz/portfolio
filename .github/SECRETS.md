@@ -4,8 +4,8 @@ This file documents the required GitHub secrets for the CI/CD pipeline.
 
 ## Required Secrets
 
-### Container Publish
-- `SENTRY_DSN_FE` - frontend production build argument
+### Dependency Security
+- `SAFETY_API_KEY` - Safety CLI API key used by the `Dependency Security Checks` job in `ci-cd.yml`
 
 ### GitHub Project Automation
 - `ADD_TO_PROJECT_PAT` - personal access token used by `actions/add-to-project` to add new repository issues to the GitHub Project. For a classic PAT, include `project` scope; for private repositories also include `repo` scope. For a fine-grained PAT, grant Projects read/write plus Issues read access for this repository.
@@ -16,11 +16,7 @@ This file documents the required GitHub secrets for the CI/CD pipeline.
 ## Required Variables
 
 ### Container Publish
-- `SITE_DOMAIN` - frontend production build argument
-- `API_DOMAIN` - frontend production build argument
-- `GA_TRACKING_ID` - frontend production build argument
-- `ALLOWED_HOSTS` - frontend production build argument
-- `PROJECT_OWNER` - frontend production build argument
+- `IMAGE_NAMESPACE` - GHCR image namespace used by `release.yml` (`<registry>/<IMAGE_NAMESPACE>/production-be`, `production-nginx`)
 
 ### GitHub Project Automation
 - `ADD_TO_PROJECT_URL` - GitHub Project URL that should receive new issues. This is the Project board URL from the browser address bar, for example `https://github.com/users/LukaszRemkowicz/projects/1`, not the repository URL `https://github.com/LukaszRemkowicz/portfolio`.
@@ -64,14 +60,13 @@ The workflow runs for issues that are opened, reopened, or transferred into this
 - ✅ **Pre-commit hooks** - No secrets needed
 - ✅ **PR checks** - No secrets needed
 - ✅ **CodeQL security** - No secrets needed
-- ✅ **Frontend tests** - No secrets needed
 - ✅ **Backend tests** - No secrets needed
 - ✅ **Docker build & test** - No secrets needed
 - ✅ **Production image publish to GHCR** - Uses built-in `GITHUB_TOKEN` plus repo vars/secrets above
 
 ### What's NOT Included:
 - ❌ **Docker Hub push** - Removed (was using public images)
-- ❌ **Production deployment** - Uses `deploy.sh` script instead
+- ❌ **Production deployment** - Operator runs `deploy_production.sh` on the VPS instead
 
 ## Security Notes
 
@@ -82,10 +77,11 @@ The workflow runs for issues that are opened, reopened, or transferred into this
 
 ## Deployment
 
-For production deployment, use the provided `deploy.sh` script:
+For production deployment, use `deploy_production.sh` (see [infra/scripts/README.md](../infra/scripts/README.md)):
 ```bash
-# On your production server:
-./scripts/deploy.sh
+# On the production server, in ~/portfolio:
+git pull
+TAG=vX.Y.Z doppler run --project portfolio --config prd -- ./infra/scripts/release/deploy_production.sh
 ```
 
 GitHub secrets are not used for VPS deployment itself. GHCR pull credentials for the server should live outside the repo, for example in Doppler.
@@ -103,13 +99,13 @@ To enable branch protection for the main branch:
    - ✅ **Restrict pushes that create files**
    - ✅ **Include administrators**
 
-4. In **Status checks that are required**:
+4. In **Status checks that are required** (jobs defined in `.github/workflows/ci-cd.yml`):
    - ✅ **Branch Protection Check**
-   - ✅ **Frontend Tests**
+   - ✅ **Backend Quality**
    - ✅ **Backend Tests**
-   - ✅ **Docker Build & Test**
-   - ✅ **Security Scan**
-   - ✅ **All Checks Completed**
+   - ✅ **Trivy Security Analysis**
+   - ✅ **Dependency Security Checks**
+   - ✅ **Production Image Build Check**
 
 5. **Allow force pushes**: ❌ (disabled)
 6. **Allow deletions**: ❌ (disabled)

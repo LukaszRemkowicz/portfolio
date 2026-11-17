@@ -13,6 +13,7 @@ For general project context, architecture, and repository structure, read:
 - `README.md`
 - `backend/README.md`
 - `infra/scripts/README.md`
+- `infra/scripts/db_backup/MAINTENANCE.md` (database backup/restore)
 
 The frontend lives in the separate `LukaszRemkowicz/portfolio-fe` repo (Cloudflare Workers); it is not in this repository.
 
@@ -52,27 +53,27 @@ confirming behavior.
 ## Project Document Map
 
 - `infra/docs/project/cache_invalidation.md`
-  Use for stale homepage/shared content, Django signals, cache invalidation, or
-  frontend SSR cache invalidation. Describes the two-layer cache model and
-  backend-to-frontend invalidation flow.
+  Use for stale homepage/shared content, Django signals, or API cache
+  invalidation. Describes the DatabaseCache, `CacheService`, and the disabled
+  SSR webhook leftover.
 - `infra/docs/project/django_admin_image_cropper_mechanism.md`
   Use for Django admin image cropper changes, preview/media bugs, or extending
   cropper behavior. Describes the cropper contract, browser flow, media serving
   rules, and derived image pipeline.
 - `infra/docs/project/latest_images_tags.md`
   Use for homepage latest-image filters and `LandingPageSettings.latest_filters`.
-  Describes how tags are curated, rendered, cached, and invalidated.
+  Describes how tags are curated, cached, and invalidated.
 - `infra/docs/project/feature_flag_mechanism.md`
-  Use for `LandingPageSettings`-driven feature visibility, frontend route/navbar
-  gating, and adding public feature flags. Describes the backend-to-frontend
-  feature-flag flow and expected consumption pattern.
+  Use for `LandingPageSettings`-driven feature visibility and adding public
+  feature flags. Describes the backend half; the frontend half lives in
+  `portfolio-fe`.
 - `infra/docs/project/landing_page_total_time_spent_system.md`
   Use for landing-page total-time calculation,
   `AstroImage.calculated_exposure_hours`, rebuild flow, serializer rounding, and
   cache invalidation. Describes the derived-stat architecture and operational
   caveats.
 - `infra/docs/project/logging_structure_overview.md`
-  Use for backend/frontend/nginx logging formats, JSON-vs-plain-text status, and
+  Use for backend/nginx logging formats, JSON-vs-plain-text status, and
   application log emission structure.
 - `infra/docs/project/translation_system_overview.md`
   Use for translation lifecycle, `TranslationTask` debugging, translation admin
@@ -80,18 +81,13 @@ confirming behavior.
   models. Describes the async translation architecture and operational
   boundaries.
 - `infra/docs/project/release_deploy_architecture.md`
-  Use for release scripts, deploy logic, image naming, artifact flow, and
-  rollback behavior. Describes the tag-based release/deploy model and script
-  responsibilities.
-- `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
-  Use for SSR architecture decisions and initial migration direction. Describes
-  the preferred incremental SSR strategy and early-phase non-goals.
-- `infra/docs/project/SSR Migration/STAGE-2_full_ssr_bff_migration_plan.md`
-  Use for BFF route ownership and FE-to-BE transport migration. Describes the
-  target BFF architecture, endpoint inventory, and transitional `/app/*` rules.
-- `infra/docs/project/architecture.png`
-  Use for quick visual orientation. Describes the platform architecture at a high
-  level.
+  Use for release scripts, deploy logic, image naming (`production-be`,
+  `production-nginx`), artifact flow, and rollback behavior. Describes the
+  tag-based release/deploy model and script responsibilities.
+- `infra/docs/project/supabase_api.md`
+  Use for the Supabase Edge Function API, the hidden-API secret, `portfolio_api`
+  grants and migration order, the contact form (Resend, `api_private`), function
+  deploy, gateway quirks, and running the production admin locally.
 - `infra/docs/agent/image_variant_quickstart.md`
   Use as the cheap entry point for image variant specs, generated image files,
   variant sync, and compatibility methods before opening larger analysis docs.
@@ -100,15 +96,15 @@ confirming behavior.
 
 - Cache bug or stale homepage content -> `infra/docs/project/cache_invalidation.md`
 - Homepage latest-image filters/tags -> `infra/docs/project/latest_images_tags.md`
-- Feature-gated frontend modules or `LandingPageSettings` booleans -> `infra/docs/project/feature_flag_mechanism.md`
+- Feature flag backend (frontend gating lives in `portfolio-fe`) or `LandingPageSettings` booleans -> `infra/docs/project/feature_flag_mechanism.md`
 - Landing page total-time stat or exposure-hours rebuilds -> `infra/docs/project/landing_page_total_time_spent_system.md`
 - Django admin image cropping or preview/media bug -> `infra/docs/project/django_admin_image_cropper_mechanism.md`
-- Backend/frontend/nginx logging structure -> `infra/docs/project/logging_structure_overview.md`
+- Backend/nginx logging structure -> `infra/docs/project/logging_structure_overview.md`
 - Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
 - Release/deploy script logic or image naming -> `infra/docs/project/release_deploy_architecture.md`
 - Production release procedure -> `infra/scripts/README.md`
-- SSR architecture direction -> `infra/docs/project/SSR Migration/STAGE-1_ssr_migration.md`
-- BFF route ownership or `/app/...` migration -> `infra/docs/project/SSR Migration/STAGE-2_full_ssr_bff_migration_plan.md`
+- Supabase function API, its grants/migrations, contact form or local production
+  admin -> `infra/docs/project/supabase_api.md`
 - Image variant generation, `ImageVariantSpec`, `ViewportWidths`, or
   `ImageVariantModelMixin` -> `infra/docs/agent/image_variant_quickstart.md`
 - Explicit phase/TODO/analysis work -> the named file under
