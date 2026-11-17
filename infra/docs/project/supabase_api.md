@@ -39,6 +39,9 @@ flowchart LR
   uses the direct connection (`db.<ref>.supabase.co:5432`); local runs use the
   session pooler (port 5432). Never the transaction pooler (6543): it breaks
   prepared statements.
+- `/sitemap.xml` (`sitemap.ts`) mirrors `backend/core/sitemaps.py` byte for byte and
+  is built from the database on every request; the FE Worker serves it on the site
+  domain. A new FE page with a fixed URL must be added to both sitemaps.
 - Local checks, in `supabase/functions/api`: `deno task test`, `deno task check`,
   `deno task lint`, `deno task fmt:check`; `deno task serve` runs it on :8001.
 
@@ -65,7 +68,8 @@ validation messages, 5-minute duplicate check, then two mails.
 ### Gateway behaviour to remember
 
 - `text/html` responses are rewritten to `text/plain` (no custom domain), so HTML
-  error pages show as source text when opened directly.
+  error pages show as source text when opened directly. `application/xml` is
+  rewritten too, so the FE `/sitemap.xml` route sets the XML type itself.
 - Malformed `%`-encoding is answered with 400 by the gateway before the function.
 
 ## Database Roles and Migrations (`supabase/migrations`)

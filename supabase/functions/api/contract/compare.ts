@@ -243,6 +243,8 @@ await check("shop (disabled)", "/v1/shop/products/");
 await check("v1 unknown", "/v1/nothing/");
 await check("non-v1 unknown", "/nothing");
 await check("health", "/health");
+// XML: only status and content-type are compared (body data differs per backend).
+await check("sitemap", "/sitemap.xml");
 // signed media
 await check("image-urls", `/image-urls/?ids=${first.pk}`);
 await check("image-urls pl", `/image-urls/?ids=${first.pk}&lang=pl`);
