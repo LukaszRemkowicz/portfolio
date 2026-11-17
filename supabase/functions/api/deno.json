@@ -1,0 +1,17 @@
+{
+  "imports": {
+    "postgres": "npm:postgres@3.4.5",
+    "aws4fetch": "npm:aws4fetch@1.0.20",
+    "@std/assert": "jsr:@std/assert@1"
+  },
+  "fmt": { "lineWidth": 100, "exclude": ["countries.ts"] },
+  "lint": { "exclude": ["countries.ts"] },
+  "tasks": {
+    "serve": "API_PUBLIC_BASE_URL=http://localhost:8001 PORT=8001 deno run --allow-net --allow-env index.ts",
+    "fmt:check": "deno fmt --check",
+    "lint": "deno lint",
+    "check": "deno check index.ts contract/compare.ts",
+    "test": "deno test --allow-env",
+    "contract": "deno run --allow-net --allow-env contract/compare.ts"
+  }
+}
