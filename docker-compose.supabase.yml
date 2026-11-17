@@ -1,0 +1,67 @@
+# Production admin on your own machine, against the Supabase database.
+#
+# Runs the released backend image: first migrations, then the Django admin at
+# http://localhost:8000/admin/. Nothing here touches the VPS.
+#
+# Start it with infra/scripts/run_admin.sh (picks the newest release, logs in to
+# GHCR, passes TAG and the Doppler config). Stop with Ctrl+C after background
+# work (variants, translations) has finished.
+name: portfolio-supabase
+
+x-backend: &backend
+  # GHCR_NAMESPACE already includes the registry host (same as prepare_images.sh).
+  image: ${GHCR_NAMESPACE}/production-be:${TAG:?set TAG, e.g. TAG=v2.21.0}
+  environment:
+    DEBUG: "False"
+    PYTHONPATH: "."
+    TZ: "Europe/Warsaw"
+    ENVIRONMENT: prod
+    SECRET_KEY: ${SECRET_KEY}
+    # Supabase session pooler (IPv4); all values come from Doppler.
+    DB_HOST: ${SUPABASE_DB_HOST}
+    DB_PORT: ${SUPABASE_DB_PORT}
+    DB_NAME: ${SUPABASE_DB_NAME}
+    DB_USER: ${SUPABASE_DB_USER}
+    DB_PASSWORD: ${SUPABASE_DB_PASSWORD}
+    PGSSLMODE: require
+    # Served on localhost over plain HTTP.
+    ADMIN_DOMAIN: localhost
+    SITE_DOMAIN: ${SITE_DOMAIN}
+    API_DOMAIN: ${API_DOMAIN}
+    ALLOWED_HOSTS: localhost,127.0.0.1
+    CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000
+    CSRF_COOKIE_DOMAIN: ""
+    SESSION_COOKIE_DOMAIN: ""
+    SECURE_SSL_REDIRECT: "False"
+    SECURE_HSTS_SECONDS: "0"
+    EMAIL_HOST: ${EMAIL_HOST}
+    EMAIL_PORT: ${EMAIL_PORT}
+    EMAIL_USE_TLS: ${EMAIL_USE_TLS}
+    EMAIL_HOST_USER: ${EMAIL_HOST_USER}
+    EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
+    DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
+    CONTACT_EMAIL: ${CONTACT_EMAIL}
+    SENTRY_DSN: ${SENTRY_DSN}
+    SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
+    PROJECT_OWNER: ${PROJECT_OWNER}
+    OPENAI_API_KEY: ${OPENAI_API_KEY}
+    R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+    R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+    SSR_CACHE_INVALIDATION_URL: ""
+    SKIP_PERMISSION_FIX: "true"
+
+services:
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: sh -c "python manage.py migrate --noinput && python manage.py createcachetable"
+
+  admin:
+    <<: *backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    # --insecure serves admin static files without nginx (DEBUG is off).
+    command: python manage.py runserver 0.0.0.0:8000 --insecure
+    ports:
+      - "127.0.0.1:8000:8000"
