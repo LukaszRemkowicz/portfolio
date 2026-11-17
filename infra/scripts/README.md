@@ -14,15 +14,12 @@ Primary script groups:
 
 ## 🚀 Release Scripts
 
-Release scripts manage **Staging** and **Production** deployments on a single VPS.
+Release scripts manage **Production** deployments on a single VPS. Staging no longer exists.
 
-- `release/build.sh` -> **builds Docker images** with environment prefixes and service suffixes (e.g. `production-be:v1.0.0`)
+- `release/build.sh` -> manual fallback: **builds Docker images locally** with environment prefixes and service suffixes (`production-be:v1.0.0`, `production-nginx:v1.0.0`)
 - `release/prepare_images.sh` -> pulls production images from GHCR, retags them to the local runtime names, and removes the GHCR tag from the VPS
-- `release/prepare_staging_images.sh` -> pulls staging images from GHCR, retags them to the local runtime names, and removes the GHCR tag from the VPS
-- `release/release.sh` -> runs **one-shot release tasks** (migrations, collectstatic, etc.) targeting the correct environment services
-- `release/deploy.sh` -> performs the **deployment switch only** and updates environment-specific rollback state
-- `release/deploy_staging.sh` -> guided staging workflow with approval prompts between staging image preparation, release, and deploy
-- `release/manual_deploy_staging.sh` -> legacy guided staging workflow with approval prompts between VPS-local build, release, and deploy
+- `release/release.sh` -> runs **one-shot release tasks** (migrations, `createcachetable`, collectstatic, etc.)
+- `release/deploy.sh` -> performs the **deployment switch only** (`be` and `nginx`, `ENVIRONMENT=production` only) and updates rollback state
 - `release/deploy_production.sh` -> guided production workflow with approval prompts between image preparation, release, and deploy
 
 ## 🔐 Environment Variables
@@ -30,14 +27,14 @@ Release scripts manage **Staging** and **Production** deployments on a single VP
 These scripts **require** several variables to be set, typically via Doppler.
 
 ### ✅ Mandatory
-1. `ENVIRONMENT`: Determines tags and isolated state (e.g. `production`, `stage`)
+1. `ENVIRONMENT`: Determines tags and isolated state (`production`)
 2. `TAG`: The git tag or version (e.g. `v1.2.3`)
-3. `PROJECT_OWNER`: Injected into frontend metadata
-4. `SITE_DOMAIN` and `API_DOMAIN`: Used for Nginx templates and frontend builds
+3. `PROJECT_OWNER`: Backend runtime setting
+4. `SITE_DOMAIN` and `API_DOMAIN`: Used for Nginx templates and Django configuration
 5. `ALLOWED_HOSTS`: Django security setting
 
 ### 🏭 GHCR image preparation
-- `GHCR_USERNAME`: registry username used by `prepare_images.sh` and `prepare_staging_images.sh`
+- `GHCR_USERNAME`: registry username used by `prepare_images.sh`
 - `GHCR_TOKEN`: registry token with package read access
 - `GHCR_REGISTRY`: registry host used by image preparation scripts (defaults to `ghcr.io`)
 - `GHCR_NAMESPACE`: full image namespace used by image preparation scripts
@@ -62,70 +59,6 @@ EMERGENCY=1 doppler run -- ./infra/scripts/release/build.sh
 > The working tree is still printed in the output so you know exactly what was uncommitted. Use only in genuine emergencies and follow up with a proper commit and tagged build.
 
 ---
-
-## 🧪 Staging Workflow
-
-Staging currently has two artifact paths:
-
-- **Legacy VPS-local path**: build the images on the VPS, then release and
-  deploy them locally.
-- **Registry publish path**: build the staging images in GitHub Actions and
-  push them to GHCR. This avoids stressing the VPS during image builds.
-
-### Registry-backed staging deploy
-
-Guided flow:
-
-```bash
-doppler run -- ./infra/scripts/release/deploy_staging.sh
-```
-
-Image preparation only, for debugging the registry pull step without running
-release/deploy:
-
-```bash
-doppler run -- ./infra/scripts/release/prepare_staging_images.sh
-```
-
-### Registry publish path
-
-To publish staging images without building them on the VPS:
-
-1. Open the pull request for the branch you want to publish.
-2. Add the PR label:
-
-```text
-publish-staging
-```
-
-The `Publish Staging Images` workflow builds the PR head SHA and pushes these
-constant staging tags to GHCR:
-
-```text
-stage-be:v0.0.0-STG
-stage-nginx:v0.0.0-STG
-```
-
-If the PR branch is updated while the `publish-staging` label is still present,
-the workflow publishes the new PR head commit again. Remove the label to stop
-publishing future branch updates.
-
-### Legacy VPS-local build and deploy
-
-Use this only when the staging registry path is unavailable or you explicitly
-want to build on the VPS:
-
-```bash
-doppler run -- ./infra/scripts/release/manual_deploy_staging.sh
-```
-
-Manual legacy flow:
-
-```bash
-TAG=v1.0.0-test ENVIRONMENT=stage doppler run -- ./infra/scripts/release/build.sh
-TAG=v1.0.0-test ENVIRONMENT=stage COMPOSE_FILE=docker-compose.stage.yml doppler run -- ./infra/scripts/release/release.sh
-TAG=v1.0.0-test ENVIRONMENT=stage COMPOSE_FILE=docker-compose.stage.yml doppler run -- ./infra/scripts/release/deploy.sh
-```
 
 ## 🏭 Production Workflow
 
@@ -166,8 +99,7 @@ TEST=true TAG=test-feat-add-image-registry-2f0b23d doppler -c dev run -- ./infra
 
 The Workers frontend (`portfolio-fe`) reaches the backend through the
 `cloudflared` service (profile `tunnel`), which forwards the tunnel hostname to
-`http://be:8000` inside the compose network, as the in-network `fe` does. It
-opens no ports, and `deploy.sh` does not touch it (pinned public image, not
+`http://be:8000` inside the compose network. It opens no ports, and `deploy.sh` does not touch it (pinned public image, not
 `${TAG}`).
 
 One-time setup:
@@ -188,9 +120,7 @@ One-time setup:
 doppler run -- docker compose -f docker-compose.prod.yml up -d cloudflared
 ```
 
-Staging: same with `docker-compose.stage.yml` and the staging tunnel token.
-Stop with `docker compose ... stop cloudflared`; the current frontend keeps
-working without it.
+Stop with `docker compose -f docker-compose.prod.yml stop cloudflared`.
 
 ## ↩️ Rollback
 
@@ -213,14 +143,13 @@ TAG=v1.1.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.
 - Images follow `${ENVIRONMENT}-<service>:${TAG}`
 
 ### 📥 Artifact Source
-- Staging normally uses CI-published GHCR images from the `publish-staging` PR label workflow and `prepare_staging_images.sh`; the legacy local-build path remains available through `manual_deploy_staging.sh`
-- Production uses `prepare_images.sh` to pull GHCR images, retag them locally, and remove the GHCR tag so only the local runtime names remain
+- Production uses `prepare_images.sh` to pull GHCR images (published by `.github/workflows/release.yml`), retag them locally, and remove the GHCR tag so only the local runtime names remain
+- `build.sh` is a manual fallback that builds the same images on the VPS
 
 ### 🧾 Compose File Overrides
-- `build.sh` auto-detects the environment compose file
-- `release.sh` and `deploy.sh` default to production unless `COMPOSE_FILE` is overridden
+- `build.sh`, `release.sh` and `deploy.sh` resolve `docker-compose.<env>.yml` from `ENVIRONMENT` (`production` -> `docker-compose.prod.yml`) unless `COMPOSE_FILE` is set
 - `release.sh` and `deploy.sh` both load `docker-compose.common.yml` in addition to the target environment compose file
-- `deploy_staging.sh` and `deploy_production.sh` pause for operator approval before each phase unless `--yes` is passed
+- `deploy_production.sh` pauses for operator approval before each phase unless `--yes` is passed
 
 ### 🔒 Locking
 - These scripts use `flock` to prevent concurrent deployments
@@ -230,20 +159,11 @@ TAG=v1.1.0 ENVIRONMENT=production doppler run -- ./infra/scripts/release/deploy.
 
 - `release.sh --dry-run` validates inputs and dependency state without executing the release job
 - `deploy.sh --dry-run` shows the deployment flow without switching running containers
-- `deploy_staging.sh --dry-run` and `deploy_production.sh --dry-run` pass dry-run through to release/deploy steps
+- `deploy_production.sh --dry-run` passes dry-run through to release/deploy steps
 
 ---
 
 ## 🩺 Troubleshooting
-
-### “FATAL: database portfolio_stage does not exist”
-If you changed project names or moved volumes, the staging database may need a fresh initialization:
-
-```bash
-docker compose -f docker-compose.stage.yml down -v
-```
-
-Then rerun `release.sh`.
 
 ### “Port is already allocated”
 Ensure you are not running two stacks that collide on the same ports. Use:
@@ -269,7 +189,7 @@ For production, run:
 TAG=v1.2.0 doppler run -- ./infra/scripts/release/prepare_images.sh
 ```
 
-For staging, run `deploy_staging.sh`. The registry-backed staging scripts own the fixed `v0.0.0-STG` image tag. If you are intentionally using the legacy VPS-local path, run `build.sh` first instead.
+If you are intentionally building on the VPS instead, run `build.sh` first.
 
 ### 💾 Backup scripts
 

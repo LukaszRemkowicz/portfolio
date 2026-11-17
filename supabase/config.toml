@@ -1,0 +1,4 @@
+project_id = "portfolio"
+
+[functions.api]
+verify_jwt = false

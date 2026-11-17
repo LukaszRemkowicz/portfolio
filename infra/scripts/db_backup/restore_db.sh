@@ -19,7 +19,7 @@ TARGET_DB="${TARGET_DB:-db}"
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/docker-compose.yml}"
 
 case "${ENVIRONMENT:-}" in
-    production|prod|staging|stage|stg)
+    production|prod)
         if [ "${DB_NAME}" != "${STANDARD_DB_NAME}" ]; then
             echo "⚠️  Overriding DB_NAME=${DB_NAME} with standardized ${STANDARD_DB_NAME} for ENVIRONMENT=${ENVIRONMENT}"
             DB_NAME="${STANDARD_DB_NAME}"

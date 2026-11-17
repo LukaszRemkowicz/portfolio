@@ -46,7 +46,13 @@ set -euo pipefail
 # ------------------------------------------------------------------
 
 # Required variables (fails if not provided)
-: "${ENVIRONMENT:?ENVIRONMENT is required (stg|prod) (inject via: doppler run -- ./deploy.sh)}"
+: "${ENVIRONMENT:?ENVIRONMENT is required (production) (inject via: doppler run -- ./deploy.sh)}"
+
+# Fail before anything is switched: production is the only deployable environment.
+if [[ "${ENVIRONMENT}" != "production" ]]; then
+  echo "❌ Only ENVIRONMENT=production is deployable (got: ${ENVIRONMENT})"
+  exit 1
+fi
 
 # Optional / Dynamic variables with defaults
 DEBUG="${DEBUG:-false}"
@@ -60,7 +66,7 @@ for arg in "$@"; do
     --dry-run) DRY_RUN=true; echo "🧪 Dry-run mode enabled" ;;
     *)
       echo "❌ ERROR: Unknown argument: ${arg}"
-      echo "✅ Usage: TAG=vX.Y.Z ENVIRONMENT=stg|prod doppler run -- ./deploy.sh [--dry-run]"
+      echo "✅ Usage: TAG=vX.Y.Z ENVIRONMENT=production doppler run -- ./deploy.sh [--dry-run]"
       exit 1
       ;;
   esac
@@ -148,13 +154,7 @@ echo "📦 Compose project: ${COMPOSE_PROJECT_NAME}"
 
 # Only long-running services should be switched during deploy. One-shot jobs
 # like `release` are handled explicitly by release.sh earlier in the flow.
-if [[ "${ENV_SUFFIX}" == "stage" ]]; then
-  DEPLOY_SERVICES=("be" "nginx")
-  ON_DEMAND_SERVICES=()
-else
-  DEPLOY_SERVICES=("be" "nginx")
-  ON_DEMAND_SERVICES=()
-fi
+DEPLOY_SERVICES=("be" "nginx")
 
 # ------------------------------------------------------------------
 # Legacy Project Cleanup (One-time transition from implicit naming)
@@ -242,17 +242,8 @@ echo "✅ Images found. Proceeding with deployment."
 echo "🚀 [DEPLOY] [2/5] Switching containers to new images (TAG=$TAG)"
 if [[ "${DRY_RUN}" == true ]]; then
   echo "🧾 DRY RUN: would execute: ${COMPOSE[*]} up -d ${DEPLOY_SERVICES[*]}"
-  for svc in "${ON_DEMAND_SERVICES[@]}"; do
-    echo "🧾 DRY RUN: would stop on-demand service if running: ${svc}"
-  done
 else
   "${COMPOSE[@]}" up -d "${DEPLOY_SERVICES[@]}"
-  for svc in "${ON_DEMAND_SERVICES[@]}"; do
-    if "${COMPOSE[@]}" ps --services --status running 2>/dev/null | grep -q "^${svc}$"; then
-      echo "🛑 Stopping staging on-demand service: ${svc}"
-      "${COMPOSE[@]}" stop "${svc}"
-    fi
-  done
   SWITCHED_CONTAINERS=true
 fi
 
@@ -300,30 +291,15 @@ else
   # Determine health check target based on ENVIRONMENT
   HEALTH_SITE_DOMAIN="${SITE_DOMAIN}"
 
-  if [[ "${ENVIRONMENT}" == "production" ]]; then
-    HEALTH_PORT="443"
-    # Hit the local Traefik listener directly while preserving Host/SNI for the
-    # production domain. This avoids false negatives when the server cannot
-    # loop back to its own public DNS/IP during deploy-time checks.
-    HEALTH_URL="https://${HEALTH_SITE_DOMAIN}/sitemap.xml"
-    CURL_ARGS=(
-      "-fsSk"
-      "-o" "/dev/null"
-      "--resolve" "${HEALTH_SITE_DOMAIN}:443:127.0.0.1"
-    )
-  else
-    # Staging is protected by Traefik IP allowlisting, so a local HTTP probe
-    # with the correct Host header is more reliable than a full HTTPS loopback
-    # check during deploy. A 301/302 redirect to HTTPS is considered healthy.
-    HEALTH_PORT="80"
-    HEALTH_URL="http://127.0.0.1:${HEALTH_PORT}/health"
-    CURL_ARGS=(
-      "-sS"
-      "-o" "/dev/null"
-      "-w" "%{http_code}"
-      "-H" "Host: ${HEALTH_SITE_DOMAIN}"
-    )
-  fi
+  # Hit the local Traefik listener directly while preserving Host/SNI for the
+  # production domain. This avoids false negatives when the server cannot
+  # loop back to its own public DNS/IP during deploy-time checks.
+  HEALTH_URL="https://${HEALTH_SITE_DOMAIN}/sitemap.xml"
+  CURL_ARGS=(
+    "-fsSk"
+    "-o" "/dev/null"
+    "--resolve" "${HEALTH_SITE_DOMAIN}:443:127.0.0.1"
+  )
 
   echo "🩺 TARGET: ${HEALTH_URL} (Host: ${HEALTH_SITE_DOMAIN})"
 
@@ -331,17 +307,9 @@ else
   MAX_RETRIES_FE=20 # Extended to 60s (20 * 3s) for certificates and warmup.
   for ((i=1; i<=MAX_RETRIES_FE; i++)); do
     # Use array expansion to correctly handle spaces/quotes
-    if [[ "${ENVIRONMENT}" == "production" ]]; then
-      if curl "${CURL_ARGS[@]}" "${HEALTH_URL}" 2>/dev/null; then
-        echo "✅ Nginx is reachable at ${HEALTH_URL}"
-        break
-      fi
-    else
-      HTTP_CODE="$(curl "${CURL_ARGS[@]}" "${HEALTH_URL}" 2>/dev/null || true)"
-      if [[ "${HTTP_CODE}" == "200" || "${HTTP_CODE}" == "301" || "${HTTP_CODE}" == "302" ]]; then
-        echo "✅ Nginx is reachable at ${HEALTH_URL} (HTTP ${HTTP_CODE})"
-        break
-      fi
+    if curl "${CURL_ARGS[@]}" "${HEALTH_URL}" 2>/dev/null; then
+      echo "✅ Nginx is reachable at ${HEALTH_URL}"
+      break
     fi
     echo "⏳ Waiting for nginx to become reachable… ($i/$MAX_RETRIES_FE)"
     sleep 3

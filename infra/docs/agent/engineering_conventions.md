@@ -56,10 +56,6 @@ Use this file for style and implementation guidance. Use `AGENTS.md` for routing
 - Refactor toward simpler structure when touching confusing code, but avoid unnecessary rewrites.
 
 
-## React / Frontend
+## Frontend
 
-- Keep browser-only logic isolated from shared SSR code.
-- Prefer functional components and custom hooks for reusable behavior.
-- Do not introduce client-only assumptions into SSR paths without guarding them.
-- Keep FE-owned transport endpoints under `/app/*` separate from public page routes.
-- Reuse existing React Query, routing, and SEO patterns unless there is a strong reason to change them.
+The frontend lives in the separate `LukaszRemkowicz/portfolio-fe` repository (React Router 7 on Cloudflare Workers). Do frontend work and follow its conventions there; this repository only provides the API.
