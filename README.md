@@ -26,6 +26,8 @@ Backend, nginx and infrastructure for a personal portfolio (astrophotography, tr
 
 Production request path: the browser talks to the Cloudflare Workers frontend (`portfolio-fe`), which reaches this stack through a Cloudflare Tunnel. Django serves the API, the sitemap and the admin; media is stored in Cloudflare R2.
 
+Moving off the VPS: the public API also runs as a Supabase Edge Function over the Supabase database (`supabase/`), reachable only through the Worker, and the production admin runs locally against Supabase. See [Supabase API and local admin](infra/docs/project/supabase_api.md).
+
 ```mermaid
 flowchart LR
     Browser["Browser"] --> Workers["Cloudflare Workers<br/>(portfolio-fe)"]
@@ -271,6 +273,22 @@ TAG=vX.Y.Z doppler run --project portfolio --config prd -- ./infra/scripts/relea
 
 Details and rollback: [release_deploy_architecture.md](infra/docs/project/release_deploy_architecture.md), [infra/scripts/README.md](infra/scripts/README.md), [.github/SECRETS.md](.github/SECRETS.md).
 
+### Supabase API and production admin
+
+Deploy the Edge Function (secrets from Doppler):
+
+```bash
+doppler run --project portfolio --config prd -- supabase/deploy-api.sh
+```
+
+Run the production Django admin on your machine against Supabase: it pulls the newest released backend image from GHCR, runs migrations and serves http://localhost:8000/admin/ (pass a tag such as `v2.21.0` to pin a release). Stop it with Ctrl+C after background work (image variants, translations) has finished.
+
+```bash
+infra/scripts/run_admin.sh
+```
+
+More: [supabase_api.md](infra/docs/project/supabase_api.md).
+
 ## 💾 Database Backup & Maintenance
 
 Database maintenance scripts are located in `infra/scripts/db_backup/`.
@@ -303,5 +321,5 @@ Log and sitemap monitoring is handled outside this repository by the separate `a
 - [infra/scripts/README.md](infra/scripts/README.md) - release, backup and Cloudflare Tunnel runbook
 - [infra/scripts/db_backup/MAINTENANCE.md](infra/scripts/db_backup/MAINTENANCE.md) - database backup and restore
 - [.github/SECRETS.md](.github/SECRETS.md) - GitHub secrets, variables and CI/CD
-- [infra/docs/project/](infra/docs/project/) - system docs: [cache invalidation](infra/docs/project/cache_invalidation.md), [release and deploy](infra/docs/project/release_deploy_architecture.md), [logging](infra/docs/project/logging_structure_overview.md), [feature flags](infra/docs/project/feature_flag_mechanism.md), [latest image tags](infra/docs/project/latest_images_tags.md), [total time spent](infra/docs/project/landing_page_total_time_spent_system.md), [admin image cropper](infra/docs/project/django_admin_image_cropper_mechanism.md), [translations](infra/docs/project/translation_system_overview.md)
+- [infra/docs/project/](infra/docs/project/) - system docs: [cache invalidation](infra/docs/project/cache_invalidation.md), [release and deploy](infra/docs/project/release_deploy_architecture.md), [logging](infra/docs/project/logging_structure_overview.md), [feature flags](infra/docs/project/feature_flag_mechanism.md), [latest image tags](infra/docs/project/latest_images_tags.md), [total time spent](infra/docs/project/landing_page_total_time_spent_system.md), [admin image cropper](infra/docs/project/django_admin_image_cropper_mechanism.md), [translations](infra/docs/project/translation_system_overview.md), [Supabase API and local admin](infra/docs/project/supabase_api.md)
 - [infra/docs/agent/](infra/docs/agent/) - agent routing and engineering conventions ([AGENTS.md](AGENTS.md))

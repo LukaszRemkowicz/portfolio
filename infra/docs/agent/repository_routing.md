@@ -84,6 +84,10 @@ confirming behavior.
   Use for release scripts, deploy logic, image naming (`production-be`,
   `production-nginx`), artifact flow, and rollback behavior. Describes the
   tag-based release/deploy model and script responsibilities.
+- `infra/docs/project/supabase_api.md`
+  Use for the Supabase Edge Function API, the hidden-API secret, `portfolio_api`
+  grants and migration order, the contact form (Resend, `api_private`), function
+  deploy, gateway quirks, and running the production admin locally.
 - `infra/docs/agent/image_variant_quickstart.md`
   Use as the cheap entry point for image variant specs, generated image files,
   variant sync, and compatibility methods before opening larger analysis docs.
@@ -99,6 +103,8 @@ confirming behavior.
 - Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
 - Release/deploy script logic or image naming -> `infra/docs/project/release_deploy_architecture.md`
 - Production release procedure -> `infra/scripts/README.md`
+- Supabase function API, its grants/migrations, contact form or local production
+  admin -> `infra/docs/project/supabase_api.md`
 - Image variant generation, `ImageVariantSpec`, `ViewportWidths`, or
   `ImageVariantModelMixin` -> `infra/docs/agent/image_variant_quickstart.md`
 - Explicit phase/TODO/analysis work -> the named file under
