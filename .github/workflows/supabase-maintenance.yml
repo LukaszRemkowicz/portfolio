@@ -1,0 +1,91 @@
+name: Supabase Maintenance
+
+# Daily: one request through the site that reaches the database, so the free
+# Supabase project is never paused for inactivity.
+# Monthly: encrypted pg_dump of the Supabase database to the private R2 bucket;
+# dumps older than 62 days are deleted. Free projects get no automatic backups.
+# This repo is public: nothing secret may reach the logs, and the dump is
+# encrypted before upload. Restore steps: infra/docs/project/supabase_api.md.
+
+on:
+  schedule:
+    - cron: "17 5 * * *" # ping, daily
+    - cron: "23 3 1 * *" # backup, 1st of the month
+  workflow_dispatch:
+    inputs:
+      backup:
+        description: Also take a database backup now
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-maintenance
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Ping the site API
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Request settings (reaches the database)
+        run: >-
+          curl -fsS --retry 3 --retry-delay 20 -o /dev/null
+          -w "%{http_code} in %{time_total}s\n"
+          https://lukaszremkowicz.com/app/settings/
+
+  backup:
+    name: Back up the database to R2
+    if: github.event.schedule == '23 3 1 * *' || (github.event_name == 'workflow_dispatch' && inputs.backup)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PGHOST: ${{ secrets.SUPABASE_DB_HOST }}
+      PGPORT: ${{ secrets.SUPABASE_DB_PORT }}
+      PGDATABASE: ${{ secrets.SUPABASE_DB_NAME }}
+      PGUSER: ${{ secrets.SUPABASE_DB_USER }}
+      PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PGSSLMODE: require
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      # R2 rejects the newer default checksum headers of AWS CLI v2.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      R2_ENDPOINT: https://8e28090942604cdb0c3620bd22f54145.r2.cloudflarestorage.com
+      BACKUP_URI: s3://portfolio-originals/backups/supabase
+    steps:
+      - name: Dump the public and api_private schemas
+        run: |
+          set -euo pipefail
+          # pg_dump must match the server's major version (Postgres 17).
+          docker run --rm -e PGHOST -e PGPORT -e PGDATABASE -e PGUSER -e PGPASSWORD -e PGSSLMODE \
+            postgres:17 pg_dump --format=custom --schema=public --schema=api_private > db.dump
+          test -s db.dump
+          echo "dump: $(stat -c%s db.dump) bytes"
+
+      - name: Encrypt and upload
+        run: |
+          set -euo pipefail
+          gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \
+            --passphrase-fd 3 --output db.dump.gpg db.dump 3<<<"$BACKUP_PASSPHRASE"
+          name="$(date -u +%Y-%m-%d).dump.gpg"
+          aws s3 cp db.dump.gpg "$BACKUP_URI/$name" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+          echo "uploaded $name"
+
+      - name: Delete backups older than 62 days
+        run: |
+          set -euo pipefail
+          cutoff="$(date -u -d '62 days ago' +%Y-%m-%d)"
+          aws s3 ls "$BACKUP_URI/" --endpoint-url "$R2_ENDPOINT" | awk '{print $4}' |
+            while read -r file; do
+              [[ "$file" =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2})\.dump\.gpg$ ]] || continue
+              if [[ "${BASH_REMATCH[1]}" < "$cutoff" ]]; then
+                aws s3 rm "$BACKUP_URI/$file" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+                echo "deleted $file"
+              fi
+            done
