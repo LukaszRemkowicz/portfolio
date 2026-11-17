@@ -28,6 +28,7 @@ from django.utils.translation import gettext_lazy as _
 from common.background import submit
 from common.constants import FALLBACK_URL_SLUG
 from common.types import ImageVariantSpec, ViewportWidths
+from core.cache_service import CacheService
 from core.models import BaseImage, LandingPageSettings, SingletonModel
 from translation.mixins import AutomatedTranslationModelMixin
 from translation.services import TranslationService
@@ -629,22 +630,21 @@ class AstroImage(AutomatedTranslationModelMixin, BaseImage):
                 self.slug = f"{base_slug}-{str(uuid.uuid4())[:8]}"
         super().save(*args, **kwargs)
         self.trigger_translations()
-        current_default_exposure_details = (
-            self.safe_translation_getter(
-                "exposure_details",
-                language_code=settings.DEFAULT_APP_LANGUAGE,
-                any_language=False,
-            )
-            or ""
-        )
-        if (
-            current_default_exposure_details
-            and current_default_exposure_details != previous_default_exposure_details
-            and self.pk
-        ):
-            submit(
-                calculate_astroimage_exposure_hours_task, str(self.pk), retries=2, retry_delay=300
-            )
+        current_default_exposure_details = self._get_saved_default_exposure_details()
+        if current_default_exposure_details != previous_default_exposure_details and self.pk:
+            if current_default_exposure_details:
+                submit(
+                    calculate_astroimage_exposure_hours_task,
+                    str(self.pk),
+                    retries=2,
+                    retry_delay=300,
+                )
+            else:
+                type(self).objects.using(self._state.db).filter(pk=self.pk).update(
+                    calculated_exposure_hours=0
+                )
+                self.calculated_exposure_hours = 0
+                CacheService.invalidate_landing_page_cache()
 
 
 class MainPageBackgroundImage(AutomatedTranslationModelMixin, BaseImage):

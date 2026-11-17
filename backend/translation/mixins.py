@@ -1,5 +1,6 @@
 import logging
 import uuid
+from functools import partial
 
 from django.conf import settings
 from django.contrib import messages
@@ -13,7 +14,7 @@ from common.background import submit
 
 from .models import TranslationTask
 from .services import TranslationService
-from .tasks import translate_instance_task
+from .tasks import mark_translation_failed, translate_instance_task
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +185,7 @@ class AutomatedTranslationModelMixin:
             translate_instance_task,
             retries=3,
             retry_delay=60,
+            on_failure=partial(mark_translation_failed, task_id),
             task_id=task_id,
             **task_kwargs,
         )

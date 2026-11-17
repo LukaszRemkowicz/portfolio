@@ -50,7 +50,7 @@ python manage.py repair_travel_place --place-id 53 --country PL --apply
 
 The first command writes nothing; `--apply` repairs that Place, refreshes its
 linked highlights, and retains previous URL aliases. Verify the place ID before
-applying. Saving linked highlights triggers the normal API/SSR cache invalidation.
+applying. Saving linked highlights triggers the normal API cache invalidation.
 The command does not infer countries for other regions or change translated text.
 
 Travel highlight text uses the requested language, then English, and never an

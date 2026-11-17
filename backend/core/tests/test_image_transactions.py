@@ -1,0 +1,68 @@
+from unittest.mock import patch
+
+import pytest
+
+from django.db import transaction
+
+from common.tests.image_helpers import jpeg_field
+from core.models import ImageVariant
+from programming.tests.factories import ProjectImageFactory
+
+
+@pytest.fixture
+def execute_on_commit():
+    """Use Django's real commit hooks for these transaction tests."""
+    return
+
+
+def make_variant(owner):
+    variant = ImageVariant.objects.create(owner=owner, role="probe", width=1, height=1)
+    variant.file.save("transaction-probe.jpg", jpeg_field("probe.jpg"), save=True)
+    return variant
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    "operation",
+    ["replacement", "variant_instance", "variant_queryset", "owner_instance", "owner_queryset"],
+)
+@pytest.mark.parametrize("rollback", [True, False])
+def test_file_cleanup_follows_transaction(operation, rollback):
+    with patch("core.models.submit"):
+        owner = ProjectImageFactory(original=jpeg_field("old.jpg"))
+        variant = make_variant(owner)
+        target = owner.original if operation == "replacement" else variant.file
+        storage, name = target.storage, target.name
+        assert storage.exists(name)
+
+        with transaction.atomic():
+            if operation == "replacement":
+                owner.original = jpeg_field("new.jpg")
+                owner.save()
+            elif operation == "variant_instance":
+                variant.delete()
+            elif operation == "variant_queryset":
+                ImageVariant.objects.filter(pk=variant.pk).delete()
+            elif operation == "owner_instance":
+                owner.delete()
+            else:
+                type(owner).objects.filter(pk=owner.pk).delete()
+            assert storage.exists(name)
+            if rollback:
+                transaction.set_rollback(True)
+
+        assert storage.exists(name) is rollback
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("kind", ["instance", "queryset"])
+def test_variant_deletion_in_autocommit(kind):
+    with patch("core.models.submit"):
+        owner = ProjectImageFactory()
+        variant = make_variant(owner)
+        storage, name = variant.file.storage, variant.file.name
+        if kind == "instance":
+            variant.delete()
+        else:
+            ImageVariant.objects.filter(pk=variant.pk).delete()
+        assert not storage.exists(name)

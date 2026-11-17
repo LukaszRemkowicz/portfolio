@@ -13,6 +13,7 @@ x-backend: &backend
   image: ${GHCR_NAMESPACE}/production-be:${TAG:?set TAG, e.g. TAG=v2.21.0}
   environment:
     DEBUG: "False"
+    CACHE_BACKEND: django.core.cache.backends.locmem.LocMemCache
     PYTHONPATH: "."
     TZ: "Europe/Warsaw"
     ENVIRONMENT: prod
@@ -34,27 +35,19 @@ x-backend: &backend
     SESSION_COOKIE_DOMAIN: ""
     SECURE_SSL_REDIRECT: "False"
     SECURE_HSTS_SECONDS: "0"
-    EMAIL_HOST: ${EMAIL_HOST}
-    EMAIL_PORT: ${EMAIL_PORT}
-    EMAIL_USE_TLS: ${EMAIL_USE_TLS}
-    EMAIL_HOST_USER: ${EMAIL_HOST_USER}
-    EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
-    DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
-    CONTACT_EMAIL: ${CONTACT_EMAIL}
     SENTRY_DSN: ${SENTRY_DSN}
     SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     PROJECT_OWNER: ${PROJECT_OWNER}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
     R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
     R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
-    SSR_CACHE_INVALIDATION_URL: ""
     SKIP_PERMISSION_FIX: "true"
 
 services:
   migrate:
     <<: *backend
     restart: "no"
-    command: sh -c "python manage.py migrate --noinput && python manage.py createcachetable"
+    command: sh -c "python manage.py migrate --noinput && python manage.py createcachetable && python manage.py reset_stuck_translation_tasks"
 
   admin:
     <<: *backend
@@ -62,6 +55,8 @@ services:
       migrate:
         condition: service_completed_successfully
     # --insecure serves admin static files without nginx (DEBUG is off).
-    command: python manage.py runserver 0.0.0.0:8000 --insecure
+    command: python manage.py runserver --noreload --insecure 0.0.0.0:8000
+    stop_signal: SIGINT
+    stop_grace_period: 15m
     ports:
       - "127.0.0.1:8000:8000"

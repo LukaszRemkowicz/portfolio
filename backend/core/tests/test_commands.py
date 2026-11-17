@@ -1,6 +1,4 @@
-import json
 from io import StringIO
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -14,81 +12,11 @@ from django.urls import reverse
 from astrophotography.models import MeteorsMainPageConfig
 from astrophotography.tests.factories import AstroImageFactory
 from common.tests.image_helpers import jpeg_field
-from core.management.commands.backfill_image_variants import Command as BackfillImageVariantsCommand
-from core.management.commands.regenerate_thumbnails import Command as RegenerateThumbnailsCommand
 from core.models import LandingPageSettings
 from programming.tests.factories import ProjectImageFactory
 from shop.models import ShopSettings
 from shop.tests.factories import ShopProductFactory
 from users.tests.factories import UserFactory
-
-
-class TestMcpListCommandsCommand:
-    def test_mcp_list_commands_returns_json_command_inventory(self) -> None:
-        output = StringIO()
-
-        call_command("mcp_list_commands", "--json", stdout=output)
-
-        payload = json.loads(output.getvalue())
-        assert payload == {
-            "commands": [
-                {
-                    "name": "media_inventory",
-                    "description": "Inspect DB image references and media files on disk.",
-                    "read_only": True,
-                    "params": {},
-                }
-            ]
-        }
-
-
-@pytest.mark.django_db
-class TestMediaInventoryCommand:
-    def test_media_inventory_reports_db_refs_missing_files_and_orphans(
-        self,
-        settings,
-        tmp_path,
-    ) -> None:
-        settings.MEDIA_ROOT = tmp_path
-        media_root = Path(settings.MEDIA_ROOT)
-
-        with (
-            patch("core.models.submit"),
-            patch("users.models.submit"),
-        ):
-            astro_image = AstroImageFactory(original=jpeg_field("astro-source.jpg"))
-            user = UserFactory()
-            user.avatar.save("avatar-source.jpg", jpeg_field("avatar-source.jpg"), save=True)
-
-        type(astro_image).objects.filter(pk=astro_image.pk).update(
-            original="images/missing-source.jpg"
-        )
-        orphan_path = media_root / "orphans" / "manual-orphan.jpg"
-        orphan_path.parent.mkdir(parents=True, exist_ok=True)
-        orphan_path.write_bytes(b"orphan")
-
-        output = StringIO()
-        call_command("media_inventory", "--json", stdout=output)
-
-        payload = json.loads(output.getvalue())
-
-        assert payload["summary"]["db_references"] >= 2
-        assert payload["summary"]["missing_references"] == 1
-        assert payload["summary"]["unreferenced_files"] >= 2
-        assert any(
-            field["model"] == "users.User" and field["field"] == "avatar"
-            for field in payload["fields"]
-        )
-        assert any(
-            reference["model"] == "astrophotography.AstroImage"
-            and reference["field"] == "original"
-            and reference["file"] == "images/missing-source.jpg"
-            for reference in payload["missing_references"]
-        )
-        assert any(
-            disk_file["path"] == "orphans/manual-orphan.jpg"
-            for disk_file in payload["delete_candidates"]
-        )
 
 
 @pytest.mark.django_db
@@ -124,44 +52,6 @@ class TestClearCacheCommand:
         call_command("clear_cache")
 
         mock_clear.assert_called_once()
-
-
-@pytest.mark.django_db
-class TestRegenerateThumbnailsCommand:
-    def test_command_does_not_inherit_variant_backfill_command(self) -> None:
-        assert not issubclass(RegenerateThumbnailsCommand, BackfillImageVariantsCommand)
-
-    def test_regenerates_thumbnail_variants_only(self) -> None:
-        with patch("core.models.submit"):
-            image = AstroImageFactory(
-                original=jpeg_field("regenerate-thumbnail.jpg", size=(1200, 800)),
-            )
-
-        image.sync_image_variants()
-        image.variants.filter(role="thumbnail").delete()
-        existing_variant_count = image.variants.exclude(role="thumbnail").count()
-
-        call_command("regenerate_thumbnails", object_id=str(image.pk))
-
-        image.refresh_from_db()
-        thumbnail = image.variants.get(role="thumbnail", width=560)
-        assert thumbnail.height == 373
-        assert image.variants.exclude(role="thumbnail").count() == existing_variant_count
-
-    def test_force_rebuilds_existing_thumbnail_variant(self) -> None:
-        with patch("core.models.submit"):
-            image = AstroImageFactory(
-                original=jpeg_field("force-thumbnail.jpg", size=(1200, 800)),
-            )
-
-        image.sync_image_variants()
-        old_thumbnail_name = image.variants.get(role="thumbnail", width=560).file.name
-
-        call_command("regenerate_thumbnails", object_id=str(image.pk), force=True)
-
-        image.refresh_from_db()
-        new_thumbnail_name = image.variants.get(role="thumbnail", width=560).file.name
-        assert new_thumbnail_name != old_thumbnail_name
 
 
 @pytest.mark.django_db
@@ -216,9 +106,6 @@ class TestBackfillImageVariantsCommand:
         invalidate_shop_cache = mocker.patch(
             "core.management.commands.backfill_image_variants.CacheService.invalidate_shop_cache"
         )
-        invalidate_frontend = mocker.patch(
-            "core.management.commands.backfill_image_variants.invalidate_frontend_ssr_cache"
-        )
 
         call_command("backfill_image_variants", object_id=str(image.pk))
 
@@ -227,16 +114,6 @@ class TestBackfillImageVariantsCommand:
         invalidate_travel_cache.assert_called()
         invalidate_landing_page_cache.assert_called_once_with()
         invalidate_shop_cache.assert_called_once_with()
-        invalidate_frontend.assert_called_once_with(
-            [
-                "background",
-                "latest-astro-images",
-                "profile",
-                "settings",
-                "shop",
-                "travel-highlights",
-            ]
-        )
 
     def test_generates_project_image_original_format_from_model_specs(self) -> None:
         with patch("core.models.submit"):

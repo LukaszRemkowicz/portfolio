@@ -54,8 +54,7 @@ confirming behavior.
 
 - `infra/docs/project/cache_invalidation.md`
   Use for stale homepage/shared content, Django signals, or API cache
-  invalidation. Describes the DatabaseCache, `CacheService`, and the disabled
-  SSR webhook leftover.
+  invalidation. Describes cache backends and `CacheService`.
 - `infra/docs/project/django_admin_image_cropper_mechanism.md`
   Use for Django admin image cropper changes, preview/media bugs, or extending
   cropper behavior. Describes the cropper contract, browser flow, media serving

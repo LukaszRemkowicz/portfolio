@@ -80,7 +80,7 @@ class GPTProvider(LLMProvider):
 
     def __init__(self) -> None:
         self._openai = openai_module
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        self.client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=60, max_retries=1)
 
     def ask_question_with_usage(
         self,

@@ -38,7 +38,9 @@ def execute_on_commit() -> Generator[None]:
     Ensure transaction.on_commit hooks execute immediately in tests.
     By default, they don't run in standard TestCase/TestCase-like tests.
     """
-    with patch("django.db.transaction.on_commit", side_effect=lambda func: func()):
+    with patch(
+        "django.db.transaction.on_commit", side_effect=lambda func, *_args, **_kwargs: func()
+    ):
         yield
 
 
