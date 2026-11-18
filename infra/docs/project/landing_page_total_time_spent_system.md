@@ -82,6 +82,11 @@ Flow:
 6. Save it into `AstroImage.calculated_exposure_hours`
 7. Invalidate the settings/landing-page cache so the total is recalculated on demand
 
+Clearing the saved default-language exposure details resets the stored hours to
+zero and invalidates the landing-page cache without scheduling a calculation.
+A completed calculation updates the hours only if the saved default-language
+exposure text still matches its input; otherwise the stale result is discarded.
+
 ### Global total rendering
 
 The portfolio total is not persisted or asynchronously recomputed anymore.
@@ -109,6 +114,7 @@ Operational use:
 - use `--recalculate` after prompt changes
 - use the default mode for backfilling newly added images
 - the command recalculates each image directly in a loop; it does not dispatch background tasks
+- failures preserve the prior value, do not stop other images, and are reported by ID
 
 
 ## Save/Signal Behavior

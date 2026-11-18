@@ -1,17 +1,10 @@
-import logging
-
 from parler.admin import TranslatableAdmin, TranslatableTabularInline
 from parler.forms import TranslatableModelForm
 
 from django import forms
-from django.conf import settings
 from django.contrib import admin
 
-from translation.services import TranslationService
-
 from .models import Project, ProjectImage
-
-logger = logging.getLogger(__name__)
 
 
 class ProjectImageAdminForm(TranslatableModelForm):
@@ -90,16 +83,3 @@ class ProjectImageAdmin(TranslatableAdmin):
     )
 
     readonly_fields = ("created_at", "updated_at")
-
-    def save_model(self, request, obj, form, change):
-        """
-        Saves the project image and triggers automated translations for metadata.
-        """
-        super().save_model(request, obj, form, change)
-        supported_languages = TranslationService.get_available_languages()
-        for lang_code in supported_languages:
-            if lang_code == settings.DEFAULT_APP_LANGUAGE:
-                continue
-            logger.info(f"Triggering ProjectImage translations for '{obj.name}' into {lang_code}")
-            # Generic parler translation trigger
-            TranslationService._translate_parler_fields(obj, ["name", "description"], lang_code)

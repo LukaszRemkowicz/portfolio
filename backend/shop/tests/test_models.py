@@ -5,7 +5,6 @@ import pytest
 from pytest_mock import MockerFixture
 
 from astrophotography.tests.factories import AstroImageFactory
-from common.tasks import invalidate_frontend_ssr_cache_task
 from common.tests.image_helpers import jpeg_field, png_field
 from common.types import ImageVariantSpec, ViewportWidths
 from core.tasks import process_image_task
@@ -306,9 +305,7 @@ def test_save_triggers_translations(mocker: MockerFixture) -> None:
 @pytest.mark.django_db
 def test_save_triggers_cache_invalidation(mocker: MockerFixture) -> None:
     mock_cache = mocker.patch("shop.signals.CacheService.invalidate_shop_cache")
-    mock_ssr = mocker.patch("shop.signals.submit")
 
     ShopProductFactory()
 
     assert mock_cache.called
-    mock_ssr.assert_called_with(invalidate_frontend_ssr_cache_task, ["shop"])

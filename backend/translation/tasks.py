@@ -12,6 +12,7 @@ from requests.exceptions import RequestException
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
 
 from .models import TranslationTask
 from .services import TranslationService
@@ -80,7 +81,9 @@ def translate_instance_task(
 
     except ObjectDoesNotExist:
         logger.info("Instance not found: %s(pk=%s)", model_name, instance_pk)
-        _handle_task_failure(model_name, instance_pk, language_code, "Instance not found")
+        _handle_task_failure(
+            model_name, instance_pk, language_code, "Instance not found", task_id=task_id
+        )
         return _task_result(
             model_name, instance_pk, language_code, method_name, error="Instance not found"
         )
@@ -91,7 +94,7 @@ def translate_instance_task(
 
     except Exception as exc:
         logger.exception("Task failed: %s(pk=%s, lang=%s)", method_name, instance_pk, language_code)
-        _handle_task_failure(model_name, instance_pk, language_code, str(exc))
+        _handle_task_failure(model_name, instance_pk, language_code, str(exc), task_id=task_id)
         return _task_result(model_name, instance_pk, language_code, method_name, error=str(exc))
 
 
@@ -180,3 +183,12 @@ def _task_result(
     if error:
         data["error"] = error
     return data
+
+
+def mark_translation_failed(task_id: str, exc: Exception) -> None:
+    """Mark the exact exhausted background task as failed."""
+    TranslationTask.objects.filter(task_id=task_id).update(
+        status=TranslationTask.Status.FAILED,
+        error_message=str(exc)[:500],
+        updated_at=timezone.now(),
+    )

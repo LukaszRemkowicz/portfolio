@@ -73,3 +73,40 @@ def test_async_mode_runs_in_thread(settings):
     background.submit(func)
     assert done.wait(5)
     assert names[0].startswith("background")
+
+
+def test_terminal_failure_callback_only_after_exhaustion(settings, mocker):
+    settings.BACKGROUND_TASKS_SYNC = False
+    callbacks = []
+    timers = []
+    mocker.patch(
+        "common.background._get_executor", return_value=MagicMock(submit=lambda fn, *a: fn(*a))
+    )
+    mocker.patch("common.background.close_old_connections")
+    mocker.patch("common.background.connection.close")
+
+    class DeferredTimer:
+        def __init__(self, delay, fn, args):
+            self.fn, self.args, self.daemon = fn, args, False
+
+        def start(self):
+            timers.append(self)
+
+    mocker.patch("common.background.Timer", DeferredTimer)
+    func = MagicMock(side_effect=ValueError("boom"))
+    background.submit(func, retries=1, on_failure=callbacks.append)
+    assert callbacks == []
+    timer = timers.pop()
+    timer.fn(*timer.args)
+    assert len(callbacks) == 1
+    assert str(callbacks[0]) == "boom"
+
+
+def test_sync_failure_callback_and_success(settings):
+    settings.BACKGROUND_TASKS_SYNC = True
+    callback = MagicMock()
+    background.submit(lambda: None, on_failure=callback)
+    callback.assert_not_called()
+    with pytest.raises(ValueError, match="boom"):
+        background.submit(MagicMock(side_effect=ValueError("boom")), on_failure=callback)
+    assert str(callback.call_args.args[0]) == "boom"

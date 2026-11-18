@@ -15,7 +15,6 @@ from astrophotography.tasks import (
 )
 from astrophotography.tests.factories import AstroImageFactory
 from common.llm.providers import MockLLMProvider
-from common.tasks import invalidate_frontend_ssr_cache_task
 from core.tests.factories import LandingPageSettingsFactory
 
 
@@ -141,10 +140,8 @@ class TestLandingPageTotalTimeSpentTask:
         mock_invalidate_cache = mocker.patch(
             "astrophotography.tasks.CacheService.invalidate_landing_page_cache"
         )
-        mock_invalidate_ssr = mocker.patch("astrophotography.tasks.submit")
         image = AstroImageFactory(exposure_details="60x300s", calculated_exposure_hours=0.0)
         mock_invalidate_cache.reset_mock()
-        mock_invalidate_ssr.reset_mock()
         service_mock = mocker.Mock()
         service_mock.get_exposure_details.return_value = "60x300s"
         service_mock.parse_total_hours.return_value = 1.5
@@ -158,9 +155,6 @@ class TestLandingPageTotalTimeSpentTask:
         image.refresh_from_db()
         assert image.calculated_exposure_hours == 1.5
         mock_invalidate_cache.assert_called_once_with()
-        mock_invalidate_ssr.assert_called_once_with(
-            invalidate_frontend_ssr_cache_task, ["settings"]
-        )
         assert result == {
             "status": "success",
             "astro_image_id": str(image.pk),
@@ -256,18 +250,12 @@ class TestLandingPageTotalTimeSpentSignals:
         mock_invalidate_cache = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_landing_page_cache"
         )
-        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
         image = AstroImageFactory(calculated_exposure_hours=1.5)
         mock_invalidate_cache.reset_mock()
-        mock_invalidate_ssr.reset_mock()
 
         image.delete()
 
         mock_invalidate_cache.assert_called_once_with()
-        assert (
-            mocker.call(invalidate_frontend_ssr_cache_task, ["settings"])
-            in mock_invalidate_ssr.call_args_list
-        )
 
     def test_astroimage_save_invalidates_settings_when_calculated_exposure_hours_changes(
         self, mocker
@@ -276,19 +264,13 @@ class TestLandingPageTotalTimeSpentSignals:
         mock_invalidate_cache = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_landing_page_cache"
         )
-        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
         image = AstroImageFactory(calculated_exposure_hours=0.0)
         mock_invalidate_cache.reset_mock()
-        mock_invalidate_ssr.reset_mock()
 
         image.calculated_exposure_hours = 1.5
         image.save(update_fields=["calculated_exposure_hours"])
 
         mock_invalidate_cache.assert_called_once_with()
-        assert (
-            mocker.call(invalidate_frontend_ssr_cache_task, ["settings"])
-            in mock_invalidate_ssr.call_args_list
-        )
 
     def test_astroimage_save_skips_settings_invalidation_when_calculated_exposure_hours_unchanged(
         self, mocker
@@ -297,67 +279,47 @@ class TestLandingPageTotalTimeSpentSignals:
         mock_invalidate_cache = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_landing_page_cache"
         )
-        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
         image = AstroImageFactory(calculated_exposure_hours=1.5)
         mock_invalidate_cache.reset_mock()
-        mock_invalidate_ssr.reset_mock()
 
         image.slug = "updated-slug"
         image.save(update_fields=["slug"])
 
         mock_invalidate_cache.assert_not_called()
-        assert (
-            mocker.call(invalidate_frontend_ssr_cache_task, ["settings"])
-            not in mock_invalidate_ssr.call_args_list
-        )
 
-    def test_astroimage_create_invalidates_gallery_and_ssr_cache(self, mocker) -> None:
+    def test_astroimage_create_invalidates_gallery_cache(self, mocker) -> None:
         mocker.patch("astrophotography.models.submit")
         mock_invalidate_cache = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
         )
-        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
 
         AstroImageFactory(exposure_details=self.RAW_EXPOSURE_DETAILS)
 
         mock_invalidate_cache.assert_called()
-        assert mocker.call(
-            invalidate_frontend_ssr_cache_task, ["latest-astro-images", "travel-highlights"]
-        ) in (mock_invalidate_ssr.call_args_list)
 
-    def test_astroimage_update_exposure_details_invalidates_gallery_and_ssr_cache(
-        self, mocker
-    ) -> None:
+    def test_astroimage_update_exposure_details_invalidates_gallery_cache(self, mocker) -> None:
         mocker.patch("astrophotography.models.submit")
         image = AstroImageFactory(exposure_details=self.RAW_EXPOSURE_DETAILS)
         mock_invalidate_cache = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
         )
-        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
 
         image.set_current_language("en")
         image.exposure_details = "<p>10x120s + 20x300s</p>"
         image.save()
 
         mock_invalidate_cache.assert_called()
-        assert mocker.call(
-            invalidate_frontend_ssr_cache_task, ["latest-astro-images", "travel-highlights"]
-        ) in (mock_invalidate_ssr.call_args_list)
 
-    def test_astroimage_delete_invalidates_gallery_and_ssr_cache(self, mocker) -> None:
+    def test_astroimage_delete_invalidates_gallery_cache(self, mocker) -> None:
         mocker.patch("astrophotography.models.submit")
         image = AstroImageFactory(exposure_details=self.RAW_EXPOSURE_DETAILS)
         mock_invalidate_cache = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
         )
-        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
 
         image.delete()
 
         mock_invalidate_cache.assert_called()
-        assert mocker.call(
-            invalidate_frontend_ssr_cache_task, ["latest-astro-images", "travel-highlights"]
-        ) in (mock_invalidate_ssr.call_args_list)
 
 
 @pytest.mark.django_db
@@ -384,10 +346,6 @@ class TestLandingPageTotalTimeSpentCommand:
             "astrophotography.management.commands.recalculate_landing_page_total_time_spent."
             "CacheService.invalidate_landing_page_cache"
         )
-        mock_invalidate_ssr = mocker.patch(
-            "astrophotography.management.commands.recalculate_landing_page_total_time_spent."
-            "submit"
-        )
         output = StringIO()
 
         call_command("recalculate_landing_page_total_time_spent", stdout=output)
@@ -396,9 +354,6 @@ class TestLandingPageTotalTimeSpentCommand:
         assert first.calculated_exposure_hours == 1.5
         mock_calculate_task.assert_called_once_with(str(first.pk))
         mock_invalidate_cache.assert_called_once_with()
-        mock_invalidate_ssr.assert_called_once_with(
-            invalidate_frontend_ssr_cache_task, ["settings"]
-        )
         assert "8.5h" in output.getvalue()
         assert "Calculated total time spent" in output.getvalue()
 
@@ -431,10 +386,6 @@ class TestLandingPageTotalTimeSpentCommand:
             "astrophotography.management.commands.recalculate_landing_page_total_time_spent."
             "CacheService.invalidate_landing_page_cache"
         )
-        mock_invalidate_ssr = mocker.patch(
-            "astrophotography.management.commands.recalculate_landing_page_total_time_spent."
-            "submit"
-        )
         output = StringIO()
 
         call_command("recalculate_landing_page_total_time_spent", "--recalculate", stdout=output)
@@ -445,9 +396,6 @@ class TestLandingPageTotalTimeSpentCommand:
         assert second.calculated_exposure_hours == 7.0
         assert mock_calculate_task.call_count == 2
         mock_invalidate_cache.assert_called_once_with()
-        mock_invalidate_ssr.assert_called_once_with(
-            invalidate_frontend_ssr_cache_task, ["settings"]
-        )
         assert "8.5h" in output.getvalue()
         assert "Rebuilt total time spent" in output.getvalue()
 

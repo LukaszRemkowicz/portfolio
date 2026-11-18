@@ -121,6 +121,7 @@ class TranslationService:
                 instance.save_translations()
         except Exception:
             logger.exception(f"Failed to save {model_name} translations")
+            raise
 
     def translate_model(
         self,

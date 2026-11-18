@@ -84,9 +84,9 @@ More detail: [cropper and media doc](infra/docs/project/django_admin_image_cropp
 
 ## ⚙️ Background Tasks & Caching
 
-- Background work (emails, translations, image processing) runs through `submit()` in [backend/common/background.py](backend/common/background.py): an in-process thread pool started after the transaction commits, with timer-based retries. There is no broker, so tasks are lost if the process stops. `BACKGROUND_TASK_WORKERS` sets the pool size (default 2). Tests run tasks inline (`BACKGROUND_TASKS_SYNC`).
+- Background work (translations, image processing) runs through `submit()` in [backend/common/background.py](backend/common/background.py): an in-process thread pool started after the transaction commits, with timer-based retries. There is no broker, so tasks are lost if the process stops. `BACKGROUND_TASK_WORKERS` sets the pool size (default 1). Tests run tasks inline (`BACKGROUND_TASKS_SYNC`).
 - Caching uses Django `DatabaseCache` (`django_cache`, `django_select2_cache`). `createcachetable` runs after `migrate` (dev `be` command and the production `release` job).
-- Content changes clear the whole API cache through `core/cache_service.py`. The old SSR cache webhook (`backend/common/ssr_cache.py`) is a disabled leftover. See [cache_invalidation.md](infra/docs/project/cache_invalidation.md).
+- Content changes clear the whole API cache through `core/cache_service.py`. See [cache_invalidation.md](infra/docs/project/cache_invalidation.md).
 
 ## ⚡ Quick Start
 
@@ -173,13 +173,6 @@ doppler --config dev run -- docker compose exec -T be python manage.py backfill_
 doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants --object-ids <uuid1> <uuid2>
 ```
 
-Regenerate thumbnails:
-
-```bash
-doppler --config dev run -- docker compose exec -T be python manage.py regenerate_thumbnails
-doppler --config dev run -- docker compose exec -T be python manage.py regenerate_thumbnails --force
-```
-
 ### Custom management commands
 
 - `clear_cache`
@@ -193,12 +186,6 @@ doppler --config dev run -- docker compose exec -T be python manage.py regenerat
   - run:
     ```bash
     doppler --config dev run -- docker compose exec -T be python manage.py backfill_image_variants
-    ```
-- `regenerate_thumbnails`
-  - rebuilds thumbnails using current thumbnail settings
-  - run:
-    ```bash
-    doppler --config dev run -- docker compose exec -T be python manage.py regenerate_thumbnails
     ```
 - `seed_settings`
   - creates or repairs singleton landing page settings and meteors config
