@@ -1,4 +1,18 @@
+import tls from "node:tls";
 import postgres from "postgres";
+
+// postgres.js flushes buffered writes from a setImmediate timer and cancels it after a direct
+// flush. Under Deno's node compat a cancelled timer can still fire with the buffer already sent,
+// so the driver writes null to the TLS socket; the throw kills the isolate (every in-flight
+// request gets 503). Nothing is pending in that case, so the null write is dropped.
+const tlsWrite = tls.TLSSocket.prototype.write;
+tls.TLSSocket.prototype.write = function (this: tls.TLSSocket, ...args: unknown[]) {
+  if (args[0] === null) {
+    console.warn("db: dropped null write from a stale postgres.js write timer");
+    return true;
+  }
+  return tlsWrite.apply(this, args as Parameters<typeof tlsWrite>);
+};
 
 let sql: postgres.Sql | undefined;
 

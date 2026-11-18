@@ -38,7 +38,9 @@ flowchart LR
 - DB: postgres.js, one connection per isolate, prepared statements. Deployed it
   uses the direct connection (`db.<ref>.supabase.co:5432`); local runs use the
   session pooler (port 5432). Never the transaction pooler (6543): it breaks
-  prepared statements.
+  prepared statements. `db.ts` drops a null write to the TLS socket: under Deno a
+  cancelled postgres.js write timer can still fire, and that throw used to kill the
+  isolate (bursts of empty 503s).
 - `/sitemap.xml` (`sitemap.ts`) mirrors `backend/core/sitemaps.py` byte for byte and
   is built from the database on every request; the FE Worker serves it on the site
   domain. A new FE page with a fixed URL must be added to both sitemaps.
