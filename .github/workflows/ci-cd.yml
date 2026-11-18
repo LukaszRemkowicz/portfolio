@@ -47,7 +47,7 @@ jobs:
       - name: Set up Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          deno-version: "~2.9"
 
       - name: Format
         run: deno task fmt:check
@@ -127,3 +127,17 @@ jobs:
         {"Backend Quality":"${{ needs.backend-quality.result }}","Backend Tests":"${{ needs.backend-tests.result }}","Supabase API Function":"${{ needs.supabase-function.result }}","Trivy Security Analysis":"${{ needs.trivy-scan.result }}","Dependency Security Checks":"${{ needs.dependency-security.result }}","Production Image Build Check":"${{ needs.image-build-check.result }}"}
       success_message: 🎉 **All checks passed!**
       failure_message: ⚠️ **Some checks failed. Please review the logs.**
+
+  # Single required check for branch protection: fails if any check above failed or was cancelled
+  # (pr-status only posts a comment and never fails).
+  ci-gate:
+    name: CI Gate
+    needs:
+      [backend-quality, backend-tests, supabase-function, trivy-scan, dependency-security, image-build-check]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: All checks passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: echo "$NEEDS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")'

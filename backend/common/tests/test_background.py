@@ -110,3 +110,19 @@ def test_sync_failure_callback_and_success(settings):
     with pytest.raises(ValueError, match="boom"):
         background.submit(MagicMock(side_effect=ValueError("boom")), on_failure=callback)
     assert str(callback.call_args.args[0]) == "boom"
+
+
+def test_async_on_failure_exception_is_logged_not_raised(settings, mocker):
+    settings.BACKGROUND_TASKS_SYNC = False
+    mocker.patch("common.background.close_old_connections")
+    mocker.patch("common.background.connection.close")
+    log = mocker.patch("common.background.logger.exception")
+    background._run(
+        MagicMock(side_effect=ValueError("boom")),
+        (),
+        {},
+        0,
+        0,
+        MagicMock(side_effect=RuntimeError("cb")),
+    )
+    assert log.call_count == 2

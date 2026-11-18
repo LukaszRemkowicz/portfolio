@@ -1,6 +1,7 @@
 import logging
 import uuid
-from functools import partial
+from collections.abc import Callable
+from functools import partial, update_wrapper
 from typing import Any, ClassVar
 
 from parler.models import TranslatableModel
@@ -33,6 +34,11 @@ def _delete_old_file(storage: Any, file_name: str) -> None:
             storage.delete(file_name)
     except OSError, ValueError:
         logger.exception("Failed to delete old image file %s", file_name)
+
+
+def _named_partial(func: Callable[..., Any], *args: Any) -> Callable[[], Any]:
+    """Partial that keeps __qualname__, which on_commit(robust=True) needs to log errors."""
+    return update_wrapper(partial(func, *args), func)
 
 
 class ImageVariantQuerySet(models.QuerySet):
@@ -125,7 +131,9 @@ class ImageVariant(models.Model):
         """Delete the stored variant file after the database transaction commits."""
         if self.file:
             transaction.on_commit(
-                partial(self.file.storage.delete, self.file.name), using=using or self._state.db
+                _named_partial(self.file.storage.delete, self.file.name),
+                using=using or self._state.db,
+                robust=True,
             )
 
     def delete(
@@ -247,7 +255,9 @@ class BaseImage(ImageVariantModelMixin, TranslatableModel):
         storage = self.original.storage
         for file_name in file_names_to_delete:
             transaction.on_commit(
-                partial(_delete_old_file, storage, file_name), using=self._state.db
+                _named_partial(_delete_old_file, storage, file_name),
+                using=self._state.db,
+                robust=True,
             )
 
     def _handle_post_save_image_effects(
