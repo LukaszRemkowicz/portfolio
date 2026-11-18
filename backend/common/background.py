@@ -50,7 +50,10 @@ def _run(
         else:
             logger.exception("Background task %s failed", getattr(func, "__name__", func))
             if on_failure:
-                on_failure(exc)
+                try:
+                    on_failure(exc)
+                except Exception:
+                    logger.exception("Background on_failure callback failed")
     finally:
         connection.close()
 

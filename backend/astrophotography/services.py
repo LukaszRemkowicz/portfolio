@@ -47,7 +47,6 @@ class AstroImageExposureTimeService:
                 language_code=settings.DEFAULT_APP_LANGUAGE,
                 any_language=False,
             )
-            or astro_image.safe_translation_getter("exposure_details", any_language=True)
             or ""
         )
         return exposure_details

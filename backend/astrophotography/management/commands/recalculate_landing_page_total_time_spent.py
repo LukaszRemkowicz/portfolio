@@ -25,6 +25,7 @@ class Command(BaseCommand):
         del args
         recalculate = options["recalculate"]
         processed_images = 0
+        skipped_images = 0
 
         queryset = AstroImage.objects.all().order_by("pk")
         if not recalculate:
@@ -33,8 +34,11 @@ class Command(BaseCommand):
         failed_ids = []
         for image in queryset:
             try:
-                calculate_astroimage_exposure_hours_task(str(image.pk))
-                processed_images += 1
+                result = calculate_astroimage_exposure_hours_task(str(image.pk))
+                if result.get("status") == "skipped":
+                    skipped_images += 1
+                else:
+                    processed_images += 1
             except Exception:
                 failed_ids.append(str(image.pk))
 
@@ -44,7 +48,8 @@ class Command(BaseCommand):
         action = "Rebuilt" if recalculate else "Calculated"
         self.stdout.write(
             self.style.SUCCESS(
-                f"{action} total time spent: {total_hours}h from {processed_images} image(s)."
+                f"{action} total time spent: {total_hours}h from {processed_images} image(s); "
+                f"skipped {skipped_images} (exposure changed or missing)."
             )
         )
 

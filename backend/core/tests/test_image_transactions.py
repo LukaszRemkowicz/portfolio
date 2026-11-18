@@ -66,3 +66,21 @@ def test_variant_deletion_in_autocommit(kind):
         else:
             ImageVariant.objects.filter(pk=variant.pk).delete()
         assert not storage.exists(name)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_failing_storage_delete_does_not_block_later_commit_hooks():
+    with patch("core.models.submit"):
+        owner = ProjectImageFactory(original=jpeg_field("old.jpg"))
+        variant = make_variant(owner)
+        later = []
+
+        def failing_delete(name):
+            raise RuntimeError("r2 down")
+
+        with patch.object(variant.file.storage, "delete", new=failing_delete):
+            with transaction.atomic():
+                variant.delete()
+                transaction.on_commit(lambda: later.append(True))
+        assert later == [True]
+        assert not ImageVariant.objects.filter(pk=variant.pk).exists()

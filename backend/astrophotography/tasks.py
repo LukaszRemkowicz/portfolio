@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 from django.apps import apps
 from django.conf import settings
+from django.db import transaction
 
 from core.cache_service import CacheService
 
@@ -23,11 +24,24 @@ def calculate_astroimage_exposure_hours_task(astro_image_id: str) -> dict[str, i
         exposure_details: str = service.get_exposure_details(astro_image)
         parsed_hours: float = service.parse_total_hours(exposure_details)
 
-        updated = astro_image_model.objects.filter(
-            pk=astro_image.pk,
-            translations__language_code=settings.DEFAULT_APP_LANGUAGE,
-            translations__exposure_details=exposure_details,
-        ).update(calculated_exposure_hours=parsed_hours)
+        # The row lock makes the check-and-write atomic against a concurrent admin save.
+        with transaction.atomic():
+            if not astro_image_model.objects.select_for_update().filter(pk=astro_image.pk).exists():
+                return {"status": "skipped", "astro_image_id": astro_image_id}
+            current_details = (
+                astro_image_model.objects.filter(
+                    pk=astro_image.pk, translations__language_code=settings.DEFAULT_APP_LANGUAGE
+                )
+                .values_list("translations__exposure_details", flat=True)
+                .first()
+            )
+            updated = (
+                astro_image_model.objects.filter(pk=astro_image.pk).update(
+                    calculated_exposure_hours=parsed_hours
+                )
+                if (current_details or "") == exposure_details
+                else 0
+            )
         if not updated:
             logger.info("Discarded stale exposure calculation for AstroImage %s", astro_image_id)
             return {"status": "skipped", "astro_image_id": astro_image_id}

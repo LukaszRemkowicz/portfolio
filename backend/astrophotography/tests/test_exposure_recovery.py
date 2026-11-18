@@ -29,11 +29,15 @@ def test_recalculate_continues_after_failure_without_erasing_old_value(mocker):
     with patch("core.models.submit"), patch("astrophotography.models.submit"):
         first = AstroImageFactory(id=UUID(int=1), calculated_exposure_hours=3)
         second = AstroImageFactory(id=UUID(int=2), calculated_exposure_hours=4)
+        third = AstroImageFactory(id=UUID(int=3), calculated_exposure_hours=5)
 
     def calculate(pk):
         if pk == str(first.pk):
             raise ValueError("bad image")
         AstroImage.objects.filter(pk=pk).update(calculated_exposure_hours=6)
+        if pk == str(third.pk):
+            return {"status": "skipped"}
+        return {"status": "success"}
 
     mocker.patch(
         "astrophotography.management.commands.recalculate_landing_page_total_time_spent."
@@ -47,6 +51,7 @@ def test_recalculate_continues_after_failure_without_erasing_old_value(mocker):
     assert first.calculated_exposure_hours == 3
     assert second.calculated_exposure_hours == 6
     assert str(first.pk) in out.getvalue()
+    assert "from 1 image(s); skipped 1 (exposure changed or missing)" in out.getvalue()
 
 
 @pytest.mark.django_db
