@@ -46,6 +46,19 @@ flowchart LR
 - Local checks, in `supabase/functions/api`: `deno task test`, `deno task check`,
   `deno task lint`, `deno task fmt:check`; `deno task serve` runs it on :8001.
 
+### Local API against the dev database
+
+```bash
+docker compose up -d db
+infra/scripts/run_local_api.sh   # http://localhost:8001, header x-origin-secret: local-dev-secret
+```
+
+Runs the function with Deno against the compose Postgres (`127.0.0.1:5436`,
+`portfolio_dev`; user and password from `doppler --config dev`). Local-only env:
+`API_DB_SSL=disable` (default is `require`) and `API_MEDIA_BASE_URL=http://localhost:8000/media`
+(public variant URLs use it instead of `https://$R2_PUBLIC_DOMAIN`). The script connects as the
+compose DB user, so the `portfolio_api` grants are not exercised.
+
 ### Contact form (`POST /v1/contact/`)
 
 Ported from the former Django view: kill switch (`contact_form_enabled`), throttle before

@@ -5,13 +5,12 @@ from django.core.exceptions import FieldDoesNotExist
 from astrophotography.models import AstroImage, MainPageBackgroundImage
 from astrophotography.tests.factories import MainPageBackgroundImageFactory
 from core.models import ImageVariant
-from programming.models import ProjectImage
 
 
 @pytest.mark.django_db
 class TestBaseImageFields:
     def test_canonical_fields_exist_on_all_baseimage_models(self) -> None:
-        for model in (AstroImage, MainPageBackgroundImage, ProjectImage):
+        for model in (AstroImage, MainPageBackgroundImage):
             assert model._meta.get_field("original")
             with pytest.raises(FieldDoesNotExist):
                 model._meta.get_field("original_webp")

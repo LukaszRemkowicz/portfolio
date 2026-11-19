@@ -255,7 +255,7 @@ The system currently supports model-level translation for:
 - `astrophotography.Tag`
 - `astrophotography.MainPageBackgroundImage`
 - `astrophotography.MainPageLocation`
-- `programming.ProjectImage`
+- `programming.Project`
 - `users.User`
 - `users.Profile`
 

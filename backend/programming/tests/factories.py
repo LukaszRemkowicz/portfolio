@@ -1,7 +1,7 @@
 import factory
 from factory.django import DjangoModelFactory
 
-from programming.models import Project, ProjectImage
+from programming.models import Project
 
 
 class ProjectFactory(DjangoModelFactory):
@@ -13,12 +13,4 @@ class ProjectFactory(DjangoModelFactory):
     technologies = "Python, Django, React"
     github_url = factory.Faker("url")
     live_url = factory.Faker("url")
-
-
-class ProjectImageFactory(DjangoModelFactory):
-    class Meta:
-        model = ProjectImage
-
-    project = factory.SubFactory(ProjectFactory)
-    original = factory.django.ImageField()
-    is_cover = False
+    image = factory.django.ImageField(width=1600, height=1000)

@@ -6,7 +6,7 @@ from django.db import transaction
 
 from common.tests.image_helpers import jpeg_field
 from core.models import ImageVariant
-from programming.tests.factories import ProjectImageFactory
+from programming.tests.factories import ProjectFactory
 
 
 @pytest.fixture
@@ -24,22 +24,19 @@ def make_variant(owner):
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     "operation",
-    ["replacement", "variant_instance", "variant_queryset", "owner_instance", "owner_queryset"],
+    ["variant_instance", "variant_queryset", "owner_instance", "owner_queryset"],
 )
 @pytest.mark.parametrize("rollback", [True, False])
 def test_file_cleanup_follows_transaction(operation, rollback):
-    with patch("core.models.submit"):
-        owner = ProjectImageFactory(original=jpeg_field("old.jpg"))
+    with patch("programming.models.submit"):
+        owner = ProjectFactory(image=jpeg_field("old.jpg"))
         variant = make_variant(owner)
-        target = owner.original if operation == "replacement" else variant.file
+        target = variant.file
         storage, name = target.storage, target.name
         assert storage.exists(name)
 
         with transaction.atomic():
-            if operation == "replacement":
-                owner.original = jpeg_field("new.jpg")
-                owner.save()
-            elif operation == "variant_instance":
+            if operation == "variant_instance":
                 variant.delete()
             elif operation == "variant_queryset":
                 ImageVariant.objects.filter(pk=variant.pk).delete()
@@ -57,8 +54,8 @@ def test_file_cleanup_follows_transaction(operation, rollback):
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("kind", ["instance", "queryset"])
 def test_variant_deletion_in_autocommit(kind):
-    with patch("core.models.submit"):
-        owner = ProjectImageFactory()
+    with patch("programming.models.submit"):
+        owner = ProjectFactory()
         variant = make_variant(owner)
         storage, name = variant.file.storage, variant.file.name
         if kind == "instance":
@@ -70,8 +67,8 @@ def test_variant_deletion_in_autocommit(kind):
 
 @pytest.mark.django_db(transaction=True)
 def test_failing_storage_delete_does_not_block_later_commit_hooks():
-    with patch("core.models.submit"):
-        owner = ProjectImageFactory(original=jpeg_field("old.jpg"))
+    with patch("programming.models.submit"):
+        owner = ProjectFactory(image=jpeg_field("old.jpg"))
         variant = make_variant(owner)
         later = []
 
