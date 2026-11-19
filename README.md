@@ -1,6 +1,6 @@
 # 🌌 Portfolio Landing Page
 
-Backend, nginx and infrastructure for a personal portfolio (astrophotography, travel stories, programming work). This repository holds the Django 6 + DRF backend (Python 3.14, `uv`), the nginx layer, Docker/compose files and the release scripts. The frontend lives in [`LukaszRemkowicz/portfolio-fe`](https://github.com/LukaszRemkowicz/portfolio-fe) (React Router 7 on Cloudflare Workers).
+Backend, nginx and infrastructure for a personal portfolio (astrophotography, travel stories, programming work). This repository holds the Django 6 backend (admin only) (Python 3.14, `uv`), the nginx layer, Docker/compose files and the release scripts. The frontend lives in [`LukaszRemkowicz/portfolio-fe`](https://github.com/LukaszRemkowicz/portfolio-fe) (React Router 7 on Cloudflare Workers).
 
 ## 🌍 Live
 
@@ -24,7 +24,7 @@ Backend, nginx and infrastructure for a personal portfolio (astrophotography, tr
 
 ## 🏗️ Architecture
 
-Production request path: the browser talks to the Cloudflare Workers frontend (`portfolio-fe`), which reaches this stack through a Cloudflare Tunnel. Django serves the API, the sitemap and the admin; media is stored in Cloudflare R2.
+Production request path: the browser talks to the Cloudflare Workers frontend (`portfolio-fe`), which reaches this stack through a Cloudflare Tunnel. Django runs only as the admin (locally, against Supabase); the public API and sitemap are served by the Supabase Edge Function; media is stored in Cloudflare R2.
 
 Moving off the VPS: the public API also runs as a Supabase Edge Function over the Supabase database (`supabase/`), reachable only through the Worker, and the production admin runs locally against Supabase. See [Supabase API and local admin](infra/docs/project/supabase_api.md).
 
@@ -50,7 +50,7 @@ flowchart LR
 
 ## 🗂️ Repository Layout
 
-- `backend/` - Django + DRF application: API, admin, translations, media logic, background tasks (`common/background.py`)
+- `backend/` - Django application: admin, translations, media logic, background tasks (`common/background.py`)
 - `docker/` - Dockerfiles and entrypoint for the backend (`docker/backend/`) and nginx (`docker/nginx/`)
 - `infra/nginx/` - nginx config and includes
 - `infra/scripts/` - release scripts (`release/`), DB backup scripts (`db_backup/`), shared helpers
@@ -127,13 +127,11 @@ Local hosts (served through Traefik, which must be running on the `traefik_proxy
 
 - Site: `https://portfolio.local/`
 - Admin: `https://admin.portfolio.local/`
-- Django health endpoint: `http://127.0.0.1:8000/health`
 
 Media defaults to `MEDIA_STORAGE=local` in dev compose, so no R2 credentials are needed.
 
 ```bash
 curl -k https://admin.portfolio.local/
-curl -fsS http://127.0.0.1:8000/health
 ```
 
 Common compose commands:
@@ -300,7 +298,7 @@ See [Backup Maintenance Guide](infra/scripts/db_backup/MAINTENANCE.md) for more 
 
 The backend echoes and logs `X-Request-ID` (forwarded by the frontend when present). Logs are JSON on Docker stdout; see [logging_structure_overview.md](infra/docs/project/logging_structure_overview.md).
 
-Log and sitemap monitoring is handled outside this repository by the separate `agent-monitoring` project. This repository only emits structured logs and generates the public sitemap.
+Log and sitemap monitoring is handled outside this repository by the separate `agent-monitoring` project. This repository only emits structured logs.
 
 ## 📚 Docs Index
 

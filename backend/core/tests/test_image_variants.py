@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 from PIL import Image
 
-from astrophotography.serializers import AstroImageSerializer
 from astrophotography.tests.factories import AstroImageFactory, MainPageBackgroundImageFactory
 from common.tests.image_helpers import jpeg_field
 from common.types import ImageVariantSource, ImageVariantSpec, ViewportWidths
@@ -88,71 +87,6 @@ class TestImageVariantFileDeletion:
         type(owner).objects.filter(pk=owner.pk).delete()
 
         assert not storage.exists(variant_name)
-
-
-@pytest.mark.django_db
-class TestImageVariantCacheInvalidation:
-    def test_astroimage_variant_save_invalidates_gallery_travel_cache(self, mocker) -> None:
-        with patch("core.models.submit"):
-            image = AstroImageFactory(original=jpeg_field("variant-cache.jpg", size=(1200, 800)))
-        mock_invalidate_astro = mocker.patch(
-            "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
-        )
-        mock_invalidate_travel = mocker.patch(
-            "astrophotography.signals.CacheService.invalidate_travel_cache"
-        )
-
-        ImageVariant.objects.create(
-            owner=image,
-            role="thumbnail",
-            width=560,
-            height=373,
-            mime_type="image/webp",
-        )
-
-        mock_invalidate_astro.assert_called_once_with()
-        mock_invalidate_travel.assert_called_once_with()
-
-    def test_astroimage_variant_delete_invalidates_gallery_travel_cache(self, mocker) -> None:
-        with patch("core.models.submit"):
-            image = AstroImageFactory(original=jpeg_field("variant-cache-delete.jpg"))
-        variant = ImageVariant.objects.create(
-            owner=image,
-            role="thumbnail",
-            width=560,
-            height=373,
-            mime_type="image/webp",
-        )
-        mock_invalidate_astro = mocker.patch(
-            "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
-        )
-        mock_invalidate_travel = mocker.patch(
-            "astrophotography.signals.CacheService.invalidate_travel_cache"
-        )
-
-        variant.delete()
-
-        mock_invalidate_astro.assert_called_once_with()
-        mock_invalidate_travel.assert_called_once_with()
-
-    def test_background_variant_save_invalidates_backend_cache(self, mocker) -> None:
-        with patch("core.models.submit"):
-            image = MainPageBackgroundImageFactory(
-                original=jpeg_field("background-cache.jpg", size=(1200, 800))
-            )
-        mock_invalidate_astro = mocker.patch(
-            "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
-        )
-
-        ImageVariant.objects.create(
-            owner=image,
-            role="hero",
-            width=1920,
-            height=1080,
-            mime_type="image/webp",
-        )
-
-        mock_invalidate_astro.assert_called_once_with()
 
 
 class TestImageVariantSpec:
@@ -677,24 +611,6 @@ class TestBaseImageVariants:
         original_format = image.variants.get(role="original_format")
         assert original_format.width == 1200
         assert original_format.height == 800
-
-    def test_list_serializer_exposes_fallback_image(self) -> None:
-        with patch("core.models.submit"):
-            image = AstroImageFactory(
-                original=jpeg_field("thumbnail.jpg", size=(1200, 800)),
-            )
-
-        process_image_task("astrophotography", "AstroImage", image.pk)
-        image.refresh_from_db()
-
-        data = AstroImageSerializer(image).data
-
-        assert data["fallback_image"]
-        assert data["fallback_image"]["url"]
-        assert "thumbnail_url" not in data
-        assert "image_variants" not in data
-        assert image.original.name not in str(data)
-        assert image.original.url not in str(data)
 
     def test_get_image_url_returns_generated_thumbnail_variant(self) -> None:
         with patch("core.models.submit"):

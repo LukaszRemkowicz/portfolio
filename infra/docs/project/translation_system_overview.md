@@ -31,7 +31,7 @@ The translation system is asynchronous and model-driven.
 6. `TranslationAgent` calls the configured LLM provider and returns translated text.
 7. The translated Parler fields are saved.
 8. The `TranslationTask` row is marked `COMPLETED` or `FAILED`.
-9. API serializers read translated content through `TranslationService.get_translation(...)`.
+9. Readers fetch translated content through `TranslationService.get_translation(...)`.
 
 
 ## Main Components
@@ -222,20 +222,11 @@ Paths:
 This means the translation system is provider-agnostic at the service layer.
 
 
-### 8. Serializer read path
+### 8. Read path
 
-Path: [backend/common/serializers.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/serializers.py)
-
-`TranslatedSerializerMixin` standardizes how translated content is returned.
-
-Responsibilities:
-
-- read `lang` from the request
-- fetch translated content through `TranslationService.get_translation(...)`
-- fall back to default language when target translation is missing
-- strip old `[TRANSLATION FAILED]` markers and empty CKEditor paragraphs
-
-This is the main reason failed or missing translations do not always surface as empty strings in the public API.
+The DRF serializers (`TranslatedSerializerMixin`) were removed from Django. Public
+translated reads are served by the Supabase function; `TranslationService.get_translation(...)`
+remains the safe read path inside Django.
 
 
 ### 9. Translation admin UI
@@ -392,6 +383,5 @@ Forensic debugging benefits from:
 - [backend/translation/agents.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/agents.py)
 - [backend/translation/mixins.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/mixins.py)
 - [backend/translation/admin.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/admin.py)
-- [backend/common/serializers.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/serializers.py)
 - [backend/translation/tests/test_translation_lifecycle.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/tests/test_translation_lifecycle.py)
 - [backend/translation/tests/test_tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/tests/test_tasks.py)

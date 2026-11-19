@@ -327,11 +327,6 @@ limits.
 For every proxied application request, Nginx overwrites both `X-Real-IP` and
 `X-Forwarded-For` with that single resolved address.
 
-Django accepts `X-Real-IP` only when its immediate `REMOTE_ADDR` belongs to
-`TRUSTED_PROXY_CIDRS`. Requests from other peers ignore `X-Real-IP`,
-`X-Forwarded-For`, and `CF-Connecting-IP` and use the peer address instead.
-The same resolver is used by default anonymous DRF throttling, API/gallery
-throttling, contact throttling, and contact security logging.
 
 ### What is not JSON yet
 

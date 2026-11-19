@@ -3,11 +3,9 @@ from unittest.mock import patch
 
 import pytest
 from pytest_mock import MockerFixture
-from rest_framework import status
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.urls import reverse
 
 from astrophotography.models import MeteorsMainPageConfig
 from astrophotography.tests.factories import AstroImageFactory
@@ -21,27 +19,18 @@ from users.tests.factories import UserFactory
 
 @pytest.mark.django_db
 class TestSeedSettingsCommand:
-    def test_seed_settings_creates_defaults(self, api_client):
+    def test_seed_settings_creates_defaults(self):
         """Test that seed_settings command creates default settings and config"""
-        # Ensure no settings record exists
         LandingPageSettings.objects.all().delete()
         MeteorsMainPageConfig.objects.all().delete()
 
-        # Run seeding
         call_command("seed_settings")
 
-        # Verify through the settings API (integrative test)
-        url = reverse("settings")
-        response = api_client.get(url)
-        assert response.status_code == status.HTTP_200_OK
-
-        # Defaults should be True, and meteors should be auto-linked
-        assert response.data["programming"] is True
-        assert response.data["contactForm"] is True
-        assert response.data["travelHighlights"] is True
-        assert response.data["lastimages"] is True
-        assert response.data["shop"] is False
-        assert response.data["meteors"]["randomShootingStars"] is True
+        settings_obj = LandingPageSettings.objects.get()
+        assert settings_obj.programming_enabled is True
+        assert settings_obj.contact_form_enabled is True
+        assert settings_obj.shop_enabled is False
+        assert settings_obj.meteors is not None
 
 
 @pytest.mark.django_db
@@ -81,39 +70,6 @@ class TestBackfillImageVariantsCommand:
         ]
         assert high_resolution.width == 1920
         assert thumbnail_widths == [320, 560]
-
-    def test_generated_variants_invalidate_media_bearing_caches(
-        self, mocker: MockerFixture
-    ) -> None:
-        with patch("core.models.submit"):
-            image = AstroImageFactory(
-                original=jpeg_field("cache-invalidation-backfill.jpg", size=(1200, 800)),
-            )
-        invalidate_user_cache = mocker.patch(
-            "core.management.commands.backfill_image_variants.CacheService.invalidate_user_cache"
-        )
-        invalidate_astrophotography_cache = mocker.patch(
-            "core.management.commands.backfill_image_variants."
-            "CacheService.invalidate_astrophotography_cache"
-        )
-        invalidate_travel_cache = mocker.patch(
-            "core.management.commands.backfill_image_variants.CacheService.invalidate_travel_cache"
-        )
-        invalidate_landing_page_cache = mocker.patch(
-            "core.management.commands.backfill_image_variants."
-            "CacheService.invalidate_landing_page_cache"
-        )
-        invalidate_shop_cache = mocker.patch(
-            "core.management.commands.backfill_image_variants.CacheService.invalidate_shop_cache"
-        )
-
-        call_command("backfill_image_variants", object_id=str(image.pk))
-
-        invalidate_user_cache.assert_called_once_with()
-        invalidate_astrophotography_cache.assert_called()
-        invalidate_travel_cache.assert_called()
-        invalidate_landing_page_cache.assert_called_once_with()
-        invalidate_shop_cache.assert_called_once_with()
 
     def test_generates_project_image_original_format_from_model_specs(self) -> None:
         with patch("core.models.submit"):

@@ -1,16 +1,9 @@
 from collections.abc import Generator
 
 import pytest
-from rest_framework.test import APIClient, APIRequestFactory
 
 from django.core.cache import cache as django_cache
 from django.test import Client, RequestFactory
-
-
-@pytest.fixture
-def api_client() -> APIClient:
-    """Create a DRF APIClient instance"""
-    return APIClient()
 
 
 @pytest.fixture
@@ -33,9 +26,3 @@ def clear_django_cache() -> Generator[None]:
 def request_factory() -> RequestFactory:
     """Create RequestFactory instance for testing"""
     return RequestFactory()
-
-
-@pytest.fixture
-def api_request_factory() -> APIRequestFactory:
-    """DRF API Request Factory fixture"""
-    return APIRequestFactory()

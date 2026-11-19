@@ -93,24 +93,6 @@ ALLOWED_HOSTS += ["localhost", "127.0.0.1", "0.0.0.0"]
 
 USE_X_FORWARDED_HOST = True
 
-# CORS Settings
-CORS_ALLOW_ALL_ORIGINS = False
-# Handle empty string from env to avoid [''] in the list
-_cors_env = env.list("CORS_ALLOWED_ORIGINS", default=[])
-CORS_ALLOWED_ORIGINS = [o for o in _cors_env if o]
-
-# Automatically add our domains to CORS and CSRF trusted lists
-for h in _base_hosts:
-    if h:
-        CORS_ALLOWED_ORIGINS.append(f"https://{h}")
-        if DEBUG:
-            CORS_ALLOWED_ORIGINS.append(f"http://{h}")
-            CORS_ALLOWED_ORIGINS.append(f"http://{h}:3000")
-
-# Remove duplicates
-CORS_ALLOWED_ORIGINS = list(set(CORS_ALLOWED_ORIGINS))
-CORS_ALLOW_CREDENTIALS = True
-
 # Custom user model - this needs to be set before INSTALLED_APPS
 AUTH_USER_MODEL = "users.User"
 
@@ -147,10 +129,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.postgres",
-    "django.contrib.sitemaps",
     # Third party apps
-    "rest_framework",
-    "corsheaders",
     "axes",  # Django Axes for admin login brute force protection
     "django_extensions",
     # Local apps
@@ -171,24 +150,11 @@ SHELL_PLUS = "ipython"
 
 # Security Settings (for Nginx SSL termination)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-TRUSTED_PROXY_CIDRS = env.list(
-    "TRUSTED_PROXY_CIDRS",
-    default=[
-        "127.0.0.0/8",
-        "::1/128",
-        "10.0.0.0/8",
-        "172.16.0.0/12",
-        "192.168.0.0/16",
-    ],
-)
 
 MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",  # Must be near the top
-    "corsheaders.middleware.CorsMiddleware",  # Must be before CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
     "common.middleware.RequestCorrelationMiddleware",
-    "inbox.middleware.ContactFormKillSwitchMiddleware",
-    # Check kill switch early (after security, before sessions)
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",  # Enable language selection
     "common.middleware.QueryParameterLocaleMiddleware",  # Override with ?lang=
@@ -353,7 +319,6 @@ if MEDIA_STORAGE == "r2":
     CKEDITOR_5_FILE_STORAGE = "common.storage.CKEditorR2Storage"
 
 # Cache Configuration (database-backed; create tables with `manage.py createcachetable`)
-# MAX_ENTRIES is high because API responses are cached for 30 days (default 300 would cull them).
 CACHE_BACKEND = env.str("CACHE_BACKEND", default="django.core.cache.backends.db.DatabaseCache")
 CACHES = {
     "default": {
@@ -368,9 +333,6 @@ CACHES = {
         "TIMEOUT": 3600,
     },
 }
-
-# 30 days is effectively infinite for this portfolio
-INFINITE_CACHE_TIMEOUT = 3600 * 24 * 30
 
 # Django Select2 Configuration
 SELECT2_CACHE_BACKEND = "select2"
@@ -479,38 +441,6 @@ LOGGING = {
         },
     },
 }
-
-# Rest Framework Settings
-REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
-    ],
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-    ],
-    "DEFAULT_THROTTLE_CLASSES": [
-        "common.throttling.TrustedAnonRateThrottle",
-        "rest_framework.throttling.UserRateThrottle",
-    ],
-    "DEFAULT_THROTTLE_RATES": {
-        "anon": "100/hour",
-        "user": "1000/hour",
-        "contact": "5/hour",  # Contact form - more restrictive
-        "api": "200/hour",  # General API calls
-        "gallery": "2000/hour",  # Gallery views - relaxed for browsing
-    },
-}
-
-if DEBUG:
-    # Disable throttling (or make it very high) in DEBUG mode
-    # This prevents development/testing from hitting rate limits
-    REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
-        "anon": "10000/hour",
-        "user": "100000/hour",
-        "contact": "1000/hour",
-        "api": "10000/hour",
-        "gallery": "100000/hour",
-    }
 
 # Django Axes Configuration (Admin Login Protection)
 AXES_FAILURE_LIMIT = 5  # Number of failed login attempts before lockout

@@ -4,16 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "backend"
-version = "2.24.2"
+version = "2.25.0"
 description = "Portfolio backend with Django REST Framework"
 readme = "README.md"
 requires-python = ">=3.14,<4.0"
 dependencies = [
     "django==6.0.10",
-    "djangorestframework==3.18.3",
     "pillow==13.0.0",
     "django-environ==0.13.0",
-    "django-cors-headers==4.9.0",
     "psycopg2==2.9.11",
     "django-axes==8.3.1",
     "gunicorn==24.1.1",
@@ -23,7 +21,6 @@ dependencies = [
     "openai==1.109.1",
     "django-extensions==3.2.3",
     "django-parler==2.3",
-    "django-parler-rest==2.2",
     "beautifulsoup4==4.14.3",
     "sentry-sdk==2.57.0",
     "requests==2.33.1",
@@ -49,7 +46,6 @@ dev = [
     "flake8==7.3.0",
     "mypy==1.19.1",
     "django-stubs==5.2.9",
-    "djangorestframework-stubs==3.16.8",
     "pre-commit==4.5.1",
     "safety==3.7.0",
     "flake8-pyproject==1.2.4",
@@ -167,10 +163,7 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
-plugins = [
-    "mypy_django_plugin.main",
-    "mypy_drf_plugin.main"
-]
+plugins = ["mypy_django_plugin.main"]
 
 [tool.django-stubs]
 django_settings_module = "settings.tests"
@@ -180,7 +173,6 @@ module = [
     "PIL.*",
     "taggit.*",
     "parler.*",
-    "parler_rest.*",
     "django_countries.*",
     "django_ckeditor_5.*",
     "django_select2.*",
@@ -198,10 +190,8 @@ module = [
     "core.models",
     "core.models",
     "programming.models",
-    "programming.serializers",
     "users.models",
     "astrophotography.models",
-    "astrophotography.serializers",
 ]
 disable_error_code = [
     "attr-defined",
@@ -308,8 +298,6 @@ select = ["E", "F", "W", "B", "ARG", "UP", "PT"]
 "**/management/commands/*.py" = ["ARG"]
 "**/admin.py" = ["ARG"]
 "**/views.py" = ["ARG"]
-"common/throttling.py" = ["ARG"]
-"backend/common/throttling.py" = ["ARG"]
 "core/models.py" = ["ARG"]
 "backend/core/models.py" = ["ARG"]
 "settings/tests.py" = ["F403", "F405"]

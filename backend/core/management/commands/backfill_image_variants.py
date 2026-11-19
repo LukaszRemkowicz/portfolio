@@ -11,7 +11,6 @@ from django.db.models.fields.files import FieldFile
 
 from astrophotography.models import AstroImage, MainPageBackgroundImage
 from common.utils.image import file_exists_in_storage
-from core.cache_service import CacheService
 from programming.models import ProjectImage
 from shop.models import ShopProduct, ShopSettings
 from users.models import User
@@ -96,9 +95,6 @@ class Command(BaseCommand):
                 dry_run=dry_run,
             )
 
-        if totals.generated and not dry_run:
-            self._invalidate_media_bearing_caches()
-
         self._report_missing_target_ids(target_ids=target_ids, totals=totals)
         self._report_totals(totals)
         if totals.errors and not silent:
@@ -119,14 +115,6 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("DRY RUN - no changes will be made.\n"))
         if force:
             self.stdout.write(self.style.WARNING("FORCE MODE - regenerating variants.\n"))
-
-    def _invalidate_media_bearing_caches(self) -> None:
-        """Clear API caches that can contain generated media URLs."""
-        CacheService.invalidate_user_cache()
-        CacheService.invalidate_astrophotography_cache()
-        CacheService.invalidate_travel_cache()
-        CacheService.invalidate_landing_page_cache()
-        CacheService.invalidate_shop_cache()
 
     def _backfill_target(
         self,
