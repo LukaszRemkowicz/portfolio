@@ -48,12 +48,11 @@ Purpose:
 
 Important behavior:
 - this field is the source of truth for the total-time calculation
-- updates to this field should invalidate landing-page/settings cache
 
 ### Landing page API value
 
 Location:
-- `backend/core/serializers.py`
+- `supabase/functions/api/core.ts` (settings payload)
 
 Purpose:
 - sums `AstroImage.calculated_exposure_hours`
@@ -93,8 +92,8 @@ The portfolio total is not persisted or asynchronously recomputed anymore.
 
 Flow:
 1. `AstroImage.calculated_exposure_hours` is kept current per image
-2. The settings serializer aggregates `Sum("calculated_exposure_hours")` on demand
-3. The serializer adds the presentation safety buffer
+2. The settings endpoint aggregates the sum of `calculated_exposure_hours` on demand
+3. The endpoint adds the presentation safety buffer
 4. The API returns the rounded value to the frontend
 
 
@@ -117,24 +116,15 @@ Operational use:
 - failures preserve the prior value, do not stop other images, and are reported by ID
 
 
-## Save/Signal Behavior
-
-Relevant signals live in:
-- `backend/astrophotography/signals.py`
+## Save Behavior
 
 Current behavior:
 - `AstroImage.save()` queues per-image recalculation when the default-language
   `exposure_details` changed and is non-empty
-- deleting an `AstroImage` invalidates settings/landing-page cache
-- changing `calculated_exposure_hours` invalidates landing-page/settings cache
-- translation-model signals still invalidate astrophotography/latest/travel cache,
-  but they do not queue exposure-hour recalculation anymore
+- clearing the default-language `exposure_details` resets the hours to 0 without a task
 
 Important rule:
-- bulk `QuerySet.update(...)` does not call `save()` and does not trigger model
-  signals
-- if signal-driven cache invalidation is required, use per-object `save(...)` or
-  explicitly invalidate cache afterward
+- bulk `QuerySet.update(...)` does not call `save()` and does not queue recalculation
 
 
 ## LLM Boundary
@@ -190,11 +180,8 @@ When changing this feature, cover backend behavior (frontend rendering is tested
 Minimum backend coverage:
 - service parsing and prompt loading
 - per-image task behavior
-- serializer aggregation behavior
-- signal behavior for `exposure_details`
-- signal behavior for `calculated_exposure_hours`
+- save behavior for `exposure_details`
 - command behavior
-- settings serializer output
 
 
 ## Current State Summary
@@ -204,7 +191,6 @@ The system currently works in this form:
 - per-image derived hours stored on `AstroImage`
 - `AstroImage.save()` is the trigger point for per-image recalculation
 - total derived on the fly from the sum of image values
-- integer public display value produced in the settings serializer
-- cache invalidation wired to settings-dependent paths
+- integer public display value produced by the settings endpoint (Supabase function)
 - rebuild command for backfill and full recalculation without task fan-out
 - prompt-driven LLM extraction with worked arithmetic examples

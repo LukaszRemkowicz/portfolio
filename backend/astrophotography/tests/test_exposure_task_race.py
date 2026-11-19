@@ -42,12 +42,10 @@ def test_unchanged_exposure_calculation_succeeds(mocker):
     mocker.patch(
         "astrophotography.tasks.AstroImageExposureTimeService.create_default", return_value=service
     )
-    cache = mocker.patch("astrophotography.tasks.CacheService.invalidate_landing_page_cache")
     result = calculate_astroimage_exposure_hours_task(str(image.pk))
     image.refresh_from_db()
     assert image.calculated_exposure_hours == 2
     assert result["status"] == "success"
-    cache.assert_called_once()
 
 
 @pytest.mark.django_db

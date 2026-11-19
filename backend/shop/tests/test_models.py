@@ -300,12 +300,3 @@ def test_save_triggers_translations(mocker: MockerFixture) -> None:
     ShopProductFactory()
 
     assert mock_trigger.called
-
-
-@pytest.mark.django_db
-def test_save_triggers_cache_invalidation(mocker: MockerFixture) -> None:
-    mock_cache = mocker.patch("shop.signals.CacheService.invalidate_shop_cache")
-
-    ShopProductFactory()
-
-    assert mock_cache.called

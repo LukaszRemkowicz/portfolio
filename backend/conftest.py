@@ -4,8 +4,6 @@ from unittest.mock import patch
 import pytest
 
 from core.fixtures import (
-    api_client,
-    api_request_factory,
     clear_django_cache,
     client,
     request_factory,
@@ -13,8 +11,6 @@ from core.fixtures import (
 from translation.fixtures import mock_get_available_languages, mock_translate_task
 
 __all__ = [
-    "api_client",
-    "api_request_factory",
     "clear_django_cache",
     "client",
     "request_factory",

@@ -6,15 +6,8 @@ from typing import Any
 
 import pytest
 from pytest_mock import MockerFixture
-from rest_framework.test import APIClient
-
-from django.core import mail
-from django.test import override_settings
-from django.urls import reverse
 
 from astrophotography.tests.factories import AstroImageFactory
-from core.tests.factories import LandingPageSettingsFactory
-from inbox.models import ContactMessage
 
 CaptureOnCommit = Callable[..., AbstractContextManager[Any]]
 
@@ -29,32 +22,6 @@ def execute_on_commit() -> None:
 @pytest.fixture(autouse=True)
 def global_translation_mock() -> None:
     return None
-
-
-@pytest.mark.django_db
-@override_settings(
-    SIMULATE_CONTACT_EMAILS=False,
-    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
-)
-def test_contact_form_sends_email_via_real_submit(
-    api_client: APIClient, django_capture_on_commit_callbacks: CaptureOnCommit
-) -> None:
-    LandingPageSettingsFactory(contact_form_enabled=True)
-    data = {
-        "name": "E2E User",
-        "email": "e2e@example.com",
-        "subject": "E2E subject",
-        "message": "E2E message body",
-    }
-
-    with django_capture_on_commit_callbacks(execute=True):
-        response = api_client.post(reverse("inbox:contact-message-list"), data, format="json")
-
-    assert response.status_code == 201
-    assert ContactMessage.objects.filter(email="e2e@example.com").count() == 1
-    # Owner notification + sender confirmation.
-    assert len(mail.outbox) == 2
-    assert "E2E subject" in mail.outbox[0].subject
 
 
 @pytest.mark.django_db

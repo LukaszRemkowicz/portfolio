@@ -21,14 +21,6 @@ CSRF_COOKIE_DOMAIN = ".testapi.local"
 _test_base_hosts = [SITE_DOMAIN, ADMIN_DOMAIN, API_DOMAIN]  # noqa: F405
 ALLOWED_HOSTS = [h for h in _test_base_hosts if h] + ["localhost", "127.0.0.1", "0.0.0.0"]
 
-CORS_ALLOWED_ORIGINS = []
-for h in _test_base_hosts:
-    if h:
-        CORS_ALLOWED_ORIGINS.append(f"https://{h}")
-        CORS_ALLOWED_ORIGINS.append(f"http://{h}")
-        CORS_ALLOWED_ORIGINS.append(f"http://{h}:3000")
-CORS_ALLOWED_ORIGINS = list(set(CORS_ALLOWED_ORIGINS))
-
 CSRF_TRUSTED_ORIGINS = []
 for h in _test_base_hosts:
     if h:

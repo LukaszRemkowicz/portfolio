@@ -4,6 +4,7 @@ import uuid
 import pytest
 
 from django.conf import settings
+from django.core.cache import cache
 
 from astrophotography.forms import AstroImageForm
 from astrophotography.tests.factories import (
@@ -215,12 +216,14 @@ class TestTranslationFallbacks:
         # Delete English (default) translation to simulate a record
         # created strictly in a non-default language
         img.translations.all().delete()
+        # Queryset delete bypasses parler's cache, which lives in the Django cache.
+        cache.clear()
 
         # Create a PL translation
         img.set_current_language("pl")
         img.name = "Polish Name"
         img.save()
-        # Queryset delete bypasses parler's per-instance cache; reload to drop stale 'en'.
+        # Reload to drop the stale 'en' on the instance.
         img = type(img).objects.get(pk=img.pk)
 
         # Request translation in 'en'. The 'en' version is missing,
