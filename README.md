@@ -272,6 +272,12 @@ Run the production Django admin on your machine against Supabase: it pulls the n
 infra/scripts/run_admin.sh
 ```
 
+Run the public API function locally against the dev compose Postgres (serves http://localhost:8001, media from `localhost:8000/media`):
+
+```bash
+infra/scripts/run_local_api.sh
+```
+
 More: [supabase_api.md](infra/docs/project/supabase_api.md).
 
 ## 💾 Database Backup & Maintenance

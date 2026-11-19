@@ -11,7 +11,7 @@ from django.db.models.fields.files import FieldFile
 
 from astrophotography.models import AstroImage, MainPageBackgroundImage
 from common.utils.image import file_exists_in_storage
-from programming.models import ProjectImage
+from programming.models import Project
 from shop.models import ShopProduct, ShopSettings
 from users.models import User
 
@@ -40,7 +40,7 @@ class Command(BaseCommand):
     targets = (
         VariantBackfillTarget("AstroImage", AstroImage),
         VariantBackfillTarget("MainPageBackgroundImage", MainPageBackgroundImage),
-        VariantBackfillTarget("ProjectImage", ProjectImage),
+        VariantBackfillTarget("Project", Project),
         VariantBackfillTarget("ShopProduct", ShopProduct),
         VariantBackfillTarget("ShopSettings", ShopSettings),
         VariantBackfillTarget("User", User),

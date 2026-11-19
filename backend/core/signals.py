@@ -4,7 +4,7 @@ from django.dispatch import receiver
 
 @receiver(pre_delete, sender="astrophotography.AstroImage")
 @receiver(pre_delete, sender="astrophotography.MainPageBackgroundImage")
-@receiver(pre_delete, sender="programming.ProjectImage")
+@receiver(pre_delete, sender="programming.Project")
 @receiver(pre_delete, sender="shop.ShopProduct")
 @receiver(pre_delete, sender="shop.ShopSettings")
 @receiver(pre_delete, sender="users.User")

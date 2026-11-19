@@ -11,7 +11,7 @@ from astrophotography.models import MeteorsMainPageConfig
 from astrophotography.tests.factories import AstroImageFactory
 from common.tests.image_helpers import jpeg_field
 from core.models import LandingPageSettings
-from programming.tests.factories import ProjectImageFactory
+from programming.tests.factories import ProjectFactory
 from shop.models import ShopSettings
 from shop.tests.factories import ShopProductFactory
 from users.tests.factories import UserFactory
@@ -71,20 +71,16 @@ class TestBackfillImageVariantsCommand:
         assert high_resolution.width == 1920
         assert thumbnail_widths == [320, 560]
 
-    def test_generates_project_image_original_format_from_model_specs(self) -> None:
-        with patch("core.models.submit"):
-            image = ProjectImageFactory(
-                original=jpeg_field("project-backfill.jpg", size=(900, 600)),
-            )
+    def test_generates_project_variants_from_model_specs(self) -> None:
+        with patch("programming.models.submit"):
+            project = ProjectFactory(image=jpeg_field("project-backfill.jpg", size=(900, 600)))
 
-        assert [spec.role for spec in image.get_image_variant_specs()] == ["original_format"]
+        call_command("backfill_image_variants", object_id=str(project.pk))
 
-        call_command("backfill_image_variants", object_id=str(image.pk))
-
-        image.refresh_from_db()
-        original_format = image.variants.get(role="original_format", width=900)
+        project.refresh_from_db()
+        original_format = project.variants.get(role="original_format", width=900)
         assert original_format.height == 600
-        assert original_format.file.name.startswith("programming/original_format/")
+        assert original_format.file.name.startswith("programming/projects/original_format/")
 
     def test_generates_user_profile_variants(self) -> None:
         with patch("users.models.submit"):

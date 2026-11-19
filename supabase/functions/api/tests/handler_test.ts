@@ -341,6 +341,116 @@ Deno.test("shop enabled: settings head merged with products; price stays a strin
   assertEquals(p.variants.thumbnail.length, 1);
 });
 
+let projectPricing: Record<string, unknown> = {};
+function projectRows(t: string, params: unknown[], enabled = true): unknown[] {
+  const has = (v: string) =>
+    params.some((p) => p === v || (p as { identifier?: unknown })?.identifier === v);
+  if (t.includes("select programming_enabled")) return [{ programming_enabled: enabled }];
+  if (t.includes("from programming_project where is_active")) {
+    return [{
+      id: "3",
+      technologies: " Python, Django ,, React ",
+      github_url: "https://github.com/x/y",
+      live_url: "",
+      pricing: "",
+      price: null,
+      currency: "PLN",
+      created_epoch: "1700000000",
+      ...projectPricing,
+    }];
+  }
+  if (has("programming_project_translation")) {
+    return [{ master: "3", language_code: "en", name: "Proj", description: "<p>D</p>" }];
+  }
+  if (has("project")) {
+    return [{
+      owner: "3",
+      role: "thumbnail",
+      width: 800,
+      height: 500,
+      mime_type: "image/webp",
+      file: "programming/projects/thumbnail/a b.webp",
+    }];
+  }
+  return [];
+}
+
+Deno.test("projects: flag off is 404", async () => {
+  setup();
+  rowsFor = (t, p) => projectRows(t, p, false);
+  const res = await handler(req("http://h/v1/projects/"));
+  assertEquals(res.status, 404);
+  assertEquals(await res.json(), { detail: "Projects are currently not available." });
+});
+
+Deno.test("projects: shape, technologies split, R2 vs API_MEDIA_BASE_URL variant URL", async () => {
+  setup();
+  Deno.env.delete("API_MEDIA_BASE_URL");
+  rowsFor = (t, p) => projectRows(t, p);
+  const res = await handler(req("http://h/v1/projects/?lang=pl"));
+  assertEquals(res.status, 200);
+  const { projects } = await res.json();
+  assertEquals(projects.length, 1);
+  const [p] = projects;
+  assertEquals(
+    {
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      technologies: p.technologies,
+      github_url: p.github_url,
+      live_url: p.live_url,
+      created_at: p.created_at,
+    },
+    {
+      id: "3",
+      name: "Proj",
+      description: "<p>D</p>",
+      technologies: ["Python", "Django", "React"],
+      github_url: "https://github.com/x/y",
+      live_url: "",
+      created_at: drfDateTime("1700000000"),
+    },
+  );
+  assertEquals(
+    p.fallback_image.url,
+    "https://media.lukaszremkowicz.com/programming/projects/thumbnail/a%20b.webp",
+  );
+  assertEquals(p.variants.thumbnail.length, 1);
+
+  setup({ API_MEDIA_BASE_URL: "http://localhost:8000/media/" });
+  try {
+    rowsFor = (t, params) => projectRows(t, params);
+    const local = await (await handler(req("http://h/v1/projects/"))).json();
+    assertEquals(
+      local.projects[0].fallback_image.url,
+      "http://localhost:8000/media/programming/projects/thumbnail/a%20b.webp",
+    );
+  } finally {
+    Deno.env.delete("API_MEDIA_BASE_URL");
+  }
+});
+
+Deno.test("projects: price_tag shapes", async () => {
+  const cases: [Record<string, unknown>, unknown][] = [
+    [{}, null],
+    [{ pricing: "free" }, { type: "free" }],
+    [{ pricing: "paid", price: "49", currency: "EUR" }, {
+      type: "paid",
+      amount: "49.00",
+      currency: "EUR",
+    }],
+  ];
+  for (const [pricing, expected] of cases) {
+    setup();
+    projectPricing = pricing;
+    rowsFor = (t, p) => projectRows(t, p);
+    const { projects } = await (await handler(req("http://h/v1/projects/"))).json();
+    assertEquals(projects[0].price_tag, expected);
+  }
+  projectPricing = {};
+});
+
 Deno.test("sitemap: exact XML, Warsaw lastmod across midnight, headers", async () => {
   setup();
   const late = String(Date.parse("2026-03-01T23:30:00Z") / 1000); // Warsaw: 2026-03-02 00:30

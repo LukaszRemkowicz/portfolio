@@ -36,7 +36,8 @@ export function db(): postgres.Sql {
     database: Deno.env.get("API_DB_NAME"),
     username: Deno.env.get("API_DB_USER"),
     password: Deno.env.get("API_DB_PASSWORD"),
-    ssl: "require",
+    // "disable" only for the local docker Postgres (infra/scripts/run_local_api.sh).
+    ssl: Deno.env.get("API_DB_SSL") === "disable" ? false : "require",
     max: 1, // one connection per isolate: direct when deployed, session pooler (5432) locally
     prepare: true,
     idle_timeout: 20,
