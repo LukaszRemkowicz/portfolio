@@ -10,8 +10,7 @@
     "serve": "API_PUBLIC_BASE_URL=http://localhost:8001 PORT=8001 deno run --allow-net --allow-env index.ts",
     "fmt:check": "deno fmt --check",
     "lint": "deno lint",
-    "check": "deno check index.ts contract/compare.ts",
-    "test": "deno test --allow-env",
-    "contract": "deno run --allow-net --allow-env contract/compare.ts"
+    "check": "deno check index.ts",
+    "test": "deno test --allow-env"
   }
 }

@@ -3,8 +3,6 @@ from io import StringIO
 
 import pytest
 from psycopg2.extras import DateRange
-from rest_framework.request import Request
-from rest_framework.test import APIRequestFactory
 
 from django.core.management import call_command
 from django.urls import reverse
@@ -13,7 +11,6 @@ from django.utils import translation
 from astrophotography.admin import MainPageLocationForm
 from astrophotography.forms import PlaceAdminForm
 from astrophotography.models import AstroImage, MainPageLocation, Place
-from astrophotography.serializers import MainPageLocationSerializer
 from astrophotography.tests.factories import (
     AstroImageFactory,
     MainPageLocationFactory,
@@ -105,28 +102,6 @@ def test_changing_trip_destination_uses_submitted_place(admin_client):
     assert list(trip.images.all()) == [image]
 
 
-def test_country_trip_detail_resolves_fallback_place_segment(api_client):
-    trip = MainPageLocationFactory(place=PlaceFactory(name="", country="ES"))
-    response = api_client.get(f"/v1/travel/spain/explore/{trip.date_slug}/?lang=en")
-    assert response.status_code == 200
-    assert response.data["pk"] == trip.pk
-
-
-def test_region_country_repair_preserves_old_url(api_client):
-    region = PlaceFactory(name="Bieszczady", is_region=True, country="")
-    trip = MainPageLocationFactory(place=region)
-    old_url = f"/v1/travel/explore/bieszczady/{trip.date_slug}/"
-    region.country = "PL"
-    region.save()
-    trip.save()
-    trip.refresh_from_db()
-    assert trip.country_slug == "poland"
-    assert api_client.get(old_url).status_code == 200
-    response = api_client.get(f"/v1/travel/poland/bieszczady/{trip.date_slug}/")
-    assert response.status_code == 200
-    assert response.data["pk"] == trip.pk
-
-
 def test_trip_slugs_do_not_change_with_admin_language():
     place = PlaceFactory(name="Cabo de Gata", country="ES")
     place.set_current_language("pl")
@@ -136,22 +111,6 @@ def test_trip_slugs_do_not_change_with_admin_language():
         trip = MainPageLocationFactory(place=place)
     assert trip.country_slug == "spain"
     assert trip.place_slug == "cabo-de-gata"
-
-
-@pytest.mark.parametrize(("lang", "expected_title"), [("en", ""), ("pl", "Polski tytuł")])
-def test_travel_title_never_falls_back_from_english_to_polish(lang, expected_title):
-    trip = MainPageLocationFactory(highlight_name="Spain trip", highlight_title="", story="")
-    trip.set_current_language("pl")
-    trip.highlight_name = "Hiszpania"
-    trip.highlight_title = "Polski tytuł"
-    trip.story = "Polska historia"
-    trip.save()
-    request = Request(APIRequestFactory().get("/", {"lang": lang}))
-    data = MainPageLocationSerializer(trip, context={"request": request}).data
-    assert data["highlight_title"] == expected_title
-    if lang == "en":
-        assert data["story"] == ""
-        assert data["story_preview"] == ""
 
 
 def test_travel_labels_omit_empty_country():
@@ -252,44 +211,6 @@ def test_repair_place_if_country_empty_keeps_aliases_unchanged_on_second_run(mon
     trip.refresh_from_db()
     assert save_calls == []
     assert trip.legacy_slugs == aliases_after_repair
-
-
-def test_place_country_change_refreshes_trip_slugs_and_cached_location(api_client):
-    region = PlaceFactory(name="Bieszczady", is_region=True, country="")
-    trip = MainPageLocationFactory(place=region)
-    url = reverse("astroimages:travel-highlights-list") + "?lang=en"
-    assert api_client.get(url).json()[0]["place"]["country"] == ""
-    region.country = "PL"
-    region.save()
-    trip.refresh_from_db()
-    assert trip.country_slug == "poland"
-    data = api_client.get(url).json()[0]
-    assert data["place"]["country"] == "Poland"
-    assert data["country_slug"] == "poland"
-
-
-def test_completed_title_update_refreshes_cached_english_without_changing_polish(api_client):
-    trip = MainPageLocationFactory(highlight_title="")
-    trip.set_current_language("pl")
-    trip.highlight_title = "Polski tytuł"
-    trip.save()
-    url = reverse("astroimages:travel-highlights-list")
-    assert api_client.get(url, {"lang": "en"}).json()[0]["highlight_title"] == ""
-    assert api_client.get(url, {"lang": "pl"}).json()[0]["highlight_title"] == "Polski tytuł"
-    trip.set_current_language("en")
-    trip.highlight_title = "English title"
-    trip.save()
-    assert api_client.get(url, {"lang": "en"}).json()[0]["highlight_title"] == "English title"
-    assert api_client.get(url, {"lang": "pl"}).json()[0]["highlight_title"] == "Polski tytuł"
-
-
-def test_ambiguous_legacy_url_returns_404(api_client):
-    first = MainPageLocationFactory(place=PlaceFactory(name="First", country="PL"))
-    second = MainPageLocationFactory(place=PlaceFactory(name="Second", country="ES"))
-    MainPageLocation.objects.filter(pk__in=[first.pk, second.pk]).update(
-        legacy_slugs=[{"country": "explore", "place": "old-region"}]
-    )
-    assert api_client.get(f"/v1/travel/explore/old-region/{first.date_slug}/").status_code == 404
 
 
 def test_nested_regions_and_cycles_do_not_expand_to_unrelated_countries():

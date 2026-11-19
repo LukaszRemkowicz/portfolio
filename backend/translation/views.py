@@ -3,17 +3,13 @@
 Views for the translation app, providing dynamic styling and status endpoints.
 """
 
-from rest_framework import permissions
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.request import Request
-
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpRequest, HttpResponse
+from django.views.decorators.http import require_GET
 
 
-@api_view(["GET"])
-@permission_classes([permissions.AllowAny])
-def admin_dynamic_parler_css_view(request: Request) -> HttpResponse:
+@require_GET
+def admin_dynamic_parler_css_view(request: HttpRequest) -> HttpResponse:
     """
     Returns dynamically generated CSS to hide the 'X' (delete) button
     for the configured default/fallback language in Django Admin.

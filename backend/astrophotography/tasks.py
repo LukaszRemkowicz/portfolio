@@ -5,8 +5,6 @@ from django.apps import apps
 from django.conf import settings
 from django.db import transaction
 
-from core.cache_service import CacheService
-
 from .services import AstroImageExposureTimeService
 
 if TYPE_CHECKING:
@@ -45,7 +43,6 @@ def calculate_astroimage_exposure_hours_task(astro_image_id: str) -> dict[str, i
         if not updated:
             logger.info("Discarded stale exposure calculation for AstroImage %s", astro_image_id)
             return {"status": "skipped", "astro_image_id": astro_image_id}
-        CacheService.invalidate_landing_page_cache()
 
         logger.info(
             "Stored %s calculated exposure hour(s) for AstroImage %s",

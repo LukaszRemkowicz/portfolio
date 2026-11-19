@@ -325,7 +325,7 @@
 
         setStatus("Resolving AstroImage source...");
         state.loadingSourceValue = pk;
-        const baseUrl = config.lookup_url || "/image-urls/";
+        const baseUrl = config.lookup_url || "/api/v1/shop/image-lookup/";
         const fetchUrl = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "id=" + encodeURIComponent(pk);
 
         fetch(fetchUrl)

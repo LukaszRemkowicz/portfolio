@@ -2,8 +2,8 @@
 
 The public read API and the contact form run as a Supabase Edge Function over the
 Supabase Postgres database. The Django admin runs on your own machine against the
-same database. This replaces the VPS for public traffic; DRF stays in the repo as
-the reference implementation of the API contract.
+same database. This replaces the VPS for public traffic; the former DRF API was removed from
+Django (see git history for the reference implementation).
 
 ## Request Path
 
@@ -27,9 +27,8 @@ flowchart LR
 
 ## Edge Function (`supabase/functions/api`)
 
-- 1:1 port of the DRF read endpoints: same paths, query params, status codes and
-  JSON. `contract/compare.ts` deep-compares every endpoint against a running DRF
-  (`deno task contract`, with `BASELINE_URL`, `FUNCTION_URL`, `API_ORIGIN_SECRET`).
+- 1:1 port of the former DRF read endpoints: same paths, query params, status codes and
+  JSON.
 - Hidden API: `router.ts` first requires `API_ORIGIN_SECRET` to be set (else a bare
   503), then `x-origin-secret` to match (else 403), before any routing or DB work.
 - Media signing uses `MEDIA_SIGNING_KEY` (HMAC over `slug:expiry`), separate from
@@ -41,15 +40,15 @@ flowchart LR
   prepared statements. `db.ts` drops a null write to the TLS socket: under Deno a
   cancelled postgres.js write timer can still fire, and that throw used to kill the
   isolate (bursts of empty 503s).
-- `/sitemap.xml` (`sitemap.ts`) mirrors `backend/core/sitemaps.py` byte for byte and
-  is built from the database on every request; the FE Worker serves it on the site
-  domain. A new FE page with a fixed URL must be added to both sitemaps.
+- `/sitemap.xml` (`sitemap.ts`) is built from the database on every request; the FE
+  Worker serves it on the site domain. A new FE page with a fixed URL must be added
+  to it.
 - Local checks, in `supabase/functions/api`: `deno task test`, `deno task check`,
   `deno task lint`, `deno task fmt:check`; `deno task serve` runs it on :8001.
 
 ### Contact form (`POST /v1/contact/`)
 
-Mirrors the Django view: kill switch (`contact_form_enabled`), throttle before
+Ported from the former Django view: kill switch (`contact_form_enabled`), throttle before
 validation (per IP 5/h, per email 3/h, IP+email 2/h), payload limit, DRF
 validation messages, 5-minute duplicate check, then two mails.
 

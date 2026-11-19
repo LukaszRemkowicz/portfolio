@@ -1,6 +1,6 @@
 # 🐍 Portfolio Backend
 
-Django + DRF backend for portfolio content, admin, secure media, and translations.
+Django backend for portfolio content, admin, secure media, and translations. The public API lives in the Supabase Edge Function (`supabase/functions/api`).
 
 
 ## 🚀 Features
@@ -8,7 +8,7 @@ Django + DRF backend for portfolio content, admin, secure media, and translation
 ### Core Functionality
 - **Portfolio Content Models** - User profile, homepage settings, astrophotography content, and travel highlights.
 - **Image Management** - `BaseImage` abstract model with automatic thumbnail generation and consistent scaling.
-- **Contact System** - Contact form processing with anti-spam protection and email notifications.
+- **Contact System** - Contact messages stored and managed in the admin (the public form is handled by the Supabase function).
 - **Translations** - Multi-language content support for public portfolio data.
 
 ### Travel destinations
@@ -50,8 +50,7 @@ python manage.py repair_travel_place --place-id 53 --country PL --apply
 
 The first command writes nothing; `--apply` repairs that Place, refreshes its
 linked highlights, and retains previous URL aliases. Verify the place ID before
-applying. Saving linked highlights triggers the normal API cache invalidation.
-The command does not infer countries for other regions or change translated text.
+applying. The command does not infer countries for other regions or change translated text.
 
 Travel highlight text uses the requested language, then English, and never an
 arbitrary third language. An empty English Highlight Title stays empty in the API,
@@ -68,24 +67,18 @@ We use [Django Axes](https://github.com/jazzband/django-axes) to protect the adm
 - Locked-out users are tracked by IP and username.
 - Configurable cool-off periods and failure limits.
 
-### 2. API Abuse Prevention (**DRF Throttling**)
-Granular rate limiting is enforced across all endpoints:
-- **Anonymous Throttling**: Limits unauthenticated users.
-- **Contact Form Throttling**: Specialized 5-per-hour limit to prevent spam.
-- **Method Restriction**: Critical ViewSets (like Contact/Users) explicitly restrict HTTP verbs to the bare minimum (e.g., POST-only or GET-only).
-
-### 3. Dependency Scanning (**Safety**)
+### 2. Dependency Scanning (**Safety**)
 We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for known vulnerabilities.
 - Integrated into the CI/CD pipeline and available via `uv run security`.
 
-### 4. Infrastructure Security
+### 3. Infrastructure Security
 - **Non-Root Execution**: Docker containers run under a restricted `appuser`.
 - **Environment Isolation**: Secure configuration via `django-environ`.
 - **Docker-Locked Environment**: Verified multi-stage builds and restricted `.dockerignore`.
 
 ### Technical Features
 - **Modern Stack** - Python 3.14, Django 6.0, and `uv` for dependency management.
-- **Caching** - Database-backed caching (Django `DatabaseCache`, tables created by `manage.py createcachetable`) for API responses and Django Select2. Background work (emails, translations, image processing) runs in an in-process thread pool (`common/background.py`).
+- **Caching** - Database-backed caching (Django `DatabaseCache`, tables created by `manage.py createcachetable`) for Django Select2. Background work (emails, translations, image processing) runs in an in-process thread pool (`common/background.py`).
 - **Error Tracking** - Sentry integration for production monitoring and telemetry.
 - **Internationalization (i18n)** - Multi-language support (EN/PL) with automatic message compilation.
 - **Docker Integration** - Multi-stage builds with automated static collection.
@@ -102,11 +95,9 @@ Today it mainly serves as:
 
 - content owner for portfolio data
 - admin application on `ADMIN_DOMAIN`
-- internal API consumed by the frontend server
 - secure media signer / backend partner for nginx protected media
-- source of truth for sitemap and SEO-backed dynamic URLs
 
-Normal public website traffic reaches the frontend server first. Django is the content/admin/internal API layer.
+Normal public website traffic reaches the frontend server first. Django is the content/admin layer.
 
 ## 📖 Glossary
 
@@ -123,19 +114,15 @@ Normal public website traffic reaches the frontend server first. Django is the c
   - user profile
 - translation workflows
 - secure media signing and `X-Accel-Redirect` cooperation with nginx
-- contact form processing
-- cache invalidation signals for frontend cache
+- contact message storage and admin
 
 ## 🔌 Service Integration
 
 Key points:
 
-- backend serves content and API responses over internal service networking
-- backend emits cache invalidation webhooks after relevant content changes
 - backend cooperates with nginx for protected media delivery
-- backend provides sitemap and dynamic content data consumed by the frontend server
+- public API and sitemap are served by the Supabase Edge Function
 
-Invalidation is triggered from model save/delete signals after transaction commit.
 
 ## 🛡️ Security / Delivery Model
 
@@ -238,7 +225,6 @@ doppler --config dev run -- docker compose up --build
 
 ## 📝 Notes
 
-- Django still owns sitemap generation and should remain the source of truth for dynamic public URLs.
 - The backend public API host should be treated as internal/administrative architecture, not the main browser contract.
 
 

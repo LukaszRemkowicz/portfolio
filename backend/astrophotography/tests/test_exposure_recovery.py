@@ -15,13 +15,11 @@ def test_clearing_default_exposure_resets_hours_without_task(mocker):
     with patch("core.models.submit"), patch("astrophotography.models.submit"):
         image = AstroImageFactory(exposure_details="2 hours", calculated_exposure_hours=2)
     submit = mocker.patch("astrophotography.models.submit")
-    invalidate = mocker.patch("astrophotography.signals.CacheService.invalidate_landing_page_cache")
     image.exposure_details = ""
     image.save()
     image.refresh_from_db()
     assert image.calculated_exposure_hours == 0
     submit.assert_not_called()
-    invalidate.assert_called()
 
 
 @pytest.mark.django_db

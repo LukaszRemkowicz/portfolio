@@ -5,118 +5,29 @@ Shared views and utility endpoints for the core application.
 import logging
 from typing import Any, cast
 
-from rest_framework import generics, permissions, renderers, status
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.request import Request
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
 from django.apps import apps
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import default_storage
 from django.db.models import Model
-from django.http import Http404, HttpResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.decorators import method_decorator
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
+from django.views import View
 
-from common.decorators.cache import cache_response
 from common.storage import is_remote_storage
 from common.utils.logging import sanitize_for_logging
 from common.utils.signing import validate_signed_url
 from core.errors import render_403_error, render_404_error
-from core.models import LandingPageSettings
-from core.serializers import LandingPageSettingsSerializer
 
 logger = logging.getLogger(__name__)
 
 
-@method_decorator(cache_response(timeout=settings.INFINITE_CACHE_TIMEOUT), name="dispatch")
-class SettingsView(generics.RetrieveAPIView):
-    """
-    Endpoint to fetch global application settings.
-    - 'features': Boolean flags for enabled system modules.
-    - 'meteors': Configuration for the shooting stars effect.
-    """
-
-    permission_classes = [permissions.AllowAny]
-    serializer_class = LandingPageSettingsSerializer
-    queryset = LandingPageSettings.objects.all()
-
-    def get_object(self) -> LandingPageSettings:
-        """
-        Returns the singleton LandingPageSettings instance or raises 404.
-        """
-        obj = self.get_queryset().last()
-        if not obj:
-            raise Http404("Landing Page Settings not initialized.")
-        return cast(LandingPageSettings, obj)
-
-
-@api_view(["GET"])
-@permission_classes([permissions.AllowAny])
-@throttle_classes([])
-def health_check_view(request: Request) -> Response:
-    """
-    Simple health check endpoint returning 200 OK.
-    """
-    return Response({"status": "healthy"}, status=status.HTTP_200_OK)
-
-
-@api_view(["GET"])
-@permission_classes([permissions.AllowAny])
-def root_view(request: Request) -> Any:
-    """
-    Root view for all domains.
-    - ADMIN_DOMAIN: Redirects to /admin/
-    - Others: Redirects to SITE_DOMAIN (FE main page)
-    """
-    host = request.get_host().split(":")[0]  # Remove port if present
-    if host == settings.ADMIN_DOMAIN:
-        return redirect("admin:index")
-
-    return redirect(f"https://{settings.SITE_DOMAIN}/")
-
-
-@api_view(["GET"])
-@permission_classes([permissions.AllowAny])
-def v1_root_view(request: Request) -> Any:
-    """
-    API v1 root greetings page with a pretty template.
-    """
-    return render(request, "core/api_v1_greetings.html")
-
-
-@api_view(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
-@permission_classes([permissions.AllowAny])
-def api_404_view(request: Request, *args: Any, **kwargs: Any) -> Response:
-    """
-    Catch-all view for unmatched API endpoints.
-    Ensures 404 Not Found is returned as JSON instead of falling through to admin.
-    """
-    return Response(
-        {"detail": f"Endpoint '{request.path}' not found."},
-        status=status.HTTP_404_NOT_FOUND,
-    )
-
-
-class SecureMediaView(APIView):
+class SecureMediaView(View):
     """
     Base view to carefully serve secure, internal media via Nginx X-Accel-Redirect.
     Extending classes MUST implement get_object(), get_file_path(), and get_signature_id().
     """
 
-    permission_classes = [permissions.AllowAny]
-    renderer_classes = [renderers.StaticHTMLRenderer]
     content_disposition: str = "inline"
-
-    def perform_content_negotiation(self, request, force=False):
-        """
-        Bypass content negotiation to allow any Accept header.
-        Since we return a raw HttpResponse (X-Accel-Redirect),
-        DRF's renderer negotiation is unnecessary and can cause 406 errors.
-        """
-        return renderers.StaticHTMLRenderer(), "text/html"
 
     def get_object(self) -> Model:
         raise NotImplementedError("Subclasses must implement get_object")
@@ -128,14 +39,14 @@ class SecureMediaView(APIView):
         """Return the unique ID string used to validate the signature."""
         return str(self.kwargs.get("slug", "") or self.kwargs.get("pk", ""))
 
-    def _validate_signature(self, request: Request, identifier: str) -> HttpResponse | None:
+    def _validate_signature(self, request: HttpRequest, identifier: str) -> HttpResponse | None:
         """
         Validates the request signature and returns an error response if invalid,
         or None if valid.
         """
         safe_identifier: str = sanitize_for_logging(identifier)
-        signature: str | None = request.query_params.get("s")
-        expiration: str | None = request.query_params.get("e")
+        signature: str | None = request.GET.get("s")
+        expiration: str | None = request.GET.get("e")
 
         safe_signature: str = sanitize_for_logging(signature) if signature else "None"
         safe_expiration: str = sanitize_for_logging(expiration) if expiration else "None"
@@ -158,7 +69,7 @@ class SecureMediaView(APIView):
 
         return None
 
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> HttpResponse:
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         safe_path = sanitize_for_logging(request.get_full_path())
         logger.info(f"SecureMediaView.get() hit: {safe_path}")
         identifier = self.get_signature_id()

@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 from urllib.parse import urlparse
 
 import pytest
-from rest_framework.test import APIClient
 
+from django.test import Client
 from django.urls import reverse
 
 from astrophotography.tests.factories import AstroImageFactory
@@ -90,13 +90,17 @@ class TestRouting:
 
 
 @pytest.mark.django_db
-def test_secure_view_redirects_in_remote_mode(api_client: APIClient) -> None:
+def test_secure_view_redirects_in_remote_mode(admin_client: Client) -> None:
     image = AstroImageFactory(original__width=3000, original__height=2000)
+    signature_id = f"admin_media_astrophotography_astroimage_{image.pk}_original"
     fake: Any = SimpleNamespace(remote=True, url=lambda n: f"https://signed.example/{n}")
     with patch("core.views.default_storage", fake):
-        response = api_client.get(
-            reverse("astroimages:secure-image-serve", args=[image.slug]),
-            generate_signed_url_params(image.slug),
+        response = admin_client.get(
+            reverse(
+                "admin-astroimage-secure-media",
+                kwargs={"pk": str(image.pk), "field_name": "original"},
+            ),
+            generate_signed_url_params(signature_id),
         )
     assert response.status_code == 302
     assert response["Location"].startswith("https://signed.example/")

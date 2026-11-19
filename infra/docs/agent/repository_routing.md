@@ -53,30 +53,30 @@ confirming behavior.
 ## Project Document Map
 
 - `infra/docs/project/cache_invalidation.md`
-  Use for stale homepage/shared content, Django signals, or API cache
-  invalidation. Describes cache backends and `CacheService`.
+  Use for Django cache configuration (parler, Select2) and clearing it.
+  Django no longer caches API responses.
 - `infra/docs/project/django_admin_image_cropper_mechanism.md`
   Use for Django admin image cropper changes, preview/media bugs, or extending
   cropper behavior. Describes the cropper contract, browser flow, media serving
   rules, and derived image pipeline.
 - `infra/docs/project/latest_images_tags.md`
   Use for homepage latest-image filters and `LandingPageSettings.latest_filters`.
-  Describes how tags are curated, cached, and invalidated.
+  Describes how tags are curated.
 - `infra/docs/project/feature_flag_mechanism.md`
   Use for `LandingPageSettings`-driven feature visibility and adding public
   feature flags. Describes the backend half; the frontend half lives in
   `portfolio-fe`.
 - `infra/docs/project/landing_page_total_time_spent_system.md`
   Use for landing-page total-time calculation,
-  `AstroImage.calculated_exposure_hours`, rebuild flow, serializer rounding, and
-  cache invalidation. Describes the derived-stat architecture and operational
+  `AstroImage.calculated_exposure_hours`, and rebuild flow.
+  Describes the derived-stat architecture and operational
   caveats.
 - `infra/docs/project/logging_structure_overview.md`
   Use for backend/nginx logging formats, JSON-vs-plain-text status, and
   application log emission structure.
 - `infra/docs/project/translation_system_overview.md`
   Use for translation lifecycle, `TranslationTask` debugging, translation admin
-  behavior, serializer fallback behavior, and adding translation support to new
+  behavior, fallback behavior, and adding translation support to new
   models. Describes the async translation architecture and operational
   boundaries.
 - `infra/docs/project/release_deploy_architecture.md`

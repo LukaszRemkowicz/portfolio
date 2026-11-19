@@ -29,21 +29,6 @@ class TestProcessUserImagesTask:
         assert variant.file.name.endswith(".webp")
         assert "test_avatar" in variant.file.name
 
-    def test_process_user_images_task_invalidates_caches_after_conversion(
-        self, mocker, superuser: User
-    ):
-        superuser.avatar = jpeg_field("test_avatar.jpg", size=(800, 800))
-        with patch("users.models.submit"):
-            superuser.save()
-
-        mock_invalidate_user_cache = mocker.patch(
-            "users.signals.CacheService.invalidate_user_cache"
-        )
-
-        process_image_task("users", "User", superuser.pk, ["avatar"])
-
-        mock_invalidate_user_cache.assert_called_once()
-
     def test_process_user_images_task_uses_new_upload_not_stale_original(self, superuser: User):
         superuser.avatar = jpeg_field("old_avatar.jpg", size=(800, 800))
         with patch("users.models.submit"):

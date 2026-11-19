@@ -31,9 +31,7 @@ from astrophotography.tests.factories import (
     PlaceFactory,
     TagFactory,
 )
-from core.models import LandingPageSettings
 from core.tasks import process_image_task
-from core.tests.factories import ImageVariantFactory
 from translation.services import TranslationService
 
 
@@ -323,24 +321,6 @@ class TestMainPageLocationModel:
         # Should NOT raise any error
         MainPageLocationFactory(place=place, adventure_date=date_range2)
 
-    def test_ready_for_main_page_prefetches_image_preview_serializer_relations(self) -> None:
-        place: Place = PlaceFactory(country="PL")
-        slider: MainPageLocation = MainPageLocationFactory(place=place)
-        image: AstroImage = AstroImageFactory(place=place)
-        tag: Tag = TagFactory(name="Travel")
-        image.tags.add(tag)
-        ImageVariantFactory(owner=image, role="thumbnail", width=560, height=373)
-        slider.images.add(image)
-
-        hydrated_slider = MainPageLocation.objects.ready_for_main_page().get(pk=slider.pk)
-        hydrated_image = list(hydrated_slider.images.all())[0]
-
-        assert "images" in hydrated_slider._prefetched_objects_cache
-        assert "translations" in hydrated_image._prefetched_objects_cache
-        assert "tags" in hydrated_image._prefetched_objects_cache
-        assert "variants" in hydrated_image._prefetched_objects_cache
-        assert "place" in hydrated_image._state.fields_cache
-
 
 @pytest.mark.django_db
 class TestTagModel:
@@ -588,29 +568,3 @@ class TestImageUpdateLogic:
         form = AstroImageForm(data=data, files=files, instance=image)
 
         assert form.is_valid(), form.errors
-
-
-@pytest.mark.django_db
-class TestTagQuerySet:
-    def test_latest_tags_returns_configured_tags(self) -> None:
-        """Verify that latest_tags() returns only tags configured in LandingPageSettings."""
-        tag1 = TagFactory(name="Tag 1")
-        tag2 = TagFactory(name="Tag 2")
-        TagFactory(name="Other Tag")
-
-        settings, _ = LandingPageSettings.objects.get_or_create()
-        settings.latest_filters.add(tag1, tag2)
-
-        latest = Tag.objects.latest_tags()
-        assert latest.count() == 2
-        assert tag1 in latest
-        assert tag2 in latest
-
-    def test_latest_tags_returns_empty_when_no_settings(self) -> None:
-        """Verify that latest_tags() returns empty queryset when no settings are configured."""
-        TagFactory(name="Tag 1")
-        # Ensure no LandingPageSettings exist
-        LandingPageSettings.objects.all().delete()
-
-        latest = Tag.objects.latest_tags()
-        assert latest.count() == 0
