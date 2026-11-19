@@ -30,7 +30,10 @@ class TestAstroImageAdminSecureMediaView:
         astro_image.refresh_from_db()
         assert response.status_code == HTTPStatus.OK
         assert response["Cache-Control"] == "private, no-store, max-age=0"
-        assert response["X-Accel-Redirect"] == f"/protected_media/{astro_image.original.name}"
+        assert not response.has_header("X-Accel-Redirect")
+        assert response["Content-Disposition"].startswith("inline;")
+        with astro_image.original.open("rb") as f:
+            assert b"".join(response.streaming_content) == f.read()
 
     def test_forbidden_anonymous(self, client: Client, astro_image: AstroImage) -> None:
         params: dict[str, Any] = generate_signed_url_params(_signature_id(astro_image))

@@ -250,7 +250,7 @@ The widget loads persisted images from `current_image_url`, for example:
 These are loaded directly in the browser via `new Image()`.
 
 ### Admin-domain media serving
-On `admin.portfolio.local`, media is served by `safe_serve()` in [backend/settings/urls.py](../../../backend/settings/urls.py).
+Locally (`http://localhost:8000/admin/`), media is served by `safe_serve()` in [backend/settings/urls.py](../../../backend/settings/urls.py).
 
 Allowed:
 - `about_me_images/...`
@@ -279,7 +279,7 @@ Regression test:
 - [backend/core/tests/test_admin_media_urls.py](../../../backend/core/tests/test_admin_media_urls.py)
 
 ### Cloudflare R2 media storage
-`MEDIA_STORAGE=r2` is the default (production); `MEDIA_STORAGE=local` (dev compose and tests) keeps the local `FileSystemStorage` and nginx `X-Accel-Redirect` serving. `MEDIA_STORAGE=r2` switches the default storage to `common.storage.R2RoutingStorage`.
+`MEDIA_STORAGE=r2` is the default (production); `MEDIA_STORAGE=local` (dev compose and tests) keeps the local `FileSystemStorage`; secure views stream the file from Django (no nginx). `MEDIA_STORAGE=r2` switches the default storage to `common.storage.R2RoutingStorage`.
 
 Env vars (r2 only): `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (required, startup fails without them), `R2_ENDPOINT_URL`, `R2_PUBLIC_BUCKET` (`portfolio-media`), `R2_PRIVATE_BUCKET` (`portfolio-originals`), `R2_PUBLIC_DOMAIN` (`media.lukaszremkowicz.com`, host only), `R2_SIGNED_URL_EXPIRE` (`300` seconds).
 
@@ -395,7 +395,7 @@ If a field needs a non-square crop:
 Minimum verification for cropper changes:
 
 1. `uv run test`
-2. manual admin check on `admin.portfolio.local`
+2. manual admin check on the local dev stack (`http://localhost:8000/admin/`)
 3. switch dropdown across all configured fields
 4. confirm preview loads for persisted files
 5. confirm `Apply` writes back to the correct file input

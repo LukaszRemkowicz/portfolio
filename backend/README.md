@@ -95,7 +95,7 @@ Today it mainly serves as:
 
 - content owner for portfolio data
 - admin application on `ADMIN_DOMAIN`
-- secure media signer / backend partner for nginx protected media
+- secure media signer for admin previews
 
 Normal public website traffic reaches the frontend server first. Django is the content/admin layer.
 
@@ -113,30 +113,23 @@ Normal public website traffic reaches the frontend server first. Django is the c
   - background images
   - user profile
 - translation workflows
-- secure media signing and `X-Accel-Redirect` cooperation with nginx
+- secure media signing for admin previews
 - contact message storage and admin
 
 ## 🔌 Service Integration
 
 Key points:
 
-- backend cooperates with nginx for protected media delivery
 - public API and sitemap are served by the Supabase Edge Function
 
 
 ## 🛡️ Security / Delivery Model
 
-Public media delivery and protected media delivery are split between Django and nginx.
+Protected (admin) media flow:
 
-Protected media flow:
-
-- Django signs or authorizes access
-- nginx serves bytes through `X-Accel-Redirect`
-
-So:
-
-- Django owns access control and URL decisions
-- nginx owns efficient file delivery
+- Django checks staff status and the signed URL
+- on R2 (production) it redirects to a short-lived presigned URL
+- on local storage (dev, tests) it streams the file itself
 
 ## 📈 Observability
 

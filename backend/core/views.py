@@ -9,7 +9,8 @@ from django.apps import apps
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import default_storage
 from django.db.models import Model
-from django.http import Http404, HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http import FileResponse, Http404, HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http.response import HttpResponseBase
 from django.shortcuts import get_object_or_404
 from django.views import View
 
@@ -23,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 class SecureMediaView(View):
     """
-    Base view to carefully serve secure, internal media via Nginx X-Accel-Redirect.
+    Base view to serve signed admin media: a presigned redirect on remote storage,
+    the file itself on local storage.
     Extending classes MUST implement get_object(), get_file_path(), and get_signature_id().
     """
 
@@ -69,7 +71,7 @@ class SecureMediaView(View):
 
         return None
 
-    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
         safe_path = sanitize_for_logging(request.get_full_path())
         logger.info(f"SecureMediaView.get() hit: {safe_path}")
         identifier = self.get_signature_id()
@@ -98,17 +100,14 @@ class SecureMediaView(View):
             redirect = HttpResponseRedirect(default_storage.url(file_path))
             redirect["Cache-Control"] = "private, no-store, max-age=0"
             return redirect
-        response = HttpResponse()
-        # This path must match the 'location /protected_media/' block in nginx.conf
-        redirect_uri: str = f"/protected_media/{file_path}"
-        response["X-Accel-Redirect"] = redirect_uri
-        response["Content-Type"] = ""  # Let Nginx determine the content type
+        # Local storage (dev and tests): no nginx in front, so Django streams the file.
+        try:
+            response = FileResponse(default_storage.open(file_path), filename=filename)
+        except FileNotFoundError:
+            logger.error(f"Secure media file missing on disk: {sanitize_for_logging(file_path)}")
+            return render_404_error(request)
         response["Content-Disposition"] = f'{self.content_disposition}; filename="{filename}"'
         response["Cache-Control"] = "private, no-store, max-age=0"
-        logger.info(
-            f"Serving secure media via Nginx redirect: {redirect_uri} "
-            f"as {filename} ({self.content_disposition})"
-        )
         return response
 
 
