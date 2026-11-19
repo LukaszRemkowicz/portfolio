@@ -3,6 +3,7 @@ import { loadConfig, missingEnv } from "./config.ts";
 import * as contact from "./contact.ts";
 import * as core from "./core.ts";
 import { type Ctx, detail, htmlError, json, makeCtx } from "./http.ts";
+import * as projects from "./projects.ts";
 import * as shop from "./shop.ts";
 import { sitemap } from "./sitemap.ts";
 import { safeEqual } from "./signing.ts";
@@ -31,6 +32,7 @@ const ROUTES: [RegExp, Handler][] = [
   [new RegExp(`^/v1/travel/${SLUG}/${SLUG}/${SLUG}/$`), astro.travelBySlugs],
   [/^\/v1\/tags\/$/, astro.tags],
   [/^\/v1\/categories\/$/, () => astro.categories()],
+  [/^\/v1\/projects\/$/, projects.projects],
   [/^\/v1\/shop\/products\/$/, shop.products],
   [/^\/(?:image-urls|v1\/images)\/$/, astro.imageUrls],
   [new RegExp(`^/(?:image-urls|v1/images)/${SLUG}/$`), astro.imageUrl],

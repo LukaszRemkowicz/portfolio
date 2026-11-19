@@ -10,7 +10,7 @@ from django.db.migrations.executor import MigrationExecutor
 
 from astrophotography.models import AstroImage
 from core.models import ImageVariant
-from programming.models import ProjectImage
+from programming.models import Project
 
 
 @pytest.mark.django_db(transaction=True)
@@ -46,7 +46,7 @@ def test_astroimage_variant_role_migration_preserves_other_models_and_files() ->
             mime_type="image/webp",
         )
         project_variant = ImageVariant.objects.create(
-            content_type=ContentType.objects.get_for_model(ProjectImage),
+            content_type=ContentType.objects.get_for_model(Project),
             object_id=str(uuid4()),
             file=project_file,
             role="original_format",

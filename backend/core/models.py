@@ -163,7 +163,7 @@ class BaseImage(ImageVariantModelMixin, TranslatableModel):
         help_text=_("Uploaded source image for the next BaseImage contract."),
     )
     # Translations moved to concrete subclasses because BaseImage is abstract.
-    # See AstroImage and ProjectImage.
+    # See AstroImage.
 
     variants = GenericRelation(
         ImageVariant,

@@ -17,7 +17,9 @@ export type VariantPayload = {
 /** Public URL as django-storages builds it with a custom domain (filepath_to_uri quoting). */
 export function publicUrl(domain: string, name: string): string {
   const path = name.replace(/\\/g, "/").split("/").map(encodeURIComponent).join("/");
-  return `https://${domain}/${path}`;
+  // Local dev: API_MEDIA_BASE_URL (e.g. http://localhost:8000/media) replaces the R2 domain.
+  const base = Deno.env.get("API_MEDIA_BASE_URL")?.replace(/\/+$/, "");
+  return base ? `${base}/${path}` : `https://${domain}/${path}`;
 }
 
 export function candidates(variants: Variant[], role: string, domain: string): Candidate[] {

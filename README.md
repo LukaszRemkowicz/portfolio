@@ -43,9 +43,9 @@ flowchart LR
 ```
 
 - `cloudflared` is a compose service (profile `tunnel` in `docker-compose.prod.yml`). It is started separately and is not touched by the deploy. See [infra/scripts/README.md](infra/scripts/README.md).
-- Traefik runs on the VPS edge (and in the local dev compose labels). `deploy.sh` also uses it for its health check (HTTPS to `SITE_DOMAIN` via `127.0.0.1:443`).
+- Traefik runs on the VPS edge. `deploy.sh` also uses it for its health check (HTTPS to `SITE_DOMAIN` via `127.0.0.1:443`).
 - nginx config: [infra/nginx/](infra/nginx/). It still has an `fe:8080` upstream (`infra/nginx/static_server.conf`). On the VPS an old orphan `fe` container (no longer defined in this repo's compose) keeps running so nginx can resolve it. Do not remove it until that upstream is removed.
-- Local development uses the same `nginx + Django + PostgreSQL` stack through `docker-compose.yml` with Traefik labels.
+- Local development runs only `Django + PostgreSQL` through `docker-compose.yml` (no Traefik, no nginx).
 - Secrets come from Doppler.
 
 ## 🗂️ Repository Layout
@@ -72,7 +72,7 @@ Component docs:
 
 ## 🖼️ Media
 
-`MEDIA_STORAGE` selects the storage backend: `r2` (default) or `local`. Dev compose and tests use `local` (files on disk, served by nginx).
+`MEDIA_STORAGE` selects the storage backend: `r2` (default) or `local`. Dev compose and tests use `local` (files on disk, served by Django).
 
 In `r2` mode (code: [backend/common/storage.py](backend/common/storage.py)):
 
@@ -104,17 +104,8 @@ doppler setup
 Create the external Docker resources the local stack expects:
 
 ```bash
-docker network create traefik_proxy || true
 docker volume create portfolio_dev_db_data || true
 docker volume create portfolio_dev_static_data || true
-```
-
-Add to `/etc/hosts`:
-
-```text
-127.0.0.1 portfolio.local
-127.0.0.1 admin.portfolio.local
-127.0.0.1 api.portfolio.local
 ```
 
 Start the stack (the `be` service runs migrations, `createcachetable`, message compilation and `collectstatic` on start):
@@ -123,15 +114,12 @@ Start the stack (the `be` service runs migrations, `createcachetable`, message c
 doppler --config dev run -- docker compose up --build
 ```
 
-Local hosts (served through Traefik, which must be running on the `traefik_proxy` network):
-
-- Site: `https://portfolio.local/`
-- Admin: `https://admin.portfolio.local/`
+Admin: `http://localhost:8000/admin/` (`/` redirects there).
 
 Media defaults to `MEDIA_STORAGE=local` in dev compose, so no R2 credentials are needed.
 
 ```bash
-curl -k https://admin.portfolio.local/
+curl -I http://localhost:8000/admin/login/
 ```
 
 Common compose commands:
@@ -139,7 +127,7 @@ Common compose commands:
 ```bash
 doppler --config dev run -- docker compose down
 doppler --config dev run -- docker compose restart be
-doppler --config dev run -- docker compose logs -f be nginx
+doppler --config dev run -- docker compose logs -f be
 ```
 
 ## 🧰 Useful Commands
@@ -270,6 +258,12 @@ Run the production Django admin on your machine against Supabase: it pulls the n
 
 ```bash
 infra/scripts/run_admin.sh
+```
+
+Run the public API function locally against the dev compose Postgres (serves http://localhost:8001, media from `localhost:8000/media`):
+
+```bash
+infra/scripts/run_local_api.sh
 ```
 
 More: [supabase_api.md](infra/docs/project/supabase_api.md).

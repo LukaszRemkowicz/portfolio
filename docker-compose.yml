@@ -2,11 +2,6 @@ name: portfolio-dev
 
 networks:
   portfolio_network:
-  traefik_proxy:
-    external: true
-
-include:
-  - docker-compose.common.yml
 
 
 x-backend-common: &backend-common
@@ -30,11 +25,13 @@ x-backend-common: &backend-common
     DB_PASSWORD: ${DB_PASSWORD}
     DB_HOST: ${DB_HOST:-db}
     DB_PORT: 5432
-    ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+    # Admin and /media/ are served on localhost (no Traefik, no admin.portfolio.local).
+    ADMIN_DOMAIN: localhost
     API_DOMAIN: ${API_DOMAIN}
-    CSRF_COOKIE_DOMAIN: ${CSRF_COOKIE_DOMAIN}
+    # Served on http://localhost:8000 (no Traefik): host-only cookies, localhost origins.
+    CSRF_COOKIE_DOMAIN: ""
     ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-    CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
+    CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000
     EMAIL_HOST: ${EMAIL_HOST}
     EMAIL_PORT: ${EMAIL_PORT}
     EMAIL_USE_TLS: ${EMAIL_USE_TLS}
@@ -43,7 +40,7 @@ x-backend-common: &backend-common
     DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
     CONTACT_EMAIL: ${CONTACT_EMAIL}
     SIMULATE_CONTACT_EMAILS: ${SIMULATE_CONTACT_EMAILS:-true}
-    SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN}
+    SESSION_COOKIE_DOMAIN: ""
     SENTRY_DSN: ${SENTRY_DSN}
     ENVIRONMENT: ${ENVIRONMENT:-production}
     PROJECT_OWNER: ${PROJECT_OWNER}
@@ -53,23 +50,6 @@ x-backend-common: &backend-common
   depends_on:
     - db
 
-
-x-local-nginx-common: &local-nginx-common
-  image: nginx:1.31.3-alpine
-  depends_on:
-    nginx-blocklist-init:
-      condition: service_completed_successfully
-    be:
-      condition: service_healthy
-  restart: unless-stopped
-  volumes:
-    - ./infra/nginx/static_server.conf:/etc/nginx/nginx.conf:ro
-    - ./infra/nginx/includes:/etc/nginx/includes:ro
-    - ./backend/media:/app/media:ro
-    - ./infra/nginx/html/error.html:/usr/share/nginx/html/error.html:ro
-    - ./infra/nginx/html/404.html:/usr/share/nginx/html/404.html:ro
-    - portfolio_dev_static_data:/app/staticfiles:ro
-    - nginx_blocklist:/etc/nginx/blocklist:ro
 
 services:
   be:
@@ -122,23 +102,6 @@ services:
     volumes:
       - portfolio_dev_db_data:/var/lib/postgresql
 
-
-  nginx:
-    <<: *local-nginx-common
-    networks:
-      - portfolio_network
-      - traefik_proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.portfolio-dev.rule=Host(`${SITE_DOMAIN:-portfolio.local}`)"
-      - "traefik.http.routers.portfolio-dev.entrypoints=websecure"
-      - "traefik.http.routers.portfolio-dev.tls=true"
-      - "traefik.http.routers.portfolio-dev.middlewares=public-security@file"
-      - "traefik.http.routers.portfolio-dev-admin.rule=Host(`admin.${SITE_DOMAIN:-portfolio.local}`)"
-      - "traefik.http.routers.portfolio-dev-admin.entrypoints=websecure"
-      - "traefik.http.routers.portfolio-dev-admin.tls=true"
-      - "traefik.http.routers.portfolio-dev-admin.middlewares=admin-api-security@file,rate-limit@file"
-      - "traefik.http.services.portfolio-dev.loadbalancer.server.port=80"
 
 volumes:
   portfolio_dev_db_data:

@@ -10,7 +10,7 @@ from common.types import ImageVariantSource, ImageVariantSpec, ViewportWidths
 from core.mixins import ImageVariantModelMixin
 from core.models import BaseImage, ImageVariant
 from core.tasks import process_image_task
-from programming.tests.factories import ProjectImageFactory
+from programming.tests.factories import ProjectFactory
 from shop.models import ShopSettings
 from shop.tests.factories import ShopProductFactory
 from users.tests.factories import UserFactory
@@ -60,7 +60,7 @@ class TestImageVariantFileDeletion:
             lambda: MainPageBackgroundImageFactory(
                 original=jpeg_field("owner-background.jpg", size=(1200, 800))
             ),
-            lambda: ProjectImageFactory(original=jpeg_field("owner-project.jpg", size=(1200, 800))),
+            lambda: ProjectFactory(image=jpeg_field("owner-project.jpg", size=(1200, 800))),
             ShopProductFactory,
             lambda: ShopSettings.objects.create(
                 title="Shop",
@@ -598,19 +598,19 @@ class TestBaseImageVariants:
         assert image.variants.filter(role="detail").count() == 0
         assert all(not image.original.storage.exists(name) for name in variant_names)
 
-    def test_project_image_specs_create_original_format_variant(self) -> None:
-        with patch("core.models.submit"):
-            image = ProjectImageFactory(
-                original=jpeg_field("project.jpg", size=(1200, 800)),
-            )
+    def test_project_specs_create_original_format_and_thumbnail_variants(self) -> None:
+        with patch("programming.models.submit"):
+            project = ProjectFactory(image=jpeg_field("project.jpg", size=(1200, 800)))
 
-        process_image_task("programming", "ProjectImage", image.pk)
+        process_image_task("programming", "Project", project.pk)
 
-        image.refresh_from_db()
-        assert [spec.role for spec in image.get_image_variant_specs()] == ["original_format"]
-        original_format = image.variants.get(role="original_format")
-        assert original_format.width == 1200
-        assert original_format.height == 800
+        project.refresh_from_db()
+        assert [spec.role for spec in project.get_image_variant_specs()] == [
+            "original_format",
+            "thumbnail",
+        ]
+        assert project.variants.get(role="original_format").width == 1200
+        assert project.variants.get(role="thumbnail").width == 800
 
     def test_get_image_url_returns_generated_thumbnail_variant(self) -> None:
         with patch("core.models.submit"):

@@ -29,7 +29,7 @@ from core.tests.factories import (
     TranslationTaskFactory,
 )
 from inbox.tests.factories import ContactMessageFactory
-from programming.tests.factories import ProjectFactory, ProjectImageFactory
+from programming.tests.factories import ProjectFactory
 from shop.models import ShopSettings
 from shop.tests.factories import ShopProductFactory
 from users.tests.factories import ProfileFactory
@@ -61,7 +61,6 @@ def test_every_registered_admin_add_and_change_page(admin_client, admin_user):
         ),
         "inbox.ContactMessage": ContactMessageFactory,
         "programming.Project": ProjectFactory,
-        "programming.ProjectImage": ProjectImageFactory,
         "shop.ShopProduct": ShopProductFactory,
         "shop.ShopSettings": lambda: ShopSettings.objects.create(title="Smoke shop"),
         "translation.TranslationTask": lambda: TranslationTaskFactory(

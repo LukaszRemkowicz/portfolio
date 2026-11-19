@@ -47,6 +47,7 @@ def safe_serve(request, path, document_root=None, show_indexes=False):
         "images/",
         "thumbnails/",
         "shop/",
+        "programming/",
     )
     blocked_prefixes = ("logs/",)
 

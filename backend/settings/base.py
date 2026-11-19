@@ -600,7 +600,7 @@ ADMIN_SITE_ORDERING = (
     {
         "app": "programming",
         "label": _("Programming"),
-        "models": ("programming.Project", "programming.ProjectImage"),
+        "models": ("programming.Project",),
     },
     {
         "app": "core",
@@ -667,7 +667,6 @@ JAZZMIN_SETTINGS = {
         "astrophotography.Tripod": "fas fa-arrows-alt",
         "inbox.ContactMessage": "fas fa-envelope",
         "programming.Project": "fas fa-code",
-        "programming.ProjectImage": "fas fa-images",
         "shop.ShopProduct": "fas fa-shopping-cart",
         "axes.AccessAttempt": "fas fa-user-lock",
         "axes.AccessLog": "fas fa-list-alt",
