@@ -6,7 +6,6 @@ from PIL import Image
 
 from astrophotography.serializers import AstroImageSerializer
 from astrophotography.tests.factories import AstroImageFactory, MainPageBackgroundImageFactory
-from common.tasks import invalidate_frontend_ssr_cache_task
 from common.tests.image_helpers import jpeg_field
 from common.types import ImageVariantSource, ImageVariantSpec, ViewportWidths
 from core.mixins import ImageVariantModelMixin
@@ -26,7 +25,7 @@ def _stored_output_image_size(image, name: str) -> tuple[int, int]:
 
 @pytest.mark.django_db
 class TestImageVariantFileDeletion:
-    def test_delete_file_uses_field_file_delete_without_model_save(self) -> None:
+    def test_delete_file_uses_storage_without_model_save(self) -> None:
         variant = ImageVariant()
         file_mock = MagicMock()
         file_mock.__bool__.return_value = True
@@ -34,7 +33,7 @@ class TestImageVariantFileDeletion:
 
         variant.delete_file()
 
-        file_mock.delete.assert_called_once_with(save=False)
+        file_mock.storage.delete.assert_called_once_with(file_mock.name)
 
     def test_parent_instance_delete_removes_variant_files(self) -> None:
         image = AstroImageFactory(original=jpeg_field("owner-delete.jpg", size=(1200, 800)))
@@ -93,7 +92,7 @@ class TestImageVariantFileDeletion:
 
 @pytest.mark.django_db
 class TestImageVariantCacheInvalidation:
-    def test_astroimage_variant_save_invalidates_gallery_travel_and_ssr_cache(self, mocker) -> None:
+    def test_astroimage_variant_save_invalidates_gallery_travel_cache(self, mocker) -> None:
         with patch("core.models.submit"):
             image = AstroImageFactory(original=jpeg_field("variant-cache.jpg", size=(1200, 800)))
         mock_invalidate_astro = mocker.patch(
@@ -102,7 +101,6 @@ class TestImageVariantCacheInvalidation:
         mock_invalidate_travel = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_travel_cache"
         )
-        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
 
         ImageVariant.objects.create(
             owner=image,
@@ -114,13 +112,8 @@ class TestImageVariantCacheInvalidation:
 
         mock_invalidate_astro.assert_called_once_with()
         mock_invalidate_travel.assert_called_once_with()
-        mock_invalidate_ssr.assert_called_once_with(
-            invalidate_frontend_ssr_cache_task, ["latest-astro-images", "travel-highlights"]
-        )
 
-    def test_astroimage_variant_delete_invalidates_gallery_travel_and_ssr_cache(
-        self, mocker
-    ) -> None:
+    def test_astroimage_variant_delete_invalidates_gallery_travel_cache(self, mocker) -> None:
         with patch("core.models.submit"):
             image = AstroImageFactory(original=jpeg_field("variant-cache-delete.jpg"))
         variant = ImageVariant.objects.create(
@@ -136,17 +129,13 @@ class TestImageVariantCacheInvalidation:
         mock_invalidate_travel = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_travel_cache"
         )
-        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
 
         variant.delete()
 
         mock_invalidate_astro.assert_called_once_with()
         mock_invalidate_travel.assert_called_once_with()
-        mock_invalidate_ssr.assert_called_once_with(
-            invalidate_frontend_ssr_cache_task, ["latest-astro-images", "travel-highlights"]
-        )
 
-    def test_background_variant_save_invalidates_background_ssr_cache(self, mocker) -> None:
+    def test_background_variant_save_invalidates_backend_cache(self, mocker) -> None:
         with patch("core.models.submit"):
             image = MainPageBackgroundImageFactory(
                 original=jpeg_field("background-cache.jpg", size=(1200, 800))
@@ -154,7 +143,6 @@ class TestImageVariantCacheInvalidation:
         mock_invalidate_astro = mocker.patch(
             "astrophotography.signals.CacheService.invalidate_astrophotography_cache"
         )
-        mock_invalidate_ssr = mocker.patch("astrophotography.signals.submit")
 
         ImageVariant.objects.create(
             owner=image,
@@ -165,9 +153,6 @@ class TestImageVariantCacheInvalidation:
         )
 
         mock_invalidate_astro.assert_called_once_with()
-        mock_invalidate_ssr.assert_called_once_with(
-            invalidate_frontend_ssr_cache_task, ["background"]
-        )
 
 
 class TestImageVariantSpec:

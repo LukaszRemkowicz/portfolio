@@ -107,7 +107,6 @@ Typical purpose:
 
 - shared services
 - email task dispatch
-- SSR cache invalidation webhook (disabled leftover)
 - shared image-processing workflow
 
 Common log shape:
@@ -121,8 +120,6 @@ Common log shape:
 
 Examples live in:
 
-- [backend/common/tasks.py](../../../backend/common/tasks.py)
-- [backend/common/ssr_cache.py](../../../backend/common/ssr_cache.py)
 - [backend/common/utils/image.py](../../../backend/common/utils/image.py)
 
 #### `core`

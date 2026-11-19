@@ -3,7 +3,6 @@ from unittest.mock import patch
 import pytest
 from PIL import Image
 
-from common.tasks import invalidate_frontend_ssr_cache_task
 from common.tests.image_helpers import jpeg_field, png_field
 from core.tasks import process_image_task
 from users.models import User
@@ -40,14 +39,10 @@ class TestProcessUserImagesTask:
         mock_invalidate_user_cache = mocker.patch(
             "users.signals.CacheService.invalidate_user_cache"
         )
-        mock_invalidate_frontend = mocker.patch("users.signals.submit")
 
         process_image_task("users", "User", superuser.pk, ["avatar"])
 
         mock_invalidate_user_cache.assert_called_once()
-        mock_invalidate_frontend.assert_called_once_with(
-            invalidate_frontend_ssr_cache_task, ["profile"]
-        )
 
     def test_process_user_images_task_uses_new_upload_not_stale_original(self, superuser: User):
         superuser.avatar = jpeg_field("old_avatar.jpg", size=(800, 800))

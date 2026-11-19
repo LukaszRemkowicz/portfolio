@@ -1,5 +1,7 @@
 import logging
 import uuid
+from collections.abc import Callable
+from functools import partial, update_wrapper
 from typing import Any, ClassVar
 
 from parler.models import TranslatableModel
@@ -7,7 +9,7 @@ from parler.models import TranslatableModel
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, router, transaction
 from django.db.models.fields.files import ImageFieldFile
 from django.utils.translation import gettext_lazy as _
 
@@ -16,7 +18,6 @@ from common.storage import is_private_name, is_remote_storage
 from common.types import ImageVariantSource, ImageVariantSpec
 from common.utils.image import (
     IMAGE_FORMAT,
-    delete_file_from_storage,
     file_exists_in_storage,
     file_is_available,
     seeded_image_upload_to,
@@ -27,13 +28,28 @@ from core.tasks import process_image_task
 logger = logging.getLogger(__name__)
 
 
+def _delete_old_file(storage: Any, file_name: str) -> None:
+    try:
+        if storage.exists(file_name):
+            storage.delete(file_name)
+    except OSError, ValueError:
+        logger.exception("Failed to delete old image file %s", file_name)
+
+
+def _named_partial(func: Callable[..., Any], *args: Any) -> Callable[[], Any]:
+    """Partial that keeps __qualname__, which on_commit(robust=True) needs to log errors."""
+    return update_wrapper(partial(func, *args), func)
+
+
 class ImageVariantQuerySet(models.QuerySet):
     """QuerySet that keeps file cleanup consistent with instance deletion."""
 
     def delete(self) -> tuple[int, dict[str, int]]:
-        for variant in self.iterator():
-            variant.delete_file()
-        return super().delete()
+        self._for_write = True
+        with transaction.atomic(using=self.db):
+            for variant in self.iterator():
+                variant.delete_file(using=self.db)
+            return super().delete()
 
 
 class ImageVariant(models.Model):
@@ -111,15 +127,23 @@ class ImageVariant(models.Model):
     def __str__(self) -> str:
         return f"{self.role} {self.width}w for {self.content_type_id}:{self.object_id}"
 
-    def delete_file(self) -> None:
-        """Delete the stored variant file without saving this row."""
+    def delete_file(self, *, using: str | None = None) -> None:
+        """Delete the stored variant file after the database transaction commits."""
         if self.file:
-            self.file.delete(save=False)
+            transaction.on_commit(
+                _named_partial(self.file.storage.delete, self.file.name),
+                using=using or self._state.db,
+                robust=True,
+            )
 
-    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+    def delete(
+        self, using: str | None = None, keep_parents: bool = False
+    ) -> tuple[int, dict[str, int]]:
         """Delete the stored variant file together with this row."""
-        self.delete_file()
-        return super().delete(*args, **kwargs)
+        using = using or router.db_for_write(type(self), instance=self)
+        with transaction.atomic(using=using):
+            self.delete_file(using=using)
+            return super().delete(using=using, keep_parents=keep_parents)
 
 
 class BaseImage(ImageVariantModelMixin, TranslatableModel):
@@ -228,8 +252,13 @@ class BaseImage(ImageVariantModelMixin, TranslatableModel):
         if not (self.pk and file_names_to_delete and self.original):
             return
 
+        storage = self.original.storage
         for file_name in file_names_to_delete:
-            delete_file_from_storage(self.original, file_name)
+            transaction.on_commit(
+                _named_partial(_delete_old_file, storage, file_name),
+                using=self._state.db,
+                robust=True,
+            )
 
     def _handle_post_save_image_effects(
         self,

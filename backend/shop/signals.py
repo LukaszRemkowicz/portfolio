@@ -1,16 +1,9 @@
 # backend/shop/signals.py
-"""Cache invalidation signals for shop content.
-
-Keeps two cache layers in sync after shop product changes:
-- backend API cache, cleared via CacheService
-- frontend SSR shell cache, cleared via invalidate_frontend_ssr_cache_task
-"""
+"""Cache invalidation signals for shop content."""
 
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from common.background import submit
-from common.tasks import invalidate_frontend_ssr_cache_task
 from core.cache_service import CacheService
 
 from .models import ShopProduct, ShopSettings
@@ -21,11 +14,5 @@ from .models import ShopProduct, ShopSettings
 @receiver([post_save, post_delete], sender=ShopProduct)
 @receiver([post_save, post_delete], sender="shop.ShopProductTranslation")
 def invalidate_shop_cache(sender, instance, **kwargs):
-    """Clear shop caches after product content changes.
-
-    Clears:
-    - backend shop API cache
-    - frontend SSR tag: ``shop``
-    """
+    """Clear shop API cache after product content changes."""
     CacheService.invalidate_shop_cache()
-    submit(invalidate_frontend_ssr_cache_task, ["shop"])

@@ -331,7 +331,7 @@ class ProfileAdmin(
         ),
         ("Metadata", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created_at", "updated_at", "translation_status")
 
     def has_add_permission(self, request) -> bool:
         """Limit profiles to the defined types (Programming, Astro)"""

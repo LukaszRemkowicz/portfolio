@@ -36,18 +36,24 @@ def _run(
     kwargs: dict[str, Any],
     retries: int,
     delay: float,
+    on_failure: Callable[[Exception], None] | None,
 ) -> None:
     close_old_connections()
     try:
         func(*args, **kwargs)
-    except Exception:
+    except Exception as exc:
         if retries > 0:
             # A timer waits for the retry, so the delay does not hold a pool thread.
-            timer = Timer(delay, _schedule, (func, args, kwargs, retries - 1, delay))
+            timer = Timer(delay, _schedule, (func, args, kwargs, retries - 1, delay, on_failure))
             timer.daemon = True
             timer.start()
         else:
             logger.exception("Background task %s failed", getattr(func, "__name__", func))
+            if on_failure:
+                try:
+                    on_failure(exc)
+                except Exception:
+                    logger.exception("Background on_failure callback failed")
     finally:
         connection.close()
 
@@ -58,8 +64,9 @@ def _schedule(
     kwargs: dict[str, Any],
     retries: int,
     delay: float,
+    on_failure: Callable[[Exception], None] | None,
 ) -> None:
-    _get_executor().submit(_run, func, args, kwargs, retries, delay)
+    _get_executor().submit(_run, func, args, kwargs, retries, delay, on_failure)
 
 
 def submit(
@@ -67,14 +74,20 @@ def submit(
     *args: Any,
     retries: int = 0,
     retry_delay: float = 60,
+    on_failure: Callable[[Exception], None] | None = None,
     **kwargs: Any,
 ) -> None:
     """Run func in a background thread once the current transaction commits."""
 
     def dispatch() -> None:
         if settings.BACKGROUND_TASKS_SYNC:
-            func(*args, **kwargs)
+            try:
+                func(*args, **kwargs)
+            except Exception as exc:
+                if on_failure:
+                    on_failure(exc)
+                raise
         else:
-            _schedule(func, args, kwargs, retries, retry_delay)
+            _schedule(func, args, kwargs, retries, retry_delay, on_failure)
 
     transaction.on_commit(dispatch)

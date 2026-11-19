@@ -128,6 +128,7 @@ Important behavior:
 
 - task state is anchored to the dispatcher-provided `task_id` when available
 - transient HTTP/network failures are re-raised so `submit(..., retries=3, retry_delay=60)` retries them after a fixed delay instead of an immediate hard failure
+- exhausted retries mark the exact task `FAILED` with the last error
 - partial field-level failures are treated as task failure and saved to `error_message`
 
 
@@ -354,11 +355,7 @@ its localized default subtitle when `highlight_title` is empty.
 
 ### 1. `TranslationTask` can become stale
 
-Current design records execution failures well, but does not automatically reconcile old orphaned `PENDING` rows.
-
-Implication:
-
-- admin status can show `In Progress` because of ancient stale task rows
+The local production admin startup runs `reset_stuck_translation_tasks` after migrations. It marks orphaned `PENDING` and `RUNNING` tasks as `FAILED` so they can be retried. This assumes only one local admin process is running.
 
 ### 2. Public stale content may be unrelated to translation itself
 

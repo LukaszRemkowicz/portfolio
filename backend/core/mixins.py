@@ -99,8 +99,8 @@ class ImageVariantModelMixin(metaclass=DjangoModelABCMeta):
 
         ``changed_field_names`` limits syncing to specific source families when a
         task was triggered by a targeted field change. ``force`` performs a full
-        rebuild for every selected family, replacing current rows only after all
-        replacements are generated successfully.
+        rebuild for every selected family, deleting current rows before generating
+        replacements.
         """
         changed_variant_count = 0
         effective_force = force or changed_field_names is not None

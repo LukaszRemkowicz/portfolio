@@ -52,7 +52,12 @@ if SENTRY_DSN and ENABLE_SENTRY:
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("SECRET_KEY", default=cast(Any, "django-insecure-development-key"))
+SECRET_KEY = env.str("SECRET_KEY", default="")
+if not SECRET_KEY.strip():
+    if DEBUG:
+        SECRET_KEY = "django-insecure-development-key"
+    else:
+        raise ImproperlyConfigured("SECRET_KEY is required when DEBUG is False")
 
 
 # Security Hardening
@@ -63,8 +68,8 @@ SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
 SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000 if not DEBUG else 0)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=not DEBUG)
 SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=not DEBUG)
-# These headers are set by Nginx — disable Django's duplicates where possible
-SECURE_CONTENT_TYPE_NOSNIFF = False
+# Django also serves the local admin without Nginx.
+SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = False
 # X_FRAME_OPTIONS must stay — XFrameOptionsMiddleware crashes if set to None
 X_FRAME_OPTIONS = "DENY"
@@ -227,10 +232,6 @@ TRANSLATION_LLM_PROVIDER = env.str("TRANSLATION_LLM_PROVIDER", default="gpt")
 LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER = env.str(
     "LANDING_PAGE_TOTAL_TIME_SPENT_LLM_PROVIDER", default="gpt"
 )
-SSR_CACHE_INVALIDATION_URL = env.str("SSR_CACHE_INVALIDATION_URL", default="")
-SSR_CACHE_INVALIDATION_TOKEN = env.str(
-    "SSR_CACHE_INVALIDATION_TOKEN", default="dev-ssr-cache-token"
-)
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -353,15 +354,16 @@ if MEDIA_STORAGE == "r2":
 
 # Cache Configuration (database-backed; create tables with `manage.py createcachetable`)
 # MAX_ENTRIES is high because API responses are cached for 30 days (default 300 would cull them).
+CACHE_BACKEND = env.str("CACHE_BACKEND", default="django.core.cache.backends.db.DatabaseCache")
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "BACKEND": CACHE_BACKEND,
         "LOCATION": "django_cache",
         "TIMEOUT": 3600,
         "OPTIONS": {"MAX_ENTRIES": 10000},
     },
     "select2": {
-        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "BACKEND": CACHE_BACKEND,
         "LOCATION": "django_select2_cache",
         "TIMEOUT": 3600,
     },
@@ -686,7 +688,7 @@ ADMIN_SITE_ORDERING = (
 # Background tasks (in-process thread pool, see common/background.py)
 # ===========================
 
-BACKGROUND_TASK_WORKERS = env.int("BACKGROUND_TASK_WORKERS", default=2)
+BACKGROUND_TASK_WORKERS = env.int("BACKGROUND_TASK_WORKERS", default=1)
 # Run tasks inline instead of in a thread (used by tests)
 BACKGROUND_TASKS_SYNC = False
 

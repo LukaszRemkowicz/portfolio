@@ -1,4 +1,5 @@
 import uuid
+from unittest.mock import ANY
 
 from translation.mixins import AutomatedTranslationModelMixin
 from translation.models import TranslationTask
@@ -38,6 +39,7 @@ class TestTranslationDispatch:
             translate_instance_task,
             retries=3,
             retry_delay=60,
+            on_failure=ANY,
             task_id=task_id,
             model_name=obj._meta.label,
             instance_pk=obj.pk,

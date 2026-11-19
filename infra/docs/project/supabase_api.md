@@ -38,7 +38,9 @@ flowchart LR
 - DB: postgres.js, one connection per isolate, prepared statements. Deployed it
   uses the direct connection (`db.<ref>.supabase.co:5432`); local runs use the
   session pooler (port 5432). Never the transaction pooler (6543): it breaks
-  prepared statements.
+  prepared statements. `db.ts` drops a null write to the TLS socket: under Deno a
+  cancelled postgres.js write timer can still fire, and that throw used to kill the
+  isolate (bursts of empty 503s).
 - `/sitemap.xml` (`sitemap.ts`) mirrors `backend/core/sitemaps.py` byte for byte and
   is built from the database on every request; the FE Worker serves it on the site
   domain. A new FE page with a fixed URL must be added to both sitemaps.
@@ -98,14 +100,28 @@ The script sets the function secrets from Doppler (DB, `MEDIA_SIGNING_KEY`,
 
 ```bash
 infra/scripts/run_admin.sh            # newest release tag
-infra/scripts/run_admin.sh v2.21.0    # a specific release
+infra/scripts/run_admin.sh <release-tag>  # a release matching this checkout
 ```
 
 Pulls the released `production-be` image from GHCR, runs `migrate` and
-`createcachetable`, then serves the admin at http://localhost:8000/admin/
+`createcachetable` and `reset_stuck_translation_tasks`, then serves the admin at http://localhost:8000/admin/
 (`docker-compose.supabase.yml`, all config from Doppler). Background work
 (image variants, translations) runs in-process: stop with Ctrl+C only after it
 has finished. Nothing here touches the VPS.
+
+This compose file requires an image from the release that includes this change or newer.
+For an older release tag, use the matching Git checkout; older images lack the reset command.
+
+Startup marks unfinished translation tasks from the previous process as failed; retry
+those translations in the admin. If image work was interrupted, recover it with:
+
+```bash
+docker compose -f docker-compose.supabase.yml run --rm --no-deps admin python manage.py backfill_image_variants
+docker compose -f docker-compose.supabase.yml run --rm --no-deps admin python manage.py recalculate_landing_page_total_time_spent --recalculate
+```
+
+Run these with the same `TAG`, GHCR and Doppler environment used for the admin.
+`--no-deps` avoids starting the migrate/reset service alongside an active worker.
 
 ## Keep-alive and Backups
 
