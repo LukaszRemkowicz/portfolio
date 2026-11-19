@@ -49,7 +49,6 @@ After save, the existing async image pipeline still runs:
 2. model save logic detects changed image fields.
 3. the matching async image task is scheduled.
 4. A background thread regenerates the derived file for the changed source field.
-5. cache invalidation runs after image processing.
 
 This means the cropper does not replace the existing backend image-processing architecture. It only changes what source file is submitted.
 
@@ -92,7 +91,7 @@ This means the cropper does not replace the existing backend image-processing ar
 
 ### Media serving and tests
 - [backend/settings/urls.py](../../../backend/settings/urls.py)
-  - admin-domain media serving
+  - local admin media serving
   - `safe_serve()`
 - [backend/core/tests/test_admin_media_urls.py](../../../backend/core/tests/test_admin_media_urls.py)
   - regression coverage for admin media URL behavior
@@ -249,7 +248,7 @@ The widget loads persisted images from `current_image_url`, for example:
 
 These are loaded directly in the browser via `new Image()`.
 
-### Admin-domain media serving
+### Local admin media serving
 Locally (`http://localhost:8000/admin/`), media is served by `safe_serve()` in [backend/settings/urls.py](../../../backend/settings/urls.py).
 
 Allowed:
@@ -351,7 +350,7 @@ Likely causes:
 Check:
 - browser console network tab
 - model field `.name` and `.url`
-- `safe_serve()` behavior on admin domain
+- `safe_serve()` behavior on the local admin
 - lookup endpoint response for shop foreign-key crops
 
 ### 3. Backend appears broken after frontend work
@@ -371,7 +370,7 @@ If a new model field should use the cropper:
 1. add a new `CropperFieldConfig` instance to the relevant admin property
 2. make sure the admin form exposes a stable file input id
 3. choose an `ImageSpec` for admin crop export
-4. ensure admin-domain media serving allows that media path
+4. ensure local admin media serving allows that media path
 5. verify the existing async derivative pipeline supports the field, or extend it
 6. add admin and backend regression coverage
 
@@ -409,5 +408,5 @@ As of April 8, 2026:
 - field config type is centralized in `users/types.py`
 - cropper field instances are owned by the relevant admin classes
 - shape is typed with `CropperPreviewShape`
-- admin-domain media serving bug for `about_me_images` is fixed
+- local admin media serving bug for `about_me_images` is fixed
 - backend test suite is green

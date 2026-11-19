@@ -79,10 +79,10 @@ Flow:
 4. Send the normalized text to the LLM
 5. Parse the returned float hour value
 6. Save it into `AstroImage.calculated_exposure_hours`
-7. Invalidate the settings/landing-page cache so the total is recalculated on demand
+7. Nothing is cached: the Edge Function sums the stored values on each request
 
 Clearing the saved default-language exposure details resets the stored hours to
-zero and invalidates the landing-page cache without scheduling a calculation.
+zero without scheduling a calculation.
 A completed calculation updates the hours only if the saved default-language
 exposure text still matches its input; otherwise the stale result is discarded.
 
@@ -153,19 +153,11 @@ If higher confidence is required:
 - reserve the LLM for ambiguous free-form cases only
 
 
-## Cache Invalidation
+## Caching
 
-This feature relies on the backend API cache (Django `DatabaseCache`).
-
-Current invalidation points:
-- per-image exposure-hour recalculation invalidates landing-page backend cache
-- `AstroImage.calculated_exposure_hours` changes invalidate the same settings
-  cache path
-
-Why this matters:
-- the total is exposed via `/v1/settings/`
-- clearing only astrophotography cache is not enough for this statistic
-
+There is no API cache. The total is exposed via `/v1/settings/` and is read from
+the stored per-image values by the Supabase Edge Function on each request, so a
+recalculation shows up immediately without clearing anything.
 
 ## Frontend Rendering
 

@@ -6,7 +6,7 @@ This document explains how content translation works in the backend:
 
 - what components are involved
 - how translations are queued and executed
-- how translated content is read by the API and admin
+- how translated content is read (Supabase Edge Function for the public API, Django for the admin)
 - where task state is stored
 - what the known operational limits are
 
@@ -38,7 +38,7 @@ The translation system is asynchronous and model-driven.
 
 ### 1. `TranslationTask` model
 
-Path: [backend/translation/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/models.py)
+Path: [backend/translation/models.py](../../../backend/translation/models.py)
 
 This model tracks async translation execution state.
 
@@ -59,7 +59,7 @@ Important limitation:
 
 ### 2. Translation-triggering model mixin
 
-Path: [backend/translation/mixins.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/mixins.py)
+Path: [backend/translation/mixins.py](../../../backend/translation/mixins.py)
 
 `AutomatedTranslationModelMixin` is the model-side entry point.
 
@@ -86,7 +86,7 @@ Key behavior:
 
 ### 3. Translation admin mixins
 
-Path: [backend/translation/mixins.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/mixins.py)
+Path: [backend/translation/mixins.py](../../../backend/translation/mixins.py)
 
 Admin-specific helpers:
 
@@ -104,7 +104,7 @@ Admin-specific helpers:
 
 ### 4. Background task wrapper
 
-Path: [backend/translation/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/tasks.py)
+Path: [backend/translation/tasks.py](../../../backend/translation/tasks.py)
 
 `translate_instance_task` is the async execution wrapper.
 
@@ -134,7 +134,7 @@ Important behavior:
 
 ### 5. `TranslationService`
 
-Path: [backend/translation/services.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/services.py)
+Path: [backend/translation/services.py](../../../backend/translation/services.py)
 
 This is the orchestration layer for translation logic.
 
@@ -157,14 +157,16 @@ Main concepts:
 - `_run_parler_translation(...)`
   - shared field-level orchestration for most models
 - `get_translation(...)`
-  - safe read path used by serializers and API output
+  - safe read path for translated values inside Django
 
 Supported model methods:
 
 - `translate_astro_image`
 - `translate_main_page_location`
 - `translate_main_page_background_image`
-- `translate_project_image`
+- `translate_project`
+- `translate_shop_product`
+- `translate_shop_settings`
 - `translate_user`
 - `translate_profile`
 - `translate_place`
@@ -180,7 +182,7 @@ Special cases:
 
 ### 6. `TranslationAgent`
 
-Path: [backend/translation/agents.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/agents.py)
+Path: [backend/translation/agents.py](../../../backend/translation/agents.py)
 
 This is the LLM-facing adapter.
 
@@ -211,8 +213,8 @@ Important behavior:
 
 Paths:
 
-- [backend/common/llm/protocols.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/llm/protocols.py)
-- [backend/common/llm/registry.py](/Users/lukaszremkowicz/Projects/landingpage/backend/common/llm/registry.py)
+- [backend/common/llm/protocols.py](../../../backend/common/llm/protocols.py)
+- [backend/common/llm/registry.py](../../../backend/common/llm/registry.py)
 
 `TranslationService.create_default()` resolves the provider through:
 
@@ -225,7 +227,7 @@ This means the translation system is provider-agnostic at the service layer.
 ### 8. Read path
 
 The DRF serializers (`TranslatedSerializerMixin`) were removed from Django. Public
-translated reads are served by the Supabase function; `TranslationService.get_translation(...)`
+translated reads are served by the Supabase function (`supabase/functions/api`); `TranslationService.get_translation(...)`
 remains the safe read path inside Django.
 
 
@@ -233,9 +235,9 @@ remains the safe read path inside Django.
 
 Paths:
 
-- [backend/translation/admin.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/admin.py)
-- [backend/translation/views.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/views.py)
-- [backend/translation/urls.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/urls.py)
+- [backend/translation/admin.py](../../../backend/translation/admin.py)
+- [backend/translation/views.py](../../../backend/translation/views.py)
+- [backend/translation/urls.py](../../../backend/translation/urls.py)
 
 Components:
 
@@ -264,7 +266,7 @@ These models opt in by setting `translation_service_method` and calling `trigger
 
 ## Language Configuration
 
-Primary settings path: [backend/settings/base.py](/Users/lukaszremkowicz/Projects/landingpage/backend/settings/base.py)
+Primary settings path: [backend/settings/base.py](../../../backend/settings/base.py)
 
 Relevant settings:
 
@@ -333,7 +335,7 @@ Read-time fallback behavior:
 - then default language
 - then any other available language
 
-This fallback keeps the API populated even when translation is incomplete.
+This fallback keeps the public output populated even when translation is incomplete.
 
 Travel highlights are an exception: `highlight_name`, `highlight_title`, `story`,
 and story previews allow requested-language then default-English fallback only.
@@ -371,17 +373,17 @@ Forensic debugging benefits from:
 3. Register the model and fields in `TranslationService.TRANSLATION_CONFIGS`.
 4. Set `translation_service_method` on the model.
 5. Ensure the model calls `trigger_translations()` at the correct save point.
-6. Use `TranslatedSerializerMixin` or `TranslationService.get_translation(...)` in API output.
+6. For public output, add the field to the Edge Function query (`supabase/functions/api`) and a `portfolio_api` grant in a new `supabase/migrations/*.sql` (see [supabase_api.md](supabase_api.md)). Inside Django use `TranslationService.get_translation(...)`.
 7. Add lifecycle and service tests.
 
 
 ## Useful Files
 
-- [backend/translation/models.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/models.py)
-- [backend/translation/tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/tasks.py)
-- [backend/translation/services.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/services.py)
-- [backend/translation/agents.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/agents.py)
-- [backend/translation/mixins.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/mixins.py)
-- [backend/translation/admin.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/admin.py)
-- [backend/translation/tests/test_translation_lifecycle.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/tests/test_translation_lifecycle.py)
-- [backend/translation/tests/test_tasks.py](/Users/lukaszremkowicz/Projects/landingpage/backend/translation/tests/test_tasks.py)
+- [backend/translation/models.py](../../../backend/translation/models.py)
+- [backend/translation/tasks.py](../../../backend/translation/tasks.py)
+- [backend/translation/services.py](../../../backend/translation/services.py)
+- [backend/translation/agents.py](../../../backend/translation/agents.py)
+- [backend/translation/mixins.py](../../../backend/translation/mixins.py)
+- [backend/translation/admin.py](../../../backend/translation/admin.py)
+- [backend/translation/tests/test_translation_lifecycle.py](../../../backend/translation/tests/test_translation_lifecycle.py)
+- [backend/translation/tests/test_tasks.py](../../../backend/translation/tests/test_tasks.py)

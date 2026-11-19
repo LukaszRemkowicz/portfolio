@@ -65,13 +65,18 @@ quickstart and targeted code inspection are insufficient.
 ## AstroImage Access
 
 - Source uploads under `images/original/` and legacy files directly under
-  `images/` are private. Public `/media/images/` paths are limited to generated
-  `thumbnail/` and `detail/` variants; other direct image paths require staff
+  `images/` are private (bucket `portfolio-originals` in `r2` mode). Only
+  generated `thumbnail/` and `detail/` variants are public: the Edge Function
+  returns them as direct URLs on `media.lukaszremkowicz.com` (bucket
+  `portfolio-media`; `supabase/functions/api/media.ts`). Locally (`MEDIA_STORAGE=local`)
+  Django serves them under `/media/`, and other direct image paths require staff
   access on the admin media route.
 - AstroImage's signed viewer serves only the `high_resolution` variant. It does
-  not fall back to `detail` or the source upload. Legacy AstroImage
-  `original_format` rows are renamed in place, so their existing file paths stay
-  valid.
+  not fall back to `detail` or the source upload. The Edge Function route
+  `/image-files/<slug>/serve/` (`serveImage` in `supabase/functions/api/astrophotography.ts`)
+  validates the HMAC signature (`signing.ts`, `MEDIA_SIGNING_KEY`) and answers 302 with
+  a short-lived presigned R2 URL. Legacy AstroImage `original_format` rows are
+  renamed in place, so their existing file paths stay valid.
 - The public API payload does not expose the `high_resolution` role. The
   signed image URL contract stays unchanged, so the external frontend keeps
   using the existing signed URL flow.
