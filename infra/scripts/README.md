@@ -2,6 +2,17 @@
 
 This repository uses shell scripts to manage deployments, backups, and related operational tasks.
 
+> **VPS rollback only.** The release scripts (`release/`), the `db_backup/` scripts and the Cloudflare Tunnel section below belong to the VPS stack, which has been stopped since 2026-11-17 and is kept only as a rollback path. Production now runs on Supabase and Cloudflare; see [supabase_api.md](../docs/project/supabase_api.md) and the Release & Deployment section of the root [README](../../README.md).
+
+## Current production tooling
+
+- `infra/scripts/run_admin.sh [tag]` -> runs the released `production-be` image locally against Supabase (migrations, admin on http://localhost:8000/admin/)
+- `infra/scripts/run_local_api.sh` -> runs the Edge Function locally on :8001 against the dev compose Postgres
+- `supabase/deploy-api.sh` -> deploys the Edge Function (`doppler run --project portfolio --config prd -- supabase/deploy-api.sh`)
+- `.github/workflows/supabase-maintenance.yml` -> database keep-alive ping and monthly encrypted backup to R2
+
+Details: [supabase_api.md](../docs/project/supabase_api.md).
+
 ## 🗂️ Script Groups
 
 Primary script groups:
@@ -12,9 +23,9 @@ Primary script groups:
 
 ---
 
-## 🚀 Release Scripts
+## 🚀 Release Scripts (VPS rollback)
 
-Release scripts manage **Production** deployments on a single VPS. Staging no longer exists.
+Release scripts manage **Production** deployments on a single VPS (stopped since 2026-11-17). Staging no longer exists.
 
 - `release/build.sh` -> manual fallback: **builds Docker images locally** with environment prefixes and service suffixes (`production-be:v1.0.0`, `production-nginx:v1.0.0`)
 - `release/prepare_images.sh` -> pulls production images from GHCR, retags them to the local runtime names, and removes the GHCR tag from the VPS
@@ -60,7 +71,7 @@ EMERGENCY=1 doppler run -- ./infra/scripts/release/build.sh
 
 ---
 
-## 🏭 Production Workflow
+## 🏭 Production Workflow (VPS rollback)
 
 Before the first production release, ensure the backup directories exist and are writable by the deploy user:
 
@@ -95,7 +106,9 @@ For test-only GHCR tags that are not SemVer-like:
 TEST=true TAG=test-feat-add-image-registry-2f0b23d doppler -c dev run -- ./infra/scripts/release/prepare_images.sh
 ```
 
-## 🔌 Cloudflare Tunnel (frontend on Workers)
+## 🔌 Cloudflare Tunnel (frontend on Workers) - VPS rollback only
+
+The tunnel is part of the stopped VPS stack; the current Worker reaches the Supabase Edge Function directly.
 
 The Workers frontend (`portfolio-fe`) reaches the backend through the
 `cloudflared` service (profile `tunnel`), which forwards the tunnel hostname to

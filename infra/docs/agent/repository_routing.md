@@ -53,8 +53,8 @@ confirming behavior.
 ## Project Document Map
 
 - `infra/docs/project/cache_invalidation.md`
-  Use for Django cache configuration (parler, Select2) and clearing it.
-  Django no longer caches API responses.
+  Use for the admin `DatabaseCache` configuration (parler, Select2) and clearing
+  it. There is no API cache: Django no longer caches API responses.
 - `infra/docs/project/django_admin_image_cropper_mechanism.md`
   Use for Django admin image cropper changes, preview/media bugs, or extending
   cropper behavior. Describes the cropper contract, browser flow, media serving
@@ -72,36 +72,39 @@ confirming behavior.
   Describes the derived-stat architecture and operational
   caveats.
 - `infra/docs/project/logging_structure_overview.md`
-  Use for backend/nginx logging formats, JSON-vs-plain-text status, and
-  application log emission structure.
+  Use for backend logging formats, JSON-vs-plain-text status, and application
+  log emission structure. The nginx sections are VPS-only (stopped); public API
+  logs live in the Supabase function logs.
 - `infra/docs/project/translation_system_overview.md`
   Use for translation lifecycle, `TranslationTask` debugging, translation admin
   behavior, fallback behavior, and adding translation support to new
   models. Describes the async translation architecture and operational
   boundaries.
 - `infra/docs/project/release_deploy_architecture.md`
-  Use for release scripts, deploy logic, image naming (`production-be`,
-  `production-nginx`), artifact flow, and rollback behavior. Describes the
-  tag-based release/deploy model and script responsibilities.
+  Use for the current release flow and, in a separate part, the VPS rollback
+  model (stopped since 2026-11-17): release scripts, deploy logic, image naming
+  (`production-be`, `production-nginx`), artifact flow, and rollback behavior.
 - `infra/docs/project/supabase_api.md`
   Use for the Supabase Edge Function API, the hidden-API secret, `portfolio_api`
-  grants and migration order, the contact form (Resend, `api_private`), function
-  deploy, gateway quirks, and running the production admin locally.
+  grants and migration order, the production release order, the contact form
+  (Resend, `api_private`), function deploy, gateway quirks, running the
+  production admin locally, and keep-alive/backups.
 - `infra/docs/agent/image_variant_quickstart.md`
   Use as the cheap entry point for image variant specs, generated image files,
   variant sync, and compatibility methods before opening larger analysis docs.
 
 ## Short Routing Guide
 
-- Cache bug or stale homepage content -> `infra/docs/project/cache_invalidation.md`
+- Admin cache (`DatabaseCache`) questions -> `infra/docs/project/cache_invalidation.md` (there is no API cache)
 - Homepage latest-image filters/tags -> `infra/docs/project/latest_images_tags.md`
 - Feature flag backend (frontend gating lives in `portfolio-fe`) or `LandingPageSettings` booleans -> `infra/docs/project/feature_flag_mechanism.md`
 - Landing page total-time stat or exposure-hours rebuilds -> `infra/docs/project/landing_page_total_time_spent_system.md`
 - Django admin image cropping or preview/media bug -> `infra/docs/project/django_admin_image_cropper_mechanism.md`
-- Backend/nginx logging structure -> `infra/docs/project/logging_structure_overview.md`
+- Backend logging structure (nginx = VPS only) -> `infra/docs/project/logging_structure_overview.md`
 - Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
-- Release/deploy script logic or image naming -> `infra/docs/project/release_deploy_architecture.md`
-- Production release procedure -> `infra/scripts/README.md`
+- Release flow, or VPS rollback script logic/image naming -> `infra/docs/project/release_deploy_architecture.md`
+- Production release procedure -> `infra/docs/project/supabase_api.md` and the Release & Deployment section of `README.md`
+- VPS rollback runbook (stopped since 2026-11-17) -> `infra/scripts/README.md`
 - Supabase function API, its grants/migrations, contact form or local production
   admin -> `infra/docs/project/supabase_api.md`
 - Image variant generation, `ImageVariantSpec`, `ViewportWidths`, or

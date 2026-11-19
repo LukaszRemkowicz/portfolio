@@ -1,5 +1,7 @@
 # 🚀 Release Scripts
 
+> **VPS rollback only.** These scripts deploy the VPS stack, which has been stopped since 2026-11-17 and is kept only as a rollback path. The current release flow is described in the root [README](../../../README.md) and [supabase_api.md](../../docs/project/supabase_api.md).
+
 The canonical operational documentation for infrastructure scripts lives in:
 
 - [infra/scripts/README.md](../README.md)

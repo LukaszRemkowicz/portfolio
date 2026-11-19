@@ -10,19 +10,21 @@ It is intended as:
 - an operational guide for reading logs across backend and nginx,
 - a baseline for future log normalization and ingestion work.
 
-Current state verified on 2026-04-17.
+Current state verified on 2026-04-17; updated for the Supabase architecture on 2026-11.
+
+The public API logs are not in this stack: they live in the Supabase Edge Function logs (Supabase dashboard). Django is the admin only and runs locally, so its JSON logs go to local Docker stdout. The nginx sections below describe the stopped VPS stack (VPS-only, rollback).
 
 ## Short Answer
 
 Current JSON logging status:
 
 - Backend Django app: yes, JSON to Docker stdout
-- Nginx access logs: yes, JSON to Docker stdout
+- Nginx access logs (VPS-only): yes, JSON to Docker stdout
 
 Current plain-text / non-JSON areas:
 
 - Backend startup / any non-logging `print` usage: possible plain text
-- Nginx error logs: plain text
+- Nginx error logs (VPS-only): plain text
 - Shell entrypoint scripts: plain text
 
 So the stack is partially normalized, but not fully JSON everywhere yet.
@@ -128,7 +130,6 @@ Typical purpose:
 
 - shared domain infrastructure
 - `BaseImage` lifecycle
-- cache services
 
 #### `scripts`
 
@@ -155,20 +156,19 @@ Examples live in:
 
 - [backend/core/models.py](../../../backend/core/models.py)
 - [backend/core/tasks.py](../../../backend/core/tasks.py)
-- [backend/core/cache_service.py](../../../backend/core/cache_service.py)
 
 #### `users`
 
 Typical purpose:
 
 - profile/user image lifecycle
-- user/profile admin or API logic
+- user/profile admin logic
 
 Common log shape:
 
 - base JSON fields
 - request context when logs happen during HTTP request flow
-- cache invalidation or image-processing related extras when provided
+- image-processing related extras when provided
 
 Examples live in:
 
@@ -179,7 +179,7 @@ Examples live in:
 Typical purpose:
 
 - shop settings image lifecycle
-- product/shop API and admin logic
+- product/shop admin logic
 
 Common log shape:
 
@@ -282,7 +282,7 @@ The middleware:
 
 Backend runtime logging is already JSON and suitable for Docker log parsing.
 
-## 2. Nginx
+## 2. Nginx (VPS-only, stopped since 2026-11-17)
 
 ### Current format
 
@@ -401,8 +401,8 @@ This does not need to happen immediately, but it is the clean target if the proj
 If you are looking at live Docker logs:
 
 - backend logs are JSON
-- nginx access logs are JSON
-- nginx error lines remain plain text
+- nginx access logs are JSON (VPS-only)
+- nginx error lines remain plain text (VPS-only)
 
 Landingpage owns application log emission only.
 
