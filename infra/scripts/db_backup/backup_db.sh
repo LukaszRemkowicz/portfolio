@@ -12,21 +12,9 @@ source "$PROJECT_ROOT/infra/scripts/utils.sh"
 
 RETENTION_DAYS="${RETENTION_DAYS:-7}"
 DB_USER="${DB_USER:-postgres}"
-STANDARD_DB_NAME="$(get_db_name)"
-DB_NAME="${DB_NAME:-$STANDARD_DB_NAME}"
+DB_NAME="${DB_NAME:-$(get_db_name)}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PASSWORD="${DB_PASSWORD:-postgres}"
-
-# For managed prod environments, prefer the standardized DB name derived
-# from ENVIRONMENT over any stale injected DB_NAME value.
-case "${ENVIRONMENT:-}" in
-    production|prod)
-        if [ "${DB_NAME}" != "${STANDARD_DB_NAME}" ]; then
-            echo "⚠️  Overriding DB_NAME=${DB_NAME} with standardized ${STANDARD_DB_NAME} for ENVIRONMENT=${ENVIRONMENT}"
-            DB_NAME="${STANDARD_DB_NAME}"
-        fi
-        ;;
-esac
 
 # Anchor compose file to project root
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/docker-compose.yml}"
@@ -46,7 +34,7 @@ mkdir -p "$BACKUP_DIR"
 
 if [ ! -w "$BACKUP_DIR" ]; then
     echo "❌ ERROR: Backup directory is not writable: $BACKUP_DIR"
-    echo "👉 Ensure the deploy user owns the backup path. See infra/scripts/README.md"
+    echo "👉 Ensure the current user can write to the backup path. See infra/scripts/README.md"
     exit 1
 fi
 

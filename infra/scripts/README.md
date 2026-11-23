@@ -9,7 +9,7 @@ Shell scripts for local tooling and database backups. Production runs on Supabas
 - `supabase/deploy-api.sh` -> deploys the Edge Function (`doppler run --project portfolio --config prd -- supabase/deploy-api.sh`)
 - `.github/workflows/supabase-maintenance.yml` -> database keep-alive ping and monthly encrypted backup to R2
 - `db_backup/` -> backup, restore, restore validation for the local Docker database
-- `utils.sh` -> shared utility functions used across the scripts
+- `utils.sh` -> helpers for the `db_backup/` scripts (local dev database name)
 
 Details: [supabase_api.md](../docs/project/supabase_api.md).
 
