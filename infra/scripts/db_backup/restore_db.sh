@@ -13,19 +13,9 @@ source "$PROJECT_ROOT/infra/scripts/utils.sh"
 
 # Default configuration (can be overridden by env vars)
 DB_USER="${DB_USER:-postgres}"
-STANDARD_DB_NAME="$(get_db_name)"
-DB_NAME="${DB_NAME:-$STANDARD_DB_NAME}"
+DB_NAME="${DB_NAME:-$(get_db_name)}"
 TARGET_DB="${TARGET_DB:-db}"
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/docker-compose.yml}"
-
-case "${ENVIRONMENT:-}" in
-    production|prod)
-        if [ "${DB_NAME}" != "${STANDARD_DB_NAME}" ]; then
-            echo "⚠️  Overriding DB_NAME=${DB_NAME} with standardized ${STANDARD_DB_NAME} for ENVIRONMENT=${ENVIRONMENT}"
-            DB_NAME="${STANDARD_DB_NAME}"
-        fi
-        ;;
-esac
 
 # Validating COMPOSE_FILE: If it's a directory, look for docker-compose.yml inside
 if [ -d "$COMPOSE_FILE" ]; then
@@ -35,8 +25,10 @@ fi
 # 2. Argument Parsing (Backup File)
 if [ "$#" -ne 1 ]; then
     echo "Usage: $0 <path_to_backup_file>"
-    echo "Available backups in ${BACKUP_DIR:-/var/backups/portfolio}:"
-    find "${BACKUP_DIR:-/var/backups/portfolio}" -maxdepth 3 \( -name '*.dump' -o -name '*.sql' -o -name '*.sql.gz' \) -type f 2>/dev/null | sort | sed 's/^/  /'
+    if [ -n "${BACKUP_DIR:-}" ]; then
+        echo "Available backups in ${BACKUP_DIR}:"
+        find "${BACKUP_DIR}" -maxdepth 3 \( -name '*.dump' -o -name '*.sql' -o -name '*.sql.gz' \) -type f 2>/dev/null | sort | sed 's/^/  /'
+    fi
     exit 1
 fi
 
