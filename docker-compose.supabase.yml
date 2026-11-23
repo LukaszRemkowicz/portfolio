@@ -1,7 +1,7 @@
 # Production admin on your own machine, against the Supabase database.
 #
 # Runs the released backend image: first migrations, then the Django admin at
-# http://localhost:8000/admin/. Nothing here touches the VPS.
+# http://localhost:8000/admin/.
 #
 # Start it with infra/scripts/run_admin.sh (picks the newest release, logs in to
 # GHCR, passes TAG and the Doppler config). Stop with Ctrl+C after background
@@ -54,7 +54,7 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-    # --insecure serves admin static files without nginx (DEBUG is off).
+    # --insecure serves admin static files without a web server (DEBUG is off).
     command: python manage.py runserver --noreload --insecure 0.0.0.0:8000
     stop_signal: SIGINT
     stop_grace_period: 15m

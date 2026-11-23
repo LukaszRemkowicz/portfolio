@@ -29,7 +29,7 @@ class RequestCorrelationMiddleware:
     and duration.
 
     This makes it possible to correlate a single request across the frontend
-    server, backend, nginx, and monitoring pipelines.
+    server, backend, and monitoring pipelines.
     """
 
     def __init__(self, get_response: Callable[[Any], Any]) -> None:

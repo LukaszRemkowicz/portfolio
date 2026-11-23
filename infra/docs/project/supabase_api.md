@@ -2,8 +2,9 @@
 
 The public read API and the contact form run as a Supabase Edge Function over the
 Supabase Postgres database. The Django admin runs on your own machine against the
-same database. This replaces the VPS for public traffic; the former DRF API was removed from
-Django (see git history for the reference implementation).
+same database. The former DRF API was removed from
+Django (see git history for the reference implementation). Release flow:
+[release_deploy_architecture.md](release_deploy_architecture.md).
 
 ## Request Path
 
@@ -21,9 +22,12 @@ flowchart LR
 - The FE Worker calls the function with `SSR_API_URL` (the function URL) and adds
   `x-origin-secret` from the `API_ORIGIN_SECRET` Worker secret. The browser never
   calls the function directly.
-- Media links in API responses point at `https://$SITE_DOMAIN/image-files/...`;
-  the FE rewrites them to `/app/image-files/...`, the Worker proxies them and the
-  function answers 302 with a short-lived presigned R2 URL.
+- Media links in API responses are of two kinds. Public image variants (thumbnail,
+  detail) are direct URLs on `media.lukaszremkowicz.com` (R2 bucket `portfolio-media`);
+  they never pass through the function. Originals and high-resolution files (private
+  bucket `portfolio-originals`) are `https://$SITE_DOMAIN/image-files/...` links: the FE
+  rewrites them to `/app/image-files/...`, the Worker proxies them and the function
+  answers 302 with a short-lived presigned R2 URL.
 
 ## Edge Function (`supabase/functions/api`)
 
@@ -98,6 +102,18 @@ validation messages, 5-minute duplicate check, then two mails.
   A Django migration that recreates a table drops its grants: re-apply them.
 - When the API needs a new table or column, grant it in a new migration.
 
+## Release Order
+
+After the release PR (`dev` -> `main`) is merged and `release.yml` has published the images,
+run what the release needs, in this order:
+
+1. `infra/scripts/run_admin.sh <tag>`: Django migrations on Supabase (see Local Production Admin).
+2. New `supabase/migrations/*.sql` grants, applied after Django `migrate`.
+3. The Edge Function deploy (below).
+
+The FE deploys from the `portfolio-fe` repo CI. See also the Release & Deployment section
+of the root [README](../../../README.md).
+
 ## Deploy
 
 ```bash
@@ -119,7 +135,7 @@ Pulls the released `production-be` image from GHCR, runs `migrate` and
 `createcachetable` and `reset_stuck_translation_tasks`, then serves the admin at http://localhost:8000/admin/
 (`docker-compose.supabase.yml`, all config from Doppler). Background work
 (image variants, translations) runs in-process: stop with Ctrl+C only after it
-has finished. Nothing here touches the VPS.
+has finished.
 
 This compose file requires an image from the release that includes this change or newer.
 For an older release tag, use the matching Git checkout; older images lack the reset command.

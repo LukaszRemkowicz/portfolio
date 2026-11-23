@@ -7,22 +7,22 @@ This document describes the current logging structure inside the landingpage app
 It is intended as:
 
 - a current-state reference for future logging work,
-- an operational guide for reading logs across backend and nginx,
+- an operational guide for reading logs across the backend,
 - a baseline for future log normalization and ingestion work.
 
-Current state verified on 2026-04-17.
+Current state verified on 2026-04-17; updated for the Supabase architecture on 2026-11.
+
+The public API logs are not in this stack: they live in the Supabase Edge Function logs (Supabase dashboard). Django is the admin only and runs locally, so its JSON logs go to local Docker stdout.
 
 ## Short Answer
 
 Current JSON logging status:
 
 - Backend Django app: yes, JSON to Docker stdout
-- Nginx access logs: yes, JSON to Docker stdout
 
 Current plain-text / non-JSON areas:
 
 - Backend startup / any non-logging `print` usage: possible plain text
-- Nginx error logs: plain text
 - Shell entrypoint scripts: plain text
 
 So the stack is partially normalized, but not fully JSON everywhere yet.
@@ -128,7 +128,6 @@ Typical purpose:
 
 - shared domain infrastructure
 - `BaseImage` lifecycle
-- cache services
 
 #### `scripts`
 
@@ -155,20 +154,19 @@ Examples live in:
 
 - [backend/core/models.py](../../../backend/core/models.py)
 - [backend/core/tasks.py](../../../backend/core/tasks.py)
-- [backend/core/cache_service.py](../../../backend/core/cache_service.py)
 
 #### `users`
 
 Typical purpose:
 
 - profile/user image lifecycle
-- user/profile admin or API logic
+- user/profile admin logic
 
 Common log shape:
 
 - base JSON fields
 - request context when logs happen during HTTP request flow
-- cache invalidation or image-processing related extras when provided
+- image-processing related extras when provided
 
 Examples live in:
 
@@ -179,7 +177,7 @@ Examples live in:
 Typical purpose:
 
 - shop settings image lifecycle
-- product/shop API and admin logic
+- product/shop admin logic
 
 Common log shape:
 
@@ -282,65 +280,7 @@ The middleware:
 
 Backend runtime logging is already JSON and suitable for Docker log parsing.
 
-## 2. Nginx
-
-### Current format
-
-Nginx access logging is JSON.
-
-Relevant config:
-
-- [infra/nginx/static_server.conf](../../../infra/nginx/static_server.conf)
-
-Current access log definition:
-
-- `log_format json_analytics escape=json ...`
-- `access_log /dev/stdout json_analytics;`
-
-### Current structured fields
-
-The JSON access log contains:
-
-- `time_local`
-- `client_ip`: visitor address resolved by Nginx real-IP handling
-- `peer_ip`: immediate connection address before real-IP replacement
-- `forwarded_for`: forwarding chain received by Nginx
-- `cf_connecting_ip`: Cloudflare connecting-IP header when present
-- `host`
-- `upstream_addr`
-- `request`
-- `status`
-- `body_bytes_sent`
-- `request_time`
-- `upstream_response_time`
-- `upstream_status`
-- `http_referrer`
-- `http_user_agent`
-
-### Client-IP contract
-
-Nginx is the application boundary that resolves the visitor address. It trusts
-only the configured private proxy networks and Cloudflare ranges, processes
-`X-Forwarded-For` recursively, and uses the resulting `$remote_addr` for rate
-limits.
-
-For every proxied application request, Nginx overwrites both `X-Real-IP` and
-`X-Forwarded-For` with that single resolved address.
-
-
-### What is not JSON yet
-
-Nginx error logs are still plain text:
-
-- `error_log /dev/stderr warn;`
-
-### Conclusion
-
-Nginx access logs are JSON on Docker stdout. Nginx error logs are plain text on
-Docker stderr. Nginx no longer writes duplicate host files; Docker logging and
-MCP stream collection are the runtime sources for both streams.
-
-## 3. Shell Entrypoints / Startup Scripts
+## 2. Shell Entrypoints / Startup Scripts
 
 Current startup scripts still emit plain text via shell `echo`.
 
@@ -355,54 +295,17 @@ These are operational bootstrap logs, not application logs, and they are current
 ### Fully or mostly JSON today
 
 - Backend Django runtime logs
-- Nginx access logs
 
 ### Still plain text today
 
-- Nginx error logs
 - shell entrypoint logs
-
-## Recommended Cross-Stack Field Direction
-
-The stack does not yet use one single field schema everywhere.
-
-Current examples:
-
-- Backend:
-  - `timestamp`
-  - `level`
-  - `logger`
-  - `request_id`
-- Nginx:
-  - `time_local`
-  - `request`
-  - `status`
-For future normalization, a better common field direction would be:
-
-- `timestamp`
-- `service`
-- `component`
-- `level`
-- `message`
-- `request_id`
-- `method`
-- `path`
-- `host`
-- `status_code`
-- `duration_ms`
-- `client_ip`
-- `upstream`
-- `environment`
-
-This does not need to happen immediately, but it is the clean target if the project later adds centralized parsing or dashboards.
 
 ## Practical Reading Guide
 
 If you are looking at live Docker logs:
 
 - backend logs are JSON
-- nginx access logs are JSON
-- nginx error lines remain plain text
+- entrypoint lines are plain text
 
 Landingpage owns application log emission only.
 
@@ -411,5 +314,4 @@ Landingpage owns application log emission only.
 - [backend/settings/base.py](../../../backend/settings/base.py)
 - [backend/common/utils/logging.py](../../../backend/common/utils/logging.py)
 - [backend/common/middleware.py](../../../backend/common/middleware.py)
-- [infra/nginx/static_server.conf](../../../infra/nginx/static_server.conf)
 - [docker/backend/entrypoint.sh](../../../docker/backend/entrypoint.sh)

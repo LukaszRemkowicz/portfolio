@@ -36,12 +36,12 @@ with those sub-places rather than a country destination.
 Saving a Place also refreshes linked travel slugs in the source language. Previous
 country/place slug pairs are stored as aliases, so existing links continue to work.
 Canonical matches take precedence; an ambiguous alias returns 404. Date changes
-are not versioned by these aliases. Migration `0022_mainpagelocation_legacy_slugs`
-must run before deploying code that uses these aliases.
+are not versioned by these aliases. (Historical: migration `0022_mainpagelocation_legacy_slugs`
+had to run before code using these aliases was deployed; it is long applied.)
 
-The known record, Place 53, was repaired to Poland by an earlier release;
-releases no longer run this step. For a manual repair, preview the exact change first (run inside the deployed
-backend environment):
+(Historical) The known record, Place 53, was repaired to Poland by an earlier release;
+releases no longer run this step. For a manual repair, preview the exact change first (run inside the backend
+environment, e.g. the local production admin container):
 
 ```bash
 python manage.py repair_travel_place --place-id 53 --country PL
@@ -63,7 +63,7 @@ restored from its source; clearing caches does not reconstruct it.
 We use a defense-in-depth model across the backend, API, and admin surfaces.
 
 ### 1. Brute Force Protection (**Django Axes**)
-We use [Django Axes](https://github.com/jazzband/django-axes) to protect the admin portal and API from brute-force attacks.
+We use [Django Axes](https://github.com/jazzband/django-axes) to protect the Django admin login from brute-force attacks. The public API is not served by Django.
 - Locked-out users are tracked by IP and username.
 - Configurable cool-off periods and failure limits.
 
@@ -94,15 +94,15 @@ We use [Safety](https://github.com/pyupio/safety) to scan our dependencies for k
 Today it mainly serves as:
 
 - content owner for portfolio data
-- admin application on `ADMIN_DOMAIN`
+- admin application, run locally (dev stack at http://localhost:8000/admin/, or the released image against Supabase via `infra/scripts/run_admin.sh`); it is never public
 - secure media signer for admin previews
 
-Normal public website traffic reaches the frontend server first. Django is the content/admin layer.
+Public website traffic goes browser -> Cloudflare Worker (`portfolio-fe`) -> Supabase Edge Function; Django is not in that path. Django is the content/admin layer.
 
 ## 📖 Glossary
 
 - `SITE_DOMAIN`: public website host.
-- `ADMIN_DOMAIN`: public Django admin host.
+- `ADMIN_DOMAIN`: Django admin host (`localhost` locally; the admin is not public).
 - `X-Request-ID`: request correlation header used for tracing requests across services.
 
 ## 🧱 Backend Responsibilities
@@ -120,7 +120,7 @@ Normal public website traffic reaches the frontend server first. Django is the c
 
 Key points:
 
-- public API and sitemap are served by the Supabase Edge Function
+- public API and sitemap are served by the Supabase Edge Function (`supabase/functions/api`, see [supabase_api.md](../infra/docs/project/supabase_api.md))
 
 
 ## 🛡️ Security / Delivery Model
@@ -135,8 +135,7 @@ Protected (admin) media flow:
 
 What exists:
 
-- FE generates or forwards `X-Request-ID`
-- backend middleware reuses or creates request IDs
+- backend middleware reuses or creates request IDs (admin requests only; there is no FE -> Django request path)
 - backend responses echo `X-Request-ID`
 - backend logs include:
   - request ID
@@ -151,8 +150,8 @@ Middleware path:
 - [backend/common/middleware.py](common/middleware.py)
 
 Backend log and sitemap report inspection now belongs to the standalone
-`agent-monitoring` project. This backend emits application logs and generates
-the public sitemap, but it no longer contains the legacy Django monitoring app,
+`agent-monitoring` project. This backend emits application logs; the sitemap is
+served by the Supabase function. It no longer contains the legacy Django monitoring app,
 report models, admin report actions, or monitoring migrations.
 
 ## 🛠️ Development
@@ -200,10 +199,10 @@ uv run pre-commit run --all-files
 
 ### 🚀 Deployment
 
+Production runs the released `production-be` image through `infra/scripts/run_admin.sh [tag]` (Doppler `prd`, Supabase DB and R2; migrations run on start). The release order (migrations, Supabase grants, Edge Function deploy) is in [supabase_api.md](../infra/docs/project/supabase_api.md) and the root [README](../README.md). Local development:
+
 ```bash
-# run from the project root with centralized secrets.
-# choose the proper Doppler config for the target environment,
-# for example: --config dev, --config stg, or --config prod
+# run from the project root with centralized secrets (Doppler config: dev)
 doppler --config dev run -- docker compose up --build
 ```
 
@@ -218,13 +217,13 @@ doppler --config dev run -- docker compose up --build
 
 ## 📝 Notes
 
-- The backend public API host should be treated as internal/administrative architecture, not the main browser contract.
+- Django serves no public traffic; the browser contract is the Cloudflare Worker plus the Supabase Edge Function.
 
 
 
 ## 🗄️ Database Maintenance
 
-We provide specialized "God-Tier" scripts for automated database backups and restore verification.
+Production (Supabase) backups are the monthly encrypted dump of the `supabase-maintenance` workflow (see "Keep-alive and Backups" in [supabase_api.md](../infra/docs/project/supabase_api.md)). The scripts below are for the local Docker database.
 
 - **Atomic Backups**: `infra/scripts/db_backup/backup_db.sh` creates validated, timestamped dumps with overlap protection.
 - **Restore Verification**: `infra/scripts/db_backup/test_restore.sh` automatically verifies that backups are healthy by performing a full restore in a temporary container.

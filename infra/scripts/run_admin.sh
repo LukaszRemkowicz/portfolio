@@ -2,7 +2,7 @@
 # Production Django admin on this machine, against the Supabase database.
 # Pulls the newest released backend image from GHCR, runs migrations, then serves
 # the admin at http://localhost:8000/admin/ (Ctrl+C to stop, after background work
-# such as variants and translations has finished). Nothing here touches the VPS.
+# such as variants and translations has finished).
 #
 #   infra/scripts/run_admin.sh            # newest vX.Y.Z tag on GitHub
 #   infra/scripts/run_admin.sh v2.21.0    # a specific release

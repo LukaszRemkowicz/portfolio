@@ -25,10 +25,10 @@ x-backend-common: &backend-common
     DB_PASSWORD: ${DB_PASSWORD}
     DB_HOST: ${DB_HOST:-db}
     DB_PORT: 5432
-    # Admin and /media/ are served on localhost (no Traefik, no admin.portfolio.local).
+    # Admin and /media/ are served on localhost (no reverse proxy).
     ADMIN_DOMAIN: localhost
     API_DOMAIN: ${API_DOMAIN}
-    # Served on http://localhost:8000 (no Traefik): host-only cookies, localhost origins.
+    # Served on http://localhost:8000 (no reverse proxy): host-only cookies, localhost origins.
     CSRF_COOKIE_DOMAIN: ""
     ALLOWED_HOSTS: ${ALLOWED_HOSTS}
     CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000

@@ -68,7 +68,7 @@ SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
 SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000 if not DEBUG else 0)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=not DEBUG)
 SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=not DEBUG)
-# Django also serves the local admin without Nginx.
+# Django serves the local admin directly (no reverse proxy).
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = False
 # X_FRAME_OPTIONS must stay — XFrameOptionsMiddleware crashes if set to None
@@ -148,7 +148,7 @@ INSTALLED_APPS = [
 # InteractiveConsole fallback.
 SHELL_PLUS = "ipython"
 
-# Security Settings (for Nginx SSL termination)
+# Security Settings (behind a TLS-terminating proxy)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 MIDDLEWARE = [
@@ -550,7 +550,7 @@ CKEDITOR_5_CONFIGS = {
 CKEDITOR_5_CUSTOM_CSS = "css/ckeditor_admin_fix.css"
 
 if not DEBUG:
-    # We handle SSL Redirect and HSTS in Nginx, so we silence these checks
+    # SSL redirect and HSTS are not handled by Django, so we silence these checks
     SILENCED_SYSTEM_CHECKS = ["security.W004", "security.W008"]
 
 ADMIN_SITE_ORDERING = (
