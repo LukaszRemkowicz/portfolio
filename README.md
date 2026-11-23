@@ -1,6 +1,6 @@
 # 🌌 Portfolio Landing Page
 
-Backend and infrastructure for a personal portfolio (astrophotography, travel stories, programming work). This repository holds the Django 6 backend (admin only; Python 3.14, `uv`), the Supabase Edge Function that serves the public API (`supabase/`), Docker/compose files and the operational scripts (the old VPS release scripts and nginx layer are kept only for rollback). The frontend lives in [`LukaszRemkowicz/portfolio-fe`](https://github.com/LukaszRemkowicz/portfolio-fe) (React Router 7 on Cloudflare Workers).
+Backend and infrastructure for a personal portfolio (astrophotography, travel stories, programming work). This repository holds the Django 6 backend (admin only; Python 3.14, `uv`), the Supabase Edge Function that serves the public API (`supabase/`), Docker/compose files and the operational scripts. The frontend lives in [`LukaszRemkowicz/portfolio-fe`](https://github.com/LukaszRemkowicz/portfolio-fe) (React Router 7 on Cloudflare Workers).
 
 ## 🌍 Live
 
@@ -31,7 +31,7 @@ Production request path: the browser talks to the Cloudflare Worker `portfolio-f
 - Django 6 is the admin only and is never public. It runs locally: the dev stack (`docker compose`, Django + PostgreSQL) or the released `production-be` image against Supabase through `infra/scripts/run_admin.sh`.
 - The DRF/Django public API was removed (v2.25.0). Django no longer caches or invalidates API responses.
 - Secrets come from Doppler.
-- The DigitalOcean VPS stack (Traefik, nginx, cloudflared tunnel, gunicorn) has been stopped since 2026-11-17 and is kept only as a rollback path; see [VPS rollback](#vps-rollback-stopped-since-2026-11-17).
+- The former DigitalOcean VPS was retired on 2026-11-23.
 
 More: [Supabase API and local admin](infra/docs/project/supabase_api.md).
 
@@ -39,11 +39,10 @@ More: [Supabase API and local admin](infra/docs/project/supabase_api.md).
 
 - `backend/` - Django application: admin, translations, media logic, background tasks (`common/background.py`)
 - `supabase/` - the Edge Function API (`functions/api`), SQL migrations for roles and grants (`migrations`) and `deploy-api.sh`
-- `docker/` - Dockerfiles and entrypoint for the backend (`docker/backend/`) and nginx (`docker/nginx/`, VPS rollback)
-- `infra/nginx/` - nginx config and includes (VPS rollback)
-- `infra/scripts/` - `run_admin.sh`, `run_local_api.sh`, release scripts (`release/`, VPS rollback), DB backup scripts (`db_backup/`, local/VPS), shared helpers
+- `docker/` - Dockerfiles and entrypoint for the backend (`docker/backend/`)
+- `infra/scripts/` - `run_admin.sh`, `run_local_api.sh`, DB backup scripts (`db_backup/`, local dev DB), shared helpers
 - `infra/docs/` - agent docs (`agent/`) and project docs (`project/`)
-- `docker-compose.yml` - dev stack (Django + PostgreSQL); `docker-compose.supabase.yml` - local production admin; `docker-compose.common.yml`, `docker-compose.prod.yml` - VPS rollback stack
+- `docker-compose.yml` - dev stack (Django + PostgreSQL); `docker-compose.supabase.yml` - local production admin
 - `.github/` - CI/CD workflows, secrets doc, PR templates
 - `screenshots/` - README screenshots
 
@@ -249,15 +248,11 @@ infra/scripts/run_local_api.sh
 
 More: [supabase_api.md](infra/docs/project/supabase_api.md), [.github/SECRETS.md](.github/SECRETS.md).
 
-### VPS rollback (stopped since 2026-11-17)
-
-The old flow (`deploy_production.sh` on the VPS: `prepare_images.sh` -> `release.sh` -> `deploy.sh`, tag-based rollback) is kept only as a rollback path until the droplet is retired. Details: [release_deploy_architecture.md](infra/docs/project/release_deploy_architecture.md), [infra/scripts/README.md](infra/scripts/README.md). The VPS used Traefik, nginx and a Cloudflare Tunnel; nginx config lives in [infra/nginx/](infra/nginx/).
-
 ## 💾 Database Backup & Maintenance
 
 Production (Supabase) backups: `.github/workflows/supabase-maintenance.yml` pings the database every 6 hours to keep the project awake and takes a monthly encrypted `pg_dump` to `portfolio-originals/backups/supabase/` (62-day retention). Restore steps: [Keep-alive and Backups](infra/docs/project/supabase_api.md#keep-alive-and-backups). Its repo secrets are listed in [.github/SECRETS.md](.github/SECRETS.md).
 
-The scripts in `infra/scripts/db_backup/` are for the local Docker database and the stopped VPS Postgres only:
+The scripts in `infra/scripts/db_backup/` are for the local Docker database only:
 
 ```bash
 ./infra/scripts/db_backup/backup_db.sh      # compressed SQL dump
@@ -270,13 +265,13 @@ See [Backup Maintenance Guide](infra/scripts/db_backup/MAINTENANCE.md) for more 
 
 The admin (Django) logs JSON to Docker stdout locally; see [logging_structure_overview.md](infra/docs/project/logging_structure_overview.md). The Edge Function logs live in the Supabase function logs. `X-Request-ID` is echoed and logged by the Django middleware.
 
-Log and sitemap monitoring lived in the separate `agent-monitoring` project; it was stopped on the VPS, so do not assume it still runs.
+Log and sitemap monitoring lived in the separate `agent-monitoring` project; it is not part of this stack, so do not assume it still runs.
 
 ## 📚 Docs Index
 
 - [backend/README.md](backend/README.md) - backend overview, security, development
-- [infra/scripts/README.md](infra/scripts/README.md) - production tooling plus the VPS rollback runbook (release, Cloudflare Tunnel)
-- [infra/scripts/db_backup/MAINTENANCE.md](infra/scripts/db_backup/MAINTENANCE.md) - local/VPS database backup and restore
+- [infra/scripts/README.md](infra/scripts/README.md) - local tooling and DB backup scripts
+- [infra/scripts/db_backup/MAINTENANCE.md](infra/scripts/db_backup/MAINTENANCE.md) - local database backup and restore
 - [.github/SECRETS.md](.github/SECRETS.md) - GitHub secrets, variables and CI/CD
 - [infra/docs/project/](infra/docs/project/) - system docs: [cache invalidation](infra/docs/project/cache_invalidation.md), [release and deploy](infra/docs/project/release_deploy_architecture.md), [logging](infra/docs/project/logging_structure_overview.md), [feature flags](infra/docs/project/feature_flag_mechanism.md), [latest image tags](infra/docs/project/latest_images_tags.md), [total time spent](infra/docs/project/landing_page_total_time_spent_system.md), [admin image cropper](infra/docs/project/django_admin_image_cropper_mechanism.md), [translations](infra/docs/project/translation_system_overview.md), [Supabase API and local admin](infra/docs/project/supabase_api.md)
 - [infra/docs/agent/](infra/docs/agent/) - agent routing and engineering conventions ([AGENTS.md](AGENTS.md))

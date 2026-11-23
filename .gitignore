@@ -134,9 +134,6 @@ jspm_packages/
 .tern-port
 
 /backend/media/
-nginx/ssl/certs/
-infra/nginx/ssl/certs/
-nginx/logs/
 .cursor/rules/
 .gemini/
 .agent/

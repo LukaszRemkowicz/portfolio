@@ -88,25 +88,3 @@ jobs:
           cache-to: type=gha,mode=max
           tags: ${{ steps.meta_backend.outputs.tags }}
           labels: ${{ steps.meta_backend.outputs.labels }}
-
-      - name: Docker metadata for production nginx
-        id: meta_nginx
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/production-nginx
-          tags: |
-            type=raw,value=${{ steps.image_tag.outputs.value }}
-
-      - name: Build and push production nginx
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: docker/nginx/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          provenance: true
-          sbom: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: ${{ steps.meta_nginx.outputs.tags }}
-          labels: ${{ steps.meta_nginx.outputs.labels }}

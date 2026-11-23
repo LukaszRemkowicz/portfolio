@@ -1,6 +1,6 @@
 # Database Maintenance Guide
 
-> **Local / VPS Postgres only.** These scripts back up and restore the local Docker database (and the stopped VPS one). Production data lives in Supabase; its backups are the monthly `supabase-maintenance` workflow, see [Keep-alive and Backups](../../docs/project/supabase_api.md#keep-alive-and-backups).
+> **Local dev Postgres only.** These scripts back up and restore the local Docker database. Production data lives in Supabase; its backups are the monthly `supabase-maintenance` workflow, see [Keep-alive and Backups](../../docs/project/supabase_api.md#keep-alive-and-backups).
 
 This document outlines the procedures for database backups and restores for the portfolio project.
 

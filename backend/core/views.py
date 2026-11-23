@@ -100,7 +100,7 @@ class SecureMediaView(View):
             redirect = HttpResponseRedirect(default_storage.url(file_path))
             redirect["Cache-Control"] = "private, no-store, max-age=0"
             return redirect
-        # Local storage (dev and tests): no nginx in front, so Django streams the file.
+        # Local storage (dev and tests): no proxy in front, so Django streams the file.
         try:
             response = FileResponse(default_storage.open(file_path), filename=filename)
         except FileNotFoundError:

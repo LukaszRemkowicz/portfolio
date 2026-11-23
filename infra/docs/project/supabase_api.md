@@ -2,9 +2,9 @@
 
 The public read API and the contact form run as a Supabase Edge Function over the
 Supabase Postgres database. The Django admin runs on your own machine against the
-same database. This replaced the VPS for public traffic on 2026-11-17; the former DRF API was removed from
-Django (see git history for the reference implementation). The VPS stack is stopped and kept only as a
-rollback path (see [release_deploy_architecture.md](release_deploy_architecture.md)).
+same database. The former DRF API was removed from
+Django (see git history for the reference implementation). Release flow:
+[release_deploy_architecture.md](release_deploy_architecture.md).
 
 ## Request Path
 
@@ -135,7 +135,7 @@ Pulls the released `production-be` image from GHCR, runs `migrate` and
 `createcachetable` and `reset_stuck_translation_tasks`, then serves the admin at http://localhost:8000/admin/
 (`docker-compose.supabase.yml`, all config from Doppler). Background work
 (image variants, translations) runs in-process: stop with Ctrl+C only after it
-has finished. Nothing here touches the VPS.
+has finished.
 
 This compose file requires an image from the release that includes this change or newer.
 For an older release tag, use the matching Git checkout; older images lack the reset command.
