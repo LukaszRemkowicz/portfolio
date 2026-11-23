@@ -223,7 +223,7 @@ doppler --config dev run -- docker compose up --build
 
 ## 🗄️ Database Maintenance
 
-Production (Supabase) backups are the monthly encrypted dump of the `supabase-maintenance` workflow (see "Keep-alive and Backups" in [supabase_api.md](../infra/docs/project/supabase_api.md)). The scripts below are for the local Docker database and the stopped VPS Postgres.
+Production (Supabase) backups are the monthly encrypted dump of the `supabase-maintenance` workflow (see "Keep-alive and Backups" in [supabase_api.md](../infra/docs/project/supabase_api.md)). The scripts below are for the local Docker database.
 
 - **Atomic Backups**: `infra/scripts/db_backup/backup_db.sh` creates validated, timestamped dumps with overlap protection.
 - **Restore Verification**: `infra/scripts/db_backup/test_restore.sh` automatically verifies that backups are healthy by performing a full restore in a temporary container.

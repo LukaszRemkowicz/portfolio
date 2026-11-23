@@ -84,7 +84,7 @@ jobs:
           api-key: ${{ secrets.SAFETY_API_KEY }}
 
   image-build-check:
-    # The VPS is linux/amd64: no arm64/QEMU emulation (it took ~5 min per image).
+    # linux/amd64 only: no arm64/QEMU emulation (it took ~5 min per image).
     # One job per image in parallel; each image keeps its own GHA cache scope so
     # builds stop overwriting each other's cache.
     name: Production Image Build Check (${{ matrix.image }})
@@ -96,9 +96,6 @@ jobs:
           - image: backend
             file: docker/backend/Dockerfile
             target: production
-          - image: nginx
-            file: docker/nginx/Dockerfile
-            target: ""
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

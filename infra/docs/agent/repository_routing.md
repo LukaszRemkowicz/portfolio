@@ -73,17 +73,15 @@ confirming behavior.
   caveats.
 - `infra/docs/project/logging_structure_overview.md`
   Use for backend logging formats, JSON-vs-plain-text status, and application
-  log emission structure. The nginx sections are VPS-only (stopped); public API
-  logs live in the Supabase function logs.
+  log emission structure. Public API logs live in the Supabase function logs.
 - `infra/docs/project/translation_system_overview.md`
   Use for translation lifecycle, `TranslationTask` debugging, translation admin
   behavior, fallback behavior, and adding translation support to new
   models. Describes the async translation architecture and operational
   boundaries.
 - `infra/docs/project/release_deploy_architecture.md`
-  Use for the current release flow and, in a separate part, the VPS rollback
-  model (stopped since 2026-11-17): release scripts, deploy logic, image naming
-  (`production-be`, `production-nginx`), artifact flow, and rollback behavior.
+  Use for the release flow: version bump, tag, `production-be` image, and the
+  manual migrate/grants/function-deploy order.
 - `infra/docs/project/supabase_api.md`
   Use for the Supabase Edge Function API, the hidden-API secret, `portfolio_api`
   grants and migration order, the production release order, the contact form
@@ -100,11 +98,11 @@ confirming behavior.
 - Feature flag backend (frontend gating lives in `portfolio-fe`) or `LandingPageSettings` booleans -> `infra/docs/project/feature_flag_mechanism.md`
 - Landing page total-time stat or exposure-hours rebuilds -> `infra/docs/project/landing_page_total_time_spent_system.md`
 - Django admin image cropping or preview/media bug -> `infra/docs/project/django_admin_image_cropper_mechanism.md`
-- Backend logging structure (nginx = VPS only) -> `infra/docs/project/logging_structure_overview.md`
+- Backend logging structure -> `infra/docs/project/logging_structure_overview.md`
 - Translation queue/status/admin translation issues -> `infra/docs/project/translation_system_overview.md`
-- Release flow, or VPS rollback script logic/image naming -> `infra/docs/project/release_deploy_architecture.md`
+- Release flow -> `infra/docs/project/release_deploy_architecture.md`
 - Production release procedure -> `infra/docs/project/supabase_api.md` and the Release & Deployment section of `README.md`
-- VPS rollback runbook (stopped since 2026-11-17) -> `infra/scripts/README.md`
+- Local tooling and DB backup scripts -> `infra/scripts/README.md`
 - Supabase function API, its grants/migrations, contact form or local production
   admin -> `infra/docs/project/supabase_api.md`
 - Image variant generation, `ImageVariantSpec`, `ViewportWidths`, or

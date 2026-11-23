@@ -22,7 +22,7 @@ Used by `.github/workflows/supabase-maintenance.yml` (database keep-alive ping a
 ## Required Variables
 
 ### Container Publish
-- `IMAGE_NAMESPACE` - GHCR image namespace used by `release.yml` (`<registry>/<IMAGE_NAMESPACE>/production-be`, and `production-nginx` for the VPS rollback path)
+- `IMAGE_NAMESPACE` - GHCR image namespace used by `release.yml` (`<registry>/<IMAGE_NAMESPACE>/production-be`)
 
 ### GitHub Project Automation
 - `ADD_TO_PROJECT_URL` - GitHub Project URL that should receive new issues. This is the Project board URL from the browser address bar, for example `https://github.com/users/LukaszRemkowicz/projects/1`, not the repository URL `https://github.com/LukaszRemkowicz/portfolio`.
@@ -67,8 +67,6 @@ The workflow runs for issues that are opened, reopened, or transferred into this
 ## Deployment
 
 Production deployment is manual and does not use GitHub secrets: see the Release & Deployment section of the root [README](../README.md) and [supabase_api.md](../infra/docs/project/supabase_api.md) (`run_admin.sh`, Supabase grants, `supabase/deploy-api.sh`; secrets come from Doppler).
-
-The former VPS deploy (`deploy_production.sh`) is stopped since 2026-11-17 and kept only as a rollback path: [infra/scripts/README.md](../infra/scripts/README.md).
 
 ## Branch Protection Rules
 
