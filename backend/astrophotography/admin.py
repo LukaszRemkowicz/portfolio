@@ -527,23 +527,9 @@ class AstroImageAdmin(
 
     @admin.display(boolean=True, description="Has Thumbnail Variants")
     def has_thumbnail_variant(self, obj: AstroImage) -> bool:
-        expected_widths: set[int] = set()
-        for source in obj.get_image_variant_sources():
-            expected_widths.update(
-                width
-                for role, width, _quality in obj._get_expected_image_variant_targets(source)
-                if role == "thumbnail"
-            )
-
-        if not expected_widths:
-            return False
-
-        generated_widths = set(
-            obj.variants.filter(role="thumbnail", width__in=expected_widths)
-            .exclude(file="")
-            .values_list("width", flat=True)
-        )
-        return expected_widths.issubset(generated_widths)
+        # Uses the prefetched variants only: checking expected widths needs the source
+        # width, which means one R2 round trip per row and made the list take ~30 s.
+        return any(v.role == "thumbnail" and v.file for v in obj.variants.all())
 
     secure_preview_url_name = "admin-astroimage-secure-media"
 
