@@ -25,6 +25,7 @@ x-backend: &backend
     DB_USER: ${SUPABASE_DB_USER}
     DB_PASSWORD: ${SUPABASE_DB_PASSWORD}
     PGSSLMODE: require
+    DB_CONN_MAX_AGE: "60"
     # Served on localhost over plain HTTP.
     ADMIN_DOMAIN: localhost
     SITE_DOMAIN: ${SITE_DOMAIN}

@@ -25,10 +25,10 @@ Run the script from the project root:
 #### Environment Variables
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `BACKUP_DIR` | Directory to save backups | **REQUIRED** (e.g., `/var/backups/portfolio-db/`) |
+| `BACKUP_DIR` | Directory to save backups | **REQUIRED** (e.g., `path/to/dumps/`) |
 | `RETENTION_DAYS` | Number of days to keep backups | `7` |
 | `DB_USER` | Database user | `postgres` |
-| `DB_NAME` | Database name | `portfolio` |
+| `DB_NAME` | Database name | `portfolio_dev` |
 
 ---
 
@@ -41,14 +41,14 @@ Since we use the PostgreSQL custom format (`-Fc`), you must use `pg_restore` ins
 2. **Run the restore command**:
 ```bash
 # Example for backup_20240123_120000.dump
-docker compose exec -T db pg_restore -U postgres -d portfolio --clean --no-owner < database_data/backup_20240123_120000.dump
+docker compose exec -T db pg_restore -U postgres -d portfolio_dev --clean --no-owner < database_data/backup_20240123_120000.dump
 ```
 > [!IMPORTANT]
 > The `--clean` flag drops existing objects before recreating them. Use with caution.
 
-### 🖥️ Restoring in Local/Production
+### 🖥️ Restoring in Local (non-Docker) Postgres
 ```bash
-pg_restore -U postgres -d portfolio --clean --no-owner < path/to/backup.dump
+pg_restore -U postgres -d portfolio_dev --clean --no-owner < path/to/backup.dump
 ```
 
 ---
@@ -64,24 +64,24 @@ BACKUP_DIR=path/to/dumps ./infra/scripts/db_backup/test_restore.sh
 ```
 The script performs a **Truly Professional Verification**:
 1. **Env Guard**: Fails immediately with help instructions if `BACKUP_DIR` is missing.
-2. **Robust Orchestration**: Uses `docker compose config` to detect the exact production DB image.
+2. **Robust Orchestration**: Uses `docker compose config` to detect the DB image from the dev compose file.
 3. **Tool Parity**: Runs `pg_restore -l` (header validation) **inside the target container** to ensure version compatibility.
 4. **Precision SQL**:
    - Checks for **physical tables** only (`relkind='r'`).
    - Uses `format('%I', ...)` for identifier safety and proper quoting.
 5. **Extension Assertions**: Hard-verifies that mandatory extensions (e.g., `plpgsql`) are operational.
-6. **Multi-Step Smoke Test**: Validates row counts for `users`, `images`, and `migrations`.
+6. **Multi-Step Smoke Test**: Validates row counts for `users_user`, `astrophotography_astroimage` and `django_migrations`.
 
 ## 🔐 Running With Doppler
 
-Use `doppler run` when the backup credentials are stored in Doppler:
+Use `doppler run --config dev` when the dev database credentials come from Doppler:
 
 ```bash
-doppler run -- ./infra/scripts/db_backup/backup_db.sh
-doppler run -- ./infra/scripts/db_backup/test_restore.sh
+doppler run --config dev -- ./infra/scripts/db_backup/backup_db.sh
+doppler run --config dev -- ./infra/scripts/db_backup/test_restore.sh
 ```
 
 ## 📂 Path Logic
 - **Configuration**: `BACKUP_DIR` must be set in the environment (e.g., Doppler or `.bashrc`).
-- **Standard**: Recommended to use `/var/backups/portfolio-db/` for production.
+- **Standard**: Keep dumps in a local directory outside the repo (for example `~/backups/portfolio-dev/`).
 - **Fail-Fast**: Scripts will terminate immediately if `BACKUP_DIR` is undefined.

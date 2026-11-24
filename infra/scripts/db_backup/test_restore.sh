@@ -48,7 +48,7 @@ else
     if [ -z "${BACKUP_DIR:-}" ]; then
         echo "[ERROR] BACKUP_DIR is not set."
         echo "Please set it via environment variable, e.g.:"
-        echo "  export BACKUP_DIR=/var/backups/portfolio/"
+        echo "  export BACKUP_DIR=path/to/dumps/"
         exit 1
     fi
 

@@ -210,6 +210,9 @@ DATABASES = {
         "PASSWORD": env.str("DB_PASSWORD", default="postgres"),
         "HOST": env.str("DB_HOST", default="db"),
         "PORT": env.str("DB_PORT", default="5432"),
+        # Reuse connections; the local production admin talks to a remote pooler.
+        "CONN_MAX_AGE": env.int("DB_CONN_MAX_AGE", default=0),
+        "CONN_HEALTH_CHECKS": True,
     }
 }
 
