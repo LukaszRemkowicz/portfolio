@@ -36,8 +36,8 @@ class ProjectAdmin(
     ordering = ("-created_at",)
 
     fieldsets = (
-        (None, {"fields": ("name", "description", "technologies", "is_active")}),
-        (_("Pricing"), {"fields": ("pricing", "price", "currency")}),
+        (None, {"fields": ("name", "description", "badge", "technologies", "is_active")}),
+        (_("Pricing"), {"fields": ("pricing", "price", "currency", "price_source_url")}),
         (_("Links"), {"fields": ("github_url", "live_url")}),
         (_("Cover Image"), {"fields": ("image", "image_cropped")}),
         (_("Metadata"), {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
