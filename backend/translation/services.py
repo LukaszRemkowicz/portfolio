@@ -58,6 +58,7 @@ class TranslationService:
         "Project": [
             FieldTranslationConfig("name"),
             FieldTranslationConfig("description", is_html=True),
+            FieldTranslationConfig("badge"),
         ],
         "MainPageLocation": [
             FieldTranslationConfig("highlight_name"),
