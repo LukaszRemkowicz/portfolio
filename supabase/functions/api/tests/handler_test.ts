@@ -5,6 +5,7 @@ import { r2 } from "../r2.ts";
 import { handler, ORIGIN_SECRET_HEADER } from "../router.ts";
 import { signedParams } from "../signing.ts";
 import { drfDateTime } from "../format.ts";
+import { clearOfferCacheForTests } from "../offer.ts";
 
 const KEY = "handler-test-key";
 const BASE = "https://p.supabase.co/functions/v1/api";
@@ -360,7 +361,13 @@ function projectRows(t: string, params: unknown[], enabled = true): unknown[] {
     }];
   }
   if (has("programming_project_translation")) {
-    return [{ master: "3", language_code: "en", name: "Proj", description: "<p>D</p>" }];
+    return [{
+      master: "3",
+      language_code: "en",
+      name: "Proj",
+      description: "<p>D</p>",
+      badge: "First on macOS",
+    }];
   }
   if (has("project")) {
     return [{
@@ -397,6 +404,7 @@ Deno.test("projects: shape, technologies split, R2 vs API_MEDIA_BASE_URL variant
       id: p.id,
       name: p.name,
       description: p.description,
+      badge: p.badge,
       technologies: p.technologies,
       github_url: p.github_url,
       live_url: p.live_url,
@@ -406,6 +414,7 @@ Deno.test("projects: shape, technologies split, R2 vs API_MEDIA_BASE_URL variant
       id: "3",
       name: "Proj",
       description: "<p>D</p>",
+      badge: "First on macOS",
       technologies: ["Python", "Django", "React"],
       github_url: "https://github.com/x/y",
       live_url: "",
@@ -449,6 +458,36 @@ Deno.test("projects: price_tag shapes", async () => {
     assertEquals(projects[0].price_tag, expected);
   }
   projectPricing = {};
+});
+
+Deno.test("projects: live price from price_source_url, stored price when it fails", async () => {
+  const real = globalThis.fetch;
+  try {
+    for (
+      const [answer, expected] of [
+        [Response.json({ amount: 13899, currency: "eur", promotion: null }), "138.99 EUR"],
+        [new Response("x", { status: 503 }), "49.00 PLN"],
+      ] as const
+    ) {
+      setup();
+      clearOfferCacheForTests();
+      globalThis.fetch = (() => Promise.resolve(answer)) as typeof fetch;
+      projectPricing = {
+        pricing: "paid",
+        price: "49",
+        currency: "PLN",
+        price_source_url: "https://api.example/offer",
+      };
+      rowsFor = (t, p) => projectRows(t, p);
+      const { projects } = await (await handler(req("http://h/v1/projects/"))).json();
+      const tag = projects[0].price_tag;
+      assertEquals(`${tag.amount} ${tag.currency}`, expected);
+    }
+  } finally {
+    globalThis.fetch = real;
+    clearOfferCacheForTests();
+    projectPricing = {};
+  }
 });
 
 Deno.test("sitemap: exact XML, Warsaw lastmod across midnight, headers", async () => {

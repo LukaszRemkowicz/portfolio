@@ -39,7 +39,7 @@ class Project(ImageVariantModelMixin, AutomatedTranslationModelMixin, Translatab
     )
 
     translation_service_method = "translate_project"
-    translation_trigger_fields = ["name", "description"]
+    translation_trigger_fields = ["name", "description", "badge"]
 
     image_tracker = FieldTracker(fields=["image", "image_cropped"])
 
@@ -74,6 +74,15 @@ class Project(ImageVariantModelMixin, AutomatedTranslationModelMixin, Translatab
         verbose_name=_("Currency"),
         help_text=_("ISO 4217 currency code, e.g. USD, EUR, PLN."),
     )
+    price_source_url = models.URLField(
+        blank=True,
+        verbose_name=_("Price source URL"),
+        help_text=_(
+            "Optional, for Paid: a JSON offer endpoint (amount in cents, currency, optional "
+            "promotion), e.g. https://api.starligner.com/functions/payments/offer. The site "
+            "shows the price read from it; Price and Currency are the fallback."
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
@@ -101,6 +110,12 @@ class Project(ImageVariantModelMixin, AutomatedTranslationModelMixin, Translatab
             blank=True,
             verbose_name=_("Description"),
             config_name="default",
+        ),
+        badge=models.CharField(
+            max_length=40,
+            blank=True,
+            verbose_name=_("Badge"),
+            help_text=_("Optional short label on the project card, e.g. First on macOS."),
         ),
     )
 
